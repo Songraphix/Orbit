@@ -24,6 +24,7 @@ export class LayoutEngine {
   private splitRatio: number | null = null;
   private library: LibraryPanel | null = null;
   private notes = false;
+  private topTabs: boolean;
   private layout: Layout;
 
   constructor(
@@ -33,8 +34,9 @@ export class LayoutEngine {
   ) {
     this.sidebarVisible = settings.get('sidebar.visible');
     this.sidebarWidth = settings.get('sidebar.width');
+    this.topTabs = settings.get('tabs.layout') === 'top';
     this.layout = this.compute();
-    this.win.setWindowButtonVisibility(this.sidebarVisible);
+    this.updateButtons();
   }
 
   current(): Layout {
@@ -49,8 +51,7 @@ export class LayoutEngine {
     if (visible === this.sidebarVisible) return;
     this.sidebarVisible = visible;
     this.settings.set('sidebar.visible', visible);
-    // Arc hides the traffic lights with the sidebar so they never float over the page.
-    this.win.setWindowButtonVisibility(visible || this.library !== null);
+    this.updateButtons();
     this.update();
   }
 
@@ -84,9 +85,24 @@ export class LayoutEngine {
   setLibrary(panel: LibraryPanel | null): void {
     if (panel === this.library) return;
     this.library = panel;
-    // The sections column shows even when the sidebar is hidden, traffic lights included.
-    this.win.setWindowButtonVisibility(this.sidebarVisible || panel !== null);
+    this.updateButtons();
     this.update();
+  }
+
+  /** Tabs on top (the tab strip) or in the sidebar. Saved by Settings. */
+  setTopTabs(on: boolean): void {
+    if (on === this.topTabs) return;
+    this.topTabs = on;
+    this.updateButtons();
+    this.update();
+  }
+
+  /** Arc hides the traffic lights with the sidebar so they never float over the page; the
+   *  Library's column and the tab strip have room for them. */
+  private updateButtons(): void {
+    this.win.setWindowButtonVisibility(
+      this.sidebarVisible || this.library !== null || this.topTabs,
+    );
   }
 
   /** The Notes panel opened or closed. Not persisted. */
@@ -127,6 +143,7 @@ export class LayoutEngine {
       splitRatio: this.splitRatio,
       library: this.library,
       notes: this.notes,
+      topTabs: this.topTabs,
     });
   }
 }

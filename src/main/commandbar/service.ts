@@ -10,6 +10,11 @@ import type { CommandDef } from './model';
 export const COMMANDS: readonly CommandDef[] = [
   { id: 'new-tab-page', title: 'New Tab Page', keywords: ['wallpaper', 'home'] },
   { id: 'toggle-sidebar', title: 'Toggle Sidebar', keywords: ['hide', 'show'], shortcut: '⌘S' },
+  {
+    id: 'toggle-tabs-top',
+    title: 'Toggle Tabs on Top',
+    keywords: ['horizontal', 'tab strip', 'tab bar', 'layout', 'vertical', 'chrome'],
+  },
   { id: 'copy-url', title: 'Copy URL', keywords: ['link', 'address'], shortcut: '⇧⌘C' },
   { id: 'reload', title: 'Reload Page', keywords: ['refresh'], shortcut: '⌘R' },
   { id: 'close-tab', title: 'Close Tab', keywords: ['remove'], shortcut: '⌘W' },

@@ -128,6 +128,11 @@ let openLittle: ((url: string | null) => void) | null = null;
 /** ⌥⌘N, from any app (F-24). */
 const LITTLE_SHORTCUT = 'Alt+CommandOrControl+N';
 let lastEmptyLittle = 0;
+/** Tabs on top (the strip) or in the sidebar, in every window. */
+function applyTabLayout(layout: 'sidebar' | 'top'): void {
+  for (const controller of windows?.all() ?? []) controller.layout.setTopTabs(layout === 'top');
+}
+
 /** The menu accelerator and the global shortcut can both fire for one press; open one window. */
 function openEmptyLittle(): void {
   if (Date.now() - lastEmptyLittle < 400) return;
@@ -353,6 +358,12 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'quick-note':
       if (persistence) toggleQuickNote(persistence.notes, controller);
       return;
+    case 'toggle-tabs-top': {
+      const next = persistence?.settings.get('tabs.layout') === 'top' ? 'sidebar' : 'top';
+      persistence?.settings.set('tabs.layout', next);
+      applyTabLayout(next);
+      return;
+    }
     case 'toggle-notes':
       controller.notes.toggle();
       return;
@@ -504,7 +515,12 @@ void app.whenReady().then(() => {
       const [, height = 0] = window.win.getContentSize();
       window.overlay.flyDownload(
         { x: page.x + page.width / 2, y: page.y + Math.min(page.height / 2, 260) },
-        layout.sidebar.visible ? { x: 34, y: height - 86 } : { x: 22, y: height - 30 },
+        // Into the sidebar's shelf, the tab strip's Downloads button, or the corner.
+        layout.sidebar.visible
+          ? { x: 34, y: height - 86 }
+          : layout.tabStrip
+            ? { x: layout.tabStrip.width - 28, y: layout.tabStrip.height / 2 }
+            : { x: 22, y: height - 30 },
       );
     },
   );
@@ -648,6 +664,7 @@ void app.whenReady().then(() => {
       await s.clearCache();
     },
     revealData: () => void shell.openPath(app.getPath('userData')),
+    applyTabLayout,
     ai: {
       status: () => ({ hasKey: keyStore.has(), canStore: keyStore.canStore, model: TIDY_MODEL }),
       setKey: (input) => {

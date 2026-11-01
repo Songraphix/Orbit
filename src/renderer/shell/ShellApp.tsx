@@ -13,6 +13,7 @@ import type { TabState, TabsSnapshot } from '@shared/types/tabs';
 import { LittleBar } from './LittleBar';
 import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
+import { TabStrip } from './TabStrip';
 import { useMainState } from './use-main-state';
 
 /** Arc-like film grain over the sidebar (strength from the space's theme). */
@@ -114,7 +115,10 @@ function Chrome({
 
   return (
     <>
-      {!layout.sidebar.visible && !layout.fullscreen && (
+      {layout.tabStrip && sidebar && (
+        <TabStrip rect={layout.tabStrip} sidebar={sidebar} downloads={downloads} />
+      )}
+      {!layout.sidebar.visible && !layout.fullscreen && !layout.tabStrip && (
         // The hidden sidebar's edge: resting the pointer here slides it out (F-01).
         <div
           className="absolute inset-y-0 left-0 z-10"
@@ -145,7 +149,8 @@ function Chrome({
             radius={layout.radius}
             tab={tab}
             showToolbar={!layout.fullscreen}
-            sidebarVisible={layout.sidebar.visible || i > 0}
+            // No "show sidebar" button with tabs on top (the strip is the tab list).
+            sidebarVisible={layout.sidebar.visible || layout.tabStrip !== null || i > 0}
             find={find}
             focused={!split || tab?.id === tabs?.activeTabId}
             inSplit={split !== null}

@@ -181,6 +181,24 @@ describe('Notes panel layout', () => {
   });
 });
 
+describe('tabs on top', () => {
+  it('puts the strip across the top, hides the sidebar and starts the page below it', () => {
+    const layout = computeLayout({ ...base, topTabs: true });
+    expect(layout.tabStrip).toEqual({ x: 0, y: 0, width: 1280, height: 48 });
+    expect(layout.sidebar.visible).toBe(false);
+    expect(layout.card).toEqual({ x: 8, y: 48, width: 1264, height: 764 });
+    expect(computeLayout(base).tabStrip).toBeNull();
+  });
+
+  it('keeps the Notes panel level with the page; Library and fullscreen take over', () => {
+    const withNotes = computeLayout({ ...base, topTabs: true, notes: true });
+    expect(withNotes.notes!.y).toBe(48);
+    expect(withNotes.notes!.height).toBe(withNotes.card.height);
+    expect(computeLayout({ ...base, topTabs: true, library: 'narrow' }).tabStrip).toBeNull();
+    expect(computeLayout({ ...base, topTabs: true, htmlFullscreen: true }).tabStrip).toBeNull();
+  });
+});
+
 describe('sidebar edge drag', () => {
   it('resizes within limits, and hides when pushed to the edge', () => {
     expect(sidebarDrag(300)).toEqual({ collapse: false, width: 300 });

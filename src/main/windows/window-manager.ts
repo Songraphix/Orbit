@@ -328,7 +328,8 @@ export class WindowManager {
     /** The hidden sidebar slides out over the page while the pointer is on it (F-01). */
     function setSidebarPeek(open: boolean): void {
       const current = layout.current();
-      if (open && (current.sidebar.visible || current.fullscreen)) return;
+      // (Tabs on top: no sidebar to slide out.)
+      if (open && (current.sidebar.visible || current.fullscreen || current.tabStrip)) return;
       overlay.setSidebarPeek(open ? current.sidebar.width : null);
       // The traffic lights come out with it, like Arc.
       win.setWindowButtonVisibility(open || current.sidebar.visible);

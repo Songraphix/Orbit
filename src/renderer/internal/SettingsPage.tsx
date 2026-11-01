@@ -56,6 +56,22 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
           <Section id="general" title="General">
             <Group title="Tabs">
               <Row
+                label="Tab layout"
+                hint="Tabs in the sidebar, like Arc, or in a strip across the top."
+              >
+                <select
+                  value={settings.tabLayout}
+                  onChange={(e) =>
+                    update({ tabLayout: e.target.value as UserSettings['tabLayout'] })
+                  }
+                  className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                  data-testid="setting-tab-layout"
+                >
+                  <option value="sidebar">Sidebar</option>
+                  <option value="top">Top</option>
+                </select>
+              </Row>
+              <Row
                 label="Archive Today tabs"
                 hint="Tabs you haven’t opened in this long move to Archived Tabs."
               >

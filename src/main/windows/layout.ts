@@ -1,4 +1,4 @@
-import { LIBRARY_WIDTH, NOTES_WIDTH, SIDEBAR_WIDTH } from '@shared/types/layout';
+import { LIBRARY_WIDTH, NOTES_WIDTH, SIDEBAR_WIDTH, TAB_STRIP_HEIGHT } from '@shared/types/layout';
 import type { Layout, LibraryPanel, Rect } from '@shared/types/layout';
 
 /** Arc-like defaults (PLAN.md section 4.6). */
@@ -21,6 +21,8 @@ export type LayoutInput = {
   library?: LibraryPanel | null;
   /** The Notes panel (F-33) is open on the right. */
   notes?: boolean;
+  /** Tabs on top instead of in the sidebar. */
+  topTabs?: boolean;
 };
 
 /** How wide the Notes panel is: its usual width, giving way (down to its minimum) so the page
@@ -108,25 +110,31 @@ export function computeLayout(input: LayoutInput): Layout {
       fullscreen: true,
       library: null,
       notes: null,
+      tabStrip: null,
     };
   }
 
   const library = input.library
     ? libraryColumns(input.library, input.windowWidth, input.windowHeight, inset)
     : null;
-  const left = library ? library.pageLeft : input.sidebarVisible ? sidebarWidth : inset;
+  // Tabs on top: the strip across the window replaces the sidebar (the Library still takes over
+  // the left when it's open).
+  const strip = input.topTabs && !library;
+  const sidebarVisible = input.sidebarVisible && !strip;
+  const top = strip ? TAB_STRIP_HEIGHT : inset;
+  const left = library ? library.pageLeft : sidebarVisible ? sidebarWidth : inset;
   // The Notes panel takes a column on the right, with the usual gap before it.
   const notesW = input.notes ? notesWidth(input.windowWidth, left, inset) : 0;
   const right = input.notes ? notesW + inset * 2 : inset;
 
   const card = {
     x: left,
-    y: inset,
+    y: top,
     width: Math.max(0, input.windowWidth - left - right),
-    height: Math.max(0, input.windowHeight - inset * 2),
+    height: Math.max(0, input.windowHeight - top - inset),
   };
   const notes = input.notes
-    ? { x: card.x + card.width + inset, y: inset, width: notesW, height: card.height }
+    ? { x: card.x + card.width + inset, y: card.y, width: notesW, height: card.height }
     : null;
   // Split view: two cards side by side with a gap (the divider) between them.
   const panes =
@@ -152,7 +160,7 @@ export function computeLayout(input: LayoutInput): Layout {
     // In Library mode the sidebar is the sections column.
     sidebar: library
       ? { visible: true, width: library.nav.width }
-      : { visible: input.sidebarVisible, width: sidebarWidth },
+      : { visible: sidebarVisible, width: sidebarWidth },
     ...panes[0]!,
     panes,
     divider,
@@ -160,6 +168,9 @@ export function computeLayout(input: LayoutInput): Layout {
     fullscreen: false,
     library: library && { nav: library.nav, panel: library.panel },
     notes,
+    tabStrip: strip
+      ? { x: 0, y: 0, width: Math.max(0, input.windowWidth), height: TAB_STRIP_HEIGHT }
+      : null,
   };
 }
 

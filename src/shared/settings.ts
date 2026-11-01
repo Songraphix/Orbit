@@ -29,6 +29,8 @@ export const settingsSchema = {
   'window.activeSpace': z.string().nullable(),
   /** Today tabs not opened for this long are archived (F-20). */
   'archive.after': z.enum(['12h', '24h', '7d', '30d', 'never']),
+  /** Where tabs go: the sidebar (Arc) or a strip across the top (owner request). */
+  'tabs.layout': z.enum(['sidebar', 'top']),
   /** Live pages beyond this many are put to sleep, least recently used first (F-25). */
   'tabs.maxLive': z.number().int().min(1).max(50),
   /** Pages not viewed for this many minutes are put to sleep. 0 = only the maxLive limit. */
@@ -62,6 +64,7 @@ export const settingsDefaults: Settings = {
   'newtab.home': DEFAULT_HOME,
   'window.activeSpace': null,
   'archive.after': '12h',
+  'tabs.layout': 'sidebar',
   'tabs.maxLive': 8,
   'tabs.sleepAfterMinutes': 30,
   'search.engine': 'google',
@@ -84,6 +87,7 @@ export const SEARCH_ENGINES: Record<Settings['search.engine'], { name: string; u
 export const userSettingsSchema = z.object({
   archiveAfter: settingsSchema['archive.after'],
   maxLive: settingsSchema['tabs.maxLive'],
+  tabLayout: settingsSchema['tabs.layout'],
   sleepAfterMinutes: settingsSchema['tabs.sleepAfterMinutes'],
   searchEngine: settingsSchema['search.engine'],
   peek: settingsSchema['peek.enabled'],

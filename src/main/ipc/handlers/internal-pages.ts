@@ -22,6 +22,8 @@ export function registerInternalPageHandlers(
     /** Deletes a profile's cookies, storage and cache (when the profile is deleted). */
     clearProfileData: (partition: string) => Promise<void>;
     revealData: () => void;
+    /** Tabs on top or in the sidebar, in every window. */
+    applyTabLayout: (layout: 'sidebar' | 'top') => void;
     /** The Anthropic API key (F-29). */
     ai: {
       status: () => { hasKey: boolean; canStore: boolean; model: string };
@@ -78,6 +80,7 @@ export function registerInternalPageHandlers(
   const current = (): UserSettings => ({
     archiveAfter: deps.settings.get('archive.after'),
     maxLive: deps.settings.get('tabs.maxLive'),
+    tabLayout: deps.settings.get('tabs.layout'),
     sleepAfterMinutes: deps.settings.get('tabs.sleepAfterMinutes'),
     searchEngine: deps.settings.get('search.engine'),
     peek: deps.settings.get('peek.enabled'),
@@ -94,6 +97,10 @@ export function registerInternalPageHandlers(
     ownerOf(sender.webContentsId, 'settings');
     if (patch.archiveAfter) deps.settings.set('archive.after', patch.archiveAfter);
     if (patch.maxLive !== undefined) deps.settings.set('tabs.maxLive', patch.maxLive);
+    if (patch.tabLayout) {
+      deps.settings.set('tabs.layout', patch.tabLayout);
+      deps.applyTabLayout(patch.tabLayout);
+    }
     if (patch.sleepAfterMinutes !== undefined) {
       deps.settings.set('tabs.sleepAfterMinutes', patch.sleepAfterMinutes);
     }

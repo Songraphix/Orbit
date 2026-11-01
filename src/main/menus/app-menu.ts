@@ -184,6 +184,11 @@ export function installAppMenu(actions: AppMenuActions): void {
           click: actions.toggleSidebar,
         },
         {
+          id: 'toggle-tabs-top',
+          label: 'Toggle Tabs on Top',
+          click: () => actions.command('toggle-tabs-top'),
+        },
+        {
           id: 'toggle-notes',
           label: 'Toggle Notes',
           accelerator: 'Shift+CmdOrCtrl+N',
