@@ -1,4 +1,8 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { themeToVars } from '@shared/theme';
+import { DEFAULT_THEME } from '@shared/types/space';
+import type { SidebarSnapshot } from '@shared/types/space';
 import type { Layout, Rect } from '@shared/types/layout';
 import type { FindState } from '@shared/types/find';
 import type { TabsSnapshot } from '@shared/types/tabs';
@@ -6,16 +10,33 @@ import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
 import { useMainState } from './use-main-state';
 
+/** Arc-like film grain over the sidebar (strength from the space's theme). */
+const GRAIN =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+
 const toStyle = (r: Rect) => ({ left: r.x, top: r.y, width: r.width, height: r.height });
 
 export function ShellApp() {
   const layout = useMainState('state:layout');
   const tabs = useMainState('state:tabs');
   const find = useMainState('state:find');
+  const sidebar = useMainState('state:sidebar');
+
+  // ThemeEngine: the active space's theme becomes CSS variables for the whole shell.
+  const theme = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId)?.theme ?? DEFAULT_THEME;
+  const vars = useMemo(() => themeToVars(theme), [theme]);
 
   return (
-    <div className="relative h-full overflow-hidden" style={{ background: 'var(--sidebar-bg)' }}>
-      {layout && <Chrome layout={layout} tabs={tabs} find={find} />}
+    <div
+      className="relative h-full overflow-hidden transition-[background] duration-500"
+      style={{ ...(vars as CSSProperties), background: 'var(--sidebar-bg)' }}
+      data-testid="shell"
+    >
+      <div
+        className="pointer-events-none absolute inset-0 mix-blend-overlay"
+        style={{ background: GRAIN, opacity: 'var(--grain)' }}
+      />
+      {layout && <Chrome layout={layout} tabs={tabs} find={find} sidebar={sidebar} />}
     </div>
   );
 }
@@ -46,10 +67,12 @@ function Chrome({
   layout,
   tabs,
   find,
+  sidebar,
 }: {
   layout: Layout;
   tabs: TabsSnapshot | null;
   find: FindState | null;
+  sidebar: SidebarSnapshot | null;
 }) {
   const activeTab = tabs?.tabs.find((t) => t.id === tabs.activeTabId) ?? null;
   const hasActiveTab = activeTab !== null;
@@ -61,7 +84,7 @@ function Chrome({
       {layout.sidebar.visible && (
         <Sidebar
           width={layout.sidebar.width}
-          tabs={tabs}
+          sidebar={sidebar}
           onResizeStart={onResizeStart}
           onResizeEnd={onResizeEnd}
         />

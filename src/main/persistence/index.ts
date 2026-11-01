@@ -6,14 +6,14 @@ import { migrations } from './migrations';
 import { HistoryRepository } from './repositories/history';
 import { SettingsRepository } from './repositories/settings';
 import { SiteSettingsRepository } from './repositories/site-settings';
-import { TabsRepository } from './repositories/tabs';
+import { SidebarRepository } from './repositories/sidebar';
 
 export const DATABASE_FILE = 'orbit.db';
 
 export type Persistence = {
   db: Database;
   settings: SettingsRepository;
-  tabs: TabsRepository;
+  sidebar: SidebarRepository;
   history: HistoryRepository;
   siteSettings: SiteSettingsRepository;
   close(): void;
@@ -26,7 +26,7 @@ export function openPersistence(userDataDir: string): Persistence {
   return {
     db,
     settings: new SettingsRepository(db),
-    tabs: new TabsRepository(db),
+    sidebar: new SidebarRepository(db),
     history: new HistoryRepository(db),
     siteSettings: new SiteSettingsRepository(db),
     close: () => {

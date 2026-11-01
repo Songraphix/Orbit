@@ -21,6 +21,8 @@ export const settingsSchema = {
   'sidebar.width': z.number().int().min(200).max(400),
   'sidebar.visible': z.boolean(),
   'newtab.wallpaper': wallpaperChoiceSchema,
+  /** The space the main window shows. */
+  'window.activeSpace': z.string().nullable(),
 } as const;
 
 export type Settings = { [K in SettingKey]: z.output<(typeof settingsSchema)[K]> };
@@ -31,4 +33,5 @@ export const settingsDefaults: Settings = {
   'sidebar.width': 260,
   'sidebar.visible': true,
   'newtab.wallpaper': { kind: 'builtin', id: 'aurora' },
+  'window.activeSpace': null,
 };

@@ -1,0 +1,223 @@
+import { ChevronRight, CornerUpLeft, Folder, Globe, Sparkles, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
+import type { SidebarRow } from '@shared/types/space';
+
+const INDENT_PX = 14;
+
+const invoke = window.orbit.invoke;
+
+/** Inline rename field (double-click, or "Rename…" from the right-click menu). */
+export function RenameInput({
+  initial,
+  onDone,
+}: {
+  initial: string;
+  onDone: (value: string | null) => void;
+}) {
+  const [value, setValue] = useState(initial);
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    input.current?.focus();
+    input.current?.select();
+  }, []);
+  return (
+    <input
+      ref={input}
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => onDone(value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onDone(value);
+        if (e.key === 'Escape') onDone(null);
+      }}
+      className="min-w-0 flex-1 rounded bg-white/15 px-1 text-[13px] outline-none ring-1 ring-[var(--accent)]"
+      data-testid="rename-input"
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
+}
+
+export function TabIcon({ row }: { row: SidebarRow }) {
+  const className = `size-4 shrink-0 ${row.isLoading ? 'animate-pulse' : ''}`;
+  if (row.url?.startsWith('orbit://')) return <Sparkles className={className} strokeWidth={1.75} />;
+  if (row.favicon) return <img src={row.favicon} alt="" className={`${className} rounded-sm`} />;
+  return <Globe className={`${className} opacity-60`} strokeWidth={1.75} />;
+}
+
+/** A tab in the Pinned or Today list (F-04). */
+export function TabRow({
+  row,
+  active,
+  renaming,
+  onRenamed,
+}: {
+  row: SidebarRow;
+  active: boolean;
+  renaming: boolean;
+  onRenamed: () => void;
+}) {
+  const close = (e: MouseEvent) => {
+    e.stopPropagation();
+    void invoke('tabs:close', { tabId: row.id });
+  };
+  const unloaded = row.section !== 'today' && !row.live;
+
+  return (
+    <li>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-current={active ? 'page' : undefined}
+        className={`group flex h-8 items-center gap-2.5 rounded-lg pr-1 text-[13px] ${
+          active ? 'bg-[var(--row-active)] shadow-sm' : 'hover:bg-[var(--hover)]'
+        }`}
+        style={{ paddingLeft: 8 + row.depth * INDENT_PX }}
+        onClick={() => void invoke('tabs:activate', { tabId: row.id })}
+        onKeyDown={(e) => e.key === 'Enter' && void invoke('tabs:activate', { tabId: row.id })}
+        onAuxClick={(e) => e.button === 1 && close(e)} // middle-click closes (F-04)
+        onContextMenu={(e) => {
+          e.preventDefault();
+          void invoke('sidebar:itemMenu', { itemId: row.id });
+        }}
+        onDoubleClick={(e) => {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('orbit:rename', { detail: row.id }));
+        }}
+        data-testid="tab-row"
+        data-section={row.section}
+        data-tab-id={row.id}
+        data-live={row.live}
+      >
+        <TabIcon row={row} />
+        {renaming ? (
+          <RenameInput
+            initial={row.title}
+            onDone={(value) => {
+              if (value !== null) void invoke('sidebar:rename', { itemId: row.id, title: value });
+              onRenamed();
+            }}
+          />
+        ) : (
+          <span
+            className={`min-w-0 flex-1 truncate ${unloaded ? 'opacity-55' : ''}`}
+            title={row.title}
+          >
+            {row.title}
+          </span>
+        )}
+        {row.awayFromHome && (
+          <button
+            type="button"
+            aria-label="Back to pinned URL"
+            title="Back to pinned URL"
+            className="grid size-5 shrink-0 place-items-center rounded opacity-60 hover:bg-white/10 hover:opacity-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              void invoke('sidebar:goHome', { itemId: row.id });
+            }}
+            data-testid="go-home"
+          >
+            <CornerUpLeft size={13} />
+          </button>
+        )}
+        <button
+          type="button"
+          aria-label={`Close ${row.title}`}
+          className="grid size-5 shrink-0 place-items-center rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-white/10"
+          onClick={close}
+          data-testid="tab-close"
+        >
+          <X size={13} strokeWidth={2.25} />
+        </button>
+      </div>
+    </li>
+  );
+}
+
+/** A collapsible folder (F-05). */
+export function FolderRow({
+  row,
+  renaming,
+  onRenamed,
+}: {
+  row: SidebarRow;
+  renaming: boolean;
+  onRenamed: () => void;
+}) {
+  return (
+    <li>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={!row.collapsed}
+        className="flex h-8 items-center gap-2 rounded-lg pr-1 text-[13px] font-medium hover:bg-[var(--hover)]"
+        style={{ paddingLeft: 6 + row.depth * INDENT_PX }}
+        onClick={() => void invoke('sidebar:toggleFolder', { itemId: row.id })}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          void invoke('sidebar:itemMenu', { itemId: row.id });
+        }}
+        onDoubleClick={(e) => {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('orbit:rename', { detail: row.id }));
+        }}
+        data-testid="folder-row"
+      >
+        <ChevronRight
+          size={14}
+          className={`shrink-0 opacity-60 transition-transform ${row.collapsed ? '' : 'rotate-90'}`}
+        />
+        <Folder size={14} className="shrink-0 opacity-70" />
+        {renaming ? (
+          <RenameInput
+            initial={row.title}
+            onDone={(value) => {
+              if (value !== null) void invoke('sidebar:rename', { itemId: row.id, title: value });
+              onRenamed();
+            }}
+          />
+        ) : (
+          <span className="min-w-0 flex-1 truncate">{row.title}</span>
+        )}
+      </div>
+    </li>
+  );
+}
+
+export function RowList({
+  rows,
+  activeId,
+  renamingId,
+  onRenamed,
+  testId,
+}: {
+  rows: SidebarRow[];
+  activeId: string | null;
+  renamingId: string | null;
+  onRenamed: () => void;
+  testId: string;
+}) {
+  return (
+    <ul className="flex flex-col gap-0.5" data-testid={testId}>
+      {rows.map((row) =>
+        row.kind === 'folder' ? (
+          <FolderRow
+            key={row.id}
+            row={row}
+            renaming={renamingId === row.id}
+            onRenamed={onRenamed}
+          />
+        ) : (
+          <TabRow
+            key={row.id}
+            row={row}
+            active={row.id === activeId}
+            renaming={renamingId === row.id}
+            onRenamed={onRenamed}
+          />
+        ),
+      )}
+    </ul>
+  );
+}

@@ -6,6 +6,7 @@ const GETTERS = {
   'state:layout': 'layout:get',
   'state:tabs': 'tabs:get',
   'state:find': 'find:get',
+  'state:sidebar': 'sidebar:get',
 } as const;
 type StateEvent = keyof typeof GETTERS;
 

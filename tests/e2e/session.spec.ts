@@ -31,7 +31,7 @@ test('tabs, their order and the active tab survive a relaunch; others load lazil
   await invoke(first.win, 'tabs:create', { url: server.url('/one') });
   await invoke(first.win, 'tabs:create', { url: server.url('/two') });
   const rows = first.win.getByTestId('tab-row');
-  await expect(rows).toHaveText(['New Tab', 'Page One', 'Page Two']);
+  await expect(rows).toHaveText(['Page Two', 'Page One', 'New Tab']);
   await rows.nth(1).click(); // Page One is active when we quit
   await expect(rows.nth(1)).toHaveAttribute('aria-current', 'page');
   await first.close({ keepData: true });
@@ -39,7 +39,7 @@ test('tabs, their order and the active tab survive a relaunch; others load lazil
   const second = await launchOrbit({ userData: first.userData });
   try {
     const restored = second.win.getByTestId('tab-row');
-    await expect(restored).toHaveText(['New Tab', 'Page One', 'Page Two']);
+    await expect(restored).toHaveText(['Page Two', 'Page One', 'New Tab']);
     await expect(restored.nth(1)).toHaveAttribute('aria-current', 'page');
 
     // Only the active tab loaded; Page Two waits until it's clicked.
@@ -47,13 +47,15 @@ test('tabs, their order and the active tab survive a relaunch; others load lazil
       .poll(async () => (await loadedUrls(second.app)).some((u) => u.includes('/one')))
       .toBe(true);
     expect((await loadedUrls(second.app)).some((u) => u.includes('/two'))).toBe(false);
-    await restored.nth(2).click();
+    await restored.nth(0).click();
     await expect
       .poll(async () => (await loadedUrls(second.app)).some((u) => u.includes('/two')))
       .toBe(true);
 
-    // Tab shortcuts: ⌃Tab wraps to the first tab, ⌘2 jumps to the second.
+    // Tab shortcuts: ⌃Tab moves to the next tab, ⌘2 jumps to the second, ⌘9 to the last.
     await clickMenu(second.app, 'next-tab');
+    await expect(restored.nth(1)).toHaveAttribute('aria-current', 'page');
+    await clickMenu(second.app, 'previous-tab');
     await expect(restored.nth(0)).toHaveAttribute('aria-current', 'page');
     await clickMenu(second.app, 'go-to-tab-2');
     await expect(restored.nth(1)).toHaveAttribute('aria-current', 'page');

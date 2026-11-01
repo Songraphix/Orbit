@@ -47,7 +47,7 @@ test('⌘T opens the command bar; typing an address opens it in a new tab', asyn
   await expect(bar.getByTestId('command-item').first()).toHaveAttribute('data-kind', 'navigate');
   await bar.getByTestId('command-input').press('Enter');
 
-  await expect(win.getByTestId('tab-row')).toHaveText(['New Tab', 'Page One']);
+  await expect(win.getByTestId('tab-row')).toHaveText(['Page One', 'New Tab']);
   await expect.poll(() => overlayVisible(app)).toBe(false);
 });
 
@@ -58,8 +58,8 @@ test('history and open tabs show up; picking an open tab switches to it', async 
   const bar = await overlay(app);
   await bar.getByTestId('command-input').fill(server.url('/one'));
   await bar.getByTestId('command-input').press('Enter');
-  await expect(win.getByTestId('tab-row')).toHaveText(['New Tab', 'Page One']);
-  await win.getByTestId('tab-row').first().click();
+  await expect(win.getByTestId('tab-row')).toHaveText(['Page One', 'New Tab']);
+  await win.getByTestId('tab-row').last().click(); // back to the new tab page
 
   await clickMenu(app, 'new-tab');
   await bar.getByTestId('command-input').fill('page one');
@@ -77,7 +77,7 @@ test('history results appear for closed pages', async () => {
   const bar = await overlay(app);
   await bar.getByTestId('command-input').fill(server.url('/three'));
   await bar.getByTestId('command-input').press('Enter');
-  await expect(win.getByTestId('tab-row')).toHaveText(['New Tab', 'Page Three']);
+  await expect(win.getByTestId('tab-row')).toHaveText(['Page Three', 'New Tab']);
   await clickMenu(app, 'close-tab');
 
   await clickMenu(app, 'new-tab');
@@ -98,7 +98,7 @@ test('⌘L edits the current address; Esc and clicking outside close the bar', a
   await bar.getByTestId('command-input').fill(server.url('/two'));
   await bar.getByTestId('command-input').press('Enter');
   // Same tab navigated, no new tab.
-  await expect(win.getByTestId('tab-row')).toHaveText(['New Tab', 'Page Two']);
+  await expect(win.getByTestId('tab-row')).toHaveText(['Page Two', 'New Tab']);
 
   await win.getByTestId('toolbar-address').click(); // clicking the address = ⌘L
   await expect(bar.getByTestId('command-bar')).toBeVisible();
@@ -135,6 +135,6 @@ test('commands run from the bar; ⇧⌘T reopens the last closed tab', async () 
   await clickMenu(app, 'close-tab');
   await expect(win.getByTestId('tab-row')).toHaveText(['New Tab']);
   await clickMenu(app, 'reopen-tab');
-  await expect(win.getByTestId('tab-row')).toHaveText(['New Tab', 'Page Two']);
+  await expect(win.getByTestId('tab-row')).toHaveText(['Page Two', 'New Tab']);
   await expect(win.locator('[aria-current="page"]')).toHaveText('Page Two');
 });

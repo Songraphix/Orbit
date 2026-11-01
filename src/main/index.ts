@@ -1,8 +1,10 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, session } from 'electron';
+import type { Session } from 'electron';
 import type { WebContentsView } from 'electron';
 import { APP_NAME, isInternalPage } from '@shared/constants';
+import { DEFAULT_PROFILE_ID } from '@shared/types/space';
 import type { RendererEntry } from '@shared/constants';
 import { chromeUserAgent } from './app/user-agent';
 import { Broadcaster } from './ipc/broadcaster';
@@ -10,6 +12,7 @@ import { CommandBarService, copyActiveUrl } from './commandbar/service';
 import { registerAppHandlers } from './ipc/handlers/app';
 import { registerCommandBarHandlers } from './ipc/handlers/command-bar';
 import { registerFindHandlers } from './ipc/handlers/find';
+import { registerSidebarHandlers } from './ipc/handlers/sidebar';
 import { registerLayoutHandlers } from './ipc/handlers/layout';
 import { registerNewTabHandlers } from './ipc/handlers/newtab';
 import { navigateTab, registerTabHandlers } from './ipc/handlers/tabs';
@@ -20,6 +23,7 @@ import { SenderRegistry } from './ipc/sender';
 import { openPersistence } from './persistence';
 import { clampZoom } from './persistence/repositories/site-settings';
 import type { Persistence } from './persistence';
+import { SidebarStore } from './sidebar/store';
 import { WindowManager } from './windows/window-manager';
 import type { WindowController } from './windows/window-manager';
 
@@ -48,6 +52,12 @@ const senders = new SenderRegistry(
 const broadcaster = new Broadcaster();
 
 let persistence: Persistence | null = null;
+let sidebarStore: SidebarStore | null = null;
+
+// A stray error in main must never show Electron's blocking error dialog (a browser that can't
+// quit is worse than one that logs). Logged for debugging instead.
+process.on('uncaughtException', (error) => console.error('[orbit] uncaught exception', error));
+process.on('unhandledRejection', (reason) => console.error('[orbit] unhandled rejection', reason));
 let windows: WindowManager | null = null;
 
 function loadRenderer(win: BrowserWindow, entry: RendererEntry): void {
@@ -127,15 +137,26 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  sidebarStore?.close();
   persistence?.close();
   persistence = null;
 });
 
 void app.whenReady().then(() => {
   persistence = openPersistence(app.getPath('userData'));
+  const store = new SidebarStore(persistence.sidebar);
+  sidebarStore = store;
+  /** One session per profile (F-17). The default profile keeps Electron's default session, so
+   *  logins from before profiles existed carry over. */
+  const sessionFor = (profileId: string): Session | undefined => {
+    const profile = store.profiles.find((p) => p.id === profileId);
+    if (!profile || profile.id === DEFAULT_PROFILE_ID) return session.defaultSession;
+    return session.fromPartition(profile.partition);
+  };
   windows = new WindowManager({
     settings: persistence.settings,
-    tabsRepo: persistence.tabs,
+    store,
+    sessionFor,
     history: persistence.history,
     zoomFor: (url) => persistence?.siteSettings.zoomFor(url) ?? 0,
     senders,
@@ -159,6 +180,7 @@ void app.whenReady().then(() => {
     new WallpaperService(app.getPath('userData'), persistence.settings),
   );
   registerFindHandlers(router, windowManager);
+  registerSidebarHandlers(router, windowManager);
   registerCommandBarHandlers(
     router,
     windowManager,
@@ -200,6 +222,19 @@ void app.whenReady().then(() => {
       if (controller) zoom(controller, action);
     },
     print: () => windowManager.focused()?.tabs.active?.view.webContents.print(),
+    togglePin: () => {
+      const controller = windowManager.focused();
+      const id = controller?.tabs.activeItemId;
+      if (controller && id) controller.sidebar.togglePin(id);
+    },
+    newSpace: () => windowManager.focused()?.sidebar.newSpace(),
+    newFolder: () => windowManager.focused()?.sidebar.newFolder('pinned'),
+    goToSpace: (n) => {
+      const controller = windowManager.focused();
+      const space = store.spaces[n - 1];
+      if (controller && space) controller.tabs.switchSpace(space.id);
+    },
+    cycleSpace: (direction) => windowManager.focused()?.tabs.cycleSpace(direction),
     navigate: (action) => {
       const active = windowManager.focused()?.tabs.active;
       if (active) navigateTab(active, action);

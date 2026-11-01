@@ -1,8 +1,8 @@
 # Progress log
 
-## Current phase: Phase 2 — Overlay layer and command bar
+## Current phase: Phase 3 — Spaces, favorites, pinned, folders, themes, profiles, importer
 
-Target end: 2026-11-23 · Branch: `phase-2/command-bar` (Phase 1 merged to `main` at d58b3fa)
+Target end: 2026-12-10 · Branch: `phase-3/spaces` (Phase 2 merged to `main` at 8171a0e)
 
 ## Done
 
@@ -26,14 +26,18 @@ Target end: 2026-11-23 · Branch: `phase-2/command-bar` (Phase 1 merged to `main
 - 2026-11-01 — Phase 2: history [F-21] — migration 003 (history + FTS5 + triggers, favicons by host, site_settings), `HistoryRepository` (visits, titles, frecency-ranked prefix search, top sites, bulk import for the Arc importer); tabs record visits/titles/favicons
 - 2026-11-01 — Phase 2: overlay layer + command bar [F-21, F-22] — `OverlayController` (transparent top-most view, hidden when idle, focus returns to the page); command bar with results ranked in main (`buildResults`, pure): address / search first, switch-to-open-tab instead of duplicating, commands, history, Google suggestions (disabled in tests); ⌘T opens it (owner's choice), ⌘L / clicking the address edits the current URL; ⇧⌘C / ⇧⌥⌘C copy URL / Markdown link; ⇧⌘T reopens closed tabs (in memory, 25)
 - 2026-11-01 — Phase 2: find, zoom, print, toasts [F-31] — find bar in the toolbar strip (⌘F, Enter/⌘G next, ⇧Enter/⇧⌘G previous, match count, Esc), `FindController` (unit-tested); zoom ⌘+/⌘−/⌘0 remembered per site in `site_settings` and re-applied on navigation; ⌘P print; toolbar toasts ("Copied link", "Zoom 120%") — **Phase 2 task list complete**
+- 2026-11-01 — Phase 3: sidebar tree + Arc parsers — `sidebar/model.ts` (pure: favorites per profile, pinned/Today per space, nested folders, fractional keys, pin home-URL rules); Arc `StorableSidebar.json` and Chromium History parsers (verified locally against the owner's backup: 3 spaces, 12 favorites, 7 pinned, 6 Today)
+- 2026-11-01 — Phase 3: spaces [F-02…F-08, F-16] — migration 004 (profiles, spaces, sidebar_items; Phase 1 tabs migrated in), `SidebarStore` (structure written at once, live details debounced), `TabManager` now store-driven (a tab gets a live page only when opened; Today closes remove, pinned/favorite closes unload and go home), sidebar UI (favorites grid, pinned + folders, space header with Clear, New Tab, Today, bottom bar with space switcher and +), native item/space/create menus (Img 5), inline rename, ⌘D pin, ⌃1…⌃9 / ⌘⌥←→ spaces, ThemeEngine (CSS variables, WCAG AA text) with preset themes and grain; fixes: closing the active tab activates the next; quitting no longer hangs on late page events (store closed before the DB; main-process errors logged, never a blocking dialog)
 
 ## In progress
 
-- Phase 3: spaces, favorites, pinned tabs, folders, themes, profiles, Arc importer
+- Phase 3: Arc importer UI + import into the store; drag and drop; theme editor; profiles handlers; permissions
 
 ## Decisions made
 
 - 2026-11-01 — Command bar list built in-house rather than with cmdk: results are ranked in main, so cmdk's own fuzzy filter would fight it, and it pulls in several Radix packages
+- 2026-11-01 — New tabs open at the top of Today (Arc behaviour)
+- 2026-11-01 — Default profile keeps Electron's default session so existing logins carry over; other profiles get `persist:profile-<id>`
 - 2026-11-01 — New tab page added at the owner's request (F-32): "+ New Tab" always opens it; ⌘T opens it until the Phase 2 command bar, then ⌘T → command bar
 
 - Pinned versions: Electron 45.2.1 (Chromium 156, Node 24.22), electron-vite 6.0.0, Vite 8.3.5, React 19.3.1, TypeScript 6.0.3, Tailwind 4.3.3, Vitest 5.0.5, Playwright 1.64.1, electron-builder 26.18.0

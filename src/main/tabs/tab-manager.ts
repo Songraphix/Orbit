@@ -1,12 +1,14 @@
-import { randomUUID } from 'node:crypto';
-import type { BrowserWindow, WebContentsView } from 'electron';
+import type { BrowserWindow, Session, WebContentsView } from 'electron';
 import type { Layout } from '@shared/types/layout';
+import type { SidebarRow, SidebarSnapshot } from '@shared/types/space';
 import { NEW_TAB_URL } from '@shared/types/tabs';
-import type { TabsSnapshot } from '@shared/types/tabs';
-import { insertAfter, nextActiveAfterClose } from './model';
-import type { SavedTab } from '../persistence/repositories/tabs';
+import type { TabState, TabsSnapshot } from '@shared/types/tabs';
+import type { Space } from '../persistence/repositories/sidebar';
+import type { Section, SidebarItem } from '../sidebar/model';
+import type { SidebarStore } from '../sidebar/store';
+import { nextActiveAfterClose } from './model';
 import { TabController } from './tab-controller';
-import type { TabEnv, TabOptions } from './tab-controller';
+import type { TabEnv } from './tab-controller';
 
 /** A pre-drag snapshot older than this is stale (the page may have changed). */
 const SNAPSHOT_MAX_AGE_MS = 10_000;
@@ -23,49 +25,72 @@ export type TabManagerDeps = Pick<
   | 'zoomFor'
 > & {
   win: BrowserWindow;
+  store: SidebarStore;
+  initialSpaceId: string;
   getLayout: () => Layout;
-  onChange: (snapshot: TabsSnapshot) => void;
+  /** Session for a profile (each profile has its own cookies and logins). */
+  sessionFor: (profileId: string) => Session | undefined;
+  onChange: (tabs: TabsSnapshot, sidebar: SidebarSnapshot) => void;
+  onSpaceChange: (spaceId: string) => void;
   /** The active tab's page entered/left HTML fullscreen. */
   onHtmlFullscreen: (enter: boolean) => void;
   /** Find-in-page results from the active tab. */
   onFoundInPage: TabEnv['onFoundInPage'];
 };
 
+type ClosedTab = { url: string; title: string; favicon: string | null; spaceId: string };
+
+const isInternal = (url: string | null) => (url ?? '').startsWith('orbit://');
+
 /**
- * One window's tabs (PLAN.md section 4.3): creates, activates and closes them, and keeps the
- * active tab's view sized to the layout. Inactive views stay alive but hidden; sleeping tabs
- * (Phase 4) will destroy them.
+ * One window's tabs (PLAN.md section 4.3). The sidebar store owns *which* tabs exist and in what
+ * order; this owns their live pages. A tab gets a WebContentsView only once it's opened, so
+ * restored, pinned and favorite tabs cost nothing until clicked.
  */
 export class TabManager {
-  private order: string[] = [];
-  private readonly tabs = new Map<string, TabController>();
+  private readonly live = new Map<string, TabController>();
+  private spaceId: string;
   private activeId: string | null = null;
   private notifyScheduled = false;
   private frozen = false;
   private prepared: { tabId: string; at: number; dataUrl: string } | null = null;
-  private readonly closed: { url: string; title: string; favicon: string | null; index: number }[] =
-    [];
+  private readonly closed: ClosedTab[] = [];
+  private readonly unsubscribe: () => void;
+  /** Set once the window closes; late page events (pages unloading) are then ignored. */
+  private disposed = false;
 
-  constructor(private readonly deps: TabManagerDeps) {}
+  constructor(private readonly deps: TabManagerDeps) {
+    this.spaceId = deps.store.space(deps.initialSpaceId)
+      ? deps.initialSpaceId
+      : deps.store.spaces[0]!.id;
+    this.unsubscribe = deps.store.onChange(() => this.scheduleNotify());
+  }
 
-  snapshot(): TabsSnapshot {
-    return {
-      tabs: this.order.map((id) => this.tabs.get(id)!.state),
-      activeTabId: this.activeId,
-    };
+  // ── Reading ────────────────────────────────────────────────────────────────
+
+  get space(): Space {
+    return this.deps.store.space(this.spaceId) ?? this.deps.store.spaces[0]!;
+  }
+
+  get activeSpaceId(): string {
+    return this.space.id;
   }
 
   get active(): TabController | null {
-    return this.activeId ? (this.tabs.get(this.activeId) ?? null) : null;
+    return this.activeId ? (this.live.get(this.activeId) ?? null) : null;
+  }
+
+  get activeItemId(): string | null {
+    return this.activeId;
   }
 
   get(id: string): TabController | undefined {
-    return this.tabs.get(id);
+    return this.live.get(id);
   }
 
   /** The tab currently showing this webContents, if any. */
   findByContents(webContentsId: number): TabController | undefined {
-    for (const tab of this.tabs.values()) {
+    for (const tab of this.live.values()) {
       if (!tab.view.webContents.isDestroyed() && tab.view.webContents.id === webContentsId) {
         return tab;
       }
@@ -73,136 +98,183 @@ export class TabManager {
     return undefined;
   }
 
-  /** Opens a tab (default: the new tab page) right after the active tab and activates it. */
-  create(
-    url: string = NEW_TAB_URL,
-    options: { activate?: boolean; id?: string } & TabOptions = {},
-  ): TabController {
-    const { activate, id: savedId, ...tabOptions } = options;
-    const id = savedId ?? randomUUID();
-    const tab = new TabController(
-      id,
-      url,
-      {
-        internalPreload: this.deps.internalPreload,
-        loadInternal: this.deps.loadInternal,
-        registerInternal: this.deps.registerInternal,
-        unregisterInternal: this.deps.unregisterInternal,
-        history: this.deps.history,
-        zoomFor: this.deps.zoomFor,
-        onFoundInPage: (result) => {
-          if (this.activeId === id) this.deps.onFoundInPage(result);
-        },
-        openInNewTab: (link, activate) => this.create(link, { activate }),
-        onChange: () => this.scheduleNotify(),
-        onViewReplaced: (oldView, newView) => this.replaceView(id, oldView, newView),
-        // Only the visible tab may take over the window; leaving is always honoured.
-        onHtmlFullscreen: (enter) => {
-          if (!enter || this.activeId === id) this.deps.onHtmlFullscreen(enter);
-        },
-      },
-      tabOptions,
-    );
-    this.tabs.set(id, tab);
-    this.order = insertAfter(this.order, id, this.activeId ?? undefined);
-    this.attach(tab.view);
+  /** Every tab the active space shows (favorites, pinned, Today), live state merged in. */
+  snapshot(): TabsSnapshot {
+    return {
+      tabs: this.deps.store.tabsInOrder(this.space).map((item) => this.tabState(item)),
+      activeTabId: this.activeId,
+    };
+  }
 
-    if (activate ?? true) this.activate(id);
+  sidebarSnapshot(): SidebarSnapshot {
+    const space = this.space;
+    const rows = (section: Section): SidebarRow[] =>
+      this.deps.store.rows(section, space).map(({ item, depth }) => {
+        const tab = this.live.get(item.id);
+        const url = tab?.state.url ?? item.url;
+        return {
+          id: item.id,
+          kind: item.kind,
+          section: item.section,
+          parentId: item.parentId,
+          depth,
+          title: item.titleOverride || (tab?.state.title ?? item.title) || url || 'Untitled',
+          url,
+          favicon: tab?.state.favicon ?? item.favicon,
+          collapsed: item.collapsed,
+          live: tab !== undefined,
+          isLoading: tab?.state.isLoading ?? false,
+          awayFromHome: item.homeUrl !== null && url !== null && !sameUrl(url, item.homeUrl),
+        };
+      });
+    return {
+      spaces: this.deps.store.spaces.map((s) => ({
+        id: s.id,
+        name: s.name,
+        icon: s.icon,
+        profileId: s.profileId,
+        theme: s.theme,
+      })),
+      activeSpaceId: space.id,
+      favorites: rows('favorite'),
+      pinned: rows('pinned'),
+      today: rows('today'),
+      activeItemId: this.activeId,
+    };
+  }
+
+  // ── Opening, switching, closing ────────────────────────────────────────────
+
+  /** Opens a new Today tab at the top of the list (Arc), by default the new tab page. */
+  create(url: string = NEW_TAB_URL, options: { activate?: boolean } = {}): TabController {
+    const space = this.space;
+    const item = this.deps.store.insert(
+      { kind: 'tab', title: isInternal(url) ? 'New Tab' : url, url },
+      {
+        section: 'today',
+        profileId: space.profileId,
+        spaceId: space.id,
+        parentId: null,
+        beforeId: 'first',
+      },
+    );
+    const tab = this.ensureLive(item);
+    if (options.activate ?? true) this.activate(item.id);
     else this.scheduleNotify();
     return tab;
   }
 
+  /** Shows a tab, loading it if needed. Tabs from another space switch to that space. */
+  activate(id: string): void {
+    const item = this.deps.store.item(id);
+    if (!item || item.kind !== 'tab') return;
+    if (item.spaceId && item.spaceId !== this.spaceId) this.setSpace(item.spaceId, false);
+
+    const next = this.ensureLive(item);
+    const previous = this.active;
+    if (previous && previous !== next) previous.view.setVisible(false);
+    this.activeId = id;
+    this.frozen = false;
+    this.place(next.view);
+    next.view.setVisible(true);
+    next.view.webContents.focus();
+    this.deps.store.updateSpace(this.spaceId, { lastActiveItemId: id });
+    this.deps.store.updateLive(id, { lastActiveAt: Date.now() });
+    this.scheduleNotify();
+  }
+
   /**
-   * Re-opens saved tabs in order. Only the previously active tab loads now; the rest load when
-   * first clicked (cheap startup, and background tabs don't start playing audio).
+   * Closing a Today tab removes it (⇧⌘T can bring it back). Closing a pinned tab or favorite
+   * only unloads it and resets it to its home URL, like Arc.
    */
-  restore(saved: readonly SavedTab[]): void {
-    for (const s of saved) {
-      this.create(s.url, {
-        id: s.id,
-        activate: false,
-        deferLoad: true,
-        title: s.title,
-        favicon: s.favicon,
-      });
+  close(id: string): void {
+    const item = this.deps.store.item(id);
+    if (!item) return;
+    const order = this.deps.store.tabsInOrder(this.space).map((i) => i.id);
+    const wasActive = this.activeId === id; // read before unload() clears it
+    const nextId = wasActive ? nextActiveAfterClose(order, id, id) : this.activeId;
+
+    this.unload(id);
+    if (item.section === 'today') {
+      const { url, title, favicon } = item;
+      if (url) this.remember({ url, title, favicon, spaceId: item.spaceId ?? this.spaceId });
+      this.deps.store.remove(id);
+    } else if (item.homeUrl) {
+      this.deps.store.updateLive(id, { url: item.homeUrl });
     }
-    const active = saved.find((s) => s.isActive) ?? saved.at(-1);
-    if (active) this.activate(active.id);
+
+    if (wasActive) {
+      this.activeId = null;
+      if (nextId && nextId !== id) this.activate(nextId);
+    }
+    this.scheduleNotify();
   }
 
-  /** The current tabs in a form the repository can save. */
-  toSaved(): SavedTab[] {
-    return this.order.map((id) => {
-      const { url, title, favicon } = this.tabs.get(id)!.state;
-      return { id, url, title, favicon, isActive: id === this.activeId };
-    });
+  /** Destroys a tab's live page but keeps the sidebar item (pinned close, space deletion…). */
+  unload(id: string): void {
+    const tab = this.live.get(id);
+    if (!tab) return;
+    this.detach(tab.view);
+    tab.destroy();
+    this.live.delete(id);
+    if (this.activeId === id) this.activeId = null;
+    this.scheduleNotify();
   }
 
-  /** ⇧⌘T: reopens the most recently closed tab where it was. */
+  /** Pinned tab or favorite that wandered off: go back to its home URL. */
+  goHome(id: string): void {
+    const item = this.deps.store.item(id);
+    if (!item?.homeUrl) return;
+    const tab = this.live.get(id);
+    if (tab) tab.load(item.homeUrl);
+    else this.deps.store.updateLive(id, { url: item.homeUrl });
+    this.activate(id);
+  }
+
+  /** ⇧⌘T: reopens the most recently closed tab, at the top of Today in its space. */
   reopenClosed(): TabController | null {
     const last = this.closed.pop();
     if (!last) return null;
-    const tab = this.create(last.url, {
-      activate: false,
-      title: last.title,
-      favicon: last.favicon,
-    });
-    // Put it back at its old position rather than after the active tab.
-    this.order = this.order.filter((t) => t !== tab.id);
-    this.order.splice(Math.min(last.index, this.order.length), 0, tab.id);
-    this.activate(tab.id);
+    if (this.deps.store.space(last.spaceId) && last.spaceId !== this.spaceId) {
+      this.setSpace(last.spaceId, false);
+    }
+    const tab = this.create(last.url);
+    this.deps.store.updateLive(tab.id, { title: last.title, favicon: last.favicon });
     return tab;
   }
 
-  /** Previous/next tab (⌃⇧Tab / ⌃Tab), wrapping around. */
+  /** Switches the window to another space, showing the tab it had open. */
+  switchSpace(spaceId: string): void {
+    if (spaceId === this.spaceId || !this.deps.store.space(spaceId)) return;
+    this.setSpace(spaceId, true);
+  }
+
+  /** ⌃⌘← / ⌃⌘→ and swipes: previous/next space, wrapping around. */
+  cycleSpace(direction: 1 | -1): void {
+    const spaces = this.deps.store.spaces;
+    const index = spaces.findIndex((s) => s.id === this.spaceId);
+    const next = spaces[(index + direction + spaces.length) % spaces.length];
+    if (next) this.switchSpace(next.id);
+  }
+
+  /** Previous/next tab (⌃⇧Tab / ⌃Tab) within the space, wrapping around. */
   cycle(direction: 1 | -1): void {
-    if (this.order.length === 0) return;
-    const index = this.activeId ? this.order.indexOf(this.activeId) : -1;
-    const next = this.order[(index + direction + this.order.length) % this.order.length];
+    const order = this.deps.store.tabsInOrder(this.space).map((i) => i.id);
+    if (order.length === 0) return;
+    const index = this.activeId ? order.indexOf(this.activeId) : -1;
+    const next = order[(index + direction + order.length) % order.length];
     if (next) this.activate(next);
   }
 
   /** ⌘1…⌘8 go to that tab; ⌘9 always goes to the last one (like Chrome). */
   activateIndex(n: number): void {
-    const id = n === 9 ? this.order.at(-1) : this.order[n - 1];
+    const order = this.deps.store.tabsInOrder(this.space).map((i) => i.id);
+    const id = n === 9 ? order.at(-1) : order[n - 1];
     if (id) this.activate(id);
   }
 
-  activate(id: string): void {
-    const next = this.tabs.get(id);
-    if (!next) return;
-    const previous = this.active;
-    if (previous && previous !== next) previous.view.setVisible(false);
-    this.activeId = id;
-    this.frozen = false;
-    next.ensureLoaded(); // restored tabs load on first view
-    this.place(next.view);
-    next.view.setVisible(true);
-    next.view.webContents.focus();
-    this.scheduleNotify();
-  }
+  // ── Sidebar-resize snapshot (see ShellApp) ────────────────────────────────
 
-  close(id: string): void {
-    const tab = this.tabs.get(id);
-    if (!tab) return;
-    const nextId = nextActiveAfterClose(this.order, id, this.activeId);
-    // Remember it for ⇧⌘T (in memory; Phase 4 backs this with the archive).
-    const { url, title, favicon } = tab.state;
-    this.closed.push({ url, title, favicon, index: this.order.indexOf(id) });
-    if (this.closed.length > CLOSED_TAB_MEMORY) this.closed.shift();
-    this.detach(tab.view);
-    tab.destroy();
-    this.tabs.delete(id);
-    this.order = this.order.filter((t) => t !== id);
-    this.activeId = null;
-    if (nextId && nextId !== id) this.activate(nextId);
-    else this.scheduleNotify();
-  }
-
-  /**
-   * Captures the active page ahead of a possible sidebar drag (the shell calls this when the
-   * pointer reaches the sidebar edge), so `freeze()` can hide the view instantly.
-   */
   async prepareFreeze(): Promise<void> {
     const active = this.active;
     if (!active) return;
@@ -219,10 +291,6 @@ export class TabManager {
     }
   }
 
-  /**
-   * Hides the active view immediately (sidebar resizing: native views swallow pointer events,
-   * so the shell must receive them all) and returns the prepared snapshot to show in its place.
-   */
   freeze(): string | null {
     const active = this.active;
     if (!active || this.frozen) return null;
@@ -235,7 +303,6 @@ export class TabManager {
     return fresh ? prepared.dataUrl : null;
   }
 
-  /** Shows the active view again after `freeze()`. */
   unfreeze(): void {
     if (!this.frozen) return;
     this.frozen = false;
@@ -252,12 +319,94 @@ export class TabManager {
     if (active) this.place(active.view);
   }
 
-  /** Closes every view; call when the window closes so web contents don't leak. */
+  /** Closes every live page; call when the window closes so web contents don't leak. */
   destroyAll(): void {
-    for (const tab of this.tabs.values()) tab.destroy();
-    this.tabs.clear();
-    this.order = [];
+    if (this.disposed) return;
+    this.disposed = true;
+    this.unsubscribe();
+    this.deps.store.flushLive();
+    for (const tab of this.live.values()) tab.destroy();
+    this.live.clear();
     this.activeId = null;
+  }
+
+  // ── Internals ──────────────────────────────────────────────────────────────
+
+  private setSpace(spaceId: string, showRemembered: boolean): void {
+    this.active?.view.setVisible(false);
+    this.activeId = null;
+    this.spaceId = spaceId;
+    this.deps.onSpaceChange(spaceId);
+    if (showRemembered) {
+      const remembered = this.space.lastActiveItemId;
+      if (remembered && this.deps.store.item(remembered)) this.activate(remembered);
+    }
+    this.scheduleNotify();
+  }
+
+  private remember(tab: ClosedTab): void {
+    this.closed.push(tab);
+    if (this.closed.length > CLOSED_TAB_MEMORY) this.closed.shift();
+  }
+
+  private ensureLive(item: SidebarItem): TabController {
+    const existing = this.live.get(item.id);
+    if (existing) return existing;
+    const id = item.id;
+    const tab = new TabController(
+      id,
+      item.url ?? NEW_TAB_URL,
+      {
+        internalPreload: this.deps.internalPreload,
+        loadInternal: this.deps.loadInternal,
+        registerInternal: this.deps.registerInternal,
+        unregisterInternal: this.deps.unregisterInternal,
+        history: this.deps.history,
+        zoomFor: this.deps.zoomFor,
+        onFoundInPage: (result) => {
+          if (this.activeId === id) this.deps.onFoundInPage(result);
+        },
+        openInNewTab: (link, activate) => this.create(link, { activate }),
+        onChange: () => {
+          if (this.disposed) return;
+          const { url, title, favicon } = tab.state;
+          this.deps.store.updateLive(id, { url, title, favicon });
+          this.scheduleNotify();
+        },
+        onViewReplaced: (oldView, newView) => this.replaceView(id, oldView, newView),
+        // Only the visible tab may take over the window; leaving is always honoured.
+        onHtmlFullscreen: (enter) => {
+          if (!enter || this.activeId === id) this.deps.onHtmlFullscreen(enter);
+        },
+      },
+      {
+        title: item.titleOverride || item.title,
+        favicon: item.favicon,
+        session: this.deps.sessionFor(item.profileId),
+      },
+    );
+    this.live.set(id, tab);
+    this.attach(tab.view);
+    return tab;
+  }
+
+  private tabState(item: SidebarItem): TabState {
+    const tab = this.live.get(item.id);
+    if (tab) {
+      const state = tab.state;
+      return item.titleOverride ? { ...state, title: item.titleOverride } : state;
+    }
+    const url = item.url ?? NEW_TAB_URL;
+    return {
+      id: item.id,
+      url,
+      title: item.titleOverride || item.title || url,
+      favicon: item.favicon,
+      isLoading: false,
+      canGoBack: false,
+      canGoForward: false,
+      kind: isInternal(url) ? 'internal' : 'web',
+    };
   }
 
   private place(view: WebContentsView): void {
@@ -268,7 +417,7 @@ export class TabManager {
 
   private attach(view: WebContentsView): void {
     view.setVisible(false);
-    // Index 0 keeps tabs below anything added later (the overlay view in Phase 2).
+    // Index 0 keeps tabs below the overlay view.
     this.deps.win.contentView.addChildView(view, 0);
   }
 
@@ -286,13 +435,19 @@ export class TabManager {
     }
   }
 
-  /** Coalesces bursts of tab events (title + favicon + loading…) into one snapshot per tick. */
+  /** Coalesces bursts of events into one snapshot per tick. */
   private scheduleNotify(): void {
     if (this.notifyScheduled) return;
     this.notifyScheduled = true;
     queueMicrotask(() => {
       this.notifyScheduled = false;
-      if (!this.deps.win.isDestroyed()) this.deps.onChange(this.snapshot());
+      if (this.disposed || this.deps.win.isDestroyed()) return;
+      this.deps.onChange(this.snapshot(), this.sidebarSnapshot());
     });
   }
+}
+
+function sameUrl(a: string, b: string): boolean {
+  const norm = (u: string) => u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+  return norm(a) === norm(b);
 }

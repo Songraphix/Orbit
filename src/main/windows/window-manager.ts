@@ -5,10 +5,12 @@ import type { RendererEntry } from '@shared/constants';
 import type { Broadcaster } from '../ipc/broadcaster';
 import type { SenderRegistry } from '../ipc/sender';
 import type { SettingsRepository } from '../persistence/repositories/settings';
-import type { TabsRepository } from '../persistence/repositories/tabs';
 import type { TabController } from '../tabs/tab-controller';
 import type { HistorySink } from '../tabs/tab-controller';
+import type { SidebarStore } from '../sidebar/store';
+import type { Session } from 'electron';
 import { FindController } from '../tabs/find';
+import { SidebarActions } from '../sidebar/actions';
 import { TabManager } from '../tabs/tab-manager';
 import { LayoutEngine } from './layout-engine';
 import { OverlayController } from './overlay';
@@ -19,12 +21,11 @@ export const TRAFFIC_LIGHT_POSITION = { x: 16, y: 18 } as const;
 
 /** Window position/size writes are debounced; moving a window fires dozens of events. */
 const SAVE_DELAY_MS = 500;
-/** Tab list writes are debounced too (titles and favicons change in bursts). */
-const TAB_SAVE_DELAY_MS = 500;
 
 export type WindowManagerDeps = {
   settings: SettingsRepository;
-  tabsRepo: TabsRepository;
+  store: SidebarStore;
+  sessionFor: (profileId: string) => Session | undefined;
   history: HistorySink;
   zoomFor: (url: string) => number;
   senders: SenderRegistry;
@@ -45,6 +46,8 @@ export type WindowController = {
   tabs: TabManager;
   overlay: OverlayController;
   find: FindController;
+  store: SidebarStore;
+  sidebar: SidebarActions;
 };
 
 /** Creates and restores Orbit's windows (PLAN.md section 4.3). */
@@ -128,6 +131,10 @@ export class WindowManager {
     });
     tabs = new TabManager({
       win,
+      store: this.deps.store,
+      initialSpaceId: settings.get('window.activeSpace') ?? '',
+      sessionFor: this.deps.sessionFor,
+      onSpaceChange: (spaceId) => settings.set('window.activeSpace', spaceId),
       getLayout: () => layout.current(),
       internalPreload: this.deps.internalPreloadPath,
       loadInternal: this.deps.loadInternal,
@@ -136,9 +143,9 @@ export class WindowManager {
       history: this.deps.history,
       zoomFor: this.deps.zoomFor,
       onFoundInPage: (result) => find.onResult(result),
-      onChange: (snapshot) => {
+      onChange: (snapshot, sidebar) => {
         broadcaster.sendTo(contents, 'state:tabs', snapshot);
-        scheduleTabSave();
+        broadcaster.sendTo(contents, 'state:sidebar', sidebar);
         // Find belongs to the page it searched; switching tabs closes it.
         if (snapshot.activeTabId !== lastActiveTabId) {
           lastActiveTabId = snapshot.activeTabId;
@@ -148,19 +155,6 @@ export class WindowManager {
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
     });
     const tabManager = tabs;
-
-    // Session restore (PLAN.md section 5.3): open tabs are saved shortly after every change
-    // and immediately on close, so a force-quit loses at most the last half second.
-    let tabSaveTimer: ReturnType<typeof setTimeout> | null = null;
-    const saveTabs = () => {
-      if (tabSaveTimer) clearTimeout(tabSaveTimer);
-      tabSaveTimer = null;
-      this.deps.tabsRepo.saveAll(tabManager.toSaved());
-    };
-    function scheduleTabSave() {
-      if (tabSaveTimer) clearTimeout(tabSaveTimer);
-      tabSaveTimer = setTimeout(saveTabs, TAB_SAVE_DELAY_MS);
-    }
 
     // HTML fullscreen (section 4.6): Electron doesn't do this for us. The page takes the whole
     // window, and the window goes fullscreen unless it already was (then we leave it as is).
@@ -213,7 +207,21 @@ export class WindowManager {
 
     const id = contents.id;
     const overlayId = overlay.view.webContents.id;
-    const controller: WindowController = { win, layout, tabs: tabManager, overlay, find };
+    const sidebar = new SidebarActions(this.deps.store, tabManager, {
+      startRename: (target, renameId) =>
+        broadcaster.sendTo(contents, 'rename:start', { target, id: renameId, at: Date.now() }),
+      toast: (message) => broadcaster.sendTo(contents, 'toast:show', { message, at: Date.now() }),
+      openCommandBar: () => overlay.openCommandBar('new'),
+    });
+    const controller: WindowController = {
+      win,
+      layout,
+      tabs: tabManager,
+      overlay,
+      find,
+      store: this.deps.store,
+      sidebar,
+    };
     this.controllers.set(id, controller);
     this.controllers.set(overlayId, controller);
     senders.add(id, 'shell');
@@ -230,17 +238,18 @@ export class WindowManager {
     });
     win.on('close', () => {
       layout.flush();
-      saveTabs();
+      this.deps.store.flushLive(); // the sidebar store saves structure at once; live details now
     });
     win.on('closed', () => {
       tabManager.destroyAll();
       overlay.destroy();
     });
 
-    // Reopen last session's tabs, or start with a new tab page.
-    const savedTabs = this.deps.tabsRepo.load();
-    if (savedTabs.length > 0) tabManager.restore(savedTabs);
-    else tabManager.create();
+    // Reopen the space and tab that were showing; a brand-new profile starts on a new tab page.
+    const space = tabManager.space;
+    const remembered = space.lastActiveItemId;
+    if (remembered && this.deps.store.item(remembered)) tabManager.activate(remembered);
+    else if (this.deps.store.tabsInOrder(space).length === 0) tabManager.create();
 
     // The shell never navigates or opens windows itself (PLAN.md section 4.8).
     contents.on('will-navigate', (event) => event.preventDefault());

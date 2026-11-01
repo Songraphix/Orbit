@@ -5,12 +5,16 @@
  * should read colours from these variables rather than hard-coding them.
  */
 :root {
-  /* Translucent so the macOS vibrancy behind the window shows through (F-01). */
+  /* Defaults; the ThemeEngine (src/shared/theme.ts) overrides these per space on the shell root.
+     Translucent so the macOS vibrancy behind the window shows through (F-01). */
   --sidebar-bg: rgb(27 21 48 / 0.62);
   --sidebar-fg: #ece9f5;
+  --sidebar-muted: rgb(236 233 245 / 0.55);
   --accent: #8b7cf6;
   --tile-bg: rgb(255 255 255 / 0.08);
   --hover: rgb(255 255 255 / 0.06);
+  --row-active: rgb(255 255 255 / 0.16);
+  --grain: 0.1;
   color-scheme: dark;
 }
 

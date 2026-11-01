@@ -3,6 +3,7 @@ import { layoutSchema } from '../types/layout';
 import { commandBarModeSchema, commandItemSchema, overlayStateSchema } from '../types/command-bar';
 import { findStateSchema } from '../types/find';
 import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
+import { sidebarSnapshotSchema, spaceThemeSchema } from '../types/space';
 import { tabsSnapshotSchema } from '../types/tabs';
 
 /**
@@ -94,6 +95,70 @@ export const contract = {
     output: z.void(),
   },
 
+  // Sidebar tree and spaces (F-02…F-08). Right-click menus are native, built in main.
+  'sidebar:get': {
+    input: z.object({}).strict(),
+    output: sidebarSnapshotSchema,
+  },
+  'sidebar:toggleFolder': {
+    input: z.object({ itemId: tabId }).strict(),
+    output: z.void(),
+  },
+  'sidebar:goHome': {
+    input: z.object({ itemId: tabId }).strict(),
+    output: z.void(),
+  },
+  'sidebar:clearToday': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
+  'sidebar:rename': {
+    input: z.object({ itemId: tabId, title: z.string().max(200) }).strict(),
+    output: z.void(),
+  },
+  'sidebar:move': {
+    input: z
+      .object({
+        itemId: tabId,
+        section: z.enum(['favorite', 'pinned', 'today']),
+        parentId: tabId.nullable(),
+        beforeId: tabId.nullable(),
+      })
+      .strict(),
+    output: z.void(),
+  },
+  'sidebar:itemMenu': {
+    input: z.object({ itemId: tabId }).strict(),
+    output: z.void(),
+  },
+  'sidebar:spaceMenu': {
+    input: z.object({ spaceId: tabId }).strict(),
+    output: z.void(),
+  },
+  'sidebar:createMenu': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
+  'spaces:activate': {
+    input: z.object({ spaceId: tabId }).strict(),
+    output: z.void(),
+  },
+  'spaces:cycle': {
+    input: z.object({ direction: z.union([z.literal(1), z.literal(-1)]) }).strict(),
+    output: z.void(),
+  },
+  'spaces:update': {
+    input: z
+      .object({
+        spaceId: tabId,
+        name: z.string().min(1).max(60).optional(),
+        icon: z.string().min(1).max(40).optional(),
+        theme: spaceThemeSchema.optional(),
+      })
+      .strict(),
+    output: z.void(),
+  },
+
   // Command bar (F-21). The shell opens it; the overlay (where it renders) queries and executes.
   'commandbar:open': {
     input: z.object({ mode: commandBarModeSchema }).strict(),
@@ -165,10 +230,14 @@ export const events = {
   'state:layout': layoutSchema,
   /** Sent to a window's shell whenever its tabs change. */
   'state:tabs': tabsSnapshotSchema,
+  /** Sent to a window's shell whenever its sidebar (spaces, favorites, pinned, Today) changes. */
+  'state:sidebar': sidebarSnapshotSchema,
   /** Sent to a window's overlay when floating UI opens or closes. */
   'state:overlay': overlayStateSchema,
   /** Sent to a window's shell when find-in-page changes. */
   'state:find': findStateSchema,
+  /** Ask the shell to start inline renaming (a sidebar item, or the space header). */
+  'rename:start': z.object({ target: z.enum(['item', 'space']), id: z.string(), at: z.number() }),
   /** A short confirmation in the toolbar ("Copied link"). */
   'toast:show': z.object({ message: z.string().max(200), at: z.number() }),
 } as const satisfies Record<string, z.ZodType>;

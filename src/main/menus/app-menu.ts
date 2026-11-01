@@ -17,6 +17,14 @@ export type AppMenuActions = {
   /** ⌘+ / ⌘− / ⌘0. */
   zoom: (action: 'in' | 'out' | 'reset') => void;
   print: () => void;
+  /** ⌘D: pin / unpin the active tab. */
+  togglePin: () => void;
+  newSpace: () => void;
+  newFolder: () => void;
+  /** ⌃1…⌃9. */
+  goToSpace: (n: number) => void;
+  /** ⌘⌥← / ⌘⌥→. */
+  cycleSpace: (direction: 1 | -1) => void;
   /** Acts on the focused window's active tab. */
   navigate: (action: NavigateAction) => void;
   /** Opens DevTools for the active tab's page (⌥⌘I). */
@@ -186,8 +194,42 @@ export function installAppMenu(actions: AppMenuActions): void {
       ],
     },
     {
+      label: 'Spaces',
+      submenu: [
+        { id: 'new-space', label: 'New Space', click: actions.newSpace },
+        { id: 'new-folder', label: 'New Folder', click: actions.newFolder },
+        { type: 'separator' },
+        {
+          id: 'next-space',
+          label: 'Next Space',
+          accelerator: 'Alt+CmdOrCtrl+Right',
+          click: () => actions.cycleSpace(1),
+        },
+        {
+          id: 'previous-space',
+          label: 'Previous Space',
+          accelerator: 'Alt+CmdOrCtrl+Left',
+          click: () => actions.cycleSpace(-1),
+        },
+        { type: 'separator' },
+        ...Array.from({ length: 9 }, (_, i): MenuItemConstructorOptions => ({
+          id: `go-to-space-${i + 1}`,
+          label: `Go to Space ${i + 1}`,
+          accelerator: `Ctrl+${i + 1}`,
+          click: () => actions.goToSpace(i + 1),
+        })),
+      ],
+    },
+    {
       label: 'Tabs',
       submenu: [
+        {
+          id: 'toggle-pin',
+          label: 'Pin / Unpin Tab',
+          accelerator: 'CmdOrCtrl+D',
+          click: actions.togglePin,
+        },
+        { type: 'separator' },
         {
           id: 'next-tab',
           label: 'Next Tab',

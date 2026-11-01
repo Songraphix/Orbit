@@ -97,28 +97,29 @@ test('switches, closes and reopens tabs; ⌘W closes the active tab', async () =
   await invoke(win, 'tabs:create', { url: server.url('/one') });
   await invoke(win, 'tabs:create', { url: server.url('/two') });
   const rows = win.getByTestId('tab-row');
-  await expect(rows).toHaveText(['New Tab', 'Page One', 'Page Two']);
+  // New tabs go to the top of Today (Arc).
+  await expect(rows).toHaveText(['Page Two', 'Page One', 'New Tab']);
 
   // Click "Page One" to activate it.
   await rows.nth(1).click();
   await expect(rows.nth(1)).toHaveAttribute('aria-current', 'page');
 
-  // Close it with its × button: the tab below ("Page Two") becomes active.
+  // Close it with its × button: the tab below ("New Tab") becomes active.
   await rows.nth(1).hover();
   await rows.nth(1).getByTestId('tab-close').click();
-  await expect(rows).toHaveText(['New Tab', 'Page Two']);
+  await expect(rows).toHaveText(['Page Two', 'New Tab']);
   await expect(rows.nth(1)).toHaveAttribute('aria-current', 'page');
 
   // ⌘W (File → Close Tab) closes the active tab; the one above takes over.
   await app.evaluate(({ Menu }) =>
     Menu.getApplicationMenu()!.getMenuItemById('close-tab')!.click(),
   );
-  await expect(rows).toHaveText(['New Tab']);
+  await expect(rows).toHaveText(['Page Two']);
   await expect(rows.first()).toHaveAttribute('aria-current', 'page');
 
-  // "+ New Tab" opens another new tab page.
+  // "+ New Tab" opens another new tab page, at the top.
   await win.getByTestId('new-tab-row').click();
-  await expect(rows).toHaveText(['New Tab', 'New Tab']);
+  await expect(rows).toHaveText(['New Tab', 'Page Two']);
 });
 
 test('typed input is classified: domains load, words search', async () => {
@@ -139,7 +140,7 @@ test('links with target=_blank open as a new tab', async () => {
   await expect(win.locator('[aria-current="page"]')).toHaveText('Page One');
 
   await inTab(app, '/one', 'document.getElementById("popup").click()');
-  await expect(win.getByTestId('tab-row')).toHaveText(['New Tab', 'Page One', 'Page Two']);
+  await expect(win.getByTestId('tab-row')).toHaveText(['Page Two', 'Page One', 'New Tab']);
   // No extra native windows were created.
   expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
 });
