@@ -152,6 +152,11 @@ export const contract = {
     input: z.object({ direction: z.union([z.literal(1), z.literal(-1)]) }).strict(),
     output: z.void(),
   },
+  /** Moves a space to a profile ('new' creates one). Its pages reload in that profile. */
+  'spaces:setProfile': {
+    input: z.object({ spaceId: tabId, profileId: z.union([tabId, z.literal('new')]) }).strict(),
+    output: z.object({ profileId: z.string() }),
+  },
   'spaces:update': {
     input: z
       .object({

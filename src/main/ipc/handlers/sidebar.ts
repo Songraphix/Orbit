@@ -54,6 +54,17 @@ export function registerSidebarHandlers(router: IpcRouter, windows: WindowManage
     windowFor(sender.webContentsId).tabs.cycleSpace(direction);
   });
 
+  router.handle('spaces:setProfile', ({ spaceId, profileId }, { sender }) => {
+    const { store, sidebar } = windowFor(sender.webContentsId);
+    const id =
+      profileId === 'new'
+        ? store.createProfile(`Profile ${store.profiles.length + 1}`).id
+        : profileId;
+    if (!store.profiles.some((p) => p.id === id)) throw new Error('Unknown profile');
+    sidebar.setProfile(spaceId, id);
+    return { profileId: id };
+  });
+
   router.handle('spaces:update', ({ spaceId, ...patch }, { sender }) => {
     windowFor(sender.webContentsId).store.updateSpace(spaceId, patch);
   });

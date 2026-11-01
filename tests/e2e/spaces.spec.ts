@@ -138,3 +138,29 @@ test('Clear closes Today tabs; ⇧⌘T brings them back', async () => {
     await orbit.close();
   }
 });
+
+test('profiles keep logins apart: a cookie set in one space’s profile is invisible in another', async () => {
+  const orbit = await launchOrbit();
+  try {
+    const { app, win } = orbit;
+    const address = win.getByTestId('toolbar-address');
+    await invoke(win, 'tabs:create', { url: server.url('/cookie?set=personal') });
+    await invoke(win, 'tabs:create', { url: server.url('/cookie') });
+    await expect(address).toContainText('cookie:who=personal');
+
+    // A second space on a brand-new profile sees no cookie.
+    await clickMenu(app, 'new-space');
+    await win.getByTestId('rename-input').press('Enter');
+    const snapshot = await invoke<{ activeSpaceId: string }>(win, 'sidebar:get');
+    await invoke(win, 'spaces:setProfile', { spaceId: snapshot.activeSpaceId, profileId: 'new' });
+    await invoke(win, 'tabs:create', { url: server.url('/cookie') });
+    await expect(address).toContainText('cookie:none');
+
+    // Back in the first space, its login is untouched.
+    await clickMenu(app, 'go-to-space-1');
+    await invoke(win, 'tabs:create', { url: server.url('/cookie') });
+    await expect(address).toContainText('cookie:who=personal');
+  } finally {
+    await orbit.close();
+  }
+});

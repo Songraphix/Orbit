@@ -1,7 +1,9 @@
 import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { PointerEvent } from 'react';
+import type { DragEvent, PointerEvent } from 'react';
 import type { SidebarSnapshot } from '@shared/types/space';
+import { DndContext, moveFor, readDragged } from './sidebar/dnd';
+import type { DndState, DropTarget } from './sidebar/dnd';
 import { FavoritesGrid } from './sidebar/FavoritesGrid';
 import { RowList } from './sidebar/Rows';
 import { BottomBar, SpaceHeader } from './sidebar/SpaceParts';
@@ -42,8 +44,43 @@ function useRenaming() {
  * The sidebar (F-01…F-07, Img 5): favorites grid, pinned tabs and folders, the space header with
  * Clear, "+ New Tab", Today, and the bottom bar with the space switcher.
  */
+function useDndState(sidebar: SidebarSnapshot | null): DndState {
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [target, setTarget] = useState<DropTarget | null>(null);
+  return {
+    dragging,
+    target,
+    setDragging,
+    setTarget,
+    drop: (itemId, dropTarget) => {
+      setDragging(null);
+      setTarget(null);
+      if (!itemId || !sidebar) return;
+      const move = moveFor(dropTarget, sidebar);
+      if (move) void window.orbit.invoke('sidebar:move', { itemId, ...move });
+    },
+  };
+}
+
+/** A drop zone (end of a section, or the favorites grid). */
+function dropZone(dnd: DndState, target: DropTarget) {
+  return {
+    onDragOver: (e: DragEvent) => {
+      if (!dnd.dragging) return;
+      e.preventDefault();
+      dnd.setTarget(target);
+    },
+    onDrop: (e: DragEvent) => {
+      e.preventDefault();
+      dnd.drop(readDragged(e) ?? dnd.dragging, target);
+    },
+  };
+}
+
 export function Sidebar({ width, sidebar, onResizeStart, onResizeEnd }: Props) {
   const [renaming, stopRenaming] = useRenaming();
+  const dnd = useDndState(sidebar);
+  const isTarget = (t: DropTarget) => JSON.stringify(dnd.target) === JSON.stringify(t);
   const space = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId);
   const renamingItem = renaming?.target === 'item' ? renaming.id : null;
 
@@ -59,40 +96,60 @@ export function Sidebar({ width, sidebar, onResizeStart, onResizeEnd }: Props) {
         data-testid="title-strip"
       />
       {sidebar && space && (
-        <div className="no-drag min-h-0 flex-1 overflow-y-auto pb-2">
-          <FavoritesGrid rows={sidebar.favorites} activeId={sidebar.activeItemId} />
-          <nav className="flex flex-col gap-0.5 px-2" aria-label="Tabs">
-            <RowList
-              rows={sidebar.pinned}
-              activeId={sidebar.activeItemId}
-              renamingId={renamingItem}
-              onRenamed={stopRenaming}
-              testId="pinned-list"
-            />
-            <SpaceHeader
-              space={space}
-              renaming={renaming?.target === 'space'}
-              onRenamed={stopRenaming}
-              hasToday={sidebar.today.length > 0}
-            />
-            <button
-              type="button"
-              className="flex h-8 items-center gap-2.5 rounded-lg px-2 text-left text-[13px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
-              onClick={() => void window.orbit.invoke('tabs:create', {})}
-              data-testid="new-tab-row"
+        <DndContext.Provider value={dnd}>
+          <div className="no-drag min-h-0 flex-1 overflow-y-auto pb-2">
+            <div
+              {...dropZone(dnd, { kind: 'favorites' })}
+              className={`rounded-xl ${isTarget({ kind: 'favorites' }) ? 'bg-[var(--hover)] ring-2 ring-[var(--accent)]' : ''} ${
+                sidebar.favorites.length === 0 && dnd.dragging ? 'mx-3 mb-2 h-10' : ''
+              }`}
+              data-testid="favorites-drop"
             >
-              <Plus size={16} strokeWidth={2} />
-              New Tab
-            </button>
-            <RowList
-              rows={sidebar.today}
-              activeId={sidebar.activeItemId}
-              renamingId={renamingItem}
-              onRenamed={stopRenaming}
-              testId="tab-list"
-            />
-          </nav>
-        </div>
+              <FavoritesGrid rows={sidebar.favorites} activeId={sidebar.activeItemId} />
+            </div>
+            <nav className="flex flex-col gap-0.5 px-2" aria-label="Tabs">
+              <RowList
+                rows={sidebar.pinned}
+                activeId={sidebar.activeItemId}
+                renamingId={renamingItem}
+                onRenamed={stopRenaming}
+                testId="pinned-list"
+              />
+              <div
+                {...dropZone(dnd, { kind: 'end', section: 'pinned' })}
+                className={`h-2 rounded ${isTarget({ kind: 'end', section: 'pinned' }) ? 'bg-[var(--accent)]/60' : ''}`}
+                data-testid="pinned-end"
+              />
+              <SpaceHeader
+                space={space}
+                renaming={renaming?.target === 'space'}
+                onRenamed={stopRenaming}
+                hasToday={sidebar.today.length > 0}
+              />
+              <button
+                type="button"
+                className="flex h-8 items-center gap-2.5 rounded-lg px-2 text-left text-[13px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+                onClick={() => void window.orbit.invoke('tabs:create', {})}
+                data-testid="new-tab-row"
+              >
+                <Plus size={16} strokeWidth={2} />
+                New Tab
+              </button>
+              <RowList
+                rows={sidebar.today}
+                activeId={sidebar.activeItemId}
+                renamingId={renamingItem}
+                onRenamed={stopRenaming}
+                testId="tab-list"
+              />
+              <div
+                {...dropZone(dnd, { kind: 'end', section: 'today' })}
+                className={`min-h-8 flex-1 rounded ${isTarget({ kind: 'end', section: 'today' }) ? 'shadow-[inset_0_2px_0_var(--accent)]' : ''}`}
+                data-testid="today-end"
+              />
+            </nav>
+          </div>
+        </DndContext.Provider>
       )}
       {sidebar && <BottomBar spaces={sidebar.spaces} activeSpaceId={sidebar.activeSpaceId} />}
       <ResizeHandle onStart={onResizeStart} onEnd={onResizeEnd} />

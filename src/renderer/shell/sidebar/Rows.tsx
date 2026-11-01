@@ -1,9 +1,49 @@
 import { ChevronRight, CornerUpLeft, Folder, Globe, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { MouseEvent } from 'react';
+import type { DragEvent, MouseEvent } from 'react';
 import type { SidebarRow } from '@shared/types/space';
+import { DRAG_TYPE, readDragged, targetForRow, useDnd } from './dnd';
 
 const INDENT_PX = 14;
+
+/** Drag handlers and the drop indicator for one row. */
+function useRowDnd(row: SidebarRow) {
+  const dnd = useDnd();
+  const target =
+    dnd.target && 'rowId' in dnd.target && dnd.target.rowId === row.id ? dnd.target : null;
+  const indicator =
+    target?.kind === 'before'
+      ? 'shadow-[inset_0_2px_0_var(--accent)]'
+      : target?.kind === 'after'
+        ? 'shadow-[inset_0_-2px_0_var(--accent)]'
+        : target?.kind === 'into'
+          ? 'ring-2 ring-[var(--accent)]'
+          : '';
+  const props = {
+    draggable: true,
+    onDragStart: (e: DragEvent<HTMLDivElement>) => {
+      e.dataTransfer.setData(DRAG_TYPE, row.id);
+      e.dataTransfer.effectAllowed = 'move';
+      dnd.setDragging(row.id);
+    },
+    onDragEnd: () => {
+      dnd.setDragging(null);
+      dnd.setTarget(null);
+    },
+    onDragOver: (e: DragEvent<HTMLDivElement>) => {
+      if (!dnd.dragging || dnd.dragging === row.id) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dnd.setTarget(targetForRow(row, e));
+    },
+    onDrop: (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dnd.drop(readDragged(e) ?? dnd.dragging, targetForRow(row, e));
+    },
+  };
+  return { props, indicator, isDragging: dnd.dragging === row.id };
+}
 
 const invoke = window.orbit.invoke;
 
@@ -62,6 +102,7 @@ export function TabRow({
     void invoke('tabs:close', { tabId: row.id });
   };
   const unloaded = row.section !== 'today' && !row.live;
+  const dnd = useRowDnd(row);
 
   return (
     <li>
@@ -69,9 +110,10 @@ export function TabRow({
         role="button"
         tabIndex={0}
         aria-current={active ? 'page' : undefined}
+        {...dnd.props}
         className={`group flex h-8 items-center gap-2.5 rounded-lg pr-1 text-[13px] ${
           active ? 'bg-[var(--row-active)] shadow-sm' : 'hover:bg-[var(--hover)]'
-        }`}
+        } ${dnd.indicator} ${dnd.isDragging ? 'opacity-40' : ''}`}
         style={{ paddingLeft: 8 + row.depth * INDENT_PX }}
         onClick={() => void invoke('tabs:activate', { tabId: row.id })}
         onKeyDown={(e) => e.key === 'Enter' && void invoke('tabs:activate', { tabId: row.id })}
@@ -145,13 +187,15 @@ export function FolderRow({
   renaming: boolean;
   onRenamed: () => void;
 }) {
+  const dnd = useRowDnd(row);
   return (
     <li>
       <div
         role="button"
         tabIndex={0}
         aria-expanded={!row.collapsed}
-        className="flex h-8 items-center gap-2 rounded-lg pr-1 text-[13px] font-medium hover:bg-[var(--hover)]"
+        {...dnd.props}
+        className={`flex h-8 items-center gap-2 rounded-lg pr-1 text-[13px] font-medium hover:bg-[var(--hover)] ${dnd.indicator} ${dnd.isDragging ? 'opacity-40' : ''}`}
         style={{ paddingLeft: 6 + row.depth * INDENT_PX }}
         onClick={() => void invoke('sidebar:toggleFolder', { itemId: row.id })}
         onContextMenu={(e) => {

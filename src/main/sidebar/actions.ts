@@ -292,12 +292,24 @@ export class SidebarActions {
       },
       {
         label: 'Set Profile',
-        submenu: this.store.profiles.map((p) => ({
-          label: p.name,
-          type: 'radio',
-          checked: space.profileId === p.id,
-          click: () => this.setProfile(spaceId, p.id),
-        })),
+        submenu: [
+          ...this.store.profiles.map((p): MenuItemConstructorOptions => ({
+            label: p.name,
+            type: 'radio',
+            checked: space.profileId === p.id,
+            click: () => this.setProfile(spaceId, p.id),
+          })),
+          { type: 'separator' },
+          {
+            // A profile is a separate login identity: its own cookies, storage and permissions.
+            label: 'New Profile',
+            click: () => {
+              const profile = this.store.createProfile(`Profile ${this.store.profiles.length + 1}`);
+              this.setProfile(spaceId, profile.id);
+              this.ui.toast(`${space.name} now uses ${profile.name}`);
+            },
+          },
+        ],
       },
       { type: 'separator' },
       { label: 'New Folder', click: () => this.newFolder('pinned') },

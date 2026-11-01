@@ -60,6 +60,14 @@ export async function startTestServer(): Promise<TestServer> {
       res.writeHead(200, { 'content-type': 'text/html' }).end(page('Secret'));
       return;
     }
+    if (path === '/cookie') {
+      // Sets a cookie on ?set=…, and always shows what the browser sent back.
+      const set = new URL(req.url ?? '/', 'http://x').searchParams.get('set');
+      const headers: Record<string, string> = { 'content-type': 'text/html' };
+      if (set) headers['set-cookie'] = `who=${set}; Path=/`;
+      res.writeHead(200, headers).end(page(`cookie:${req.headers.cookie ?? 'none'}`));
+      return;
+    }
     if (path === '/icon.png') {
       res.writeHead(200, { 'content-type': 'image/png' }).end(PNG);
       return;
