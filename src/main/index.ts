@@ -66,6 +66,7 @@ import { acceptExternalUrl, LittleWindow } from './windows/little';
 import type { WindowController } from './windows/window-manager';
 import { notesHash } from './notes/model';
 import { enableQuietMode } from './app/quiet';
+import { registerProfileHandlers } from './ipc/handlers/profiles';
 import { FloatingNotes } from './notes/floating';
 import { newNoteTab, noteUrl, registerNotesHandlers, toggleQuickNote } from './ipc/handlers/notes';
 import { noteIdSchema } from '@shared/types/notes';
@@ -161,6 +162,9 @@ function loadInternal(view: { webContents: Electron.WebContents }, url: string):
     hash = easelIdSchema.safeParse(param).success ? `/easel/${param}` : '/not-found';
   if (page === 'library')
     hash = librarySectionSchema.safeParse(param).success ? `/library/${param}` : '/not-found';
+  // Settings can open on a section (orbit://settings/profiles).
+  if (page === 'settings' && /^(general|profiles|shortcuts|ai|privacy|about)$/.test(param))
+    hash = `/settings/${param}`;
   // A note's tab (note/<id>), the Notes panel (notes/panel[/<id>]), a floating note (notes/float/<id>).
   if (page === 'note')
     hash = noteIdSchema.safeParse(param).success ? `/note/${param}` : '/not-found';
@@ -709,6 +713,7 @@ void app.whenReady().then(() => {
   });
   floatingNotes = floating;
   registerNotesHandlers(router, windowManager, { notes: notesRepo, floating });
+  registerProfileHandlers(router, windowManager, { runCommand });
   registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
   router.handle('tabs:copyUrl', (_input, { sender }) => {

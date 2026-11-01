@@ -18,6 +18,8 @@ import { formatAddress } from '@shared/format-address';
 import type { FindState } from '@shared/types/find';
 import type { TabState } from '@shared/types/tabs';
 import { FindBar } from './FindBar';
+import type { ProfileView } from '@shared/profile';
+import { Avatar } from '../profile/Avatar';
 
 const TOAST_MS = 1600;
 
@@ -48,6 +50,7 @@ export function Toolbar({
   focused = true,
   inSplit = false,
   notesOpen,
+  profile,
 }: {
   tab: TabState | null;
   height: number;
@@ -60,6 +63,8 @@ export function Toolbar({
   inSplit?: boolean;
   /** The Notes button (right-most toolbar only): whether the panel is open. */
   notesOpen?: boolean | undefined;
+  /** The profile button (right-most toolbar only). */
+  profile?: ProfileView | null | undefined;
 }) {
   const toastMessage = useToast();
   const toast = focused ? toastMessage : null;
@@ -205,6 +210,22 @@ export function Toolbar({
           >
             <NotebookPen size={14} />
           </ToolbarButton>
+        )}
+        {profile && (
+          <button
+            type="button"
+            aria-label={`Profile: ${profile.name}`}
+            title={`${profile.name} profile`}
+            onClick={(event) => {
+              const r = event.currentTarget.getBoundingClientRect();
+              const anchor = { x: r.x, y: r.y, width: r.width, height: r.height };
+              void window.orbit.invoke('profile:menu', { anchor });
+            }}
+            className="press no-drag grid size-7 place-items-center rounded-full hover:ring-2 hover:ring-black/10"
+            data-testid="toolbar-profile"
+          >
+            <Avatar profile={profile} size={22} />
+          </button>
         )}
         {inSplit && (
           <>

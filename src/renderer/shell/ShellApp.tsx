@@ -1,3 +1,4 @@
+import type { ProfileView } from '@shared/profile';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { themeToVars } from '@shared/theme';
@@ -151,6 +152,7 @@ function Chrome({
             snapshot={split ? null : snapshot}
             // The right-most toolbar has the Notes button.
             notesOpen={i === paneTabs.length - 1 ? layout.notes !== null : undefined}
+            profile={i === paneTabs.length - 1 ? sidebar?.profile : undefined}
           />
         );
       })}
@@ -186,6 +188,7 @@ function ContentCard(props: {
   inSplit: boolean;
   snapshot: string | null;
   notesOpen: boolean | undefined;
+  profile: ProfileView | undefined;
 }) {
   const { pane, tab, inSplit, focused } = props;
   const webViewTop = pane.webView.y - pane.card.y;
@@ -221,6 +224,7 @@ function ContentCard(props: {
           focused={focused}
           inSplit={inSplit}
           notesOpen={props.notesOpen}
+          profile={props.profile}
         />
       )}
       {props.snapshot && (

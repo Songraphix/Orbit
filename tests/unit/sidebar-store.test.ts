@@ -102,6 +102,14 @@ describe('profiles', () => {
     const work = store.createProfile('Work');
     store.renameProfile(work.id, '  Office  ');
     expect(store.profiles.find((p) => p.id === work.id)?.name).toBe('Office');
+    store.updateProfile(work.id, { displayName: 'Joseph', avatar: '💼', color: '#0a84ff' });
+    store.updateProfile(work.id, { avatar: 'not an emoji' });
+    expect(store.profiles.find((p) => p.id === work.id)).toMatchObject({
+      name: 'Office',
+      displayName: 'Joseph',
+      avatar: '💼',
+      color: '#0a84ff',
+    });
     expect(store.deleteProfile(DEFAULT_PROFILE_ID)).toBe(false);
 
     const space = store.createSpace({ name: 'Job', icon: 'briefcase', profileId: work.id });

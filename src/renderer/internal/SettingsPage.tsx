@@ -31,13 +31,18 @@ const ENGINES: { value: UserSettings['searchEngine']; label: string }[] = [
 ];
 
 /** orbit://settings (Phase 4): archive, sleeping tabs, search engine, history. */
-export function SettingsPage() {
+/** orbit://settings, or orbit://settings/<section> to open on one (the profile menu's links). */
+export function SettingsPage({ section = null }: { section?: string | null }) {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [cleared, setCleared] = useState(false);
 
   useEffect(() => {
     void window.orbit.invoke('settings:get', {}).then(setSettings);
   }, []);
+  const loaded = settings !== null;
+  useEffect(() => {
+    if (loaded && section) document.getElementById(section)?.scrollIntoView();
+  }, [loaded, section]);
 
   const update = (patch: Partial<UserSettings>) =>
     void window.orbit.invoke('settings:set', patch).then(setSettings);

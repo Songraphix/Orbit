@@ -3,6 +3,8 @@ import type { ItemData } from '@shared/types/live-folders';
 import { randomUUID } from 'node:crypto';
 import { generateKeyBetween } from 'fractional-indexing';
 import { DEFAULT_THEME } from '@shared/types/space';
+import { cleanProfilePatch } from '@shared/profile';
+import type { ProfilePatch } from '@shared/profile';
 import type { SpaceTheme } from '@shared/types/space';
 import type { Profile, SidebarRepository, Space } from '../persistence/repositories/sidebar';
 import { childrenAt, flatten, insertItem, moveItem, removeItem, updateItem } from './model';
@@ -272,6 +274,9 @@ export class SidebarStore {
       name,
       partition: `persist:profile-${id}`,
       createdAt: Date.now(),
+      displayName: '',
+      avatar: '',
+      color: '',
     };
     this.repo.saveProfile(profile);
     this.profilesList = [...this.profilesList, profile];
@@ -280,10 +285,15 @@ export class SidebarStore {
   }
 
   renameProfile(id: string, name: string): void {
+    this.updateProfile(id, { name });
+  }
+
+  /** Changes a profile's name, your name, avatar or colour (each checked first). */
+  updateProfile(id: string, patch: ProfilePatch): void {
     const profile = this.profilesList.find((p) => p.id === id);
-    const clean = name.trim().slice(0, 40);
-    if (!profile || !clean) return;
-    const next = { ...profile, name: clean };
+    const clean = cleanProfilePatch(patch);
+    if (!profile || Object.keys(clean).length === 0) return;
+    const next = { ...profile, ...clean };
     this.repo.saveProfile(next);
     this.profilesList = this.profilesList.map((p) => (p.id === id ? next : p));
     this.notify();

@@ -32,6 +32,7 @@ import { mediaStateSchema } from '../types/media';
 import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
 import { sidebarSnapshotSchema, spaceThemeSchema } from '../types/space';
 import { userSettingsSchema } from '../settings';
+import { profilePatchSchema, profileViewSchema } from '../profile';
 import { tabsSnapshotSchema } from '../types/tabs';
 
 /**
@@ -791,6 +792,46 @@ export const contract = {
     input: z.object({ onTop: z.boolean().optional() }).strict(),
     output: z.object({ onTop: z.boolean() }),
     surfaces: ['internal'],
+  },
+
+  // The profile menu (owner request, like Wavebox's): the toolbar's avatar opens it.
+  'profile:menu': {
+    input: z.object({ anchor: rectSchema }).strict(),
+    output: z.void(),
+  },
+  /** The active space's profile and every profile (with how many spaces use it). */
+  'profile:get': {
+    input: z.object({}).strict(),
+    output: z.object({
+      current: profileViewSchema,
+      profiles: z.array(profileViewSchema.extend({ spaces: z.number() })),
+    }),
+    surfaces: ['overlay'],
+  },
+  'profile:update': {
+    input: z.object({ id: z.string().min(1).max(64), patch: profilePatchSchema }).strict(),
+    output: z.void(),
+    surfaces: ['overlay', 'internal'],
+  },
+  /** Go to a space of that profile (a new one if it has none). */
+  'profile:switch': {
+    input: z.object({ id: z.string().min(1).max(64) }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  /** A new profile, with its first space, and switch to it. */
+  'profile:create': {
+    input: z.object({ name: z.string().min(1).max(40) }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  /** The menu's links. */
+  'profile:open': {
+    input: z
+      .object({ page: z.enum(['settings', 'profiles', 'shortcuts', 'library', 'import']) })
+      .strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
   },
 } as const satisfies Record<string, ChannelSpec>;
 

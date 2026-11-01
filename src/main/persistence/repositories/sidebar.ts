@@ -12,7 +12,16 @@ import type { SidebarItem } from '../../sidebar/model';
 import { transaction } from '../db';
 import type { Database } from '../db';
 
-export type Profile = { id: string; name: string; partition: string; createdAt: number };
+export type Profile = {
+  id: string;
+  name: string;
+  partition: string;
+  createdAt: number;
+  /** Your name for the greeting, an emoji avatar ('' = initials) and a colour ('' = default). */
+  displayName: string;
+  avatar: string;
+  color: string;
+};
 export type Space = {
   id: string;
   profileId: string;
@@ -157,14 +166,28 @@ export class SidebarRepository {
   loadProfiles(): Profile[] {
     return (
       this.db
-        .prepare('SELECT id, name, partition, created_at FROM profiles ORDER BY created_at')
+        .prepare(
+          `SELECT id, name, partition, created_at, display_name, avatar, color FROM profiles
+           ORDER BY created_at`,
+        )
         .all() as {
         id: string;
         name: string;
         partition: string;
         created_at: number;
+        display_name: string;
+        avatar: string;
+        color: string;
       }[]
-    ).map((r) => ({ id: r.id, name: r.name, partition: r.partition, createdAt: r.created_at }));
+    ).map((r) => ({
+      id: r.id,
+      name: r.name,
+      partition: r.partition,
+      createdAt: r.created_at,
+      displayName: r.display_name,
+      avatar: r.avatar,
+      color: r.color,
+    }));
   }
 
   loadSpaces(): Space[] {
@@ -201,10 +224,12 @@ export class SidebarRepository {
   saveProfile(p: Profile): void {
     this.db
       .prepare(
-        `INSERT INTO profiles (id, name, partition, created_at) VALUES (?, ?, ?, ?)
-         ON CONFLICT (id) DO UPDATE SET name = excluded.name`,
+        `INSERT INTO profiles (id, name, partition, created_at, display_name, avatar, color)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (id) DO UPDATE SET name = excluded.name, display_name = excluded.display_name,
+           avatar = excluded.avatar, color = excluded.color`,
       )
-      .run(p.id, p.name, p.partition, p.createdAt);
+      .run(p.id, p.name, p.partition, p.createdAt, p.displayName, p.avatar, p.color);
   }
 
   /** Removes a profile and its favorites (its spaces must have moved elsewhere first). */

@@ -1,3 +1,4 @@
+import { profileViewSchema } from '../profile';
 import { z } from 'zod';
 
 /** A space's look (PLAN.md section 5.4). */
@@ -59,6 +60,8 @@ export type SidebarRow = z.output<typeof sidebarRowSchema>;
 export const sidebarSnapshotSchema = z.object({
   spaces: z.array(spaceViewSchema),
   activeSpaceId: z.string(),
+  /** The active space's profile (the toolbar's avatar). */
+  profile: profileViewSchema,
   favorites: z.array(sidebarRowSchema),
   pinned: z.array(sidebarRowSchema),
   today: z.array(sidebarRowSchema),

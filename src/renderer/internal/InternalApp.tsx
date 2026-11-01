@@ -57,7 +57,7 @@ export function InternalApp() {
 
   if (page === 'newtab') return <NewTabPage />;
   if (page === 'archive') return <ArchivePage />;
-  if (page === 'settings') return <SettingsPage />;
+  if (page === 'settings') return <SettingsPage section={param || null} />;
   if (page === 'boost' && param)
     return (
       <Suspense fallback={null}>

@@ -43,6 +43,7 @@ export class OverlayController {
   private sidebarPeek: OverlayState['sidebarPeek'] = null;
   private createMenu: OverlayState['createMenu'] = null;
   private quickNote: OverlayState['quickNote'] = null;
+  private profileMenu: OverlayState['profileMenu'] = null;
   private flight: OverlayState['flight'] = null;
   private flightTimer: ReturnType<typeof setTimeout> | null = null;
   private backdrop: OverlayState['backdrop'] = null;
@@ -81,6 +82,7 @@ export class OverlayController {
       sidebarPeek: this.sidebarPeek,
       createMenu: this.createMenu,
       quickNote: this.quickNote,
+      profileMenu: this.profileMenu,
       flight: this.flight,
       backdrop: this.backdrop,
     };
@@ -95,6 +97,7 @@ export class OverlayController {
       this.capture !== null ||
       this.createMenu !== null ||
       this.quickNote !== null ||
+      this.profileMenu !== null ||
       this.flight !== null ||
       this.sidebarPeek !== null
     );
@@ -115,8 +118,27 @@ export class OverlayController {
       this.capture !== null ||
       this.createMenu !== null ||
       this.quickNote !== null ||
+      this.profileMenu !== null ||
       this.flight !== null
     );
+  }
+
+  /** The profile menu under the toolbar's avatar; the avatar toggles it. */
+  toggleProfileMenu(anchor: Rect): void {
+    if (this.profileMenu) {
+      this.closeProfileMenu();
+      return;
+    }
+    this.siteControls = null;
+    this.createMenu = null;
+    this.profileMenu = { anchor, openedAt: Date.now() };
+    this.show();
+  }
+
+  closeProfileMenu(): void {
+    if (!this.profileMenu) return;
+    this.profileMenu = null;
+    this.sync();
   }
 
   get quickNoteId(): string | null {

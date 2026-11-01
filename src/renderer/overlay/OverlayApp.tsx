@@ -7,6 +7,7 @@ import { CaptureLayer } from './CaptureLayer';
 import { PromptView } from './PromptView';
 import { FloatingSidebar } from './FloatingSidebar';
 import { CreateMenu } from './CreateMenu';
+import { ProfileMenu } from './ProfileMenu';
 import { DownloadFlight } from './DownloadFlight';
 import { BackdropContext } from './backdrop';
 
@@ -27,6 +28,7 @@ export function OverlayApp() {
     sidebarPeek: null,
     createMenu: null,
     quickNote: null,
+    profileMenu: null,
     flight: null,
     backdrop: null,
   });
@@ -49,6 +51,8 @@ export function OverlayApp() {
     <SiteControls view={state.siteControls} />
   ) : state.createMenu ? (
     <CreateMenu key={state.createMenu.openedAt} anchor={state.createMenu.anchor} />
+  ) : state.profileMenu ? (
+    <ProfileMenu key={state.profileMenu.openedAt} anchor={state.profileMenu.anchor} />
   ) : state.quickNote ? (
     <Suspense fallback={null}>
       <QuickNote key={state.quickNote.id} id={state.quickNote.id} />

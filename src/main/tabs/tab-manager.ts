@@ -18,6 +18,7 @@ import type { Split } from './split';
 import { TabController } from './tab-controller';
 import type { TabEnv } from './tab-controller';
 import { randomUUID } from 'node:crypto';
+import { profileView } from '../sidebar/profiles';
 
 /** A pre-drag snapshot older than this is stale (the page may have changed). */
 const SNAPSHOT_MAX_AGE_MS = 10_000;
@@ -171,6 +172,10 @@ export class TabManager {
         theme: s.theme,
       })),
       activeSpaceId: space.id,
+      profile: profileView(
+        this.deps.store.profiles.find((p) => p.id === space.profileId) ??
+          this.deps.store.profiles[0]!,
+      ),
       favorites: rows('favorite'),
       pinned: rows('pinned'),
       today: rows('today'),

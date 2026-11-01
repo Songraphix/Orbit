@@ -9,6 +9,7 @@ import m007 from './007-boosts.sql?raw';
 import m008 from './008-easels.sql?raw';
 import m009 from './009-item-data.sql?raw';
 import m010 from './010-notes.sql?raw';
+import m011 from './011-profile-look.sql?raw';
 
 /** Ordered list of schema migrations. Append only — never edit or reorder a shipped entry. */
 export const migrations: readonly Migration[] = [
@@ -22,4 +23,5 @@ export const migrations: readonly Migration[] = [
   { version: 8, name: 'easels', sql: m008 },
   { version: 9, name: 'item-data', sql: m009 },
   { version: 10, name: 'notes', sql: m010 },
+  { version: 11, name: 'profile-look', sql: m011 },
 ];
