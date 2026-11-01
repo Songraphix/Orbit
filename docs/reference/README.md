@@ -2,15 +2,15 @@
 
 ## Arc screenshots (captured 22 Oct 2026)
 
-| Plan ref | File | Shows |
-|---|---|---|
-| Img 1 | `img1-media-player.png` | Sidebar mini media player above the bottom bar |
-| Img 2 | `img2-plus-create-menu.png` | "+" create menu (New Space / Folder / Easel / Boost / Split / Tab) |
-| Img 3 | `img3-site-controls.png` | Site controls popover (quick actions, extensions, Boosts, site settings, Secure) |
-| Img 4 | `img4-library.png` | Library navigation (Media, Downloads, Easels, Spaces, Boosts, Archived Tabs) |
-| Img 5 | `img5-sidebar-space-menu.png` | Full sidebar with the space context menu open |
-| Img 6 | `img6-split-view-window.png` | Whole window: Gmail + YouTube split, menu bar, compact toolbars |
-| Img 7 | `img7-sidebar-downloads.png` | Sidebar with the downloads shelf |
+| Plan ref | File                          | Shows                                                                            |
+| -------- | ----------------------------- | -------------------------------------------------------------------------------- |
+| Img 1    | `img1-media-player.png`       | Sidebar mini media player above the bottom bar                                   |
+| Img 2    | `img2-plus-create-menu.png`   | "+" create menu (New Space / Folder / Easel / Boost / Split / Tab)               |
+| Img 3    | `img3-site-controls.png`      | Site controls popover (quick actions, extensions, Boosts, site settings, Secure) |
+| Img 4    | `img4-library.png`            | Library navigation (Media, Downloads, Easels, Spaces, Boosts, Archived Tabs)     |
+| Img 5    | `img5-sidebar-space-menu.png` | Full sidebar with the space context menu open                                    |
+| Img 6    | `img6-split-view-window.png`  | Whole window: Gmail + YouTube split, menu bar, compact toolbars                  |
+| Img 7    | `img7-sidebar-downloads.png`  | Sidebar with the downloads shelf                                                 |
 
 ## Arc data backup
 
