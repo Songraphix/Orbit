@@ -74,6 +74,7 @@ import { registerTooltipHandlers } from './ipc/handlers/tooltip';
 import { registerFocusHandlers } from './ipc/handlers/focus';
 import { FocusService } from './focus/service';
 import { CaptureService } from './capture/service';
+import { saveSpaceAsTemplate, spaceFromTemplate } from './sidebar/templates';
 import { captureLabel, captureMatches, hostOf } from '@shared/capture';
 import { FloatingNotes } from './notes/floating';
 import { newNoteTab, noteUrl, registerNotesHandlers, toggleQuickNote } from './ipc/handlers/notes';
@@ -178,7 +179,10 @@ function loadInternal(view: { webContents: Electron.WebContents }, url: string):
   if (page === 'library')
     hash = librarySectionSchema.safeParse(param).success ? `/library/${param}` : '/not-found';
   // Settings can open on a section (orbit://settings/profiles).
-  if (page === 'settings' && /^(general|profiles|shortcuts|ai|privacy|about)$/.test(param))
+  if (
+    page === 'settings' &&
+    /^(general|profiles|workspaces|shortcuts|ai|privacy|about)$/.test(param)
+  )
     hash = `/settings/${param}`;
   // A note's tab (note/<id>), the Notes panel (notes/panel[/<id>]), a floating note (notes/float/<id>).
   if (page === 'note')
@@ -617,6 +621,24 @@ void app.whenReady().then(() => {
     loadInternal,
     loadOverlay,
     runCommand,
+    templates: {
+      save: (controller, spaceId) => {
+        const saved = saveSpaceAsTemplate(store, persistence!.templates, spaceId);
+        toast(
+          controller,
+          saved
+            ? `Saved “${saved.name}” as a template (${saved.tabs} ${saved.tabs === 1 ? 'tab' : 'tabs'})`
+            : 'Open some pages in this Space first',
+        );
+      },
+      list: () => persistence!.templates.list().map(({ id, name }) => ({ id, name })),
+      use: (controller, templateId) => {
+        const space = spaceFromTemplate(store, persistence!.templates, templateId, {
+          profileId: controller.tabs.space.profileId,
+        });
+        if (space) controller.tabs.switchSpace(space.id);
+      },
+    },
     capture: (controller, tabId, request) =>
       void captureService?.begin(controller, controller.tabs.get(tabId), request),
     tidyState: (spaceId) => tidy.state(spaceId),
@@ -695,6 +717,7 @@ void app.whenReady().then(() => {
     },
     revealData: () => void shell.openPath(app.getPath('userData')),
     applyTabLayout,
+    templates: persistence.templates,
     ai: {
       status: () => ({ hasKey: keyStore.has(), canStore: keyStore.canStore, model: TIDY_MODEL }),
       setKey: (input) => {
@@ -768,6 +791,7 @@ void app.whenReady().then(() => {
     persistence.work,
     persistence.notes,
     persistence.captures,
+    persistence.templates,
   );
   registerCaptureHandlers(router, windowManager, captureFlow);
   registerTooltipHandlers(router, windowManager);

@@ -1055,6 +1055,28 @@ export const contract = {
     output: z.void(),
     surfaces: ['shell', 'overlay', 'internal'],
   },
+
+  // Workspace templates (roadmap P2.5), managed in Settings → Workspaces.
+  'templates:list': {
+    input: z.object({}).strict(),
+    output: z.object({
+      templates: z.array(
+        z.object({ id: z.string(), name: z.string(), icon: z.string(), tabs: z.number() }),
+      ),
+    }),
+    surfaces: ['internal'],
+  },
+  'templates:rename': {
+    input: z.object({ id: z.string().max(64), name: z.string().min(1).max(60) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Asks first. */
+  'templates:delete': {
+    input: z.object({ id: z.string().max(64) }).strict(),
+    output: z.object({ deleted: z.boolean() }),
+    surfaces: ['internal'],
+  },
 } as const satisfies Record<string, ChannelSpec>;
 
 export const events = {

@@ -1,6 +1,7 @@
 import {
   Info,
   Keyboard,
+  LayoutTemplate,
   Settings,
   Shield,
   Sparkles,
@@ -203,6 +204,10 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
             <ProfilesSection />
           </Section>
 
+          <Section id="workspaces" title="Workspaces">
+            <WorkspacesSection />
+          </Section>
+
           <Section id="shortcuts" title="Shortcuts">
             <ShortcutsSection />
           </Section>
@@ -387,6 +392,7 @@ function AiKeyRow() {
 const NAV = [
   { id: 'general', label: 'General', icon: <Settings size={16} /> },
   { id: 'profiles', label: 'Profiles', icon: <UsersRound size={16} /> },
+  { id: 'workspaces', label: 'Workspaces', icon: <LayoutTemplate size={16} /> },
   { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard size={16} /> },
   { id: 'ai', label: 'AI', icon: <Sparkles size={16} /> },
   { id: 'privacy', label: 'Privacy', icon: <Shield size={16} /> },
@@ -649,5 +655,71 @@ function AboutSection() {
         </button>
       </Row>
     </Group>
+  );
+}
+
+type TemplateEntry = InvokeOutput<'templates:list'>['templates'][number];
+
+/** Workspace templates (roadmap P2.5): rename or delete; they're made from a Space's menu. */
+function WorkspacesSection() {
+  const [templates, setTemplates] = useState<TemplateEntry[] | null>(null);
+  const load = () =>
+    void window.orbit.invoke('templates:list', {}).then((r) => setTemplates(r.templates));
+  useEffect(load, []);
+  return (
+    <Group title="Workspace templates">
+      {templates?.length === 0 && (
+        <p className="px-4 py-5 text-sm text-neutral-500" data-testid="templates-empty">
+          Right-click a Space and choose <b>Save as Workspace Template</b>. New Spaces — and new
+          projects’ workspaces — can then start with its tabs, icon and colours.
+        </p>
+      )}
+      {templates?.map((t) => (
+        <TemplateRow key={t.id} template={t} onChange={load} />
+      ))}
+    </Group>
+  );
+}
+
+function TemplateRow({ template, onChange }: { template: TemplateEntry; onChange: () => void }) {
+  const [name, setName] = useState(template.name);
+  return (
+    <div className="flex items-center gap-3 px-4 py-2.5" data-testid="template-row">
+      <span className="grid size-8 shrink-0 place-items-center rounded-[10px] bg-neutral-100 text-neutral-600">
+        <SpaceIcon icon={template.icon} size={15} />
+      </span>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={() =>
+          name.trim() &&
+          name !== template.name &&
+          void window.orbit
+            .invoke('templates:rename', { id: template.id, name: name.trim() })
+            .then(onChange)
+        }
+        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+        maxLength={60}
+        aria-label="Template name"
+        className="min-w-0 flex-1 rounded-md px-2 py-1 text-sm hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-300 focus:outline-none"
+        data-testid="template-name"
+      />
+      <span className="shrink-0 text-xs text-neutral-400">
+        {template.tabs === 1 ? '1 tab' : `${template.tabs} tabs`}
+      </span>
+      <button
+        type="button"
+        aria-label={`Delete ${template.name}`}
+        onClick={() =>
+          void window.orbit
+            .invoke('templates:delete', { id: template.id })
+            .then((r) => r.deleted && onChange())
+        }
+        className="grid size-8 shrink-0 place-items-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600"
+        data-testid="template-delete"
+      >
+        <Trash2 size={15} />
+      </button>
+    </div>
   );
 }

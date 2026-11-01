@@ -18,6 +18,7 @@ import type { TaskDraft } from './context';
 
 const invoke = window.orbit.invoke;
 const NEW_SPACE = '__new__';
+const TEMPLATE = '__template__:';
 
 /** A form sliding up over the panel; Esc or a click on the dim area cancels. */
 export function Sheet(props: {
@@ -166,8 +167,9 @@ export function ProjectForm({ project, onClose }: { project?: Project; onClose: 
       color,
       startDate: startDate || null,
       dueDate: dueDate || null,
-      spaceId: space && space !== NEW_SPACE ? space : null,
+      spaceId: space && space !== NEW_SPACE && !space.startsWith(TEMPLATE) ? space : null,
       ...(space === NEW_SPACE ? { newSpace: true } : {}),
+      ...(space.startsWith(TEMPLATE) ? { templateId: space.slice(TEMPLATE.length) } : {}),
     };
     const problem = projectProblem(input);
     if (problem) {
@@ -254,6 +256,11 @@ export function ProjectForm({ project, onClose }: { project?: Project; onClose: 
               </option>
             ))}
             <option value={NEW_SPACE}>+ New Space for this project</option>
+            {data?.templates.map((t) => (
+              <option key={t.id} value={`${TEMPLATE}${t.id}`}>
+                + New Space from template: {t.name}
+              </option>
+            ))}
           </select>
           <span className="mt-1 block text-[11.5px] text-[var(--note-muted)]">
             The Space keeps the project&rsquo;s tabs. Open Workspace takes you back to them.

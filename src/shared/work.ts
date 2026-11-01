@@ -87,6 +87,8 @@ export const workDataSchema = z.object({
   tasks: z.array(taskSchema),
   /** Spaces a project can use as its workspace. */
   spaces: z.array(z.object({ id: z.string(), name: z.string(), icon: z.string() })),
+  /** Workspace templates a new project's Space can start from (roadmap P2.5). */
+  templates: z.array(z.object({ id: z.string(), name: z.string() })),
   /** Findings saved with Orbit Capture (research), newest first. */
   captures: z.array(captureSchema),
   /** Notes that belong to a project. */
@@ -108,6 +110,8 @@ export const projectInputSchema = z
     spaceId: z.string().max(64).nullable(),
     /** Make a new Space for the project and link it. */
     newSpace: z.boolean().optional(),
+    /** …from this workspace template (roadmap P2.5). */
+    templateId: z.string().max(64).optional(),
   })
   .strict();
 export type ProjectInput = z.output<typeof projectInputSchema>;

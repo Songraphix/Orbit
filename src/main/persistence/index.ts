@@ -10,6 +10,7 @@ import { NotesRepository } from './repositories/notes';
 import { HomeRepository } from './repositories/home';
 import { WorkRepository } from './repositories/work';
 import { CaptureRepository } from './repositories/captures';
+import { TemplateRepository } from './repositories/templates';
 import { HistoryRepository } from './repositories/history';
 import { SettingsRepository } from './repositories/settings';
 import { SiteSettingsRepository } from './repositories/site-settings';
@@ -30,6 +31,7 @@ export type Persistence = {
   home: HomeRepository;
   work: WorkRepository;
   captures: CaptureRepository;
+  templates: TemplateRepository;
   close(): void;
 };
 
@@ -50,6 +52,7 @@ export function openPersistence(userDataDir: string): Persistence {
     home: new HomeRepository(db),
     work: new WorkRepository(db),
     captures: new CaptureRepository(db),
+    templates: new TemplateRepository(db),
     close: () => {
       if (db.isOpen) db.close();
     },

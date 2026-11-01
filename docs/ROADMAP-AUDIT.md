@@ -77,3 +77,7 @@ into a task, and resume the work from a saved workspace._
 - 2026-11-01 — **P2.2 done**: universal search across Spaces, research and the archive (`universal-search.spec.ts`).
 - 2026-11-01 — **P2.3 done**: Focus mode (`focus.spec.ts`).
 - 2026-11-01 — **P2.4 done**: saved split layouts and ⌥⏎ to split (`split-layouts.spec.ts`).
+- 2026-11-01 — **P2.5 done**: workspace templates (`templates.spec.ts`).
+- 2026-11-01 — **Phase 2 done.** Acceptance passes end to end with a restart (`roadmap-phase2.spec.ts`).
+  Next: Phase 3 (AI page assistant, summaries with sources, selection → notes/tasks, creative and
+  developer toolkits), after the owner has used Phase 2.

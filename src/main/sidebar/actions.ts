@@ -48,6 +48,12 @@ export type SidebarUi = {
     refresh: (folderId: string | null) => void;
     markAllRead: (folderId: string) => void;
   };
+  /** Workspace templates (roadmap P2.5): save a Space as one, or start a Space from one. */
+  templates?: {
+    save: (spaceId: string) => void;
+    list: () => { id: string; name: string }[];
+    use: (templateId: string) => void;
+  };
 };
 
 /**
@@ -361,6 +367,19 @@ export class SidebarActions {
     Menu.buildFromTemplate(template).popup();
   }
 
+  /** "New Space from Template ▸": the saved templates (roadmap P2.5). */
+  private templatesSubmenu(): MenuItemConstructorOptions {
+    const templates = this.ui.templates?.list() ?? [];
+    return {
+      label: 'New Space from Template',
+      enabled: templates.length > 0,
+      submenu:
+        templates.length > 0
+          ? templates.map((t) => ({ label: t.name, click: () => this.ui.templates?.use(t.id) }))
+          : [{ label: 'No templates yet', enabled: false }],
+    };
+  }
+
   private spaceMenuTemplate(spaceId: string): MenuItemConstructorOptions[] {
     const space = this.store.space(spaceId);
     if (!space) return [];
@@ -376,6 +395,13 @@ export class SidebarActions {
         })),
       },
       { label: 'Rename Space…', click: () => this.ui.startRename('space', spaceId) },
+      {
+        label: 'Save as Workspace Template',
+        enabled: this.ui.templates !== undefined,
+        click: () => this.ui.templates?.save(spaceId),
+      },
+      this.templatesSubmenu(),
+      { type: 'separator' },
       {
         label: 'Edit Theme Color',
         submenu: THEME_PRESETS.map((preset) => ({

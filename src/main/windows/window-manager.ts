@@ -64,6 +64,12 @@ export type WindowManagerDeps = {
     refresh: (folderId: string | null) => void;
     markAllRead: (folderId: string) => void;
   };
+  /** Workspace templates (roadmap P2.5). */
+  templates?: {
+    save: (controller: WindowController, spaceId: string) => void;
+    list: () => { id: string; name: string }[];
+    use: (controller: WindowController, templateId: string) => void;
+  };
 };
 
 /** One Orbit window and the services scoped to it. */
@@ -409,6 +415,11 @@ export class WindowManager {
         add: (kind, spaceId) => this.deps.liveFolders?.add(controller, kind, spaceId),
         refresh: (folderId) => this.deps.liveFolders?.refresh(folderId),
         markAllRead: (folderId) => this.deps.liveFolders?.markAllRead(folderId),
+      },
+      templates: this.deps.templates && {
+        save: (spaceId) => this.deps.templates?.save(controller, spaceId),
+        list: () => this.deps.templates?.list() ?? [],
+        use: (templateId) => this.deps.templates?.use(controller, templateId),
       },
     });
     const controller: WindowController = {

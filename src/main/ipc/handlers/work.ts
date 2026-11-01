@@ -2,6 +2,8 @@ import { clipboard, ClipboardItem, dialog, nativeImage } from 'electron';
 import type { IpcRouter } from '../router';
 import type { WorkData } from '@shared/work';
 import type { CaptureRepository } from '../../persistence/repositories/captures';
+import type { TemplateRepository } from '../../persistence/repositories/templates';
+import { spaceFromTemplate } from '../../sidebar/templates';
 import type { NotesRepository } from '../../persistence/repositories/notes';
 import type { WorkRepository } from '../../persistence/repositories/work';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
@@ -16,6 +18,7 @@ export function registerWorkHandlers(
   work: WorkRepository,
   notes: NotesRepository,
   captures: CaptureRepository,
+  templates: TemplateRepository,
 ): void {
   const panelOf = (webContentsId: number) => {
     const window = windows.notesPanelFor(webContentsId);
@@ -35,6 +38,7 @@ export function registerWorkHandlers(
       ),
       tasks,
       spaces,
+      templates: templates.list().map(({ id, name }) => ({ id, name })),
       captures: captures.list(),
       notes: notes.linked(),
     };
@@ -46,10 +50,20 @@ export function registerWorkHandlers(
     return everything(window);
   });
 
-  router.handle('work:saveProject', ({ newSpace, ...input }, { sender }) => {
+  router.handle('work:saveProject', ({ newSpace, templateId, ...input }, { sender }) => {
     const window = panelOf(sender.webContentsId);
     let { spaceId } = input;
-    if (newSpace && input.name.trim()) {
+    const fromTemplate =
+      templateId && input.name.trim()
+        ? spaceFromTemplate(window.store, templates, templateId, {
+            profileId: window.tabs.space.profileId,
+            name: input.name.trim(),
+          })
+        : null;
+    if (fromTemplate) {
+      // Its own workspace, started from a template: the template's tabs, icon and colours.
+      spaceId = fromTemplate.id;
+    } else if (newSpace && input.name.trim()) {
       // Its own workspace: a new Space named after it, in the current profile.
       spaceId = window.store.createSpace({
         name: input.name.trim().slice(0, 40),

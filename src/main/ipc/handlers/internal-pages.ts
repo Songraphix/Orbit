@@ -7,6 +7,7 @@ import { setSearchEngine } from '../../omnibox/classify';
 import type { ArchiveRepository } from '../../persistence/repositories/archive';
 import type { HistoryRepository } from '../../persistence/repositories/history';
 import type { SettingsRepository } from '../../persistence/repositories/settings';
+import type { TemplateRepository } from '../../persistence/repositories/templates';
 import type { WindowManager } from '../../windows/window-manager';
 
 /** Handlers for orbit://archive and orbit://settings (internal surface only). */
@@ -24,6 +25,8 @@ export function registerInternalPageHandlers(
     revealData: () => void;
     /** Tabs on top or in the sidebar, in every window. */
     applyTabLayout: (layout: 'sidebar' | 'top') => void;
+    /** Workspace templates (roadmap P2.5). */
+    templates: TemplateRepository;
     /** The Anthropic API key (F-29). */
     ai: {
       status: () => { hasKey: boolean; canStore: boolean; model: string };
@@ -179,6 +182,37 @@ export function registerInternalPageHandlers(
   router.handle('ai:clearKey', (_input, { sender }) => {
     ownerOf(sender.webContentsId, 'settings');
     deps.ai.clearKey();
+  });
+
+  router.handle('templates:list', (_input, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    return {
+      templates: deps.templates
+        .list()
+        .map(({ id, name, icon, tabs }) => ({ id, name, icon, tabs: tabs.length })),
+    };
+  });
+
+  router.handle('templates:rename', ({ id, name }, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    deps.templates.rename(id, name);
+  });
+
+  router.handle('templates:delete', async ({ id }, { sender }) => {
+    const { window } = ownerOf(sender.webContentsId, 'settings');
+    const template = deps.templates.get(id);
+    if (!template) return { deleted: false };
+    const { response } = await dialog.showMessageBox(window.win, {
+      type: 'warning',
+      message: `Delete the template “${template.name}”?`,
+      detail: 'Spaces already made from it stay as they are.',
+      buttons: ['Delete', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    if (response !== 0) return { deleted: false };
+    deps.templates.delete(id);
+    return { deleted: true };
   });
 
   router.handle('history:clear', (_input, { sender }) => {
