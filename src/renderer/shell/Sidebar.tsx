@@ -11,6 +11,8 @@ import type { DndState, DropTarget } from './sidebar/dnd';
 import { FavoritesGrid } from './sidebar/FavoritesGrid';
 import { RowList } from './sidebar/Rows';
 import { BottomBar, SpaceHeader } from './sidebar/SpaceParts';
+import { LibraryNav } from './sidebar/LibraryNav';
+import type { LibrarySection } from '@shared/types/library';
 
 /** Height of the draggable strip that holds the traffic lights (F-01). */
 const TITLE_STRIP_HEIGHT = 44;
@@ -20,6 +22,8 @@ type Props = {
   sidebar: SidebarSnapshot | null;
   downloads: DownloadView[];
   media: MediaState;
+  /** Library mode (F-11): the sidebar lists the Library's sections instead of tabs. */
+  librarySection: LibrarySection | null;
   /** Called when an edge drag starts/ends, so the shell can stand in for the live web view. */
   onResizeStart: () => void;
   onResizeEnd: () => void;
@@ -83,7 +87,15 @@ function dropZone(dnd: DndState, target: DropTarget) {
   };
 }
 
-export function Sidebar({ width, sidebar, downloads, media, onResizeStart, onResizeEnd }: Props) {
+export function Sidebar({
+  width,
+  sidebar,
+  downloads,
+  media,
+  librarySection,
+  onResizeStart,
+  onResizeEnd,
+}: Props) {
   const [renaming, stopRenaming] = useRenaming();
   const dnd = useDndState(sidebar);
   const isTarget = (t: DropTarget) => JSON.stringify(dnd.target) === JSON.stringify(t);
@@ -101,7 +113,8 @@ export function Sidebar({ width, sidebar, downloads, media, onResizeStart, onRes
         style={{ height: TITLE_STRIP_HEIGHT }}
         data-testid="title-strip"
       />
-      {sidebar && space && (
+      {librarySection && <LibraryNav section={librarySection} />}
+      {!librarySection && sidebar && space && (
         <DndContext.Provider value={dnd}>
           <div className="no-drag min-h-0 flex-1 overflow-y-auto pb-2">
             <div
@@ -157,9 +170,11 @@ export function Sidebar({ width, sidebar, downloads, media, onResizeStart, onRes
           </div>
         </DndContext.Provider>
       )}
-      {media && <MediaCard media={media} />}
-      <DownloadsShelf items={downloads} />
-      {sidebar && <BottomBar spaces={sidebar.spaces} activeSpaceId={sidebar.activeSpaceId} />}
+      {!librarySection && media && <MediaCard media={media} />}
+      {!librarySection && <DownloadsShelf items={downloads} />}
+      {!librarySection && sidebar && (
+        <BottomBar spaces={sidebar.spaces} activeSpaceId={sidebar.activeSpaceId} />
+      )}
       <ResizeHandle onStart={onResizeStart} onEnd={onResizeEnd} />
     </aside>
   );

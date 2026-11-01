@@ -16,6 +16,9 @@ import { openBoostEditor, registerBoostHandlers } from './ipc/handlers/boosts';
 import { BoostService } from './boosts/service';
 import { domainForPage } from './boosts/model';
 import { boostIdSchema } from '@shared/types/boosts';
+import { librarySectionSchema } from '@shared/types/library';
+import { registerLibraryHandlers } from './ipc/handlers/library';
+import { MediaLibrary } from './library/media';
 import { registerCommandBarHandlers } from './ipc/handlers/command-bar';
 import { registerFindHandlers } from './ipc/handlers/find';
 import { registerInternalPageHandlers } from './ipc/handlers/internal-pages';
@@ -116,10 +119,13 @@ app.on('will-finish-launching', () => {
  *  Unknown pages show "not found". */
 function loadInternal(view: WebContentsView, url: string): void {
   const { hostname: page, pathname } = new URL(url);
-  const boostId = pathname.slice(1);
+  const param = pathname.slice(1);
   let hash = `/${isInternalPage(page) ? page : 'not-found'}`;
+  // Pages with a parameter: a Boost's editor, a Library section.
   if (page === 'boost')
-    hash = boostIdSchema.safeParse(boostId).success ? `/boost/${boostId}` : '/not-found';
+    hash = boostIdSchema.safeParse(param).success ? `/boost/${param}` : '/not-found';
+  if (page === 'library')
+    hash = librarySectionSchema.safeParse(param).success ? `/library/${param}` : '/not-found';
   if (devServer) void view.webContents.loadURL(`${devServer}/internal/index.html#${hash}`);
   else void view.webContents.loadFile(join(rendererDir, 'internal', 'index.html'), { hash });
 }
@@ -243,6 +249,9 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'settings':
       controller.tabs.create('orbit://settings');
       return;
+    case 'library':
+      controller.library.open('media');
+      return;
     case 'new-boost': {
       const page = tabs.active?.state.kind === 'web' ? tabs.active.state.url : '';
       if (boostService) openBoostEditor(controller, boostService.create(domainForPage(page)).id);
@@ -313,6 +322,7 @@ void app.whenReady().then(() => {
     (snapshot) => broadcaster.send('state:downloads', snapshot),
   );
   downloadService = downloads;
+  const media = new MediaLibrary(join(app.getPath('userData'), 'Captures'), downloads);
 
   // Site permissions: ask in the window's overlay, remember per site (F-31).
   const permissions = new PermissionService(persistence.siteSettings, (contents) => {
@@ -441,7 +451,9 @@ void app.whenReady().then(() => {
     boosts,
     toast,
     resetZoom: (controller) => zoom(controller, 'reset'),
+    saveCapture: (png) => media.saveCapture(png),
   });
+  registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
   router.handle('tabs:devtools', ({ tabId }, { sender }) => {
     const contents = windowManager.forSender(sender.webContentsId)?.tabs.get(tabId)

@@ -6,6 +6,7 @@ import type { SidebarSnapshot } from '@shared/types/space';
 import type { Layout, Rect } from '@shared/types/layout';
 import type { DownloadView } from '@shared/types/downloads';
 import type { FindState } from '@shared/types/find';
+import type { LibrarySection } from '@shared/types/library';
 import type { MediaState } from '@shared/types/media';
 import type { TabState, TabsSnapshot } from '@shared/types/tabs';
 import { LittleBar } from './LittleBar';
@@ -32,6 +33,7 @@ function MainShell() {
   const sidebar = useMainState('state:sidebar');
   const downloads = useMainState('state:downloads');
   const media = useMainState('state:media');
+  const library = useMainState('state:library');
 
   // ThemeEngine: the active space's theme becomes CSS variables for the whole shell.
   const theme = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId)?.theme ?? DEFAULT_THEME;
@@ -55,6 +57,7 @@ function MainShell() {
           sidebar={sidebar}
           downloads={downloads?.items ?? []}
           media={media}
+          librarySection={library?.section ?? null}
         />
       )}
     </div>
@@ -90,6 +93,7 @@ function Chrome({
   sidebar,
   downloads,
   media,
+  librarySection,
 }: {
   layout: Layout;
   tabs: TabsSnapshot | null;
@@ -97,6 +101,7 @@ function Chrome({
   sidebar: SidebarSnapshot | null;
   downloads: DownloadView[];
   media: MediaState;
+  librarySection: LibrarySection | null;
 }) {
   const activeTab = tabs?.tabs.find((t) => t.id === tabs.activeTabId) ?? null;
   const { snapshot, onResizeStart, onResizeEnd } = useResizeSnapshot();
@@ -114,6 +119,7 @@ function Chrome({
           sidebar={sidebar}
           downloads={downloads}
           media={media}
+          librarySection={librarySection}
           onResizeStart={onResizeStart}
           onResizeEnd={onResizeEnd}
         />

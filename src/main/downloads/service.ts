@@ -15,6 +15,19 @@ type Tracked = DownloadView & {
   item: DownloadItem | null;
 };
 
+/** A download as stored, for Library → Downloads and Media. */
+export type DownloadRecord = {
+  id: string;
+  url: string;
+  path: string;
+  filename: string;
+  mime: string;
+  totalBytes: number;
+  state: 'progressing' | 'completed' | 'cancelled' | 'interrupted';
+  startedAt: number;
+  finishedAt: number | null;
+};
+
 const IMAGE = /\.(png|jpe?g|gif|webp|heic|tiff?|bmp|pdf)$/i;
 
 /**
@@ -59,13 +72,57 @@ export class DownloadService {
   }
 
   open(id: string): void {
-    const d = this.items.get(id);
+    const d = this.find(id);
     if (d?.state === 'completed' && existsSync(d.path)) void shell.openPath(d.path);
   }
 
   reveal(id: string): void {
-    const d = this.items.get(id);
+    const d = this.find(id);
     if (d && existsSync(d.path)) shell.showItemInFolder(d.path);
+  }
+
+  /** Every download, newest first, including earlier sessions' (Library → Downloads). */
+  history(query = '', limit = 500): DownloadRecord[] {
+    const like = `%${query.trim().replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    const rows = this.db
+      .prepare(
+        `SELECT id, url, path, filename, mime, total_bytes, state, started_at, finished_at
+         FROM downloads WHERE filename LIKE ? ESCAPE '\\' OR url LIKE ? ESCAPE '\\'
+         ORDER BY started_at DESC LIMIT ?`,
+      )
+      .all(like, like, limit) as {
+      id: string;
+      url: string;
+      path: string | null;
+      filename: string;
+      mime: string | null;
+      total_bytes: number | null;
+      state: DownloadRecord['state'];
+      started_at: number;
+      finished_at: number | null;
+    }[];
+    return rows.map((row) => {
+      const live = this.items.get(row.id); // this session's: current state and progress
+      return {
+        id: row.id,
+        url: row.url,
+        path: row.path ?? '',
+        filename: row.filename,
+        mime: row.mime ?? '',
+        totalBytes: live?.totalBytes ?? row.total_bytes ?? 0,
+        state: live?.state ?? row.state,
+        startedAt: row.started_at,
+        finishedAt: live?.finishedAt ?? row.finished_at,
+      };
+    });
+  }
+
+  private find(id: string): { path: string; state: DownloadRecord['state'] } | null {
+    const live = this.items.get(id);
+    if (live) return live;
+    const row = this.db.prepare('SELECT path, state FROM downloads WHERE id = ?').get(id) as
+      { path: string | null; state: DownloadRecord['state'] } | undefined;
+    return row?.path ? { path: row.path, state: row.state } : null;
   }
 
   cancel(id: string): void {

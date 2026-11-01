@@ -3,6 +3,15 @@ import { layoutSchema, rectSchema } from '../types/layout';
 import { siteActionSchema } from '../types/site-controls';
 import { boostIdSchema, boostPatchSchema, boostSchema } from '../types/boosts';
 import {
+  boostEntrySchema,
+  downloadEntrySchema,
+  librarySectionSchema,
+  libraryStateSchema,
+  mediaIdSchema,
+  mediaItemSchema,
+  spaceEntrySchema,
+} from '../types/library';
+import {
   commandBarModeSchema,
   commandItemSchema,
   overlayStateSchema,
@@ -408,6 +417,70 @@ export const contract = {
     surfaces: ['overlay'],
   },
 
+  // Library (F-11). The shell's sidebar switches sections; the Library page (orbit://library/…,
+  // shown in place of the pages) reads and acts on each section.
+  'library:get': {
+    input: z.object({}).strict(),
+    output: libraryStateSchema,
+  },
+  'library:open': {
+    input: z.object({ section: librarySectionSchema }).strict(),
+    output: z.void(),
+  },
+  'library:close': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
+  'library:media': {
+    input: z.object({}).strict(),
+    output: z.object({ items: z.array(mediaItemSchema) }),
+    surfaces: ['internal'],
+  },
+  'library:mediaAct': {
+    input: z.object({ id: mediaIdSchema, action: z.enum(['open', 'reveal']) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'library:downloads': {
+    input: z.object({ query: z.string().max(500) }).strict(),
+    output: z.object({ items: z.array(downloadEntrySchema) }),
+    surfaces: ['internal'],
+  },
+  'library:downloadAct': {
+    input: z.object({ id: z.string().min(1).max(64), action: z.enum(['open', 'reveal']) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'library:spaces': {
+    input: z.object({}).strict(),
+    output: z.object({ spaces: z.array(spaceEntrySchema) }),
+    surfaces: ['internal'],
+  },
+  /** Open, move up or down, rename, or (after confirming) delete a space. */
+  'library:spaceAct': {
+    input: z
+      .object({
+        spaceId: tabId,
+        action: z.enum(['open', 'up', 'down', 'rename', 'delete']),
+        name: z.string().min(1).max(60).optional(),
+      })
+      .strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'library:boosts': {
+    input: z.object({}).strict(),
+    output: z.object({ boosts: z.array(boostEntrySchema) }),
+    surfaces: ['internal'],
+  },
+  'library:boostAct': {
+    input: z
+      .object({ id: boostIdSchema, action: z.enum(['on', 'off', 'edit', 'delete']) })
+      .strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+
   // Archived Tabs (orbit://archive) and Settings (orbit://settings): internal pages only.
   'archive:list': {
     input: z.object({ query: z.string().max(500) }).strict(),
@@ -486,6 +559,8 @@ export const events = {
   'little:state': z.object({ url: z.string(), title: z.string() }),
   /** Sent to every shell when downloads change. */
   'state:downloads': downloadsSnapshotSchema,
+  /** Sent to a window's shell when Library mode opens, closes or changes section. */
+  'state:library': libraryStateSchema,
   /** Sent to a window's shell when find-in-page changes. */
   'state:find': findStateSchema,
   /** Ask the shell to start inline renaming (a sidebar item, or the space header). */

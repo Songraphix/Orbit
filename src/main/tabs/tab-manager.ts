@@ -59,6 +59,8 @@ export type TabManagerDeps = Pick<
   peek?: (fromTabId: string, url: string, activate: boolean) => boolean;
   /** Split view started, resized or ended (null): the layout needs the new ratio. */
   onSplitChange?: (ratio: number | null) => void;
+  /** A tab is about to be shown (the Library steps aside). */
+  onActivate?: () => void;
 };
 
 const isInternal = (url: string | null) => (url ?? '').startsWith('orbit://');
@@ -78,6 +80,8 @@ export class TabManager {
   private readonly announced = new WeakSet<WebContents>();
   private notifyScheduled = false;
   private frozen = false;
+  /** The Library covers the content area: pages stay loaded but hidden (F-11). */
+  private hidden = false;
   private prepared: { tabId: string; at: number; dataUrl: string } | null = null;
   private readonly unsubscribe: () => void;
   /** Set once the window closes; late page events (pages unloading) are then ignored. */
@@ -198,6 +202,7 @@ export class TabManager {
   activate(id: string): void {
     const item = this.deps.store.item(id);
     if (!item || item.kind !== 'tab') return;
+    this.deps.onActivate?.();
     if (item.spaceId && item.spaceId !== this.spaceId) this.setSpace(item.spaceId, false);
 
     const next = this.ensureLive(item);
@@ -504,6 +509,14 @@ export class TabManager {
     this.place();
   }
 
+  /** Hides or shows the pages while the Library covers the content area. */
+  setHidden(hidden: boolean): void {
+    if (hidden === this.hidden) return;
+    this.hidden = hidden;
+    this.place();
+    if (!hidden) this.active?.view.webContents.focus();
+  }
+
   /** Re-applies bounds after a layout change (sidebar toggle, resize…). */
   applyLayout(): void {
     this.place();
@@ -675,7 +688,7 @@ export class TabManager {
       }
       tab.view.setBounds(bounds);
       tab.view.setBorderRadius(layout.radius);
-      tab.view.setVisible(!this.frozen && !tab.state.crashed);
+      tab.view.setVisible(!this.frozen && !this.hidden && !tab.state.crashed);
     });
   }
 

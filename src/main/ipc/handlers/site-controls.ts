@@ -20,6 +20,8 @@ export type SiteControlsDeps = {
   toast: (controller: WindowController, message: string) => void;
   /** ⌘0 for the active page. */
   resetZoom: (controller: WindowController) => void;
+  /** Keeps a screenshot for Library → Media. */
+  saveCapture: (png: Buffer) => void;
 };
 
 /**
@@ -242,7 +244,9 @@ export function registerSiteControlsHandlers(
     if (crop === null) return;
     const image = await site.tab.view.webContents.capturePage(crop);
     if (image.isEmpty()) return;
-    const png = new Blob([new Uint8Array(image.toPNG())], { type: 'image/png' });
+    const bytes = image.toPNG();
+    deps.saveCapture(bytes);
+    const png = new Blob([new Uint8Array(bytes)], { type: 'image/png' });
     await clipboard.write([new ClipboardItem({ 'image/png': png })]);
     deps.toast(controller, 'Screenshot copied');
   });

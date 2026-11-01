@@ -24,6 +24,11 @@ export const COMMANDS: readonly CommandDef[] = [
   },
   { id: 'exit-split', title: 'Exit Split View', keywords: ['side by side', 'pane', 'unsplit'] },
   { id: 'swap-split', title: 'Swap Split Panes', keywords: ['side by side', 'pane'] },
+  {
+    id: 'library',
+    title: 'Library',
+    keywords: ['media', 'downloads', 'easels', 'spaces', 'boosts'],
+  },
   { id: 'new-boost', title: 'New Boost', keywords: ['css', 'customise', 'customize', 'style'] },
   { id: 'archived-tabs', title: 'Archived Tabs', keywords: ['archive', 'closed', 'history'] },
   { id: 'settings', title: 'Settings', keywords: ['preferences', 'options'], shortcut: '⌘,' },

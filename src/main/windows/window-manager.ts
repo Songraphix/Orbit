@@ -16,6 +16,7 @@ import { TabManager } from '../tabs/tab-manager';
 import type { TabManagerDeps } from '../tabs/tab-manager';
 import { MediaController } from '../media/controller';
 import { PeekController } from '../peek/controller';
+import { LibraryController } from '../library/controller';
 import { shouldPeek } from '../peek/policy';
 import { LayoutEngine } from './layout-engine';
 import { OverlayController } from './overlay';
@@ -60,6 +61,7 @@ export type WindowController = {
   find: FindController;
   media: MediaController;
   peek: PeekController;
+  library: LibraryController;
   store: SidebarStore;
   sidebar: SidebarActions;
 };
@@ -79,6 +81,11 @@ export class WindowManager {
   /** The window whose shell sent an IPC message. */
   forSender(webContentsId: number): WindowController | undefined {
     return this.controllers.get(webContentsId);
+  }
+
+  /** The window whose Library page is this webContents. */
+  libraryFor(webContentsId: number): WindowController | null {
+    return this.all().find((c) => c.library.owns(webContentsId)) ?? null;
   }
 
   /** The tab (and its window) whose page is this webContents, e.g. a new tab page calling IPC. */
@@ -141,6 +148,7 @@ export class WindowManager {
     const contents = win.webContents;
     let tabs: TabManager | null = null;
     let peek: PeekController | null = null;
+    let library: LibraryController | null = null;
     let lastActiveTabId: string | null = null;
     const find = new FindController(
       () => tabs?.active?.view.webContents ?? null,
@@ -149,6 +157,7 @@ export class WindowManager {
     const layout = new LayoutEngine(win, settings, (next) => {
       tabs?.applyLayout(); // web views move in the same tick the shell is told
       peek?.fit();
+      library?.fit();
       broadcaster.sendTo(contents, 'state:layout', next);
     });
     tabs = new TabManager({
@@ -197,6 +206,7 @@ export class WindowManager {
       },
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
       onSplitChange: (ratio) => layout.setSplitRatio(ratio),
+      onActivate: () => library?.close(),
       siteSetting: this.deps.siteSetting,
       extensions: this.deps.extensions,
       peek: (fromTabId, url, activate) => {
@@ -275,6 +285,20 @@ export class WindowManager {
       getLayout: () => layout.current(),
     });
     const peekController = peek;
+    library = new LibraryController({
+      win,
+      tabs: tabManager,
+      getLayout: () => layout.current(),
+      internalPreload: this.deps.internalPreloadPath,
+      loadInternal: this.deps.loadInternal,
+      registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
+      unregisterInternal: (webContentsId) => senders.remove(webContentsId),
+      onChange: (section) => {
+        peek?.close();
+        broadcaster.sendTo(contents, 'state:library', { section });
+      },
+    });
+    const libraryController = library;
 
     const id = contents.id;
     const overlayId = overlay.view.webContents.id;
@@ -293,6 +317,7 @@ export class WindowManager {
       find,
       media,
       peek: peekController,
+      library: libraryController,
       store: this.deps.store,
       sidebar,
     };
@@ -316,6 +341,7 @@ export class WindowManager {
     });
     win.on('closed', () => {
       peekController.close();
+      libraryController.destroy();
       tabManager.destroyAll();
       overlay.destroy();
     });

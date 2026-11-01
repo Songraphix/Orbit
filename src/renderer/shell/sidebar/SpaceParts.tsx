@@ -31,9 +31,12 @@ export function SpaceHeader({
       </span>
       {renaming ? (
         <RenameInput
+          // A new space's rename can start before the sidebar shows that space; keying by id
+          // restarts the field with the right name instead of saving the previous space's.
+          key={space.id}
           initial={space.name}
           onDone={(value) => {
-            if (value?.trim())
+            if (value?.trim() && value.trim() !== space.name)
               void invoke('spaces:update', { spaceId: space.id, name: value.trim() });
             onRenamed();
           }}
@@ -77,9 +80,10 @@ export function BottomBar({
       <button
         type="button"
         aria-label="Library"
-        title="Library (coming in Phase 9)"
-        disabled
-        className="grid size-8 place-items-center rounded-lg opacity-40"
+        title="Library"
+        onClick={() => void invoke('library:open', { section: 'media' })}
+        className="grid size-8 place-items-center rounded-lg text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+        data-testid="library-button"
       >
         <Library size={16} />
       </button>

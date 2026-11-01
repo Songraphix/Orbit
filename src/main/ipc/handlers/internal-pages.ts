@@ -19,8 +19,13 @@ export function registerInternalPageHandlers(
     applyLittleShortcut: (enabled: boolean) => void;
   },
 ): void {
-  /** The page must be a tab currently showing that internal page. */
+  /** The page must be a tab currently showing that internal page (or, for Archived Tabs, the
+   *  window's Library page, which shows it as a section). */
   const ownerOf = (webContentsId: number, page: 'archive' | 'settings') => {
+    if (page === 'archive') {
+      const library = windows.libraryFor(webContentsId);
+      if (library) return { window: library };
+    }
     const owner = windows.tabForContents(webContentsId);
     if (!owner || !owner.tab.state.url.startsWith(`orbit://${page}`)) {
       throw new Error(`Sender ${webContentsId} is not orbit://${page}`);

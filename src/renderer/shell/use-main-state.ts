@@ -9,6 +9,7 @@ const GETTERS = {
   'state:sidebar': 'sidebar:get',
   'state:downloads': 'downloads:get',
   'state:media': 'media:get',
+  'state:library': 'library:get',
 } as const;
 type StateEvent = keyof typeof GETTERS;
 
