@@ -7,6 +7,7 @@ import { ArchiveRepository } from './repositories/archive';
 import { BoostRepository } from './repositories/boosts';
 import { EaselRepository } from './repositories/easels';
 import { NotesRepository } from './repositories/notes';
+import { HomeRepository } from './repositories/home';
 import { HistoryRepository } from './repositories/history';
 import { SettingsRepository } from './repositories/settings';
 import { SiteSettingsRepository } from './repositories/site-settings';
@@ -24,6 +25,7 @@ export type Persistence = {
   boosts: BoostRepository;
   easels: EaselRepository;
   notes: NotesRepository;
+  home: HomeRepository;
   close(): void;
 };
 
@@ -41,6 +43,7 @@ export function openPersistence(userDataDir: string): Persistence {
     boosts: new BoostRepository(db),
     easels: new EaselRepository(db),
     notes: new NotesRepository(db),
+    home: new HomeRepository(db),
     close: () => {
       if (db.isOpen) db.close();
     },

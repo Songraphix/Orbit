@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { wallpaperChoiceSchema } from './types/newtab';
+import { DEFAULT_HOME, homeSettingsSchema } from './types/home';
 import { rectSchema, SIDEBAR_WIDTH } from './types/layout';
 
 /**
@@ -22,6 +23,8 @@ export const settingsSchema = {
   'sidebar.width': z.number().int().min(SIDEBAR_WIDTH.min).max(SIDEBAR_WIDTH.max),
   'sidebar.visible': z.boolean(),
   'newtab.wallpaper': wallpaperChoiceSchema,
+  /** The new tab page's theme, tagline and widgets. */
+  'newtab.home': homeSettingsSchema,
   /** The space the main window shows. */
   'window.activeSpace': z.string().nullable(),
   /** Today tabs not opened for this long are archived (F-20). */
@@ -56,6 +59,7 @@ export const settingsDefaults: Settings = {
   'sidebar.width': 260,
   'sidebar.visible': true,
   'newtab.wallpaper': { kind: 'builtin', id: 'aurora' },
+  'newtab.home': DEFAULT_HOME,
   'window.activeSpace': null,
   'archive.after': '12h',
   'tabs.maxLive': 8,

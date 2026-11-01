@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { homeSettingsSchema, shortcutSchema, todoSchema } from './home';
 
 /** Built-in wallpapers (rendered as layered CSS gradients by the new tab page). */
 export const BUILTIN_WALLPAPERS = [
@@ -25,10 +26,20 @@ export const wallpaperChoiceSchema = z.discriminatedUnion('kind', [
 ]);
 export type WallpaperChoice = z.output<typeof wallpaperChoiceSchema>;
 
-/** What the new tab page needs to draw itself. */
-export const newTabStateSchema = z.object({
+/** The wallpaper part of the page. */
+export const wallpaperStateSchema = z.object({
   wallpaper: wallpaperChoiceSchema,
   /** The custom image as a JPEG data: URL, when one has been chosen. */
   customImage: z.string().nullable(),
+});
+export type WallpaperState = z.output<typeof wallpaperStateSchema>;
+
+/** What the new tab page needs to draw itself. */
+export const newTabStateSchema = wallpaperStateSchema.extend({
+  home: homeSettingsSchema,
+  /** Your name, from this tab's profile ('' = none yet). */
+  name: z.string(),
+  shortcuts: z.array(shortcutSchema),
+  todos: z.array(todoSchema),
 });
 export type NewTabState = z.output<typeof newTabStateSchema>;

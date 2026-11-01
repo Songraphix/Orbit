@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:f
 import { join } from 'node:path';
 import { dialog, nativeImage } from 'electron';
 import type { BaseWindow } from 'electron';
-import type { NewTabState, WallpaperChoice } from '@shared/types/newtab';
+import type { WallpaperChoice, WallpaperState } from '@shared/types/newtab';
 import type { SettingsRepository } from '../persistence/repositories/settings';
 
 /** Images are downscaled to this width (4K) and re-encoded as JPEG to keep new tabs fast. */
@@ -32,7 +32,7 @@ export class WallpaperService {
     this.customPath = join(this.dir, 'custom.jpg');
   }
 
-  state(): NewTabState {
+  state(): WallpaperState {
     const customImage = this.loadCustom();
     let wallpaper = this.settings.get('newtab.wallpaper');
     // A custom choice whose file has gone missing falls back to the default.
@@ -40,7 +40,7 @@ export class WallpaperService {
     return { wallpaper, customImage };
   }
 
-  set(choice: WallpaperChoice): NewTabState {
+  set(choice: WallpaperChoice): WallpaperState {
     if (choice.kind === 'custom' && !this.loadCustom()) {
       throw new WallpaperError('No custom image has been chosen yet');
     }
@@ -49,7 +49,7 @@ export class WallpaperService {
   }
 
   /** Shows a file picker; returns the new state, or null if the user cancelled. */
-  async choose(parent: BaseWindow | null): Promise<NewTabState | null> {
+  async choose(parent: BaseWindow | null): Promise<WallpaperState | null> {
     const options: Electron.OpenDialogOptions = {
       title: 'Choose a wallpaper',
       properties: ['openFile'],

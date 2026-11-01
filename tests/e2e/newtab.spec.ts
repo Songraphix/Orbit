@@ -154,3 +154,74 @@ test('IPC roles: the new tab page cannot drive tabs, and the shell cannot call n
   expect(await tryInvoke(page, 'newtab:get')).toBe('ok');
   expect(await tryInvoke(orbit.win, 'newtab:get')).toContain('untrusted_sender');
 });
+
+test('the home page greets you by name, keeps today’s to-dos and shows a quote', async () => {
+  const page = await newTabPage(orbit.app);
+  await expect(page.getByTestId('greeting')).toHaveText(/^Good (Morning|Afternoon|Evening|Night)/);
+  await expect(page.getByTestId('tagline')).toHaveText('Focus. Create. Build. Repeat.');
+  await expect(page.getByTestId('quote')).not.toBeEmpty();
+
+  // Your name, saved on the profile (the profile menu shows it too).
+  await page.getByTestId('greeting-add-name').click();
+  await page.getByTestId('greeting-name').fill('Joseph');
+  await page.getByTestId('greeting-name').press('Enter');
+  await expect(page.getByTestId('greeting')).toContainText(', Joseph');
+
+  // Today: add two, tick one, remove one.
+  const input = page.getByTestId('todo-input');
+  await input.fill('Finish brand guide');
+  await input.press('Enter');
+  await input.fill('Edit video');
+  await input.press('Enter');
+  await expect(page.getByTestId('todo')).toHaveText(['Finish brand guide', 'Edit video']);
+  await page.getByTestId('todo-check').first().click();
+  await expect(page.getByTestId('todo-check').first()).toHaveAttribute('aria-checked', 'true');
+  await page.getByTestId('todo').nth(1).hover();
+  await page.getByTestId('todo-remove').nth(1).click();
+  await expect(page.getByTestId('todo')).toHaveCount(1);
+
+  // A new tab page later shows the same list.
+  await orbit.win.evaluate(() =>
+    (globalThis as unknown as { orbit: { invoke: Invoke } }).orbit.invoke('tabs:create', {}),
+  );
+  const second = await newTabPage(orbit.app);
+  await expect(second.getByTestId('todo')).toHaveCount(1);
+  await expect(second.getByTestId('todo-check')).toHaveAttribute('aria-checked', 'true');
+  await expect(second.getByTestId('greeting')).toContainText(', Joseph');
+});
+
+test('shortcuts: add one, open it, remove it; widgets and theme can be switched', async () => {
+  const page = await newTabPage(orbit.app);
+  await page.getByTestId('shortcut-add').click();
+  await page.getByTestId('shortcut-url').fill('not a web address');
+  await page.getByTestId('shortcut-save').click();
+  await expect(page.getByRole('alert')).toContainText('web address');
+  await page.getByTestId('shortcut-url').fill(server.url('/two'));
+  await page.getByTestId('shortcut-title').fill('Two');
+  await page.getByTestId('shortcut-save').click();
+  await expect(page.getByTestId('shortcut-name')).toHaveText(['Two']);
+
+  // Light glass, and hiding the quote, stick.
+  await page.getByTestId('theme-toggle').click();
+  await expect(page.getByTestId('newtab')).toHaveAttribute('data-theme', 'light');
+  await page.getByTestId('customize-button').click();
+  await page.getByTestId('show-quote').uncheck();
+  await expect(page.getByTestId('quote')).toHaveCount(0);
+  await page.getByTestId('customize-tagline').fill('Ship it.');
+  await page.getByTestId('customize-tagline').blur();
+  await expect(page.getByTestId('tagline')).toHaveText('Ship it.');
+
+  await page.getByTestId('shortcut').hover();
+  await page.getByTestId('shortcut-remove').click();
+  await expect(page.getByTestId('shortcut')).toHaveCount(0);
+
+  // A shortcut opens in this tab.
+  await page.getByTestId('shortcut-add').click();
+  await page.getByTestId('shortcut-url').fill(server.url('/two'));
+  await page.getByTestId('shortcut-save').click();
+  await page
+    .getByTestId('shortcut')
+    .click()
+    .catch(() => undefined); // the page is replaced by the site
+  await expect(orbit.win.getByTestId('toolbar-address')).toContainText('Page Two');
+});

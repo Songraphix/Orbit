@@ -199,3 +199,19 @@ body {
 .no-drag {
   -webkit-app-region: no-drag;
 }
+
+/* The new tab page's 👋 waves once as it opens. */
+@keyframes wave {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+  15%,
+  45% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-8deg);
+  }
+}

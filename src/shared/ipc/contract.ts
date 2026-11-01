@@ -33,6 +33,7 @@ import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
 import { sidebarSnapshotSchema, spaceThemeSchema } from '../types/space';
 import { userSettingsSchema } from '../settings';
 import { profilePatchSchema, profileViewSchema } from '../profile';
+import { homeSettingsSchema } from '../types/home';
 import { tabsSnapshotSchema } from '../types/tabs';
 
 /**
@@ -712,6 +713,46 @@ export const contract = {
   'newtab:chooseImage': {
     input: z.object({}).strict(),
     output: newTabStateSchema.nullable(),
+    surfaces: ['internal'],
+  },
+  /** The page's theme, tagline and widgets. */
+  'newtab:setHome': {
+    input: z
+      .object({
+        theme: homeSettingsSchema.shape.theme.optional(),
+        tagline: homeSettingsSchema.shape.tagline.optional(),
+        show: homeSettingsSchema.shape.show.partial().optional(),
+      })
+      .strict(),
+    output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
+  /** Your name for the greeting (saved on this tab's profile). */
+  'newtab:setName': {
+    input: z.object({ name: z.string().max(40) }).strict(),
+    output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
+  'newtab:shortcut': {
+    input: z.discriminatedUnion('action', [
+      z
+        .object({
+          action: z.literal('add'),
+          title: z.string().max(40),
+          url: z.string().min(1).max(2048),
+        })
+        .strict(),
+      z.object({ action: z.literal('remove'), id: z.string().max(64) }).strict(),
+    ]),
+    output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
+  'newtab:todo': {
+    input: z.discriminatedUnion('action', [
+      z.object({ action: z.literal('add'), text: z.string().min(1).max(200) }).strict(),
+      z.object({ action: z.enum(['toggle', 'remove']), id: z.string().max(64) }).strict(),
+    ]),
+    output: newTabStateSchema,
     surfaces: ['internal'],
   },
   /** Loads what the user typed in the search box into the new tab page's own tab. */

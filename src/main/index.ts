@@ -591,6 +591,7 @@ void app.whenReady().then(() => {
     router,
     windowManager,
     new WallpaperService(app.getPath('userData'), persistence.settings),
+    { home: persistence.home, settings: persistence.settings, history: persistence.history },
   );
   registerFindHandlers(router, windowManager);
   registerSidebarHandlers(router, windowManager);
@@ -817,6 +818,7 @@ void app.whenReady().then(() => {
     try {
       backupDatabase(db.db, join(app.getPath('userData'), 'backups'));
       db.archive.prune();
+      db.home.pruneTodos();
     } catch (error) {
       console.error('[orbit] backup failed', error);
     }
