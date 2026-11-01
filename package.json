@@ -20,7 +20,8 @@
     "test:watch": "vitest",
     "test:e2e": "electron-vite build && playwright test",
     "dist": "electron-vite build && electron-builder --mac --arm64",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "node scripts/dev-app-name.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [

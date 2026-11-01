@@ -197,9 +197,20 @@ export const contract = {
     input: z.object({ spaceId: tabId }).strict(),
     output: z.void(),
   },
+  /** The sidebar's + button (Img 2): Arc's create popover, hanging above `anchor`. */
   'sidebar:createMenu': {
-    input: z.object({}).strict(),
+    input: z.object({ anchor: rectSchema }).strict(),
     output: z.void(),
+  },
+  /** A choice in the create popover. */
+  'sidebar:create': {
+    input: z
+      .object({
+        action: z.enum(['space', 'folder', 'easel', 'boost', 'split', 'tab']),
+      })
+      .strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
   },
   'spaces:activate': {
     input: z.object({ spaceId: tabId }).strict(),

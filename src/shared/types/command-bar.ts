@@ -73,6 +73,8 @@ export const overlayStateSchema = z.object({
   /** A small copy of the page under the overlay, which glass surfaces blur behind themselves
    *  (native web views can't be blurred by CSS). `rect` is where the page sits in the window. */
   backdrop: z.object({ image: z.string(), rect: rectSchema }).nullable(),
+  /** The sidebar's + popover (Img 2), above the button at `anchor`. */
+  createMenu: z.object({ anchor: rectSchema, openedAt: z.number() }).nullable(),
   /** The hidden sidebar, slid out over the page while the pointer is on it (F-01). */
   sidebarPeek: z.object({ width: z.number() }).nullable(),
   siteControls: siteControlsViewSchema.nullable(),

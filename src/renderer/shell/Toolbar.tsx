@@ -104,17 +104,23 @@ export function Toolbar({
         {tab?.isLoading ? <X size={15} /> : <RotateCw size={14} />}
       </ToolbarButton>
 
-      {focused && find?.open ? (
-        <FindBar state={find} />
-      ) : toast ? (
+      {toast && (
+        // Arc-style confirmation: a small dark pill by the toolbar's right edge.
         <div
-          className="animate-rise absolute inset-x-28 flex items-center justify-center gap-1.5 text-[13px] font-medium text-neutral-700"
+          key={toast}
+          className="animate-pop pointer-events-none absolute right-11 z-10 flex h-[26px] origin-right items-center gap-1.5 rounded-[9px] bg-[rgb(28_27_34/0.92)] pr-2.5 pl-2 text-[12.5px] font-medium text-white shadow-[inset_0_0.5px_0_rgb(255_255_255/0.14),0_0_0_0.5px_rgb(0_0_0/0.3),0_6px_18px_-4px_rgb(0_0_0/0.35)]"
+          style={{ top: Math.max(0, (height - 26) / 2) }}
           role="status"
           data-testid="toolbar-toast"
         >
-          <Check size={13} className="text-[var(--accent)]" />
+          <span className="grid size-4 place-items-center rounded-full bg-[var(--accent)]">
+            <Check size={10} strokeWidth={3} />
+          </span>
           {toast}
         </div>
+      )}
+      {focused && find?.open ? (
+        <FindBar state={find} />
       ) : (
         address && (
           // Clicking the address edits it in the command bar (⌘L), like Arc.

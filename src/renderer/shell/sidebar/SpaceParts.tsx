@@ -175,8 +175,13 @@ export function BottomBar({
         type="button"
         aria-label="Create"
         title="New space, folder or tab"
-        className="grid size-8 place-items-center rounded-lg hover:bg-[var(--hover)]"
-        onClick={() => void invoke('sidebar:createMenu', {})}
+        className="press grid size-8 place-items-center rounded-lg hover:bg-[var(--hover)]"
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          void invoke('sidebar:createMenu', {
+            anchor: { x: r.x, y: r.y, width: r.width, height: r.height },
+          });
+        }}
         data-testid="create-button"
       >
         <Plus size={17} />

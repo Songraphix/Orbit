@@ -168,7 +168,11 @@ export function Sidebar({
               }`}
               data-testid="favorites-drop"
             >
-              <FavoritesGrid rows={sidebar.favorites} activeId={sidebar.activeItemId} />
+              <FavoritesGrid
+                rows={sidebar.favorites}
+                activeId={sidebar.activeItemId}
+                width={width}
+              />
             </div>
             <nav className="flex flex-col gap-0.5 px-2" aria-label="Tabs">
               <RowList

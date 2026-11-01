@@ -66,6 +66,7 @@ const ROUTES: Record<string, string> = {
      </script>`,
   ),
   '/three': page('Page Three'),
+  '/inbox': page('Inbox (12) - Mail'),
   '/boost': page(
     'Boost Me',
     `<div id="banner" style="height:80px;background:#fc0">Ad banner</div>

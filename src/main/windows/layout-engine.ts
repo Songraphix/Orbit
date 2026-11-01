@@ -1,6 +1,6 @@
 import type { Layout, LibraryPanel } from '@shared/types/layout';
 import type { SettingsRepository } from '../persistence/repositories/settings';
-import { clampSidebarWidth, computeLayout } from './layout';
+import { computeLayout, sidebarDrag } from './layout';
 
 /** The parts of BrowserWindow the engine uses (keeps it testable with a fake). */
 export type LayoutWindow = {
@@ -54,7 +54,13 @@ export class LayoutEngine {
   }
 
   setSidebarWidth(width: number): void {
-    const clamped = clampSidebarWidth(width);
+    const drag = sidebarDrag(width);
+    if (drag.collapse) {
+      // Pushed right up to the window's edge: the sidebar hides (its width is kept for later).
+      this.setSidebarVisible(false);
+      return;
+    }
+    const clamped = drag.width;
     if (clamped === this.sidebarWidth) return;
     this.sidebarWidth = clamped;
     if (this.saveTimer) clearTimeout(this.saveTimer);

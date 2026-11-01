@@ -41,6 +41,7 @@ export class OverlayController {
   private siteControls: SiteControlsView | null = null;
   private capture: OverlayState['capture'] = null;
   private sidebarPeek: OverlayState['sidebarPeek'] = null;
+  private createMenu: OverlayState['createMenu'] = null;
   private backdrop: OverlayState['backdrop'] = null;
   private snapshotting = false;
 
@@ -75,6 +76,7 @@ export class OverlayController {
       siteControls: this.siteControls,
       capture: this.capture,
       sidebarPeek: this.sidebarPeek,
+      createMenu: this.createMenu,
       backdrop: this.backdrop,
     };
   }
@@ -86,6 +88,7 @@ export class OverlayController {
       this.peek !== null ||
       this.siteControls !== null ||
       this.capture !== null ||
+      this.createMenu !== null ||
       this.sidebarPeek !== null
     );
   }
@@ -102,8 +105,26 @@ export class OverlayController {
       this.prompts.length > 0 ||
       this.peek !== null ||
       this.siteControls !== null ||
-      this.capture !== null
+      this.capture !== null ||
+      this.createMenu !== null
     );
+  }
+
+  /** The sidebar's + popover (Img 2); the button toggles it. */
+  toggleCreateMenu(anchor: Rect): void {
+    if (this.createMenu) {
+      this.closeCreateMenu();
+      return;
+    }
+    this.siteControls = null;
+    this.createMenu = { anchor, openedAt: Date.now() };
+    this.show();
+  }
+
+  closeCreateMenu(): void {
+    if (!this.createMenu) return;
+    this.createMenu = null;
+    this.sync();
   }
 
   get sidebarPeekOpen(): boolean {

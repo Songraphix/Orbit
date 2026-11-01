@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  sidebarDrag,
   clampSidebarWidth,
   computeLayout,
   computePeek,
@@ -150,5 +151,14 @@ describe('Library mode layout', () => {
       library: 'wide',
     });
     expect(small.library!.panel.width).toBe(300);
+  });
+});
+
+describe('sidebar edge drag', () => {
+  it('resizes within limits, and hides when pushed to the edge', () => {
+    expect(sidebarDrag(300)).toEqual({ collapse: false, width: 300 });
+    expect(sidebarDrag(150)).toEqual({ collapse: false, width: 200 }); // held at the minimum
+    expect(sidebarDrag(119)).toEqual({ collapse: true });
+    expect(sidebarDrag(Number.NaN)).toEqual({ collapse: false, width: 260 });
   });
 });

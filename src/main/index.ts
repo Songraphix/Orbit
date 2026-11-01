@@ -338,6 +338,9 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'live-refresh':
       void liveFolders?.refreshAll().then(() => toast(controller, 'Live Folders refreshed'));
       return;
+    case 'manage-spaces':
+      controller.library.open('spaces');
+      return;
     case 'library':
       controller.library.open('media');
       return;

@@ -1,4 +1,4 @@
-import { clipboard, Menu } from 'electron';
+import { clipboard, Menu, ShareMenu } from 'electron';
 import type { MenuItemConstructorOptions } from 'electron';
 import type { Space } from '../persistence/repositories/sidebar';
 import type { TabManager } from '../tabs/tab-manager';
@@ -367,7 +367,12 @@ export class SidebarActions {
         ],
       },
       { type: 'separator' },
-      { label: 'Share Space…', enabled: false },
+      {
+        label: 'Share Space…',
+        enabled: this.pinnedUrls(spaceId).length > 0,
+        // The space's pinned links through the macOS share sheet (AirDrop, Mail, Messages, Notes…).
+        click: () => new ShareMenu({ urls: this.pinnedUrls(spaceId) }).popup(),
+      },
       {
         label: `Export “${space.name}” into Folder`,
         enabled: others.length > 0,
@@ -377,32 +382,25 @@ export class SidebarActions {
         })),
       },
       { type: 'separator' },
-      { label: 'Manage Spaces…', enabled: false },
+      { label: 'Manage Spaces…', click: () => this.ui.command('manage-spaces') },
       { label: 'Delete Space', enabled: others.length > 0, click: () => this.deleteSpace(spaceId) },
     ];
     Menu.buildFromTemplate(template).popup();
   }
 
-  /** The "+" menu at the bottom of the sidebar (Img 2). */
-  createMenu(): void {
-    Menu.buildFromTemplate([
-      { label: 'New Space', click: () => this.newSpace() },
-      { label: 'New Folder', click: () => this.newFolder('pinned') },
-      { type: 'separator' },
-      {
-        label: 'New Easel',
-        accelerator: 'Ctrl+Shift+E',
-        click: () => this.ui.command('new-easel'),
-      },
-      { label: 'New Boost', click: () => this.ui.command('new-boost') },
-      { type: 'separator' },
-      {
-        label: 'New Split',
-        accelerator: 'Ctrl+Shift+=',
-        click: () => this.ui.command('split-view'),
-      },
-      { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: () => this.ui.openCommandBar() },
-    ]).popup();
+  /** A space's pinned web links, in sidebar order (Share Space…). */
+  private pinnedUrls(spaceId: string): string[] {
+    const space = this.store.space(spaceId);
+    if (!space) return [];
+    return this.store
+      .rows('pinned', space)
+      .map((r) => r.item.homeUrl ?? r.item.url)
+      .filter((url): url is string => typeof url === 'string' && /^https?:\/\//.test(url));
+  }
+
+  /** Runs an app command for this window (the + popover's Easel, Boost and Split). */
+  runCommand(id: string): void {
+    this.ui.command(id);
   }
 
   /** Moves a space to another profile; its open pages reload in the new profile's session. */

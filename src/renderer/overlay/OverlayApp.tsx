@@ -6,6 +6,7 @@ import { SiteControls } from './SiteControls';
 import { CaptureLayer } from './CaptureLayer';
 import { PromptView } from './PromptView';
 import { FloatingSidebar } from './FloatingSidebar';
+import { CreateMenu } from './CreateMenu';
 import { BackdropContext } from './backdrop';
 
 /**
@@ -20,6 +21,7 @@ export function OverlayApp() {
     siteControls: null,
     capture: null,
     sidebarPeek: null,
+    createMenu: null,
     backdrop: null,
   });
 
@@ -39,6 +41,8 @@ export function OverlayApp() {
     <CaptureLayer key={state.capture.openedAt} area={state.capture.area} />
   ) : state.siteControls ? (
     <SiteControls view={state.siteControls} />
+  ) : state.createMenu ? (
+    <CreateMenu key={state.createMenu.openedAt} anchor={state.createMenu.anchor} />
   ) : null;
   // Anything else opening takes over the overlay: the slid-out sidebar goes back in.
   const busy = top !== null || state.peek !== null;

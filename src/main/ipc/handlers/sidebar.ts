@@ -42,8 +42,21 @@ export function registerSidebarHandlers(router: IpcRouter, windows: WindowManage
     windowFor(sender.webContentsId).sidebar.spaceMenu(spaceId);
   });
 
-  router.handle('sidebar:createMenu', (_i, { sender }) => {
-    windowFor(sender.webContentsId).sidebar.createMenu();
+  router.handle('sidebar:createMenu', ({ anchor }, { sender }) => {
+    windowFor(sender.webContentsId).overlay.toggleCreateMenu(anchor);
+  });
+
+  router.handle('sidebar:create', ({ action }, { sender }) => {
+    const controller = windowFor(sender.webContentsId);
+    controller.overlay.closeCreateMenu();
+    const { sidebar } = controller;
+    if (action === 'space') sidebar.newSpace();
+    else if (action === 'folder') sidebar.newFolder('pinned');
+    else if (action === 'tab') controller.overlay.openCommandBar('new');
+    else
+      sidebar.runCommand(
+        action === 'easel' ? 'new-easel' : action === 'boost' ? 'new-boost' : 'split-view',
+      );
   });
 
   router.handle('spaces:activate', ({ spaceId }, { sender }) => {

@@ -54,6 +54,17 @@ function paneIn(card: Rect, toolbarHeight: number) {
   return { card, toolbar, webView };
 }
 
+/** Dragging the sidebar's edge narrower than this hides it (Arc's push-to-collapse). */
+export const SIDEBAR_COLLAPSE_AT = 120;
+
+/** What an edge drag to `width` does: hide the sidebar, or resize it (clamped). Pure. */
+export function sidebarDrag(
+  width: number,
+): { collapse: true } | { collapse: false; width: number } {
+  if (Number.isFinite(width) && width < SIDEBAR_COLLAPSE_AT) return { collapse: true };
+  return { collapse: false, width: clampSidebarWidth(width) };
+}
+
 export function clampSidebarWidth(width: number): number {
   if (!Number.isFinite(width)) return SIDEBAR_WIDTH.default;
   return Math.round(Math.min(SIDEBAR_WIDTH.max, Math.max(SIDEBAR_WIDTH.min, width)));
