@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { wallpaperChoiceSchema } from './types/newtab';
 
 /**
  * Every persisted setting, with its schema and default. Stored as JSON in the `settings` table.
@@ -19,6 +20,7 @@ export const settingsSchema = {
   }),
   'sidebar.width': z.number().int().min(200).max(400),
   'sidebar.visible': z.boolean(),
+  'newtab.wallpaper': wallpaperChoiceSchema,
 } as const;
 
 export type Settings = { [K in SettingKey]: z.output<(typeof settingsSchema)[K]> };
@@ -28,4 +30,5 @@ export const settingsDefaults: Settings = {
   'window.state': { bounds: null, isMaximized: false },
   'sidebar.width': 260,
   'sidebar.visible': true,
+  'newtab.wallpaper': { kind: 'builtin', id: 'aurora' },
 };

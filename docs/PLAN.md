@@ -27,7 +27,7 @@ Before writing a single line of code, protect your data. The importer in Phase 3
 
 This file is the single source of truth for the project. It lives at `docs/PLAN.md` in the repository, and Claude Code reads it (together with `CLAUDE.md`) at the start of every working session.
 
-- Every feature has an ID (`F-01` … `F-31`). Phases, commits and pull requests reference these IDs.
+- Every feature has an ID (`F-01` … `F-32`). Phases, commits and pull requests reference these IDs.
 - When a technical decision changes, update this document **and** add an Architecture Decision Record (ADR) in `docs/decisions/`.
 - Progress is tracked in `docs/PROGRESS.md` (template in Appendix D), not in this file, so this plan stays clean.
 - Screenshots of the real Arc live in `docs/reference/` and are referenced as "Img 1–7" below.
@@ -112,6 +112,7 @@ These principles settle design arguments. When two options are both reasonable, 
 | F-29 | Tidy (AI) | Groups and names Today tabs automatically using an LLM | P2 | 10 |
 | F-30 | Developer mode | Per-site full URL display, quick DevTools, localhost-friendly behaviour | P1 | 7 |
 | F-31 | Browser plumbing | Right-click menus, find in page, zoom, print, HTML fullscreen, popups/OAuth, HTTP auth, certificate errors, permission prompts, crash recovery, history | P0 | 1–4 |
+| F-32 | New tab page | Wallpaper (built-in gradients or your own image), clock and greeting, search box; opened by "+ New Tab" (and ⌘T until Phase 2) — owner request, not in Arc | P0 | 1 |
 
 ### 2.3 Out of scope (for now)
 
@@ -826,6 +827,16 @@ Per-site toggle (Img 3). When on: the toolbar shows the full URL including port 
 | Spellcheck | `session.setSpellCheckerLanguages` (macOS uses the system checker) | 3 |
 | Notifications | Web Notification API works through Electron; gate with PermissionService | 3 |
 | Default browser | Settings button that calls `setAsDefaultProtocolClient` for http/https | 6 |
+
+### F-32 — New tab page (added 1 Nov 2026 at the owner's request; Arc has no equivalent)
+
+**Behaviour.** `orbit://newtab` shows a full-bleed wallpaper, a large clock with a greeting and date, and a frosted search box that is focused on open. Enter loads the address or search in the same tab. A **Customize** button opens a panel with built-in wallpapers (layered gradients with grain) and "Choose your own image…". "+ New Tab" in the sidebar always opens this page; ⌘T opens it until the command bar lands in Phase 2, then ⌘T opens the command bar (a setting may swap them).
+
+**Implementation.** Internal page in the `internal` renderer, loaded into a tab's WebContentsView with the internal preload. Its IPC channels (`newtab:*`) are restricted to the `internal` surface, and main also checks the sender is a tab currently on the new tab page. Navigating away swaps in a fresh, unprivileged web view. The wallpaper choice is the `newtab.wallpaper` setting; a custom image is validated, downscaled to ≤ 3840 px and stored as `<userData>/wallpapers/custom.jpg`.
+
+**Later.** Shortcut tiles (most-visited from history in Phase 2, favorites after the Phase 3 import); live-updating other open new tab pages when the wallpaper changes.
+
+**Done when.** The page appears for every new tab, searching/navigating works, and wallpaper choices (including your own image) persist.
 
 ---
 

@@ -7,6 +7,9 @@ import { insertAfter, nextActiveAfterClose } from './model';
 import { TabController } from './tab-controller';
 import type { TabEnv } from './tab-controller';
 
+/** A pre-drag snapshot older than this is stale (the page may have changed). */
+const SNAPSHOT_MAX_AGE_MS = 10_000;
+
 export type TabManagerDeps = Pick<
   TabEnv,
   'internalPreload' | 'loadInternal' | 'registerInternal' | 'unregisterInternal'
@@ -27,6 +30,7 @@ export class TabManager {
   private activeId: string | null = null;
   private notifyScheduled = false;
   private frozen = false;
+  private prepared: { tabId: string; at: number; dataUrl: string } | null = null;
 
   constructor(private readonly deps: TabManagerDeps) {}
 
@@ -43,6 +47,16 @@ export class TabManager {
 
   get(id: string): TabController | undefined {
     return this.tabs.get(id);
+  }
+
+  /** The tab currently showing this webContents, if any. */
+  findByContents(webContentsId: number): TabController | undefined {
+    for (const tab of this.tabs.values()) {
+      if (!tab.view.webContents.isDestroyed() && tab.view.webContents.id === webContentsId) {
+        return tab;
+      }
+    }
+    return undefined;
   }
 
   /** Opens a tab (default: the new tab page) right after the active tab and activates it. */
@@ -93,23 +107,39 @@ export class TabManager {
   }
 
   /**
-   * Hides the active view behind a still snapshot (for sidebar resizing, when the shell must
-   * receive every pointer event). Returns the snapshot as a JPEG data: URL.
+   * Captures the active page ahead of a possible sidebar drag (the shell calls this when the
+   * pointer reaches the sidebar edge), so `freeze()` can hide the view instantly.
    */
-  async freeze(): Promise<string | null> {
+  async prepareFreeze(): Promise<void> {
     const active = this.active;
-    if (!active || this.frozen) return null;
-    this.frozen = true;
-    let snapshot: string | null = null;
+    if (!active) return;
     try {
       const image = await active.view.webContents.capturePage();
-      if (!image.isEmpty())
-        snapshot = `data:image/jpeg;base64,${image.toJPEG(80).toString('base64')}`;
+      if (image.isEmpty() || this.activeId !== active.id) return;
+      this.prepared = {
+        tabId: active.id,
+        at: Date.now(),
+        dataUrl: `data:image/jpeg;base64,${image.toJPEG(80).toString('base64')}`,
+      };
     } catch {
       // A page that can't be captured just shows the blank card while dragging.
     }
-    if (this.frozen) active.view.setVisible(false);
-    return snapshot;
+  }
+
+  /**
+   * Hides the active view immediately (sidebar resizing: native views swallow pointer events,
+   * so the shell must receive them all) and returns the prepared snapshot to show in its place.
+   */
+  freeze(): string | null {
+    const active = this.active;
+    if (!active || this.frozen) return null;
+    this.frozen = true;
+    active.view.setVisible(false);
+    const prepared = this.prepared;
+    this.prepared = null;
+    const fresh =
+      prepared && prepared.tabId === active.id && Date.now() - prepared.at < SNAPSHOT_MAX_AGE_MS;
+    return fresh ? prepared.dataUrl : null;
   }
 
   /** Shows the active view again after `freeze()`. */

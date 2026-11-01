@@ -67,6 +67,8 @@ function ResizeHandle({ onStart, onEnd }: { onStart: () => void; onEnd: () => vo
   return (
     <div
       className="no-drag absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize"
+      // Hovering the edge snapshots the page, so a drag can swap it in without delay.
+      onPointerEnter={() => void window.orbit.invoke('sidebar:prepareResize', {})}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onLostPointerCapture={onLostPointerCapture}

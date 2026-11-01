@@ -7,7 +7,9 @@ import type { RendererEntry } from '@shared/constants';
 import { Broadcaster } from './ipc/broadcaster';
 import { registerAppHandlers } from './ipc/handlers/app';
 import { registerLayoutHandlers } from './ipc/handlers/layout';
+import { registerNewTabHandlers } from './ipc/handlers/newtab';
 import { registerTabHandlers } from './ipc/handlers/tabs';
+import { WallpaperService } from './newtab/wallpaper-service';
 import { installAppMenu } from './menus/app-menu';
 import { IpcRouter } from './ipc/router';
 import { SenderRegistry } from './ipc/sender';
@@ -91,6 +93,11 @@ void app.whenReady().then(() => {
   registerAppHandlers(router);
   registerLayoutHandlers(router, windowManager);
   registerTabHandlers(router, windowManager);
+  registerNewTabHandlers(
+    router,
+    windowManager,
+    new WallpaperService(app.getPath('userData'), persistence.settings),
+  );
   router.assertComplete();
 
   installAppMenu({

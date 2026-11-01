@@ -14,5 +14,5 @@ export type OrbitApi = {
   on<E extends EventChannel>(channel: E, listener: (payload: EventPayload<E>) => void): () => void;
 };
 
-/** The reduced API exposed to internal orbit:// pages (grows from Phase 4). */
-export type OrbitInternalApi = Record<string, never>;
+/** The reduced API exposed to internal orbit:// pages: requests only (main limits the channels). */
+export type OrbitInternalApi = Pick<OrbitApi, 'invoke'>;

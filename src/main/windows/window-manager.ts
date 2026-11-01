@@ -5,6 +5,7 @@ import type { RendererEntry } from '@shared/constants';
 import type { Broadcaster } from '../ipc/broadcaster';
 import type { SenderRegistry } from '../ipc/sender';
 import type { SettingsRepository } from '../persistence/repositories/settings';
+import type { TabController } from '../tabs/tab-controller';
 import { TabManager } from '../tabs/tab-manager';
 import { LayoutEngine } from './layout-engine';
 import { MIN_SIZE, resolveWindowBounds } from './window-state';
@@ -43,6 +44,15 @@ export class WindowManager {
   /** The window whose shell sent an IPC message. */
   forSender(webContentsId: number): WindowController | undefined {
     return this.controllers.get(webContentsId);
+  }
+
+  /** The tab (and its window) whose page is this webContents, e.g. a new tab page calling IPC. */
+  tabForContents(webContentsId: number): { window: WindowController; tab: TabController } | null {
+    for (const window of this.controllers.values()) {
+      const tab = window.tabs.findByContents(webContentsId);
+      if (tab) return { window, tab };
+    }
+    return null;
   }
 
   /** The focused window (for menu commands), falling back to any window. */

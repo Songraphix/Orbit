@@ -13,6 +13,20 @@ export type Orbit = {
   close: (options?: { keepData?: boolean }) => Promise<void>;
 };
 
+/**
+ * The main window's shell page. Tab views are pages too (the new tab page can appear first),
+ * so pick the shell by its URL rather than taking the first page.
+ */
+async function shellPage(app: ElectronApplication): Promise<Page> {
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    const shell = app.windows().find((p) => p.url().includes('/shell/index.html'));
+    if (shell) return shell;
+    await app.waitForEvent('window', { timeout: 250 }).catch(() => undefined);
+  }
+  throw new Error('Orbit shell window did not appear');
+}
+
 /** Launches the built app with a throwaway profile, so tests never touch real data. */
 export async function launchOrbit(options: { userData?: string } = {}): Promise<Orbit> {
   const userData = options.userData ?? mkdtempSync(join(tmpdir(), 'orbit-e2e-'));
@@ -23,7 +37,7 @@ export async function launchOrbit(options: { userData?: string } = {}): Promise<
     args: ['.'],
     env: { ...(env as Record<string, string>), ORBIT_USER_DATA_DIR: userData },
   });
-  const win = await app.firstWindow();
+  const win = await shellPage(app);
   return {
     app,
     win,

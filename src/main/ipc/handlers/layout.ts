@@ -20,8 +20,13 @@ export function registerLayoutHandlers(router: IpcRouter, windows: WindowManager
     windowFor(sender.webContentsId).layout.setSidebarWidth(width);
   });
 
-  router.handle('sidebar:beginResize', async (_input, { sender }) => ({
-    snapshot: await windowFor(sender.webContentsId).tabs.freeze(),
+  router.handle('sidebar:prepareResize', async (_input, { sender }) => {
+    await windowFor(sender.webContentsId).tabs.prepareFreeze();
+  });
+
+  // Synchronous on purpose: the view must be hidden before the next pointer move arrives.
+  router.handle('sidebar:beginResize', (_input, { sender }) => ({
+    snapshot: windowFor(sender.webContentsId).tabs.freeze(),
   }));
 
   router.handle('sidebar:endResize', (_input, { sender }) => {

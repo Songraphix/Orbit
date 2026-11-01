@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { layoutSchema } from '../types/layout';
+import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
 import { tabsSnapshotSchema } from '../types/tabs';
 
 /**
@@ -48,6 +49,11 @@ export const contract = {
     input: z.object({ width: z.number().finite() }).strict(),
     output: z.void(),
   },
+  /** The pointer reached the sidebar edge: capture the page now, in case a drag follows. */
+  'sidebar:prepareResize': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
   /** Native web views swallow pointer events, so while the sidebar edge is dragged the active
    *  view is hidden and the shell shows this still snapshot (JPEG data: URL) in its place. */
   'sidebar:beginResize': {
@@ -74,6 +80,30 @@ export const contract = {
   'tabs:close': {
     input: z.object({ tabId }).strict(),
     output: z.void(),
+  },
+
+  // New tab page (orbit://newtab). Only internal pages may call these.
+  'newtab:get': {
+    input: z.object({}).strict(),
+    output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
+  'newtab:setWallpaper': {
+    input: z.object({ wallpaper: wallpaperChoiceSchema }).strict(),
+    output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
+  /** Opens a file picker; resolves to the new state, or null if the user cancelled. */
+  'newtab:chooseImage': {
+    input: z.object({}).strict(),
+    output: newTabStateSchema.nullable(),
+    surfaces: ['internal'],
+  },
+  /** Loads what the user typed in the search box into the new tab page's own tab. */
+  'newtab:navigate': {
+    input: z.object({ input: z.string().min(1).max(8192) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
   },
 } as const satisfies Record<string, ChannelSpec>;
 
