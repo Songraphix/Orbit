@@ -23,14 +23,14 @@ export function PeekFrame({ peek, interactive }: { peek: PeekView; interactive: 
 
   return (
     <div
-      className="fixed inset-0 bg-black/25 animate-[orbit-fade-in_120ms_ease-out]"
+      className="fixed inset-0 bg-black/30 animate-[orbit-fade-in_var(--dur)_var(--ease-out)]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}
       data-testid="peek-backdrop"
     >
       <div
-        className="absolute bg-white shadow-[0_24px_80px_rgb(0_0_0/0.35)]"
+        className="absolute bg-white shadow-[0_0_0_0.5px_rgb(0_0_0/0.2),0_2px_6px_rgb(0_0_0/0.12),0_30px_90px_-10px_rgb(0_0_0/0.55)]"
         style={{
           left: frame.x,
           top: frame.y,
@@ -49,7 +49,7 @@ export function PeekFrame({ peek, interactive }: { peek: PeekView; interactive: 
             aria-label="Close Preview"
             title="Close (Esc)"
             onClick={close}
-            className="grid size-7 place-items-center rounded-md hover:bg-black/5"
+            className="press grid size-7 place-items-center rounded-[7px] hover:bg-black/[0.06]"
             data-testid="peek-close"
           >
             <X size={15} />
@@ -72,7 +72,7 @@ export function PeekFrame({ peek, interactive }: { peek: PeekView; interactive: 
           <button
             type="button"
             onClick={() => void window.orbit.invoke('peek:promote', {})}
-            className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 font-medium text-neutral-700 hover:bg-black/5"
+            className="press flex shrink-0 items-center gap-1 rounded-[7px] px-2 py-1 font-medium text-neutral-700 hover:bg-black/[0.06]"
             data-testid="peek-promote"
           >
             Open as Tab <ArrowUpRight size={13} />

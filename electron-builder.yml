@@ -10,6 +10,9 @@ asarUnpack:
   - '**/*.node'
 mac:
   category: public.app-category.productivity
+  icon: resources/icon.icns
+  darkModeSupport: true
+  minimumSystemVersion: '13.0'
   target:
     - target: dmg
       arch: arm64
@@ -21,4 +24,25 @@ protocols:
     schemes:
       - http
       - https
-# Electron Fuses are applied in Phase 11.
+# HTML files open in Orbit too (macOS lists it as a browser).
+fileAssociations:
+  - ext: [html, htm, xhtml, shtml]
+    name: HTML Document
+    role: Viewer
+# Electron Fuses (PLAN.md sections 4.8 and 12), flipped in the packaged binary:
+# - no ELECTRON_RUN_AS_NODE, NODE_OPTIONS or --inspect: the app can't be turned into a Node shell
+# - the app is loaded only from app.asar, whose integrity is checked
+# - cookies are encrypted with the Keychain
+# File-protocol privileges stay on: Orbit's own pages are served from file://.
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  loadBrowserProcessSpecificV8Snapshot: false
+  grantFileProtocolExtraPrivileges: true
+  # Flipping fuses changes the binary; Apple Silicon kills an app whose ad-hoc signature no longer
+  # matches, so it's re-signed (ad hoc) afterwards.
+  resetAdHocDarwinSignature: true

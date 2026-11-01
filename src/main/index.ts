@@ -389,6 +389,8 @@ app.on('will-quit', () => {
 });
 
 void app.whenReady().then(() => {
+  // The packaged app gets its icon from the bundle; in development, show it in the Dock too.
+  if (!app.isPackaged) app.dock?.setIcon(join(import.meta.dirname, '../../resources/icon.png'));
   persistence = openPersistence(app.getPath('userData'));
   const store = new SidebarStore(persistence.sidebar);
   sidebarStore = store;

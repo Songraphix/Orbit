@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Orbit's app icon: a planet with a tilted ring on a deep violet-to-rose squircle (macOS grid:
+       824 px tile, 100 px margin for the shadow). -->
+  <defs>
+    <linearGradient id="bg" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#22164F"/>
+      <stop offset="0.48" stop-color="#5B3BE8"/>
+      <stop offset="0.82" stop-color="#C04FD8"/>
+      <stop offset="1" stop-color="#FF7AA8"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0.3" cy="0.12" r="0.75">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.32"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.04"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="planet" cx="0.36" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.55" stop-color="#ECE6FF"/>
+      <stop offset="1" stop-color="#B7A6FF"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="1" stop-color="#FFD9EA" stop-opacity="0.9"/>
+    </linearGradient>
+    <filter id="drop" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0B0620" flood-opacity="0.38"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+    <clipPath id="tile"><rect x="100" y="100" width="824" height="824" rx="186"/></clipPath>
+    <!-- The front half of the ring (below the tilted centre line) is drawn over the planet. -->
+    <clipPath id="front">
+      <rect x="0" y="540" width="1024" height="600" transform="rotate(-20 512 540)"/>
+    </clipPath>
+  </defs>
+
+  <g filter="url(#drop)">
+    <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  </g>
+  <g clip-path="url(#tile)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#sheen)"/>
+    <!-- a faint halo behind the planet -->
+    <circle cx="512" cy="540" r="190" fill="#FFFFFF" opacity="0.18" filter="url(#glow)"/>
+    <!-- back of the ring -->
+    <ellipse cx="512" cy="540" rx="318" ry="104" transform="rotate(-20 512 540)" fill="none"
+             stroke="url(#ring)" stroke-width="26" opacity="0.7"/>
+    <circle cx="512" cy="540" r="158" fill="url(#planet)"/>
+    <!-- front of the ring, over the planet -->
+    <g clip-path="url(#front)">
+      <ellipse cx="512" cy="540" rx="318" ry="104" transform="rotate(-20 512 540)" fill="none"
+               stroke="url(#ring)" stroke-width="26"/>
+    </g>
+    <!-- a small moon riding the ring -->
+    <circle cx="790" cy="498" r="30" fill="#FFFFFF"/>
+    <!-- lit top edge -->
+    <rect x="101" y="101" width="822" height="822" rx="185" fill="none" stroke="#FFFFFF"
+          stroke-opacity="0.22" stroke-width="2"/>
+  </g>
+</svg>
