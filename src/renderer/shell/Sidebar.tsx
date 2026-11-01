@@ -12,6 +12,7 @@ import { FavoritesGrid } from './sidebar/FavoritesGrid';
 import { RowList } from './sidebar/Rows';
 import { BottomBar, SpaceHeader } from './sidebar/SpaceParts';
 import { LibraryNav } from './sidebar/LibraryNav';
+import { WorkspaceNav } from './sidebar/WorkspaceNav';
 import { AddressPill } from './sidebar/AddressPill';
 import type { TabState } from '@shared/types/tabs';
 import type { LibrarySection } from '@shared/types/library';
@@ -188,6 +189,7 @@ export function Sidebar({
                 width={width}
               />
             </div>
+            <WorkspaceNav />
             <nav className="flex flex-col gap-0.5 px-2" aria-label="Tabs">
               <RowList
                 rows={sidebar.pinned}

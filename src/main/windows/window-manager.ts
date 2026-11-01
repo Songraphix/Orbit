@@ -364,7 +364,7 @@ export class WindowManager {
     notes = new NotesPanelController({
       win,
       getLayout: () => layout.current(),
-      setOpen: (open) => layout.setNotes(open),
+      setOpen: (open, wide) => layout.setNotes(open, wide),
       internalPreload: this.deps.internalPreloadPath,
       loadInternal: this.deps.loadInternal,
       registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),

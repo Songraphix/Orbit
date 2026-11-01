@@ -5,8 +5,8 @@ import type { Layout } from '@shared/types/layout';
 export type NotesPanelDeps = {
   win: BrowserWindow;
   getLayout: () => Layout;
-  /** Makes room on the right (the page narrows), or gives it back. */
-  setOpen: (open: boolean) => void;
+  /** Makes room on the right (the page narrows), or gives it back; wide for the board. */
+  setOpen: (open: boolean, wide: boolean) => void;
   internalPreload: string;
   loadInternal: (target: { webContents: WebContents }, url: string) => void;
   registerInternal: (webContentsId: number) => void;
@@ -18,9 +18,13 @@ export type NotesPanelDeps = {
  * (the notes list, or one note) in its own internal view. The page narrows and stays usable.
  * Closing only hides the view, so reopening is instant and an unsaved word is never lost.
  */
+/** The panel's tabs (and the Project Board). */
+export type PanelView = 'notes' | 'projects' | 'tasks' | 'board';
+
 export class NotesPanelController {
   private view: WebContentsView | null = null;
   private shown = false;
+  private wide = false;
 
   constructor(private readonly deps: NotesPanelDeps) {}
 
@@ -32,21 +36,22 @@ export class NotesPanelController {
     return this.view !== null && this.view.webContents.id === webContentsId;
   }
 
-  /** Opens the panel: on note `id`, or where it was (the list, the first time). */
-  open(id?: string): void {
+  /** Opens the panel: on note `id`, on one of its tabs, or where it was (Notes, at first). */
+  open(id?: string, tab?: PanelView): void {
     const fresh = this.view === null;
     const view = this.view ?? this.createView();
-    const path = id ? `orbit://notes/panel/${id}` : 'orbit://notes/panel';
-    if (fresh) this.deps.loadInternal(view, path);
-    else if (id) {
-      // Switch notes inside the loaded page (no reload). `id` was checked to be a UUID.
+    // `id` was checked to be a UUID; `tab` is one of PanelView.
+    const sub = id ? `/${id}` : tab && tab !== 'notes' ? `/${tab}` : tab === 'notes' ? '' : null;
+    if (fresh) this.deps.loadInternal(view, `orbit://notes/panel${sub ?? ''}`);
+    else if (sub !== null) {
+      // Switch inside the loaded page (no reload).
       void view.webContents
-        .executeJavaScript(`location.hash = ${JSON.stringify(`#/notes/panel/${id}`)}`)
+        .executeJavaScript(`location.hash = ${JSON.stringify(`#/notes/panel${sub}`)}`)
         .catch(() => undefined);
     }
     if (!this.shown) {
       this.shown = true;
-      this.deps.setOpen(true); // the layout tells the shell (its Notes button lights up)
+      this.deps.setOpen(true, this.wide); // the layout tells the shell (its Notes button lights up)
     }
     this.fit();
     view.setVisible(true);
@@ -56,8 +61,16 @@ export class NotesPanelController {
   close(): void {
     if (!this.shown) return;
     this.shown = false;
+    this.wide = false;
     this.view?.setVisible(false);
-    this.deps.setOpen(false);
+    this.deps.setOpen(false, false);
+  }
+
+  /** The Project Board needs room: the panel widens while it shows. */
+  setWide(wide: boolean): void {
+    if (wide === this.wide) return;
+    this.wide = wide;
+    if (this.shown) this.deps.setOpen(true, wide);
   }
 
   toggle(): void {

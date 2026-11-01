@@ -39,7 +39,7 @@ test('the Notes panel docks beside the page; notes are written, listed, searched
     const { app, win } = orbit;
     expect(await layoutNotes(win)).toBeNull();
     await win.getByTestId('toolbar-notes').click();
-    await expect.poll(() => layoutNotes(win)).toMatchObject({ width: 340 });
+    await expect.poll(() => layoutNotes(win)).toMatchObject({ width: 380 });
     await expect(win.getByTestId('toolbar-notes')).toHaveAttribute('aria-pressed', 'true');
 
     const panel = await pageWith(app, '#/notes/panel');

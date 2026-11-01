@@ -24,6 +24,7 @@ export class LayoutEngine {
   private splitRatio: number | null = null;
   private library: LibraryPanel | null = null;
   private notes = false;
+  private notesWide = false;
   private topTabs: boolean;
   private layout: Layout;
 
@@ -106,9 +107,10 @@ export class LayoutEngine {
   }
 
   /** The Notes panel opened or closed. Not persisted. */
-  setNotes(open: boolean): void {
-    if (open === this.notes) return;
+  setNotes(open: boolean, wide = this.notesWide): void {
+    if (open === this.notes && wide === this.notesWide) return;
     this.notes = open;
+    this.notesWide = wide;
     this.update();
   }
 
@@ -143,6 +145,7 @@ export class LayoutEngine {
       splitRatio: this.splitRatio,
       library: this.library,
       notes: this.notes,
+      notesWide: this.notesWide,
       topTabs: this.topTabs,
     });
   }

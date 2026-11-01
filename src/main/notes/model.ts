@@ -53,6 +53,14 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  *  floating note (`float/<id>`). Anything else is "not found". Pure. */
 export function notesHash(param: string): string {
   const [mode = '', id, ...rest] = param.split('/');
+  // The panel's other views: Projects (and one project), Tasks, the Project Board.
+  if (mode === 'panel' && (id === 'projects' || id === 'tasks' || id === 'board')) {
+    if (rest.length === 0) return `/notes/panel/${id}`;
+    if (id === 'projects' && rest.length === 1 && UUID.test(rest[0]!)) {
+      return `/notes/panel/projects/${rest[0]}`;
+    }
+    return '/not-found';
+  }
   if (rest.length > 0) return '/not-found';
   if (mode === 'panel' && id === undefined) return '/notes/panel';
   if ((mode === 'panel' || mode === 'float') && id && UUID.test(id)) return `/notes/${mode}/${id}`;

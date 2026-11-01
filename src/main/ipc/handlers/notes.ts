@@ -169,11 +169,11 @@ export function registerNotesHandlers(
     window.win.focus();
   });
 
-  router.handle('notes:panel', ({ open, id }, { sender }) => {
+  router.handle('notes:panel', ({ open, id, view }, { sender }) => {
     const window =
       windows.forSender(sender.webContentsId) ?? surfaceOf(sender.webContentsId).window;
     if (!window) return;
-    if (id || open === true) window.notes.open(id);
+    if (id || view || open === true) window.notes.open(id, view);
     else if (open === false) window.notes.close();
     else window.notes.toggle();
   });

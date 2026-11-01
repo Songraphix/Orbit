@@ -34,6 +34,13 @@ import { sidebarSnapshotSchema, spaceThemeSchema } from '../types/space';
 import { userSettingsSchema } from '../settings';
 import { profilePatchSchema, profileViewSchema } from '../profile';
 import { homeSettingsSchema } from '../types/home';
+import {
+  PROJECT_STATUSES,
+  TASK_STATUSES,
+  projectInputSchema,
+  taskInputSchema,
+  workDataSchema,
+} from '../work';
 import { tabsSnapshotSchema } from '../types/tabs';
 
 /**
@@ -816,9 +823,15 @@ export const contract = {
     output: z.void(),
     surfaces: ['internal', 'overlay'],
   },
-  /** The Notes panel: toggle (no `open`), open (optionally on a note) or close. */
+  /** The productivity panel: toggle (no `open`), open (on a note, or one of its tabs) or close. */
   'notes:panel': {
-    input: z.object({ open: z.boolean().optional(), id: noteIdSchema.optional() }).strict(),
+    input: z
+      .object({
+        open: z.boolean().optional(),
+        id: noteIdSchema.optional(),
+        view: z.enum(['notes', 'projects', 'tasks', 'board']).optional(),
+      })
+      .strict(),
     output: z.void(),
     surfaces: ['shell', 'overlay', 'internal'],
   },
@@ -873,6 +886,52 @@ export const contract = {
       .strict(),
     output: z.void(),
     surfaces: ['overlay'],
+  },
+
+  // Projects and tasks (owner request): the productivity panel's Projects, Tasks and Board.
+  // Only the panel may call these. Every change answers with all the data, so its views stay
+  // in step.
+  'work:get': {
+    input: z.object({}).strict(),
+    output: workDataSchema,
+    surfaces: ['internal'],
+  },
+  'work:saveProject': {
+    input: projectInputSchema,
+    output: z.object({ id: z.string(), data: workDataSchema }),
+    surfaces: ['internal'],
+  },
+  'work:projectStatus': {
+    input: z.object({ id: z.string().max(64), status: z.enum(PROJECT_STATUSES) }).strict(),
+    output: workDataSchema,
+    surfaces: ['internal'],
+  },
+  /** Asks first (delete its tasks too, or keep them); `deleted` false if cancelled. */
+  'work:deleteProject': {
+    input: z.object({ id: z.string().max(64) }).strict(),
+    output: z.object({ deleted: z.boolean(), data: workDataSchema }),
+    surfaces: ['internal'],
+  },
+  'work:saveTask': {
+    input: taskInputSchema,
+    output: z.object({ id: z.string(), data: workDataSchema }),
+    surfaces: ['internal'],
+  },
+  'work:taskStatus': {
+    input: z.object({ id: z.string().max(64), status: z.enum(TASK_STATUSES) }).strict(),
+    output: workDataSchema,
+    surfaces: ['internal'],
+  },
+  'work:deleteTask': {
+    input: z.object({ id: z.string().max(64) }).strict(),
+    output: z.object({ deleted: z.boolean(), data: workDataSchema }),
+    surfaces: ['internal'],
+  },
+  /** The Project Board widens the panel while it shows. */
+  'work:panelWide': {
+    input: z.object({ wide: z.boolean() }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
   },
 } as const satisfies Record<string, ChannelSpec>;
 

@@ -192,3 +192,21 @@
   --note-bg: #1f1f22;
   --note-hover: rgb(255 255 255 / 0.07);
 }
+
+/* The productivity panel's Projects / Tasks / Board (owner request): purple accent, quiet cards. */
+[data-note-theme='light'] {
+  --work-accent: #6d5dfc;
+  --work-accent-soft: rgb(109 93 252 / 0.12);
+  --work-card: rgb(0 0 0 / 0.035);
+  --work-border: rgb(0 0 0 / 0.07);
+  --work-track: rgb(0 0 0 / 0.08);
+  --work-sheet: #ffffff;
+}
+[data-note-theme='dark'] {
+  --work-accent: #7c6cff;
+  --work-accent-soft: rgb(124 108 255 / 0.2);
+  --work-card: rgb(255 255 255 / 0.045);
+  --work-border: rgb(255 255 255 / 0.07);
+  --work-track: rgb(255 255 255 / 0.1);
+  --work-sheet: #26262b;
+}

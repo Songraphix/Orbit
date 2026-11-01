@@ -58,6 +58,12 @@ describe('notesHash', () => {
     expect(notesHash('float/../settings')).toBe('/not-found');
     expect(notesHash(`float/${id}/x`)).toBe('/not-found');
     expect(notesHash('')).toBe('/not-found');
+    expect(notesHash('panel/projects')).toBe('/notes/panel/projects');
+    expect(notesHash(`panel/projects/${id}`)).toBe(`/notes/panel/projects/${id}`);
+    expect(notesHash('panel/tasks')).toBe('/notes/panel/tasks');
+    expect(notesHash('panel/board')).toBe('/notes/panel/board');
+    expect(notesHash('panel/tasks/x')).toBe('/not-found');
+    expect(notesHash('panel/projects/../x')).toBe('/not-found');
   });
 });
 

@@ -1,6 +1,6 @@
 import {
   Check,
-  CircleCheck,
+  Crosshair,
   ImagePlus,
   LayoutGrid,
   Moon,
@@ -505,12 +505,17 @@ function Today({
   return (
     <section
       className={`w-[min(440px,100%)] rounded-[26px] px-6 pt-4 pb-3 ${glass(light)}`}
-      aria-label="Today"
+      aria-label="My Focus"
       data-testid="today"
     >
       <h2 className="mb-2 flex items-center gap-2.5 text-[18px] font-semibold">
-        <CircleCheck size={21} />
-        Today
+        <Crosshair size={20} />
+        <span className="flex-1">My Focus</span>
+        {todos.some((t) => !t.done) && (
+          <span className="text-[13px] font-normal opacity-60" data-testid="focus-remaining">
+            {todos.filter((t) => !t.done).length} remaining
+          </span>
+        )}
       </h2>
       <ul className="flex flex-col gap-1">
         {todos.map((t) => (
@@ -684,7 +689,7 @@ function CustomizePanel({
         {(
           [
             ['shortcuts', 'Shortcuts'],
-            ['today', 'Today list'],
+            ['today', 'My Focus list'],
             ['quote', 'Quote'],
           ] as const
         ).map(([key, label]) => (

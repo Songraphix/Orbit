@@ -1,0 +1,212 @@
+import { z } from 'zod';
+
+/**
+ * Projects and tasks (owner request, "Browser Project Management"): the data the productivity
+ * panel shows, and the pure rules it follows — progress, counts, filters and due dates.
+ */
+
+export const PROJECT_STATUSES = ['active', 'on-hold', 'done'] as const;
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
+  active: 'Active',
+  'on-hold': 'On Hold',
+  done: 'Done',
+};
+
+export const TASK_STATUSES = ['todo', 'doing', 'done'] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
+  todo: 'To Do',
+  doing: 'In Progress',
+  done: 'Done',
+};
+
+export const PRIORITIES = ['low', 'medium', 'high'] as const;
+export type Priority = (typeof PRIORITIES)[number];
+export const PRIORITY_LABEL: Record<Priority, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+};
+
+/** Project colours (folder icons, progress bars). */
+export const PROJECT_COLORS = [
+  { id: 'purple', hex: '#8b5cf6' },
+  { id: 'blue', hex: '#3b82f6' },
+  { id: 'orange', hex: '#f97316' },
+  { id: 'green', hex: '#22c55e' },
+  { id: 'pink', hex: '#ec4899' },
+  { id: 'teal', hex: '#14b8a6' },
+  { id: 'red', hex: '#ef4444' },
+  { id: 'yellow', hex: '#eab308' },
+] as const;
+export type ProjectColor = (typeof PROJECT_COLORS)[number]['id'];
+const colorIds = PROJECT_COLORS.map((c) => c.id) as [ProjectColor, ...ProjectColor[]];
+
+export const colorHex = (id: string): string =>
+  PROJECT_COLORS.find((c) => c.id === id)?.hex ?? PROJECT_COLORS[0].hex;
+
+/** A local calendar date, "2026-11-01". */
+export const dateKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+export const projectSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  status: z.enum(PROJECT_STATUSES),
+  color: z.enum(colorIds),
+  startDate: dateKeySchema.nullable(),
+  dueDate: dateKeySchema.nullable(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type Project = z.output<typeof projectSchema>;
+
+export const taskSchema = z.object({
+  id: z.string(),
+  /** null = not in a project. */
+  projectId: z.string().nullable(),
+  title: z.string(),
+  description: z.string(),
+  priority: z.enum(PRIORITIES),
+  status: z.enum(TASK_STATUSES),
+  dueDate: dateKeySchema.nullable(),
+  completedAt: z.number().nullable(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type Task = z.output<typeof taskSchema>;
+
+export const workDataSchema = z.object({
+  projects: z.array(projectSchema),
+  tasks: z.array(taskSchema),
+});
+export type WorkData = z.output<typeof workDataSchema>;
+
+export const projectInputSchema = z
+  .object({
+    id: z.string().max(64).optional(),
+    name: z.string().max(80),
+    description: z.string().max(300),
+    status: z.enum(PROJECT_STATUSES),
+    color: z.enum(colorIds),
+    startDate: dateKeySchema.nullable(),
+    dueDate: dateKeySchema.nullable(),
+  })
+  .strict();
+export type ProjectInput = z.output<typeof projectInputSchema>;
+
+export const taskInputSchema = z
+  .object({
+    id: z.string().max(64).optional(),
+    projectId: z.string().max(64).nullable(),
+    title: z.string().max(200),
+    description: z.string().max(2000),
+    priority: z.enum(PRIORITIES),
+    status: z.enum(TASK_STATUSES),
+    dueDate: dateKeySchema.nullable(),
+  })
+  .strict();
+export type TaskInput = z.output<typeof taskInputSchema>;
+
+/** Why a project can't be saved, or null. Pure. */
+export function projectProblem(input: Pick<ProjectInput, 'name' | 'startDate' | 'dueDate'>) {
+  if (!input.name.trim()) return 'Give the project a name';
+  if (input.startDate && input.dueDate && input.dueDate < input.startDate) {
+    return 'The due date is before the start date';
+  }
+  return null;
+}
+
+/** Why a task can't be saved, or null. Pure. */
+export function taskProblem(input: Pick<TaskInput, 'title'>) {
+  return input.title.trim() ? null : 'Give the task a title';
+}
+
+export type Progress = { total: number; done: number; remaining: number; percent: number };
+
+/** A project's progress, from its tasks only: done / total, rounded; 0 % with no tasks. Pure. */
+export function projectProgress(projectId: string, tasks: readonly Task[]): Progress {
+  const mine = tasks.filter((t) => t.projectId === projectId);
+  const done = mine.filter((t) => t.status === 'done').length;
+  const total = mine.length;
+  return {
+    total,
+    done,
+    remaining: total - done,
+    percent: total === 0 ? 0 : Math.round((done / total) * 100),
+  };
+}
+
+export type ProjectFilter = 'all' | ProjectStatus;
+
+/** How many projects each filter shows. Pure. */
+export function projectCounts(projects: readonly Project[]): Record<ProjectFilter, number> {
+  return {
+    all: projects.length,
+    active: projects.filter((p) => p.status === 'active').length,
+    'on-hold': projects.filter((p) => p.status === 'on-hold').length,
+    done: projects.filter((p) => p.status === 'done').length,
+  };
+}
+
+export function filterProjects(projects: readonly Project[], filter: ProjectFilter): Project[] {
+  return filter === 'all' ? [...projects] : projects.filter((p) => p.status === filter);
+}
+
+/** Today's local date as "YYYY-MM-DD". */
+export function dateKey(at: Date | number): string {
+  const d = typeof at === 'number' ? new Date(at) : at;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+export type TaskFilter = 'all' | 'today' | 'upcoming' | 'completed';
+
+/**
+ * The Tasks tab's filters (local dates): All — everything, open first; Today — open tasks due
+ * today or overdue; Upcoming — open tasks due later; Completed — done, newest first. Pure.
+ */
+export function filterTasks(tasks: readonly Task[], filter: TaskFilter, today: string): Task[] {
+  const open = tasks.filter((t) => t.status !== 'done');
+  const byDue = (a: Task, b: Task) =>
+    (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || a.createdAt - b.createdAt;
+  switch (filter) {
+    case 'today':
+      return open.filter((t) => t.dueDate !== null && t.dueDate <= today).sort(byDue);
+    case 'upcoming':
+      return open.filter((t) => t.dueDate !== null && t.dueDate > today).sort(byDue);
+    case 'completed':
+      return tasks
+        .filter((t) => t.status === 'done')
+        .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
+    default:
+      return [...open.sort(byDue), ...tasks.filter((t) => t.status === 'done')];
+  }
+}
+
+export function taskCounts(tasks: readonly Task[], today: string): Record<TaskFilter, number> {
+  return {
+    all: tasks.length,
+    today: filterTasks(tasks, 'today', today).length,
+    upcoming: filterTasks(tasks, 'upcoming', today).length,
+    completed: filterTasks(tasks, 'completed', today).length,
+  };
+}
+
+/** "Today", "Tomorrow", "Overdue · 30 Oct", "4 Nov". Pure (dates are local "YYYY-MM-DD"). */
+export function dueLabel(
+  due: string,
+  today: string,
+  done = false,
+): { text: string; overdue: boolean } {
+  const [y, m, d] = due.split('-').map(Number) as [number, number, number];
+  const date = new Date(y, m - 1, d);
+  const short = date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  if (due === today) return { text: 'Today', overdue: false };
+  const [ty, tm, td] = today.split('-').map(Number) as [number, number, number];
+  const days = Math.round((date.getTime() - new Date(ty, tm - 1, td).getTime()) / 86_400_000);
+  if (days === 1) return { text: 'Tomorrow', overdue: false };
+  if (days < 0 && !done) return { text: `Overdue · ${short}`, overdue: true };
+  return { text: short, overdue: false };
+}

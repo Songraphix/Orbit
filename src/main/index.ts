@@ -67,6 +67,7 @@ import type { WindowController } from './windows/window-manager';
 import { notesHash } from './notes/model';
 import { enableQuietMode } from './app/quiet';
 import { registerProfileHandlers } from './ipc/handlers/profiles';
+import { registerWorkHandlers } from './ipc/handlers/work';
 import { FloatingNotes } from './notes/floating';
 import { newNoteTab, noteUrl, registerNotesHandlers, toggleQuickNote } from './ipc/handlers/notes';
 import { noteIdSchema } from '@shared/types/notes';
@@ -732,6 +733,7 @@ void app.whenReady().then(() => {
   floatingNotes = floating;
   registerNotesHandlers(router, windowManager, { notes: notesRepo, floating });
   registerProfileHandlers(router, windowManager, { runCommand });
+  registerWorkHandlers(router, windowManager, persistence.work);
   registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
   router.handle('tabs:copyUrl', (_input, { sender }) => {

@@ -157,9 +157,9 @@ describe('Library mode layout', () => {
 describe('Notes panel layout', () => {
   it('docks the panel on the right and narrows the page', () => {
     const layout = computeLayout({ ...base, notes: true });
-    // 1280 − 260 sidebar − 8 gap − 340 panel − 8 edge = 664 for the page.
-    expect(layout.card).toEqual({ x: 260, y: 8, width: 664, height: 804 });
-    expect(layout.notes).toEqual({ x: 932, y: 8, width: 340, height: 804 });
+    // 1280 − 260 sidebar − 8 gap − 380 panel − 8 edge = 624 for the page.
+    expect(layout.card).toEqual({ x: 260, y: 8, width: 624, height: 804 });
+    expect(layout.notes).toEqual({ x: 892, y: 8, width: 380, height: 804 });
     expect(computeLayout(base).notes).toBeNull();
   });
 
@@ -168,7 +168,11 @@ describe('Notes panel layout', () => {
     expect(mid.notes!.width).toBe(1000 - 260 - 16 - 420);
     expect(mid.card.width).toBe(420);
     const small = computeLayout({ ...base, windowWidth: 800, notes: true });
-    expect(small.notes!.width).toBe(260);
+    expect(small.notes!.width).toBe(280);
+    // The Project Board widens it, still leaving the page its minimum.
+    const wide = computeLayout({ ...base, windowWidth: 1600, notes: true, notesWide: true });
+    expect(wide.notes!.width).toBe(720);
+    expect(computeLayout({ ...base, notes: true, notesWide: true }).card.width).toBe(420);
   });
 
   it('works beside split view and Library mode, and hides in fullscreen', () => {

@@ -11,6 +11,7 @@ import m009 from './009-item-data.sql?raw';
 import m010 from './010-notes.sql?raw';
 import m011 from './011-profile-look.sql?raw';
 import m012 from './012-home.sql?raw';
+import m013 from './013-work.sql?raw';
 
 /** Ordered list of schema migrations. Append only — never edit or reorder a shipped entry. */
 export const migrations: readonly Migration[] = [
@@ -26,4 +27,5 @@ export const migrations: readonly Migration[] = [
   { version: 10, name: 'notes', sql: m010 },
   { version: 11, name: 'profile-look', sql: m011 },
   { version: 12, name: 'home', sql: m012 },
+  { version: 13, name: 'work', sql: m013 },
 ];

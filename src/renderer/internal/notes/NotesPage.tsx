@@ -1,6 +1,7 @@
 import {
   AppWindow,
   ArrowLeft,
+  FolderClosed,
   NotebookPen,
   PanelRight,
   PictureInPicture2,
@@ -8,15 +9,22 @@ import {
   PinOff,
   Plus,
   Search,
+  SquareCheck,
   Trash2,
   X,
 } from 'lucide-react';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import { noteTitle } from '@shared/note-text';
 import { relativeTime } from '@shared/time';
 import type { NoteAction, NoteEntry } from '@shared/types/notes';
 import { NoteEditor } from '../../notes/NoteEditor';
+import { showPanelView } from '../work/context';
+import { BoardView } from '../work/BoardView';
+import { ProjectDetail, ProjectsView } from '../work/ProjectsView';
+import { QuickActions } from '../work/QuickActions';
+import { TasksView } from '../work/TasksView';
+import { WorkProvider } from '../work/WorkProvider';
 import { saveOpenNotes } from '../../notes/save-notes';
 import { useAppearance } from '../appearance';
 
@@ -102,7 +110,8 @@ const subscribe = (onChange: () => void) => {
   window.addEventListener('hashchange', onChange);
   return () => window.removeEventListener('hashchange', onChange);
 };
-const panelNoteId = () => window.location.hash.split('/')[3] ?? null;
+/** Where the panel is: '#/notes/panel/<a>/<b>' → [a, b] ('' when absent). */
+const panelRoute = () => window.location.hash;
 const showInPanel = (id: string | null) => {
   window.location.hash = id ? `#/notes/panel/${id}` : '#/notes/panel';
 };
@@ -113,19 +122,84 @@ const showInPanel = (id: string | null) => {
  */
 export function NotesPanelPage() {
   const mode = useAppearance();
-  const id = useSyncExternalStore(subscribe, panelNoteId);
+  const hash = useSyncExternalStore(subscribe, panelRoute);
+  const [a = '', b = ''] = hash.split('/').slice(3);
+  const tab: PanelTab =
+    a === 'projects' || a === 'board' ? 'projects' : a === 'tasks' ? 'tasks' : 'notes';
+  // The board's Back returns to whichever list opened it.
+  const lastList = useRef<PanelTab>('projects');
+  useEffect(() => {
+    if (a !== 'board') lastList.current = tab;
+  }, [a, tab]);
   useEffect(() => {
     document.documentElement.style.background = 'transparent';
   }, []);
   if (!mode) return null;
+  let body: ReactNode;
+  if (a === 'projects') body = b ? <ProjectDetail key={b} id={b} /> : <ProjectsView />;
+  else if (a === 'tasks') body = <TasksView />;
+  else if (a === 'board') body = <BoardView onBack={() => showPanelView(lastList.current)} />;
+  else body = a ? <PanelNote key={a} id={a} /> : <NotesList />;
+  // Lists get the Quick Actions at their foot; a note, a project's page and the board don't.
+  const lists = (a === 'projects' && !b) || a === 'tasks';
   return (
     <main
       data-note-theme={mode}
-      className="flex h-screen flex-col overflow-hidden bg-[var(--note-bg)] text-[var(--note-fg)]"
+      className="relative flex h-screen flex-col overflow-hidden bg-[var(--note-bg)] text-[var(--note-fg)]"
       data-testid="notes-panel"
     >
-      {id ? <PanelNote key={id} id={id} /> : <NotesList />}
+      <WorkProvider>
+        <PanelTabs current={tab} />
+        {a === '' || (a !== 'projects' && a !== 'tasks' && a !== 'board') ? (
+          body
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto" data-testid="panel-body">
+            {body}
+            {lists && <QuickActions />}
+          </div>
+        )}
+      </WorkProvider>
     </main>
+  );
+}
+
+type PanelTab = 'notes' | 'projects' | 'tasks';
+
+/** Notes · Projects · Tasks across the top of the panel (and Close). */
+function PanelTabs({ current }: { current: PanelTab }) {
+  const tabs: { id: PanelTab; label: string; icon: ReactNode }[] = [
+    { id: 'notes', label: 'Notes', icon: <NotebookPen size={15} /> },
+    { id: 'projects', label: 'Projects', icon: <FolderClosed size={15} /> },
+    { id: 'tasks', label: 'Tasks', icon: <SquareCheck size={15} /> },
+  ];
+  return (
+    <nav
+      className="flex shrink-0 items-center gap-1 border-b border-[var(--work-border)] px-2.5 py-2"
+      aria-label="Panel"
+      data-testid="panel-tabs"
+    >
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          aria-current={t.id === current ? 'page' : undefined}
+          onClick={() => showPanelView(t.id)}
+          className={`press flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[11px] text-[13px] font-medium ${
+            t.id === current
+              ? 'bg-[var(--work-accent)] text-white shadow-[0_6px_16px_-8px_var(--work-accent)]'
+              : 'text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
+          }`}
+          data-testid="panel-tab"
+          data-tab={t.id}
+        >
+          {t.icon}
+          {t.label}
+        </button>
+      ))}
+      <IconButton label="Close Panel (⇧⌘N)" onClick={closePanel} testId="notes-close">
+        <X size={15} />
+      </IconButton>
+    </nav>
   );
 }
 
@@ -170,9 +244,6 @@ function NotesList() {
         </span>
         <IconButton label="New Note" onClick={() => void create()} testId="notes-new">
           <Plus size={16} />
-        </IconButton>
-        <IconButton label="Close Notes (⇧⌘N)" onClick={closePanel} testId="notes-close">
-          <X size={15} />
         </IconButton>
       </PanelHeader>
       <label className="mx-3 mb-2 flex h-8 shrink-0 items-center gap-2 rounded-[10px] bg-[var(--note-hover)] px-2.5 text-[13px]">
@@ -222,6 +293,9 @@ function NotesList() {
             )}
           </li>
         )}
+        <li>
+          <QuickActions />
+        </li>
       </ul>
     </>
   );
@@ -254,9 +328,6 @@ function PanelNote({ id }: { id: string }) {
         </IconButton>
         <IconButton label="Delete Note" onClick={() => void move('delete')} testId="note-delete">
           <Trash2 size={15} />
-        </IconButton>
-        <IconButton label="Close Notes (⇧⌘N)" onClick={closePanel} testId="notes-close">
-          <X size={15} />
         </IconButton>
       </PanelHeader>
       <div className="animate-panel-in flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-1">

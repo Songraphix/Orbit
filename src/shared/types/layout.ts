@@ -46,5 +46,6 @@ export type LibraryPanel = 'narrow' | 'wide';
 /** The tab strip's height: the traffic lights (at y 18, 12 tall) sit centred in it. */
 export const TAB_STRIP_HEIGHT = 48;
 
-/** The Notes panel: its width, the least it shrinks to, and the page width it leaves at least. */
-export const NOTES_WIDTH = { panel: 340, min: 260, pageMin: 420 } as const;
+/** The productivity panel (Notes, Projects, Tasks): its width, its width for the Project Board,
+ *  the least it shrinks to, and the page width it leaves at least. */
+export const NOTES_WIDTH = { panel: 380, wide: 720, min: 280, pageMin: 420 } as const;
