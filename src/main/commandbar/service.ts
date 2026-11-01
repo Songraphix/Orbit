@@ -14,6 +14,8 @@ export const COMMANDS: readonly CommandDef[] = [
   { id: 'reload', title: 'Reload Page', keywords: ['refresh'], shortcut: '⌘R' },
   { id: 'close-tab', title: 'Close Tab', keywords: ['remove'], shortcut: '⌘W' },
   { id: 'reopen-tab', title: 'Reopen Closed Tab', keywords: ['undo', 'restore'], shortcut: '⇧⌘T' },
+  { id: 'import-arc', title: 'Import from Arc…', keywords: ['arc', 'migrate', 'bookmarks'] },
+  { id: 'new-space', title: 'New Space', keywords: ['workspace'] },
 ];
 
 const SUGGEST_TIMEOUT_MS = 700;

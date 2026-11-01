@@ -43,6 +43,8 @@ export async function launchOrbit(options: { userData?: string } = {}): Promise<
     },
   });
   const win = await shellPage(app);
+  // Wait until the shell has rendered (and subscribed to main's events), like a real user would.
+  await win.getByTestId('toolbar').waitFor({ timeout: 15_000 });
   return {
     app,
     win,

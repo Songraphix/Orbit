@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { app, BrowserWindow, ipcMain, session } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session } from 'electron';
 import type { Session } from 'electron';
 import type { WebContentsView } from 'electron';
 import { APP_NAME, isInternalPage } from '@shared/constants';
@@ -24,6 +24,7 @@ import { openPersistence } from './persistence';
 import { clampZoom } from './persistence/repositories/site-settings';
 import type { Persistence } from './persistence';
 import { SidebarStore } from './sidebar/store';
+import { ArcImporter, findArcSources } from './importer/arc/import';
 import { WindowManager } from './windows/window-manager';
 import type { WindowController } from './windows/window-manager';
 
@@ -53,6 +54,7 @@ const broadcaster = new Broadcaster();
 
 let persistence: Persistence | null = null;
 let sidebarStore: SidebarStore | null = null;
+let arcImporter: ArcImporter | null = null;
 
 // A stray error in main must never show Electron's blocking error dialog (a browser that can't
 // quit is worse than one that logs). Logged for debugging instead.
@@ -95,6 +97,60 @@ function zoom(controller: WindowController, action: 'in' | 'out' | 'reset'): voi
   toast(controller, `Zoom ${Math.round(Math.pow(1.2, level) * 100)}%`);
 }
 
+/**
+ * File → Import from Arc… (F-27): finds the backup, previews it, imports on confirmation, and
+ * switches to the first imported space.
+ */
+async function importFromArc(controller: WindowController): Promise<void> {
+  if (!arcImporter) return;
+  const override = process.env['ORBIT_ARC_DIR'];
+  let source = override ?? findArcSources()[0];
+  if (!source) {
+    const picked = await dialog.showOpenDialog(controller.win, {
+      title: 'Choose your Arc backup folder',
+      message: 'Choose the folder that contains StorableSidebar.json',
+      properties: ['openDirectory'],
+    });
+    source = picked.filePaths[0];
+    if (picked.canceled || !source) return;
+  }
+  let preview;
+  try {
+    preview = arcImporter.preview(source);
+  } catch (error) {
+    await dialog.showMessageBox(controller.win, {
+      type: 'error',
+      message: 'This folder can’t be imported',
+      detail: error instanceof Error ? error.message : String(error),
+    });
+    return;
+  }
+  const { response } = await dialog.showMessageBox(controller.win, {
+    type: 'question',
+    message: 'Import from Arc?',
+    detail:
+      `From ${source}\n\n` +
+      `${preview.spaces} spaces (${preview.spaceNames.join(', ')})\n` +
+      `${preview.favorites} favorites · ${preview.pinned} pinned tabs · ${preview.today} Today tabs\n` +
+      `${preview.history.toLocaleString()} history entries\n\n` +
+      'Running it again later won’t create duplicates. Passwords and cookies aren’t imported — ' +
+      'sign in once per site.',
+    buttons: ['Import', 'Cancel'],
+    defaultId: 0,
+    cancelId: 1,
+  });
+  if (response !== 0) return;
+  const result = arcImporter.import(source);
+  const firstArcSpace = sidebarStore?.spaces.find((s) => s.id.startsWith('arc-'));
+  if (firstArcSpace) controller.tabs.switchSpace(firstArcSpace.id);
+  toast(
+    controller,
+    result.spacesAdded > 0
+      ? `Imported ${result.spacesAdded} spaces, ${result.favoritesAdded} favorites, ${result.tabsAdded} tabs`
+      : 'Already imported — nothing new',
+  );
+}
+
 /** Runs a command by id for a window (command bar items and menu items share these). */
 function runCommand(controller: WindowController, commandId: string): void {
   const { tabs, layout } = controller;
@@ -116,6 +172,12 @@ function runCommand(controller: WindowController, commandId: string): void {
       return;
     case 'reopen-tab':
       tabs.reopenClosed();
+      return;
+    case 'import-arc':
+      void importFromArc(controller);
+      return;
+    case 'new-space':
+      controller.sidebar.newSpace();
       return;
   }
 }
@@ -146,6 +208,7 @@ void app.whenReady().then(() => {
   persistence = openPersistence(app.getPath('userData'));
   const store = new SidebarStore(persistence.sidebar);
   sidebarStore = store;
+  arcImporter = new ArcImporter(store, persistence.history);
   /** One session per profile (F-17). The default profile keeps Electron's default session, so
    *  logins from before profiles existed carry over. */
   const sessionFor = (profileId: string): Session | undefined => {
@@ -229,6 +292,10 @@ void app.whenReady().then(() => {
     },
     newSpace: () => windowManager.focused()?.sidebar.newSpace(),
     newFolder: () => windowManager.focused()?.sidebar.newFolder('pinned'),
+    importFromArc: () => {
+      const controller = windowManager.focused();
+      if (controller) void importFromArc(controller);
+    },
     goToSpace: (n) => {
       const controller = windowManager.focused();
       const space = store.spaces[n - 1];

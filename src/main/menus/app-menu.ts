@@ -21,6 +21,7 @@ export type AppMenuActions = {
   togglePin: () => void;
   newSpace: () => void;
   newFolder: () => void;
+  importFromArc: () => void;
   /** ⌃1…⌃9. */
   goToSpace: (n: number) => void;
   /** ⌘⌥← / ⌘⌥→. */
@@ -60,6 +61,8 @@ export function installAppMenu(actions: AppMenuActions): void {
           accelerator: 'CmdOrCtrl+L',
           click: () => actions.openCommandBar('edit'),
         },
+        { type: 'separator' },
+        { id: 'import-arc', label: 'Import from Arc…', click: actions.importFromArc },
         { type: 'separator' },
         { id: 'print', label: 'Print…', accelerator: 'CmdOrCtrl+P', click: actions.print },
         { type: 'separator' },
