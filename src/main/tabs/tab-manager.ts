@@ -43,6 +43,8 @@ export type TabManagerDeps = Pick<
   onFoundInPage: TabEnv['onFoundInPage'];
   /** A tab's page stopped responding. */
   onUnresponsive?: (tabId: string) => void;
+  /** A tab's media started or stopped. */
+  onMedia?: (tabId: string, event: 'playing' | 'paused') => void;
 };
 
 const isInternal = (url: string | null) => (url ?? '').startsWith('orbit://');
@@ -408,6 +410,7 @@ export class TabManager {
         },
         openInNewTab: (link, activate) => this.create(link, { activate }),
         onUnresponsive: () => this.deps.onUnresponsive?.(id),
+        onMedia: (event) => this.deps.onMedia?.(id, event),
         onChange: () => {
           if (this.disposed) return;
           const { url, title, favicon, crashed } = tab.state;

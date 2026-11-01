@@ -4,6 +4,8 @@ import type { DragEvent, PointerEvent } from 'react';
 import type { DownloadView } from '@shared/types/downloads';
 import type { SidebarSnapshot } from '@shared/types/space';
 import { DownloadsShelf } from './sidebar/DownloadsShelf';
+import { MediaCard } from './sidebar/MediaCard';
+import type { MediaState } from '@shared/types/media';
 import { DndContext, moveFor, readDragged } from './sidebar/dnd';
 import type { DndState, DropTarget } from './sidebar/dnd';
 import { FavoritesGrid } from './sidebar/FavoritesGrid';
@@ -17,6 +19,7 @@ type Props = {
   width: number;
   sidebar: SidebarSnapshot | null;
   downloads: DownloadView[];
+  media: MediaState;
   /** Called when an edge drag starts/ends, so the shell can stand in for the live web view. */
   onResizeStart: () => void;
   onResizeEnd: () => void;
@@ -80,7 +83,7 @@ function dropZone(dnd: DndState, target: DropTarget) {
   };
 }
 
-export function Sidebar({ width, sidebar, downloads, onResizeStart, onResizeEnd }: Props) {
+export function Sidebar({ width, sidebar, downloads, media, onResizeStart, onResizeEnd }: Props) {
   const [renaming, stopRenaming] = useRenaming();
   const dnd = useDndState(sidebar);
   const isTarget = (t: DropTarget) => JSON.stringify(dnd.target) === JSON.stringify(t);
@@ -154,6 +157,7 @@ export function Sidebar({ width, sidebar, downloads, onResizeStart, onResizeEnd 
           </div>
         </DndContext.Provider>
       )}
+      {media && <MediaCard media={media} />}
       <DownloadsShelf items={downloads} />
       {sidebar && <BottomBar spaces={sidebar.spaces} activeSpaceId={sidebar.activeSpaceId} />}
       <ResizeHandle onStart={onResizeStart} onEnd={onResizeEnd} />

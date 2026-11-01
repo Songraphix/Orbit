@@ -294,6 +294,13 @@ void app.whenReady().then(() => {
   );
   registerFindHandlers(router, windowManager);
   registerSidebarHandlers(router, windowManager);
+  router.handle(
+    'media:get',
+    (_i, { sender }) => windowManager.forSender(sender.webContentsId)?.media.current() ?? null,
+  );
+  router.handle('media:control', async ({ action }, { sender }) => {
+    await windowManager.forSender(sender.webContentsId)?.media.control(action);
+  });
   router.handle('downloads:get', () => downloadService?.snapshot() ?? { items: [] });
   router.handle('downloads:act', async ({ id, action }, { sender }) => {
     const service = downloadService;

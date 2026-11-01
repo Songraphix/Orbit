@@ -13,6 +13,7 @@ import type { Session } from 'electron';
 import { FindController } from '../tabs/find';
 import { SidebarActions } from '../sidebar/actions';
 import { TabManager } from '../tabs/tab-manager';
+import { MediaController } from '../media/controller';
 import { LayoutEngine } from './layout-engine';
 import { OverlayController } from './overlay';
 import { MIN_SIZE, resolveWindowBounds } from './window-state';
@@ -48,6 +49,7 @@ export type WindowController = {
   tabs: TabManager;
   overlay: OverlayController;
   find: FindController;
+  media: MediaController;
   store: SidebarStore;
   sidebar: SidebarActions;
 };
@@ -151,6 +153,7 @@ export class WindowManager {
       history: this.deps.history,
       zoomFor: this.deps.zoomFor,
       onFoundInPage: (result) => find.onResult(result),
+      onMedia: (tabId, event) => media?.onMedia(tabId, event),
       // A frozen page: offer to wait or reload (F-31).
       onUnresponsive: (tabId) => {
         void dialog
@@ -177,10 +180,14 @@ export class WindowManager {
           lastActiveTabId = snapshot.activeTabId;
           find.close();
         }
+        media?.refresh(); // the mini player shows only while its tab is off screen
       },
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
     });
     const tabManager = tabs;
+    const media = new MediaController(tabManager, (state) =>
+      broadcaster.sendTo(contents, 'state:media', state),
+    );
 
     // HTML fullscreen (section 4.6): Electron doesn't do this for us. The page takes the whole
     // window, and the window goes fullscreen unless it already was (then we leave it as is).
@@ -245,6 +252,7 @@ export class WindowManager {
       tabs: tabManager,
       overlay,
       find,
+      media,
       store: this.deps.store,
       sidebar,
     };

@@ -21,6 +21,21 @@ const ROUTES: Record<string, string> = {
     'Notify',
     `<button id="ask" onclick="Notification.requestPermission().then((p) => { document.title = 'perm:' + p; })">Ask</button>`,
   ),
+  '/audio': page(
+    'Song',
+    `<audio id="a" loop></audio>
+     <button id="play" onclick="document.getElementById('a').play()">Play</button>
+     <script>
+       // One second of silence as a WAV, built in the page (no files needed).
+       const rate = 8000, n = rate, b = new ArrayBuffer(44 + n), v = new DataView(b);
+       const w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+       w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true);
+       v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true);
+       v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+       w(36, 'data'); v.setUint32(40, n, true); for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+       document.getElementById('a').src = URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+     </script>`,
+  ),
   '/words': page('Words', '<p>orbit one, orbit two, orbit three. Arc.</p>'),
   // Mimics a video player's fullscreen button.
   '/video': page(

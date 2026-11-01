@@ -28,6 +28,8 @@ export type TabEnv = {
   zoomFor(url: string): number;
   /** The page stopped responding (the window offers Wait / Reload). */
   onUnresponsive?(): void;
+  /** Audio/video started or stopped (the sidebar mini player). */
+  onMedia?(event: 'playing' | 'paused'): void;
   /** Find-in-page results from Chromium. */
   onFoundInPage(result: { requestId: number; activeMatchOrdinal: number; matches: number }): void;
 };
@@ -206,6 +208,8 @@ export class TabController {
       if (details.reason !== 'clean-exit') this.update({ crashed: true, isLoading: false });
     });
     contents.on('unresponsive', () => this.env.onUnresponsive?.());
+    contents.on('media-started-playing', () => this.env.onMedia?.('playing'));
+    contents.on('media-paused', () => this.env.onMedia?.('paused'));
     contents.on('did-stop-loading', () => this.update({ isLoading: false, ...this.navState() }));
     contents.on('did-navigate', () => {
       const url = contents.getURL();

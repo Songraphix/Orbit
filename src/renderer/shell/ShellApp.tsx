@@ -6,6 +6,7 @@ import type { SidebarSnapshot } from '@shared/types/space';
 import type { Layout, Rect } from '@shared/types/layout';
 import type { DownloadView } from '@shared/types/downloads';
 import type { FindState } from '@shared/types/find';
+import type { MediaState } from '@shared/types/media';
 import type { TabsSnapshot } from '@shared/types/tabs';
 import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
@@ -23,6 +24,7 @@ export function ShellApp() {
   const find = useMainState('state:find');
   const sidebar = useMainState('state:sidebar');
   const downloads = useMainState('state:downloads');
+  const media = useMainState('state:media');
 
   // ThemeEngine: the active space's theme becomes CSS variables for the whole shell.
   const theme = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId)?.theme ?? DEFAULT_THEME;
@@ -45,6 +47,7 @@ export function ShellApp() {
           find={find}
           sidebar={sidebar}
           downloads={downloads?.items ?? []}
+          media={media}
         />
       )}
     </div>
@@ -79,12 +82,14 @@ function Chrome({
   find,
   sidebar,
   downloads,
+  media,
 }: {
   layout: Layout;
   tabs: TabsSnapshot | null;
   find: FindState | null;
   sidebar: SidebarSnapshot | null;
   downloads: DownloadView[];
+  media: MediaState;
 }) {
   const activeTab = tabs?.tabs.find((t) => t.id === tabs.activeTabId) ?? null;
   const hasActiveTab = activeTab !== null;
@@ -98,6 +103,7 @@ function Chrome({
           width={layout.sidebar.width}
           sidebar={sidebar}
           downloads={downloads}
+          media={media}
           onResizeStart={onResizeStart}
           onResizeEnd={onResizeEnd}
         />

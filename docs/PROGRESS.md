@@ -43,10 +43,11 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - 2026-11-01 — Phase 3: permissions + HTTP auth [F-31] — Electron grants every permission by default; now `PermissionService` on every profile session: harmless ones allowed, sensitive ones (camera/mic, location, notifications, clipboard read, screen share…) asked in an overlay prompt and remembered per site, insecure origins and unknown permissions refused (`decide()`, pure); HTTP Basic/Digest sign-in prompt; certificate errors keep Chromium's default (refuse)
 - 2026-11-01 — Phase 3: drag and drop + profiles [F-04, F-05, F-17] — native HTML drag and drop in the sidebar (reorder, into/out of folders, Pinned ↔ Today, onto Favorites) with drop indicators; pure `moveFor()`; Set Profile › New Profile; `spaces:setProfile`; e2e proves a cookie set in one profile is invisible in another — **Phase 3 task list complete** (theme picker is presets via the space menu for now; swipe between spaces below the cut line)
 - 2026-11-01 — Phase 4: archive and tab lifecycle [F-03, F-20, F-25, F-31] — migration 005 `archive` + FTS; closing/clearing Today tabs archives them (reason recorded); ⇧⌘T and Archive → Archived Tabs (orbit://archive: search, grouped by day, restore) read from it; `TabLifecycle` auto-archives idle Today tabs (default 12 h; every 5 min and on wake) and sleeps pages (idle 30 min / max 8 awake; never the active or an audible tab) via pure `tabsToArchive` / `tabsToSleep`; crashed pages show a Reload card, frozen pages offer Wait / Reload; daily `VACUUM INTO` backup keeping 7; Settings page (⌘,) — **Phase 4 complete → M1 feature-complete**; unsigned arm64 DMG builds and the packaged app passes a smoke test
+- 2026-11-01 — Phase 5: downloads and media [F-09, F-10] — `DownloadService` on every profile session (straight to ~/Downloads, never overwrites, progress, thumbnails/file icons, migration 006); shelf above the bottom bar (Img 7: open, ⌘-click reveal, drag out, dismiss/cancel); `MediaController` + sidebar mini player (Img 1) for the background tab that's playing: play/pause, mute, Picture-in-Picture, jump to tab, stop — **Phase 5 complete** except previous/next track and automatic PiP (backlog)
 
 ## In progress
 
-- Phase 5 (started ahead of schedule while M1 waits for dogfooding): downloads shelf, media player
+- Phase 6 (ahead of schedule): split view, Peek, Little Orbit, default browser
 
 ## Decisions made
 
@@ -79,4 +80,6 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - New tab page shortcut tiles (F-32): most-visited once history exists (Phase 2), favorites after the Arc import (Phase 3)
 - Full theme colour picker (colour wheel, intensity/grain sliders) — presets via the space menu for now (F-16)
 - Swipe between spaces with two fingers (F-26, below the cut line)
+- Mini player: previous/next track (needs a page-world mediaSession bridge) and automatic Picture-in-Picture when switching away (needs the per-site setting from Phase 7)
+- Speaker icon on tab rows that are playing audio
 - Open new tab pages don't update live when the wallpaper changes elsewhere (they pick it up next time they open)

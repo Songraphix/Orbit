@@ -8,6 +8,7 @@ import {
 } from '../types/command-bar';
 import { downloadsSnapshotSchema } from '../types/downloads';
 import { findStateSchema } from '../types/find';
+import { mediaStateSchema } from '../types/media';
 import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
 import { sidebarSnapshotSchema, spaceThemeSchema } from '../types/space';
 import { userSettingsSchema } from '../settings';
@@ -186,6 +187,16 @@ export const contract = {
     output: z.void(),
   },
 
+  // Sidebar mini player (F-09).
+  'media:get': {
+    input: z.object({}).strict(),
+    output: mediaStateSchema,
+  },
+  'media:control': {
+    input: z.object({ action: z.enum(['toggle', 'mute', 'pip', 'focus', 'close']) }).strict(),
+    output: z.void(),
+  },
+
   // Command bar (F-21). The shell opens it; the overlay (where it renders) queries and executes.
   'commandbar:open': {
     input: z.object({ mode: commandBarModeSchema }).strict(),
@@ -304,6 +315,8 @@ export const events = {
   'state:sidebar': sidebarSnapshotSchema,
   /** Sent to a window's overlay when floating UI opens or closes. */
   'state:overlay': overlayStateSchema,
+  /** Sent to a window's shell when its mini player changes. */
+  'state:media': mediaStateSchema,
   /** Sent to every shell when downloads change. */
   'state:downloads': downloadsSnapshotSchema,
   /** Sent to a window's shell when find-in-page changes. */
