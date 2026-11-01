@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { app, BrowserWindow, dialog, ipcMain, session } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, session } from 'electron';
 import type { Session } from 'electron';
 import type { WebContentsView } from 'electron';
 import { APP_NAME, isInternalPage } from '@shared/constants';
@@ -28,7 +28,7 @@ import type { Persistence } from './persistence';
 import { SidebarStore } from './sidebar/store';
 import { TabLifecycle } from './archive/lifecycle';
 import { DownloadService } from './downloads/service';
-import { setSearchEngine } from './omnibox/classify';
+import { classifyInput, setSearchEngine } from './omnibox/classify';
 import { SEARCH_ENGINES } from '@shared/settings';
 import { PermissionService } from './permissions/service';
 import { ArcImporter, findArcSources } from './importer/arc/import';
@@ -80,7 +80,21 @@ function loadRenderer(win: BrowserWindow, entry: RendererEntry, query?: string):
 // ── Links from other apps (default browser) → Little Orbit (F-24) ────────────
 const littleWindows = new Map<number, LittleWindow>();
 const pendingUrls: string[] = [];
-let openLittle: ((url: string) => void) | null = null;
+let openLittle: ((url: string | null) => void) | null = null;
+/** ⌥⌘N, from any app (F-24). */
+const LITTLE_SHORTCUT = 'Alt+CommandOrControl+N';
+let lastEmptyLittle = 0;
+/** The menu accelerator and the global shortcut can both fire for one press; open one window. */
+function openEmptyLittle(): void {
+  if (Date.now() - lastEmptyLittle < 400) return;
+  lastEmptyLittle = Date.now();
+  openLittle?.(null);
+}
+function applyLittleShortcut(enabled: boolean): void {
+  if (globalShortcut.isRegistered(LITTLE_SHORTCUT)) globalShortcut.unregister(LITTLE_SHORTCUT);
+  // Fails quietly if another app owns the shortcut; the menu item still works inside Orbit.
+  if (enabled) globalShortcut.register(LITTLE_SHORTCUT, openEmptyLittle);
+}
 
 app.on('will-finish-launching', () => {
   app.on('open-url', (event, url) => {
@@ -252,6 +266,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
   lifecycle?.stop();
   sidebarStore?.close();
   persistence?.close();
@@ -336,6 +351,9 @@ void app.whenReady().then(() => {
     const little = littleWindows.get(sender.webContentsId);
     return { url: little?.url ?? '', title: little?.title ?? '' };
   });
+  router.handle('little:navigate', ({ input }, { sender }) => {
+    littleWindows.get(sender.webContentsId)?.navigate(input);
+  });
   router.handle('little:promote', (_i, { sender }) => {
     littleWindows.get(sender.webContentsId)?.promote();
   });
@@ -365,6 +383,7 @@ void app.whenReady().then(() => {
     archive: persistence.archive,
     settings: persistence.settings,
     history: persistence.history,
+    applyLittleShortcut,
   });
   registerCommandBarHandlers(
     router,
@@ -384,6 +403,7 @@ void app.whenReady().then(() => {
       if (controller) windowManager.openCommandBar(controller, mode);
     },
     newTabPage: () => windowManager.focused()?.tabs.create(),
+    newLittleWindow: openEmptyLittle,
     command: (id) => {
       const controller = windowManager.focused();
       if (controller) runCommand(controller, id);
@@ -472,8 +492,9 @@ void app.whenReady().then(() => {
     controller.win.show();
     controller.win.focus();
   };
-  openLittle = (url: string) => {
+  openLittle = (url: string | null) => {
     const little = new LittleWindow(url, {
+      resolve: (input) => classifyInput(input)?.url ?? null,
       preloadPath: join(import.meta.dirname, '../preload/shell.cjs'),
       loadRenderer,
       register: (id) => senders.add(id, 'shell'),
@@ -488,4 +509,5 @@ void app.whenReady().then(() => {
 
   windowManager.createMainWindow();
   for (const url of pendingUrls.splice(0)) openLittle(url);
+  applyLittleShortcut(persistence?.settings.get('little.globalShortcut') ?? false);
 });

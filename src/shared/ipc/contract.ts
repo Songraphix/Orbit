@@ -229,6 +229,11 @@ export const contract = {
     input: z.object({}).strict(),
     output: z.object({ url: z.string(), title: z.string() }),
   },
+  /** Little Orbit's address field: an address or a search. */
+  'little:navigate': {
+    input: z.object({ input: z.string().min(1).max(8192) }).strict(),
+    output: z.void(),
+  },
   'little:promote': {
     input: z.object({}).strict(),
     output: z.void(),

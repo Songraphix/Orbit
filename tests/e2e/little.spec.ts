@@ -42,3 +42,21 @@ test('non-web links from other apps are ignored', async () => {
   await new Promise((r) => setTimeout(r, 500));
   expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
 });
+
+test('⌥⌘N opens an empty Little Orbit that asks where to go', async () => {
+  const { app } = orbit;
+  await app.evaluate(({ Menu }) =>
+    Menu.getApplicationMenu()!.getMenuItemById('new-little')!.click(),
+  );
+
+  await expect.poll(() => app.windows().some((p) => p.url().includes('mode=little'))).toBe(true);
+  const bar = app.windows().find((p) => p.url().includes('mode=little'))!;
+  const input = bar.getByTestId('little-input');
+  await expect(input).toBeFocused();
+  await expect(bar.getByTestId('little-promote')).toBeDisabled();
+
+  await input.fill(server.url('/two'));
+  await input.press('Enter');
+  await expect(bar.getByTestId('little-address')).toContainText('Page Two');
+  await expect(bar.getByTestId('little-promote')).toBeEnabled();
+});

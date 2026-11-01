@@ -50,9 +50,11 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 - 2026-11-01 — Phase 6: Peek [F-23] — links from pinned tabs and favorites that open a new tab on another site (registrable domain, pure `shouldPeek`) open in a floating preview: page above the overlay, frame/header/backdrop drawn by the overlay (`computePeek`); Open as Tab adopts the same webContents into Today (no reload, verified by e2e), Esc / backdrop / × close; Settings → Peek toggle, per-site `peek = off` in site_settings (UI with site controls, Phase 7)
 
+- 2026-11-01 — Phase 6: ⌥⌘N Little Orbit [F-24] — File → New Little Orbit Window and a global ⌥⌘N (Settings toggle, on by default; quietly skipped if another app owns it) open an empty Little Orbit whose bar takes an address or search; clicking the address of any Little Orbit edits it — **Phase 6 complete** (split restore, drag-to-edge split and the sidebar split item are in the backlog)
+
 ## In progress
 
-- Phase 6 (ahead of schedule): wrap-up — ⌥⌘N empty Little Orbit, then Phase 7
+- Phase 7 (ahead of schedule): site controls popover (Img 3), developer mode, extensions
 
 ## Decisions made
 
@@ -83,7 +85,7 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 ## Backlog (ideas outside the current phase)
 
-- Remember split views across relaunches; split more than two panes; drag a sidebar tab onto a page edge to split (F-13)
+- Remember split views across relaunches; split more than two panes; drag a sidebar tab onto a page edge to split; show the split as one item in the sidebar (F-13)
 - Hover the left edge to reveal the hidden sidebar as a floating panel (F-01) — needs the overlay view, so it lands in Phase 2
 - New tab page shortcut tiles (F-32): most-visited once history exists (Phase 2), favorites after the Arc import (Phase 3)
 - Full theme colour picker (colour wheel, intensity/grain sliders) — presets via the space menu for now (F-16)

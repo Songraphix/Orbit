@@ -35,6 +35,8 @@ export const settingsSchema = {
     .max(24 * 60),
   /** Links from pinned tabs and favorites to other sites open in a Peek preview (F-23). */
   'peek.enabled': z.boolean(),
+  /** ⌥⌘N opens an empty Little Orbit from any app (F-24). */
+  'little.globalShortcut': z.boolean(),
   /** Search engine URL with %s for the query. */
   'search.engine': z.enum(['google', 'duckduckgo', 'bing', 'kagi', 'ecosia']),
 } as const;
@@ -53,6 +55,7 @@ export const settingsDefaults: Settings = {
   'tabs.sleepAfterMinutes': 30,
   'search.engine': 'google',
   'peek.enabled': true,
+  'little.globalShortcut': true,
 };
 
 /** Query URL templates for `search.engine`. */
@@ -71,5 +74,6 @@ export const userSettingsSchema = z.object({
   sleepAfterMinutes: settingsSchema['tabs.sleepAfterMinutes'],
   searchEngine: settingsSchema['search.engine'],
   peek: settingsSchema['peek.enabled'],
+  littleShortcut: settingsSchema['little.globalShortcut'],
 });
 export type UserSettings = z.output<typeof userSettingsSchema>;

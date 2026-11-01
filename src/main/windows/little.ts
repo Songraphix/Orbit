@@ -21,6 +21,8 @@ export type LittleDeps = {
   unregister: (webContentsId: number) => void;
   /** "Open in Orbit": hand the URL to the main window as a new tab. */
   openInMain: (url: string) => void;
+  /** Typed text → a URL to load (address or search), or null. */
+  resolve: (input: string) => string | null;
   /** Sends the page's url/title to the bar. */
   send: (bar: Electron.WebContents, state: { url: string; title: string }) => void;
 };
@@ -34,8 +36,9 @@ export class LittleWindow {
   readonly win: BrowserWindow;
   readonly page: WebContentsView;
 
+  /** `url` null = an empty window whose bar asks where to go (⌥⌘N). */
   constructor(
-    url: string,
+    url: string | null,
     private readonly deps: LittleDeps,
   ) {
     this.win = new BrowserWindow({
@@ -78,9 +81,20 @@ export class LittleWindow {
     this.win.on('closed', () => {
       if (!this.page.webContents.isDestroyed()) this.page.webContents.close();
     });
-    this.win.once('ready-to-show', () => this.win.show());
+    this.win.once('ready-to-show', () => {
+      this.win.show();
+      if (!url) bar.focus(); // the address field takes the typing
+    });
     deps.loadRenderer(this.win, 'shell', 'mode=little');
+    if (url) void this.page.webContents.loadURL(url).catch(() => undefined);
+  }
+
+  /** The bar's address field: go to a typed address or search. */
+  navigate(input: string): void {
+    const url = this.deps.resolve(input);
+    if (!url) return;
     void this.page.webContents.loadURL(url).catch(() => undefined);
+    this.page.webContents.focus();
   }
 
   get url(): string {

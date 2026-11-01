@@ -117,6 +117,21 @@ export function SettingsPage() {
         </Row>
       </Group>
 
+      <Group title="Little Orbit">
+        <Row
+          label="⌥⌘N from any app"
+          hint="Opens a small Orbit window for a quick look-up, even when Orbit isn't in front."
+        >
+          <input
+            type="checkbox"
+            checked={settings.littleShortcut}
+            onChange={(e) => update({ littleShortcut: e.target.checked })}
+            className="size-4 accent-[var(--accent,#5b5bd6)]"
+            data-testid="setting-little-shortcut"
+          />
+        </Row>
+      </Group>
+
       <Group title="Peek">
         <Row
           label="Preview links from pinned tabs"

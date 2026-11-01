@@ -11,7 +11,13 @@ import type { WindowManager } from '../../windows/window-manager';
 export function registerInternalPageHandlers(
   router: IpcRouter,
   windows: WindowManager,
-  deps: { archive: ArchiveRepository; settings: SettingsRepository; history: HistoryRepository },
+  deps: {
+    archive: ArchiveRepository;
+    settings: SettingsRepository;
+    history: HistoryRepository;
+    /** Turns the ⌥⌘N global shortcut on or off. */
+    applyLittleShortcut: (enabled: boolean) => void;
+  },
 ): void {
   /** The page must be a tab currently showing that internal page. */
   const ownerOf = (webContentsId: number, page: 'archive' | 'settings') => {
@@ -46,6 +52,7 @@ export function registerInternalPageHandlers(
     sleepAfterMinutes: deps.settings.get('tabs.sleepAfterMinutes'),
     searchEngine: deps.settings.get('search.engine'),
     peek: deps.settings.get('peek.enabled'),
+    littleShortcut: deps.settings.get('little.globalShortcut'),
   });
 
   router.handle('settings:get', (_input, { sender }) => {
@@ -65,6 +72,10 @@ export function registerInternalPageHandlers(
       setSearchEngine(SEARCH_ENGINES[patch.searchEngine].url);
     }
     if (patch.peek !== undefined) deps.settings.set('peek.enabled', patch.peek);
+    if (patch.littleShortcut !== undefined) {
+      deps.settings.set('little.globalShortcut', patch.littleShortcut);
+      deps.applyLittleShortcut(patch.littleShortcut);
+    }
     return current();
   });
 

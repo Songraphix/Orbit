@@ -9,6 +9,8 @@ export type AppMenuActions = {
   openCommandBar: (mode: 'new' | 'edit') => void;
   /** The wallpaper new tab page (also the sidebar's "+ New Tab" row). */
   newTabPage: () => void;
+  /** ⌥⌘N: an empty Little Orbit window. */
+  newLittleWindow: () => void;
   /** Runs a shared command by id (close-tab, reopen-tab, copy-url…). */
   command: (id: string) => void;
   copyUrlAsMarkdown: () => void;
@@ -77,6 +79,12 @@ export function installAppMenu(actions: AppMenuActions): void {
           click: () => actions.openCommandBar('new'),
         },
         { id: 'new-tab-page', label: 'New Tab Page', click: actions.newTabPage },
+        {
+          id: 'new-little',
+          label: 'New Little Orbit Window',
+          accelerator: 'Alt+CmdOrCtrl+N',
+          click: actions.newLittleWindow,
+        },
         {
           id: 'open-location',
           label: 'Open Location…',
