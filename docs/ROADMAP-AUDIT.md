@@ -75,3 +75,4 @@ into a task, and resume the work from a saved workspace._
 
 - 2026-11-01 — **P2.1 done**: Orbit Capture and project research (`capture.spec.ts`).
 - 2026-11-01 — **P2.2 done**: universal search across Spaces, research and the archive (`universal-search.spec.ts`).
+- 2026-11-01 — **P2.3 done**: Focus mode (`focus.spec.ts`).

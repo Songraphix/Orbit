@@ -4,6 +4,7 @@ import {
   ArrowRight,
   CalendarDays,
   CircleCheck,
+  Crosshair,
   FolderOpen,
   ListChecks,
   NotebookPen,
@@ -364,8 +365,24 @@ export function ProjectDetail({ id }: { id: string }) {
         spaces={work.data.spaces}
         onOpen={() => void openWorkspace(project)}
       />
-      <div className="mt-5 mb-1 flex items-center justify-between">
-        <h2 className="text-[14px] font-semibold">Tasks</h2>
+      <div className="mt-5 mb-1 flex items-center gap-2">
+        <h2 className="flex-1 text-[14px] font-semibold">Tasks</h2>
+        {tasks.some((t) => t.status !== 'done') && (
+          // Focus mode (roadmap P2.3) on the next open task.
+          <button
+            type="button"
+            onClick={() =>
+              void invoke('focus:start', {
+                taskId: tasks.find((t) => t.status !== 'done')!.id,
+              })
+            }
+            className="press flex h-7 items-center gap-1 rounded-[9px] px-2 text-[12.5px] font-semibold text-[var(--work-accent)] hover:bg-[var(--work-accent-soft)]"
+            data-testid="project-focus"
+          >
+            <Crosshair size={13} />
+            Focus
+          </button>
+        )}
         <PrimaryButton
           small
           onClick={() => work.editTask({ projectId: project.id })}

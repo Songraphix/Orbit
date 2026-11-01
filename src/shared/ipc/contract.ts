@@ -35,6 +35,7 @@ import { userSettingsSchema } from '../settings';
 import { profilePatchSchema, profileViewSchema } from '../profile';
 import { homeSettingsSchema } from '../types/home';
 import { CAPTURE_LIMITS, captureDraftSchema } from '../capture';
+import { focusSessionSchema } from '../focus';
 import {
   PROJECT_STATUSES,
   TASK_STATUSES,
@@ -832,6 +833,8 @@ export const contract = {
         open: z.boolean().optional(),
         id: noteIdSchema.optional(),
         view: z.enum(['notes', 'projects', 'tasks', 'board']).optional(),
+        /** Open on this project's page. */
+        projectId: z.string().max(64).optional(),
       })
       .strict(),
     output: z.void(),
@@ -1029,6 +1032,28 @@ export const contract = {
     input: z.object({}).strict(),
     output: z.void(),
   },
+
+  // Focus mode (roadmap P2.3): the toolbar's pill, a task's Focus button, the command bar.
+  'focus:get': {
+    input: z.object({}).strict(),
+    output: focusSessionSchema.nullable(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  'focus:start': {
+    input: z
+      .object({
+        taskId: z.string().max(64).optional(),
+        minutes: z.number().int().min(1).max(240).optional(),
+      })
+      .strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  'focus:end': {
+    input: z.object({ complete: z.boolean() }).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
 } as const satisfies Record<string, ChannelSpec>;
 
 export const events = {
@@ -1048,6 +1073,8 @@ export const events = {
   'state:downloads': downloadsSnapshotSchema,
   /** Sent to a window's shell when Library mode opens, closes or changes section. */
   'state:library': libraryStateSchema,
+  /** The focus session under way, or null (roadmap P2.3). */
+  'state:focus': focusSessionSchema.nullable(),
   /** Sent to a window's shell when find-in-page changes. */
   'state:find': findStateSchema,
   /** Ask the shell to start inline renaming (a sidebar item, or the space header). */

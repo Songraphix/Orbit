@@ -7,6 +7,7 @@ import {
   globalShortcut,
   ipcMain,
   net,
+  Notification,
   safeStorage,
   session,
   shell,
@@ -70,6 +71,8 @@ import { registerProfileHandlers } from './ipc/handlers/profiles';
 import { registerWorkHandlers } from './ipc/handlers/work';
 import { registerCaptureHandlers } from './ipc/handlers/capture';
 import { registerTooltipHandlers } from './ipc/handlers/tooltip';
+import { registerFocusHandlers } from './ipc/handlers/focus';
+import { FocusService } from './focus/service';
 import { CaptureService } from './capture/service';
 import { captureLabel, captureMatches, hostOf } from '@shared/capture';
 import { FloatingNotes } from './notes/floating';
@@ -121,6 +124,7 @@ process.on('unhandledRejection', (reason) => console.error('[orbit] unhandled re
 let windows: WindowManager | null = null;
 let floatingNotes: FloatingNotes | null = null;
 let captureService: CaptureService | null = null;
+let focusService: FocusService | null = null;
 
 function loadRenderer(win: BrowserWindow, entry: RendererEntry, query?: string): void {
   if (devServer) void win.loadURL(`${devServer}/${entry}/index.html${query ? `?${query}` : ''}`);
@@ -370,6 +374,12 @@ function runCommand(controller: WindowController, commandId: string): void {
       applyTabLayout(next);
       return;
     }
+    case 'focus-start':
+      focusService?.start(controller, {});
+      return;
+    case 'focus-end':
+      focusService?.end(controller, false);
+      return;
     case 'capture':
       void captureService?.begin(controller, controller.tabs.active, null);
       return;
@@ -761,6 +771,19 @@ void app.whenReady().then(() => {
   );
   registerCaptureHandlers(router, windowManager, captureFlow);
   registerTooltipHandlers(router, windowManager);
+  const focus = new FocusService({
+    settings: persistence.settings,
+    work: persistence.work,
+    broadcast: (session) => broadcaster.send('state:focus', session),
+    // Test runs stay quiet (no notifications popping up on the owner's screen).
+    notify: (title, body) => {
+      if (process.env['ORBIT_QUIET'] === '1' || !Notification.isSupported()) return;
+      new Notification({ title, body }).show();
+    },
+    toast,
+  });
+  focusService = focus;
+  registerFocusHandlers(router, windowManager, focus);
   registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
   router.handle('tabs:copyUrl', (_input, { sender }) => {
@@ -939,5 +962,6 @@ void app.whenReady().then(() => {
   }
   notesRepo.pruneBlank(shown);
   floating.restore(savedFloating, (id) => notesRepo.get(id) !== null);
+  focus.restore(); // a focus session left running keeps its timer
   applyLittleShortcut(persistence?.settings.get('little.globalShortcut') ?? false);
 });

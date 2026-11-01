@@ -177,11 +177,12 @@ export function registerNotesHandlers(
     window.win.focus();
   });
 
-  router.handle('notes:panel', ({ open, id, view }, { sender }) => {
+  router.handle('notes:panel', ({ open, id, view, projectId }, { sender }) => {
     const window =
       windows.forSender(sender.webContentsId) ?? surfaceOf(sender.webContentsId).window;
     if (!window) return;
-    if (id || view || open === true) window.notes.open(id, view);
+    if (projectId) window.notes.openAt(`panel/projects/${projectId}`);
+    else if (id || view || open === true) window.notes.open(id, view);
     else if (open === false) window.notes.close();
     else window.notes.toggle();
   });

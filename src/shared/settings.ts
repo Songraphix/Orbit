@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { wallpaperChoiceSchema } from './types/newtab';
 import { DEFAULT_HOME, homeSettingsSchema } from './types/home';
+import { focusSessionSchema } from './focus';
 import { rectSchema, SIDEBAR_WIDTH } from './types/layout';
 
 /**
@@ -51,6 +52,8 @@ export const settingsSchema = {
     .max(50),
   /** The productivity panel: open or not, and where (`panel/projects/<id>`…), for a restart. */
   'panel.state': z.object({ open: z.boolean(), route: z.string().max(120) }),
+  /** The focus session under way (roadmap P2.3), kept across a restart. */
+  'focus.session': focusSessionSchema.nullable(),
   /** Orbit Capture's last project, the default next time (null = Unsorted). */
   'capture.lastProject': z.string().nullable(),
   /** Search engine URL with %s for the query. */
@@ -78,6 +81,7 @@ export const settingsDefaults: Settings = {
   'notes.floating': [],
   'panel.state': { open: false, route: 'panel' },
   'capture.lastProject': null,
+  'focus.session': null,
 };
 
 /** Query URL templates for `search.engine`. */

@@ -54,6 +54,12 @@ export const COMMANDS: readonly CommandDef[] = [
     shortcut: '⌃⇧E',
   },
   {
+    id: 'focus-start',
+    title: 'Start Focus',
+    keywords: ['focus', 'pomodoro', 'timer', 'deep work', 'concentrate', 'task'],
+  },
+  { id: 'focus-end', title: 'End Focus', keywords: ['focus', 'stop', 'timer'] },
+  {
     id: 'capture',
     title: 'Save to Orbit…',
     keywords: ['capture', 'clip', 'research', 'save', 'snippet', 'screenshot', 'bookmark'],

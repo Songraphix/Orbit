@@ -1,4 +1,4 @@
-import { Check, Trash2 } from 'lucide-react';
+import { Check, Crosshair, Trash2 } from 'lucide-react';
 import { PRIORITY_LABEL, colorHex, dueLabel } from '@shared/work';
 import type { Project, Task } from '@shared/work';
 import { useWork } from './context';
@@ -95,6 +95,18 @@ export function TaskRow({
           )}
         </span>
       </button>
+      {!done && (
+        <button
+          type="button"
+          aria-label={`Focus on ${task.title}`}
+          title="Focus on this"
+          onClick={() => void invoke('focus:start', { taskId: task.id })}
+          className="grid size-7 shrink-0 place-items-center rounded-[8px] text-[var(--note-muted)] opacity-0 group-hover:opacity-100 hover:bg-[var(--note-hover)] hover:text-[var(--work-accent)] focus-visible:opacity-100"
+          data-testid="task-focus"
+        >
+          <Crosshair size={13} />
+        </button>
+      )}
       <button
         type="button"
         aria-label={`Delete ${task.title}`}

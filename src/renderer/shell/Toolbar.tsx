@@ -19,6 +19,8 @@ import type { FindState } from '@shared/types/find';
 import type { TabState } from '@shared/types/tabs';
 import { FindBar } from './FindBar';
 import { Tip } from '../tooltip/Tip';
+import { FocusPill } from './FocusPill';
+import type { FocusSession } from '@shared/focus';
 import type { ProfileView } from '@shared/profile';
 import { Avatar } from '../profile/Avatar';
 
@@ -52,6 +54,7 @@ export function Toolbar({
   inSplit = false,
   notesOpen,
   profile,
+  focus,
 }: {
   tab: TabState | null;
   height: number;
@@ -66,6 +69,8 @@ export function Toolbar({
   notesOpen?: boolean | undefined;
   /** The profile button (right-most toolbar only). */
   profile?: ProfileView | null | undefined;
+  /** Focus mode's pill (right-most toolbar only). */
+  focus?: FocusSession | null | undefined;
 }) {
   const toastMessage = useToast();
   const toast = focused ? toastMessage : null;
@@ -143,7 +148,10 @@ export function Toolbar({
           // Clicking the address edits it in the command bar (⌘L), like Arc.
           <button
             type="button"
-            className="no-drag absolute inset-x-28 mx-auto flex w-fit max-w-[calc(100%-14rem)] min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-1 text-[13px] hover:bg-black/5"
+            // Centred in the toolbar; while focusing, it gives way to the focus pill instead.
+            className={`no-drag flex min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-1 text-[13px] hover:bg-black/5 ${
+              focus ? 'mx-2 flex-1' : 'absolute inset-x-28 mx-auto w-fit max-w-[calc(100%-14rem)]'
+            }`}
             title={tab?.url}
             onClick={() => void window.orbit.invoke('commandbar:open', { mode: 'edit' })}
             data-testid="toolbar-address"
@@ -209,6 +217,7 @@ export function Toolbar({
             <SlidersHorizontal size={14} />
           </ToolbarButton>
         )}
+        {focus && <FocusPill session={focus} />}
         {notesOpen !== undefined && (
           <ToolbarButton
             label={notesOpen ? 'Hide Notes' : 'Notes'}

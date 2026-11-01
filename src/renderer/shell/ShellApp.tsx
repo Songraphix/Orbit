@@ -1,3 +1,4 @@
+import type { FocusSession } from '@shared/focus';
 import type { ProfileView } from '@shared/profile';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
@@ -36,6 +37,7 @@ function MainShell() {
   const downloads = useMainState('state:downloads');
   const media = useMainState('state:media');
   const library = useMainState('state:library');
+  const focus = useMainState('state:focus');
 
   // ThemeEngine: the active space's theme becomes CSS variables for the whole shell.
   const theme = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId)?.theme ?? DEFAULT_THEME;
@@ -60,6 +62,7 @@ function MainShell() {
           downloads={downloads?.items ?? []}
           media={media}
           librarySection={library?.section ?? null}
+          focus={focus}
         />
       )}
     </div>
@@ -96,6 +99,7 @@ function Chrome({
   downloads,
   media,
   librarySection,
+  focus,
 }: {
   layout: Layout;
   tabs: TabsSnapshot | null;
@@ -104,6 +108,7 @@ function Chrome({
   downloads: DownloadView[];
   media: MediaState;
   librarySection: LibrarySection | null;
+  focus: FocusSession | null;
 }) {
   const activeTab = tabs?.tabs.find((t) => t.id === tabs.activeTabId) ?? null;
   const { snapshot, onResizeStart, onResizeEnd } = useResizeSnapshot();
@@ -158,6 +163,7 @@ function Chrome({
             // The right-most toolbar has the Notes button.
             notesOpen={i === paneTabs.length - 1 ? layout.notes !== null : undefined}
             profile={i === paneTabs.length - 1 ? sidebar?.profile : undefined}
+            focus={i === paneTabs.length - 1 ? focus : null}
           />
         );
       })}
@@ -194,6 +200,7 @@ function ContentCard(props: {
   snapshot: string | null;
   notesOpen: boolean | undefined;
   profile: ProfileView | undefined;
+  focus: FocusSession | null;
 }) {
   const { pane, tab, inSplit, focused } = props;
   const webViewTop = pane.webView.y - pane.card.y;
@@ -230,6 +237,7 @@ function ContentCard(props: {
           inSplit={inSplit}
           notesOpen={props.notesOpen}
           profile={props.profile}
+          focus={props.focus}
         />
       )}
       {props.snapshot && (
