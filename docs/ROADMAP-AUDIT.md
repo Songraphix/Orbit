@@ -74,3 +74,4 @@ into a task, and resume the work from a saved workspace._
 | Reusable workspace templates                  | **Build**           | —                                                                                                   | P2.5: save a Space's tabs as a template; new Spaces (and project workspaces) from it; manage in Settings                                |
 
 - 2026-11-01 — **P2.1 done**: Orbit Capture and project research (`capture.spec.ts`).
+- 2026-11-01 — **P2.2 done**: universal search across Spaces, research and the archive (`universal-search.spec.ts`).

@@ -15,6 +15,8 @@ export const commandItemSchema = z.object({
     'project',
     'task',
     'note',
+    'capture',
+    'archived',
   ]),
   title: z.string(),
   subtitle: z.string(),

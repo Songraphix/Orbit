@@ -4,7 +4,7 @@ import { classifyInput, searchUrl } from '../omnibox/classify';
 import type { HistoryRepository } from '../persistence/repositories/history';
 import type { WindowController } from '../windows/window-manager';
 import { buildResults, parseSuggestions, sameUrl } from './model';
-import type { CommandDef, WorkHits } from './model';
+import type { ArchivedHit, CommandDef, OpenTab, WorkHits } from './model';
 
 /** Commands the bar can run (F-21). Each also has a menu shortcut, shown as the subtitle. */
 export const COMMANDS: readonly CommandDef[] = [
@@ -93,9 +93,36 @@ export class CommandBarService {
     private readonly runCommand: CommandRunner,
     /** Tests and offline use turn off network suggestions. */
     private readonly suggestionsEnabled = true,
-    /** Projects, tasks and notes matching a query (roadmap P1.3). */
+    /** Projects, tasks, notes and research matching a query (roadmap P1.3, P2.2). */
     private readonly work?: (query: string) => WorkHits,
+    /** Archived tabs matching a query (roadmap P2.2). */
+    private readonly archived?: (query: string) => ArchivedHit[],
   ) {}
+
+  /** Universal search: typing also finds tabs in your other Spaces (picking one goes there). */
+  private otherSpaceTabs(controller: WindowController): OpenTab[] {
+    const { store } = controller;
+    const here = controller.tabs.space.id;
+    const seen = new Set<string>();
+    const tabs: OpenTab[] = [];
+    for (const space of store.spaces) {
+      if (space.id === here) continue;
+      for (const item of store.tabsInOrder(space)) {
+        // Favorites belong to every space of a profile: they're already in this one's list.
+        if (item.spaceId === null || seen.has(item.id) || !item.url) continue;
+        seen.add(item.id);
+        tabs.push({
+          id: item.id,
+          title: item.titleOverride || item.title || item.url,
+          url: item.url,
+          favicon: item.favicon,
+          active: false,
+          space: space.name,
+        });
+      }
+    }
+    return tabs;
+  }
 
   async query(controller: WindowController, query: string): Promise<CommandItem[]> {
     const mode: CommandBarMode = controller.overlay.mode ?? 'new';
@@ -109,18 +136,22 @@ export class CommandBarService {
       query: trimmed,
       mode,
       classified: classifyInput(trimmed),
-      tabs: snapshot.tabs.map((t) => ({
-        id: t.id,
-        title: t.title,
-        url: t.url,
-        favicon: t.favicon,
-        active: t.id === snapshot.activeTabId,
-      })),
+      tabs: [
+        ...snapshot.tabs.map((t) => ({
+          id: t.id,
+          title: t.title,
+          url: t.url,
+          favicon: t.favicon,
+          active: t.id === snapshot.activeTabId,
+        })),
+        ...(trimmed ? this.otherSpaceTabs(controller) : []),
+      ],
       history,
       suggestions,
       commands: COMMANDS,
       searchUrl,
       ...(trimmed && this.work ? { work: this.work(trimmed) } : {}),
+      ...(trimmed && this.archived ? { archived: this.archived(trimmed) } : {}),
     });
   }
 
@@ -149,6 +180,14 @@ export class CommandBarService {
     }
     if (item.kind === 'note' && item.targetId) {
       controller.notes.open(item.targetId);
+      return;
+    }
+    if (item.kind === 'capture' && item.targetId) {
+      controller.notes.openAt(`panel/research/${item.projectId ?? 'unsorted'}`);
+      return;
+    }
+    if (item.kind === 'archived' && item.targetId) {
+      tabs.restoreFromArchive(item.targetId);
       return;
     }
     if (!item.url) return;

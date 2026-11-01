@@ -71,7 +71,7 @@ test('history and open tabs show up; picking an open tab switches to it', async 
   expect(await win.getByTestId('tab-row').count()).toBe(2); // no duplicate tab
 });
 
-test('history results appear for closed pages', async () => {
+test('closed pages come back from the bar (as archived tabs)', async () => {
   const { app, win } = orbit;
   await clickMenu(app, 'new-tab');
   const bar = await overlay(app);
@@ -82,7 +82,9 @@ test('history results appear for closed pages', async () => {
 
   await clickMenu(app, 'new-tab');
   await bar.getByTestId('command-input').fill('three');
-  await expect(bar.locator('[data-kind="history"]')).toContainText('Page Three');
+  // The archived tab (restored as it was) stands in for its history entry.
+  await expect(bar.locator('[data-kind="archived"]')).toContainText('Page Three');
+  await expect(bar.locator('[data-kind="history"]')).toHaveCount(0);
 });
 
 test('⌘L edits the current address; Esc and clicking outside close the bar', async () => {

@@ -1,6 +1,8 @@
 import { Glass } from './Glass';
 import {
+  Archive,
   ArrowRight,
+  Bookmark,
   Clock,
   FolderClosed,
   Globe,
@@ -178,6 +180,10 @@ function Glyph({ item }: { item: CommandItem }) {
       return <SquareCheck {...props} />;
     case 'note':
       return <NotebookPen {...props} />;
+    case 'capture':
+      return <Bookmark {...props} />;
+    case 'archived':
+      return <Archive {...props} />;
     case 'command':
       return item.commandId === 'new-tab-page' ? (
         <Sparkles {...props} />

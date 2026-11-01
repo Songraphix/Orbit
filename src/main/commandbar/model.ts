@@ -11,7 +11,12 @@ export type OpenTab = {
   url: string;
   favicon: string | null;
   active: boolean;
+  /** A tab in another Space (universal search): that Space's name. */
+  space?: string;
 };
+
+/** An archived tab matching the query (restored when picked). */
+export type ArchivedHit = { id: string; title: string; url: string; favicon: string | null };
 export type HistoryHit = { url: string; title: string; favicon: string | null };
 export type CommandDef = { id: string; title: string; keywords: string[]; shortcut?: string };
 
@@ -24,8 +29,10 @@ export type ResultInput = {
   suggestions: readonly string[];
   commands: readonly CommandDef[];
   searchUrl: (query: string) => string;
-  /** Your work, searched too (roadmap P1.3): projects, tasks and notes. */
+  /** Your work, searched too (roadmap P1.3, P2.2): projects, tasks, notes and research. */
   work?: WorkHits;
+  /** Archived tabs that match (roadmap P2.2). */
+  archived?: readonly ArchivedHit[];
 };
 
 export type WorkHits = {
@@ -39,6 +46,14 @@ export type WorkHits = {
   }[];
   /** Already matched (notes search their whole text). */
   notes: readonly { id: string; title: string; preview: string }[];
+  /** Saved findings, already matched. */
+  captures?: readonly {
+    id: string;
+    label: string;
+    host: string;
+    projectId: string | null;
+    project: string | null;
+  }[];
 };
 
 /** Projects, tasks and notes that match, as results (two of each at most). Pure. */
@@ -78,6 +93,17 @@ export function workResults(query: string, work: WorkHits): CommandItem[] {
       subtitle: n.preview ? `Note · ${n.preview}` : 'Note',
       favicon: null,
       targetId: n.id,
+    });
+  }
+  for (const c of (work.captures ?? []).slice(0, 2)) {
+    items.push({
+      id: `capture:${c.id}`,
+      kind: 'capture',
+      title: c.label,
+      subtitle: ['Research', c.project ?? 'Unsorted', c.host].filter(Boolean).join(' · '),
+      favicon: null,
+      targetId: c.id,
+      ...(c.projectId ? { projectId: c.projectId } : {}),
     });
   }
   return items;
@@ -156,8 +182,21 @@ export function buildResults(input: ResultInput): CommandItem[] {
     });
   }
 
-  // 3. Your projects, tasks and notes.
+  // 3. Your projects, tasks, notes and research; then archived tabs.
   if (input.work) items.push(...workResults(query, input.work));
+  // An archived tab beats a history entry for the same page (it comes back as it was).
+  for (const a of (input.archived ?? []).slice(0, 2)) {
+    if (seenUrls.some((u) => sameUrl(u, a.url))) continue;
+    seenUrls.push(a.url);
+    items.push({
+      id: `archived:${a.id}`,
+      kind: 'archived',
+      title: a.title || displayUrl(a.url),
+      subtitle: `Archived tab · ${displayUrl(a.url)}`,
+      favicon: a.favicon,
+      targetId: a.id,
+    });
+  }
 
   // 4. Commands.
   for (const c of input.commands
@@ -204,7 +243,7 @@ function tabItem(t: OpenTab): CommandItem {
     id: `tab:${t.id}`,
     kind: 'tab',
     title: t.title || displayUrl(t.url),
-    subtitle: 'Switch to tab',
+    subtitle: t.space ? `Switch to tab · ${t.space}` : 'Switch to tab',
     favicon: t.favicon,
     tabId: t.id,
   };

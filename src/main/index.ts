@@ -71,6 +71,7 @@ import { registerWorkHandlers } from './ipc/handlers/work';
 import { registerCaptureHandlers } from './ipc/handlers/capture';
 import { registerTooltipHandlers } from './ipc/handlers/tooltip';
 import { CaptureService } from './capture/service';
+import { captureLabel, captureMatches, hostOf } from '@shared/capture';
 import { FloatingNotes } from './notes/floating';
 import { newNoteTab, noteUrl, registerNotesHandlers, toggleQuickNote } from './ipc/handlers/notes';
 import { noteIdSchema } from '@shared/types/notes';
@@ -793,8 +794,23 @@ void app.whenReady().then(() => {
             done: t.status === 'done',
           })),
           notes: persistence!.notes.list(query),
+          captures: persistence!.captures
+            .list()
+            .filter((c) => captureMatches(query, c))
+            .slice(0, 2)
+            .map((c) => ({
+              id: c.id,
+              label: captureLabel(c),
+              host: hostOf(c.url),
+              projectId: c.projectId,
+              project: c.projectId ? (names.get(c.projectId) ?? null) : null,
+            })),
         };
       },
+      (query) =>
+        persistence!.archive
+          .list(query, 2)
+          .map(({ id, title, url, favicon }) => ({ id, title, url, favicon })),
     ),
   );
   router.assertComplete();

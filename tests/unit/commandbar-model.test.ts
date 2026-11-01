@@ -170,3 +170,84 @@ describe('work results (roadmap P1.3)', () => {
     expect(kinds.indexOf('note')).toBeLessThan(kinds.indexOf('history'));
   });
 });
+
+describe('universal search (roadmap P2.2)', () => {
+  const base = {
+    mode: 'new' as const,
+    classified: null,
+    history: [],
+    suggestions: [],
+    commands: [],
+    searchUrl: (q: string) => `https://s.example/?q=${q}`,
+  };
+
+  it('finds tabs in other Spaces, saying which', () => {
+    const items = buildResults({
+      ...base,
+      query: 'figma',
+      tabs: [
+        { id: 'a', title: 'Figma file', url: 'https://figma.com/f', favicon: null, active: false },
+        {
+          id: 'b',
+          title: 'Figma board',
+          url: 'https://figma.com/b',
+          favicon: null,
+          active: false,
+          space: 'Work',
+        },
+      ],
+    });
+    expect(items.filter((i) => i.kind === 'tab').map((i) => i.subtitle)).toEqual([
+      'Switch to tab',
+      'Switch to tab · Work',
+    ]);
+  });
+
+  it('finds research and archived tabs (an open tab beats its archived copy)', () => {
+    const items = buildResults({
+      ...base,
+      query: 'grid',
+      tabs: [
+        { id: 't', title: 'Grid guide', url: 'https://g.example/', favicon: null, active: false },
+      ],
+      work: {
+        projects: [],
+        tasks: [],
+        notes: [],
+        captures: [
+          {
+            id: 'c1',
+            label: 'Use the 8 pt grid',
+            host: 'example.com',
+            projectId: 'p1',
+            project: 'Brand',
+          },
+          { id: 'c2', label: 'Grid systems', host: 'web.dev', projectId: null, project: null },
+        ],
+      },
+      archived: [
+        { id: 'x1', title: 'Grid guide (old)', url: 'https://g.example/', favicon: null },
+        { id: 'x2', title: 'Grid calculator', url: 'https://calc.example/', favicon: null },
+      ],
+    });
+    const research = items.filter((i) => i.kind === 'capture');
+    expect(research.map((i) => i.subtitle)).toEqual([
+      'Research · Brand · example.com',
+      'Research · Unsorted · web.dev',
+    ]);
+    expect(research[0]).toMatchObject({ targetId: 'c1', projectId: 'p1' });
+    expect(research[1]).not.toHaveProperty('projectId');
+    expect(items.filter((i) => i.kind === 'archived').map((i) => i.targetId)).toEqual(['x2']);
+    // …and an archived tab hides a history entry for the same page.
+    const again = buildResults({
+      ...base,
+      query: 'calc',
+      tabs: [],
+      history: [{ url: 'https://calc.example/', title: 'Grid calculator', favicon: null }],
+      archived: [
+        { id: 'x2', title: 'Grid calculator', url: 'https://calc.example/', favicon: null },
+      ],
+    });
+    expect(again.filter((i) => i.kind === 'history')).toEqual([]);
+  });
+});
