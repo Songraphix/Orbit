@@ -1,3 +1,5 @@
+import { dialog } from 'electron';
+import { DEFAULT_PROFILE_ID } from '@shared/types/space';
 import { SEARCH_ENGINES } from '@shared/settings';
 import type { UserSettings } from '@shared/settings';
 import type { IpcRouter } from '../router';
@@ -17,6 +19,9 @@ export function registerInternalPageHandlers(
     history: HistoryRepository;
     /** Turns the ⌥⌘N global shortcut on or off. */
     applyLittleShortcut: (enabled: boolean) => void;
+    /** Deletes a profile's cookies, storage and cache (when the profile is deleted). */
+    clearProfileData: (partition: string) => Promise<void>;
+    revealData: () => void;
     /** The Anthropic API key (F-29). */
     ai: {
       status: () => { hasKey: boolean; canStore: boolean; model: string };
@@ -101,6 +106,55 @@ export function registerInternalPageHandlers(
       deps.applyLittleShortcut(patch.littleShortcut);
     }
     return current();
+  });
+
+  router.handle('profiles:list', (_input, { sender }) => {
+    const { window } = ownerOf(sender.webContentsId, 'settings');
+    const { store } = window;
+    return {
+      profiles: store.profiles.map((p) => ({
+        id: p.id,
+        name: p.name,
+        isDefault: p.id === DEFAULT_PROFILE_ID,
+        spaces: store.spaces.filter((s) => s.profileId === p.id).length,
+      })),
+      spaces: store.spaces.map(({ id, name, icon, profileId }) => ({ id, name, icon, profileId })),
+    };
+  });
+
+  router.handle('profiles:create', ({ name }, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings').window.store.createProfile(name.trim());
+  });
+
+  router.handle('profiles:rename', ({ id, name }, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings').window.store.renameProfile(id, name);
+  });
+
+  router.handle('profiles:delete', async ({ id }, { sender }) => {
+    const { window } = ownerOf(sender.webContentsId, 'settings');
+    const profile = window.store.profiles.find((p) => p.id === id);
+    if (!profile) return;
+    const { response } = await dialog.showMessageBox(window.win, {
+      type: 'warning',
+      message: `Delete the profile “${profile.name}”?`,
+      detail: 'Its cookies, logins, history and favorites are deleted from this Mac.',
+      buttons: ['Delete', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    if (response !== 0) return;
+    if (window.store.deleteProfile(id)) await deps.clearProfileData(profile.partition);
+  });
+
+  router.handle('profiles:assign', ({ spaceId, profileId }, { sender }) => {
+    const { window } = ownerOf(sender.webContentsId, 'settings');
+    if (!window.store.profiles.some((p) => p.id === profileId)) return;
+    window.sidebar.setProfile(spaceId, profileId);
+  });
+
+  router.handle('app:revealData', (_input, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    deps.revealData();
   });
 
   router.handle('ai:status', (_input, { sender }) => {

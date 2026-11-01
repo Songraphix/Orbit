@@ -1,3 +1,4 @@
+import { DEFAULT_PROFILE_ID } from '@shared/types/space';
 import type { ItemData } from '@shared/types/live-folders';
 import { randomUUID } from 'node:crypto';
 import { generateKeyBetween } from 'fractional-indexing';
@@ -276,6 +277,30 @@ export class SidebarStore {
     this.profilesList = [...this.profilesList, profile];
     this.notify();
     return profile;
+  }
+
+  renameProfile(id: string, name: string): void {
+    const profile = this.profilesList.find((p) => p.id === id);
+    const clean = name.trim().slice(0, 40);
+    if (!profile || !clean) return;
+    const next = { ...profile, name: clean };
+    this.repo.saveProfile(next);
+    this.profilesList = this.profilesList.map((p) => (p.id === id ? next : p));
+    this.notify();
+  }
+
+  /**
+   * Deletes a profile nobody uses (not the default, and no space on it). Its favorites go with
+   * it. Returns false when it can't be deleted.
+   */
+  deleteProfile(id: string): boolean {
+    if (id === DEFAULT_PROFILE_ID || this.spacesList.some((s) => s.profileId === id)) return false;
+    if (!this.profilesList.some((p) => p.id === id)) return false;
+    this.repo.deleteProfile(id);
+    this.items = this.items.filter((i) => !(i.profileId === id && i.spaceId === null));
+    this.profilesList = this.profilesList.filter((p) => p.id !== id);
+    this.notify();
+    return true;
   }
 
   // ── Internals ──────────────────────────────────────────────────────────────

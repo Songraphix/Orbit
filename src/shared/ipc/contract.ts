@@ -60,6 +60,7 @@ export const contract = {
       chrome: z.string(),
       platform: z.string(),
     }),
+    surfaces: ['shell', 'overlay', 'internal'],
   },
   'layout:get': {
     input: z.object({}).strict(),
@@ -627,6 +628,47 @@ export const contract = {
     surfaces: ['internal'],
   },
   'ai:clearKey': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  // Profiles (F-17) in Settings: separate cookies, logins and history per profile.
+  'profiles:list': {
+    input: z.object({}).strict(),
+    output: z.object({
+      profiles: z.array(
+        z.object({ id: z.string(), name: z.string(), isDefault: z.boolean(), spaces: z.number() }),
+      ),
+      spaces: z.array(
+        z.object({ id: z.string(), name: z.string(), icon: z.string(), profileId: z.string() }),
+      ),
+    }),
+    surfaces: ['internal'],
+  },
+  'profiles:create': {
+    input: z.object({ name: z.string().min(1).max(40) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'profiles:rename': {
+    input: z.object({ id: tabId, name: z.string().min(1).max(40) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Asks to confirm, then deletes an unused profile and its browsing data. */
+  'profiles:delete': {
+    input: z.object({ id: tabId }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Moves a space to a profile (its pages reload signed in as that profile). */
+  'profiles:assign': {
+    input: z.object({ spaceId: tabId, profileId: tabId }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Settings → About: the profile folder in Finder. */
+  'app:revealData': {
     input: z.object({}).strict(),
     output: z.void(),
     surfaces: ['internal'],

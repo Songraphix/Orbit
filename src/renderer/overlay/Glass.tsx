@@ -49,11 +49,13 @@ export function Glass(props: {
   }, []);
 
   const { className = '', children, ...rest } = props;
+  // The page copy and tint are positioned inside, so the surface must be positioned itself.
+  const position = /(^|\s)(absolute|fixed)(\s|$)/.test(className) ? '' : 'relative';
   return (
     <div
       ref={ref}
       {...rest}
-      className={`glass overflow-hidden ${backdrop ? '' : 'glass-solid'} ${className}`}
+      className={`glass overflow-hidden ${position} ${backdrop ? '' : 'glass-solid'} ${className}`}
     >
       {backdrop && origin && (
         <img

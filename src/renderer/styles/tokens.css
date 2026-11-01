@@ -72,7 +72,7 @@ body {
    Glass for floating UI: a dark tint over a blurred copy of the page (GlassBackdrop), a hairline
    rim with a lit top edge, and layered shadows for real depth. */
 .glass {
-  position: relative;
+  /* Positioning comes from the component (absolute popovers, relative otherwise). */
   isolation: isolate;
   /* The tint itself is a layer inside (see Glass.tsx), above the blurred page copy. */
   border: 0.5px solid rgb(255 255 255 / 0.14);

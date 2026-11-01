@@ -405,8 +405,11 @@ export class SidebarActions {
 
   /** Moves a space to another profile; its open pages reload in the new profile's session. */
   setProfile(spaceId: string, profileId: string): void {
-    for (const item of this.store.all().filter((i) => i.spaceId === spaceId))
-      this.tabs.unload(item.id);
+    // Web pages reload signed in as the new profile. Orbit's own pages (Settings, where this is
+    // often done) don't depend on the profile, so they stay put.
+    for (const item of this.store.all().filter((i) => i.spaceId === spaceId)) {
+      if (!(item.url ?? '').startsWith('orbit://')) this.tabs.unload(item.id);
+    }
     this.store.updateSpace(spaceId, { profileId });
     const remembered = this.store.space(spaceId)?.lastActiveItemId;
     if (spaceId === this.space.id && remembered) this.tabs.activate(remembered);

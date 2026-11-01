@@ -73,11 +73,11 @@ describe('IpcRouter', () => {
 
   it('rejects a trusted surface calling a channel not meant for it', async () => {
     const { router, call } = setup();
-    const handler = vi.fn(() => INFO);
-    router.handle('app:getInfo', handler); // default surfaces: shell + overlay
+    const handler = vi.fn(() => undefined);
+    router.handle('sidebar:toggle', handler); // default surfaces: shell + overlay
 
     // webContents 2 is an internal page (e.g. the new tab page) — trusted, but not the shell.
-    await expect(call('app:getInfo', {}, { sender: { id: 2 } })).rejects.toThrow(
+    await expect(call('sidebar:toggle', {}, { sender: { id: 2 } })).rejects.toThrow(
       'untrusted_sender',
     );
     expect(handler).not.toHaveBeenCalled();

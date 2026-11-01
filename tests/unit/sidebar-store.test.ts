@@ -95,3 +95,27 @@ describe('SidebarStore', () => {
     expect(new SidebarStore(new SidebarRepository(db)).spaces).toHaveLength(1);
   });
 });
+
+describe('profiles', () => {
+  it('renames, and deletes only an unused, non-default profile (with its favorites)', () => {
+    const store = new SidebarStore(new SidebarRepository(freshDb()));
+    const work = store.createProfile('Work');
+    store.renameProfile(work.id, '  Office  ');
+    expect(store.profiles.find((p) => p.id === work.id)?.name).toBe('Office');
+    expect(store.deleteProfile(DEFAULT_PROFILE_ID)).toBe(false);
+
+    const space = store.createSpace({ name: 'Job', icon: 'briefcase', profileId: work.id });
+    store.insert(
+      { kind: 'tab', title: 'Mail', url: 'https://mail.example.com/' },
+      { section: 'favorite', profileId: work.id, spaceId: null, parentId: null, beforeId: null },
+    );
+    expect(store.deleteProfile(work.id)).toBe(false); // a space still uses it
+
+    store.updateSpace(space.id, { profileId: DEFAULT_PROFILE_ID });
+    expect(store.deleteProfile(work.id)).toBe(true);
+    expect(store.profiles.map((p) => p.id)).toEqual([DEFAULT_PROFILE_ID]);
+    expect(store.all().some((i) => i.profileId === work.id)).toBe(false);
+    // And it stays deleted.
+    expect(new SidebarStore(new SidebarRepository(db)).profiles).toHaveLength(1);
+  });
+});

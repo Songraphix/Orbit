@@ -207,6 +207,12 @@ export class SidebarRepository {
       .run(p.id, p.name, p.partition, p.createdAt);
   }
 
+  /** Removes a profile and its favorites (its spaces must have moved elsewhere first). */
+  deleteProfile(id: string): void {
+    this.db.prepare('DELETE FROM sidebar_items WHERE profile_id = ? AND space_id IS NULL').run(id);
+    this.db.prepare('DELETE FROM profiles WHERE id = ?').run(id);
+  }
+
   saveSpace(s: Space): void {
     this.db
       .prepare(

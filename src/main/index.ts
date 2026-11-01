@@ -9,6 +9,7 @@ import {
   net,
   safeStorage,
   session,
+  shell,
 } from 'electron';
 import type { Session } from 'electron';
 import type { WebContentsView } from 'electron';
@@ -578,6 +579,12 @@ void app.whenReady().then(() => {
     settings: persistence.settings,
     history: persistence.history,
     applyLittleShortcut,
+    clearProfileData: async (partition) => {
+      const s = session.fromPartition(partition);
+      await s.clearStorageData();
+      await s.clearCache();
+    },
+    revealData: () => void shell.openPath(app.getPath('userData')),
     ai: {
       status: () => ({ hasKey: keyStore.has(), canStore: keyStore.canStore, model: TIDY_MODEL }),
       setKey: (input) => {
