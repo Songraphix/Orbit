@@ -2,7 +2,7 @@
 
 ## Current phase: M1 buffer — owner dogfooding, then v0.1.0
 
-Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.0.1/Orbit-0.0.1-arm64.dmg` (built 2026-11-01, smoke-tested)
+Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0.0.1/Orbit-0.0.1-arm64.dmg` (built 2026-11-01 with icon and fuses, launch-verified)
 
 ## Needs the owner (can't be automated)
 
@@ -74,9 +74,14 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 - 2026-11-01 — Phase 10: Tidy [F-29] — Settings → AI takes your Anthropic API key (checked for shape, encrypted with the macOS Keychain via `safeStorage` in its own file, never shown again or sent to a renderer). With a key, the space header shows **Tidy**: the space's loose Today tabs (titles and sites only — never paths or page content) go to Claude Haiku 5.5 through the official `@anthropic-ai/sdk` with structured output (zod), low effort; the answer is cleaned (unknown or repeated tabs, groups under 2, at most 6) and applied as Tidy folders at the top of Today; **Undo** (for a minute) restores the exact order. Refusals, bad keys, rate limits and offline get plain messages. Tests use a stand-in API on the test server (development builds only) — **Phase 10 complete** (optional AI tab renaming / page summaries stay in the backlog)
 
+- 2026-11-01 — Phase 11: Library beside the page (owner feedback) [F-11] — like Arc, Library mode is a narrow sections column plus a 300 px panel (wide for Spaces' columns) and the page moves right, still loaded and usable; opening tabs no longer closes the Library (`libraryColumns`, unit-tested)
+- 2026-11-01 — Phase 11: design pass (owner: "Arc feels intentional, heavy") — one motion system (out / spring curves, 120/200/320 ms, reduced-motion respected): popovers and the command bar pop in with a small spring, toasts rise, rows grow in, switching spaces slides the list the way you moved, everything clickable gives under the pointer. Glass materials for the command bar, site controls and prompts: main snapshots the page when they open and the overlay blurs that copy under a tint (native views can't be CSS-blurred), with a lit hairline rim and layered shadows. Page card depth; the active row lifts with a theme-aware shadow; command results sit on lit tiles; Library tiles, recent files, the slid-out sidebar and Peek share the materials. Checked with window screenshots (dark and light themes) throughout
+- 2026-11-01 — Phase 11: performance against PLAN.md 10.2 (3 cold launches, dev build): cold start to usable sidebar ≈ 0.6 s (budget 1.5 s); tab switch 2–5 ms (50 ms); command bar to first results ≈ 10–54 ms including typing (50 ms); idle CPU 0.3 %
+- 2026-11-01 — Phase 11: packaging — Orbit icon (SVG source in resources/), Electron fuses (no run-as-node / NODE_OPTIONS / inspect, asar-only with integrity check, encrypted cookies; re-signed ad hoc so Apple Silicon runs it), HTML document types, dark mode support. `npm run dist` → `release/0.0.1/Orbit-0.0.1-arm64.dmg` (130 MB), launch-verified. Accessibility: visible keyboard focus on all controls (labels, `aria-current` / `aria-expanded` were already there). Signing, notarisation and auto-update need an Apple Developer account — not done (personal use). Widevine (Netflix/Spotify Web) not added
+
 ## In progress
 
-- Phase 11 (ahead of schedule): polish, performance, packaging — not started
+- M1 buffer: owner dogfooding, then v0.1.0
 
 ## Decisions made
 

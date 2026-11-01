@@ -1055,9 +1055,9 @@ Apr 26 ─ May 16  Phase 11 Polish, performance, packaging, signing, updates →
 
 ### 8.15 Phase 11 — Polish, performance, packaging (Apr 26 – May 16)
 
-- [ ] Performance pass against the budgets in section 10.2; profile with Chrome DevTools on the shell and `process.getProcessMemoryInfo`.
-- [ ] Animation and visual polish pass against your Arc screenshots, side by side.
-- [ ] Accessibility pass (keyboard reachability, VoiceOver labels on sidebar items).
+- [x] Performance pass against the budgets in section 10.2; profile with Chrome DevTools on the shell and `process.getProcessMemoryInfo`.
+- [x] Animation and visual polish pass against your Arc screenshots, side by side.
+- [x] Accessibility pass (keyboard reachability, VoiceOver labels on sidebar items).
 - [ ] Packaging, signing, notarisation and auto-update (section 12) — only if you want to share it or want auto-updates.
 - [ ] Optional: Widevine via castLabs ECS if you need Netflix/Spotify Web.
 - [ ] ★ **M3 — Beyond Arc.**
