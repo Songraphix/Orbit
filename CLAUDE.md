@@ -41,6 +41,7 @@ The full plan is in docs/PLAN.md. Progress is logged in docs/PROGRESS.md.
 
 - No admin rights: Node lives in ~/.local/node/bin and gh in ~/.local/bin (on PATH via ~/.zshrc). Never use sudo or Homebrew.
 - Shells launched from VS Code may export ELECTRON_RUN_AS_NODE=1, which starts Electron as plain Node with no window. Run dev with `env -u ELECTRON_RUN_AS_NODE npm run dev`; the e2e tests strip it themselves.
+- `ORBIT_USER_DATA_DIR=<dir>` gives the app a separate profile (the single-instance lock is per profile). E2E tests always use a temp dir — never point tests at the real profile.
 - TypeScript is pinned to 6.0.x because typescript-eslint does not support 7.x yet. Revisit at each milestone.
 - Preloads build as CommonJS (`out/preload/*.cjs`) because sandboxed renderers can't load ESM preloads.
 - The user's Arc backup is at ~/ArcBackup/2026-11-01/ — outside the repo. Never copy personal data into the repo; importer fixtures must be trimmed and anonymised.

@@ -1,10 +1,18 @@
-/** The API the shell/overlay preload exposes as `window.orbit`. Grows from Phase 1. */
+import type {
+  Channel,
+  EventChannel,
+  EventPayload,
+  InvokeInput,
+  InvokeOutput,
+} from '../ipc/contract';
+
+/** The API the shell/overlay preload exposes as `window.orbit`. */
 export type OrbitApi = {
-  platform: string;
-  versions: { electron: string; chrome: string };
+  /** Send an intent to the main process (PLAN.md section 4.4). */
+  invoke<C extends Channel>(channel: C, input: InvokeInput<C>): Promise<InvokeOutput<C>>;
+  /** Subscribe to a main → renderer event. Returns an unsubscribe function. */
+  on<E extends EventChannel>(channel: E, listener: (payload: EventPayload<E>) => void): () => void;
 };
 
-/** The reduced API exposed to internal orbit:// pages. */
-export type OrbitInternalApi = {
-  platform: string;
-};
+/** The reduced API exposed to internal orbit:// pages (grows from Phase 4). */
+export type OrbitInternalApi = Record<string, never>;

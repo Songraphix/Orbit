@@ -1,8 +1,8 @@
 # Progress log
 
-## Current phase: Phase 0 — Setup and foundations
+## Current phase: Phase 1 — Window, sidebar shell and tabs
 
-Target end: 2026-11-02
+Target end: 2026-11-16 · Branch: `phase-1/foundations`
 
 ## Done
 
@@ -11,10 +11,11 @@ Target end: 2026-11-02
 - 2026-10-31 — Extension audit: 14 extensions, none use native messaging (`docs/reference/extensions.md`)
 - 2026-10-31 — Repo initialised; plan + screenshots (Img 1–7) committed (0e4acd4)
 - 2026-11-01 — Scaffold: electron-vite with shell / overlay / internal renderers, shell + internal preloads, ESLint, Prettier, Vitest, Playwright, husky pre-commit, CLAUDE.md, ADR-001…006
+- 2026-11-01 — Phase 1 step 1: typed IPC router (zod input + output validation, trusted-sender checks), main→renderer Broadcaster, typed `window.orbit.invoke/on`, first channel `app:getInfo`; e2e runs in a throwaway profile via `ORBIT_USER_DATA_DIR`
 
 ## In progress
 
-- Nothing — Phase 0 exit criteria met; awaiting review before Phase 1
+- Phase 1 step 2: persistence (SQLite + migrations + settings) — awaiting decision on node:sqlite vs better-sqlite3
 
 ## Decisions made
 
