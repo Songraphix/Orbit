@@ -1,4 +1,5 @@
-import { clipboard, Menu } from 'electron';
+import { Menu, MenuItem, clipboard } from 'electron';
+import { ElectronChromeExtensions } from 'electron-chrome-extensions';
 import type { MenuItemConstructorOptions, WebContents } from 'electron';
 import { searchUrl } from '../omnibox/classify';
 import { buildContextMenu } from './context-menu-model';
@@ -71,6 +72,17 @@ export function attachContextMenu(
         ? { type: 'separator' }
         : { label: entry.label, enabled: entry.enabled, click: () => run(entry.action) },
     );
-    Menu.buildFromTemplate(template).popup();
+    const menu = Menu.buildFromTemplate(template);
+    // Items extensions added with chrome.contextMenus go just above "Inspect".
+    const extra = ElectronChromeExtensions.fromSession(contents.session)?.getContextMenuItems(
+      contents,
+      params,
+    );
+    if (extra && extra.length > 0) {
+      let at = Math.max(0, menu.items.length - 1);
+      for (const item of extra) menu.insert(at++, item);
+      menu.insert(at, new MenuItem({ type: 'separator' }));
+    }
+    menu.popup();
   });
 }

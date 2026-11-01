@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { extensionActionSchema } from './extensions';
 import { rectSchema } from './layout';
 
 export const siteSettingRowSchema = z.object({
@@ -19,6 +20,10 @@ export const siteControlsViewSchema = z.object({
   host: z.string(),
   secure: z.boolean(),
   settings: z.array(siteSettingRowSchema),
+  /** Installed extensions' buttons for this tab. */
+  extensions: z.array(extensionActionSchema),
+  /** On a Chrome Web Store page: that extension, and whether Orbit has it. */
+  storeExtension: z.object({ id: z.string(), installed: z.boolean() }).nullable(),
   openedAt: z.number(),
 });
 export type SiteControlsView = z.output<typeof siteControlsViewSchema>;

@@ -13,6 +13,7 @@ import type { Session } from 'electron';
 import { FindController } from '../tabs/find';
 import { SidebarActions } from '../sidebar/actions';
 import { TabManager } from '../tabs/tab-manager';
+import type { TabManagerDeps } from '../tabs/tab-manager';
 import { MediaController } from '../media/controller';
 import { PeekController } from '../peek/controller';
 import { shouldPeek } from '../peek/policy';
@@ -33,6 +34,8 @@ export type WindowManagerDeps = {
   sessionFor: (profileId: string) => Session | undefined;
   history: HistorySink;
   zoomFor: (url: string) => number;
+  /** Chrome extensions (Phase 7). */
+  extensions?: TabManagerDeps['extensions'];
   /** A site's own setting (e.g. 'peek' → 'off'), by page URL. */
   siteSetting: (url: string, key: string) => string | null;
   senders: SenderRegistry;
@@ -193,6 +196,7 @@ export class WindowManager {
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
       onSplitChange: (ratio) => layout.setSplitRatio(ratio),
       siteSetting: this.deps.siteSetting,
+      extensions: this.deps.extensions,
       peek: (fromTabId, url, activate) => {
         const fromUrl = tabs?.get(fromTabId)?.state.url ?? null;
         const open = shouldPeek({

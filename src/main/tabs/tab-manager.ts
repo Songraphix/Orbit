@@ -1,4 +1,4 @@
-import type { BrowserWindow, Session, WebContentsView } from 'electron';
+import type { BrowserWindow, Session, WebContents, WebContentsView } from 'electron';
 import type { Layout } from '@shared/types/layout';
 import type { SidebarRow, SidebarSnapshot } from '@shared/types/space';
 import { NEW_TAB_URL } from '@shared/types/tabs';
@@ -48,6 +48,11 @@ export type TabManagerDeps = Pick<
   onUnresponsive?: (tabId: string) => void;
   /** A tab's media started or stopped. */
   onMedia?: (tabId: string, event: 'playing' | 'paused') => void;
+  /** Chrome extensions see web tabs as tabs (chrome.tabs.*). */
+  extensions?: {
+    addTab: (contents: WebContents, win: BrowserWindow) => void;
+    selectTab: (contents: WebContents) => void;
+  };
   /** A site's own setting by page URL (Developer Mode…). */
   siteSetting?: (url: string, key: string) => string | null;
   /** Offered every link that wants a new tab; returns true if Peek took it (F-23). */
@@ -69,6 +74,8 @@ export class TabManager {
   private activeId: string | null = null;
   /** Split view (F-13): two tabs side by side; `activeId` is the focused pane. */
   private split: Split | null = null;
+  /** Web contents already shown to extensions. */
+  private readonly announced = new WeakSet<WebContents>();
   private notifyScheduled = false;
   private frozen = false;
   private prepared: { tabId: string; at: number; dataUrl: string } | null = null;
@@ -204,6 +211,7 @@ export class TabManager {
     if (splitEnded) this.deps.onSplitChange?.(null);
     this.place();
     next.view.webContents.focus();
+    this.announce(next, true);
     this.deps.store.updateSpace(this.spaceId, { lastActiveItemId: id });
     this.deps.store.updateLive(id, { lastActiveAt: Date.now() });
     this.scheduleNotify();
@@ -308,7 +316,7 @@ export class TabManager {
     tab.setEnv(this.envFor(tab.id));
     this.live.set(tab.id, tab);
     this.attach(tab.view);
-    this.activate(tab.id);
+    this.activate(tab.id); // announces it to extensions
   }
 
   // ── Split view (F-13) ──────────────────────────────────────────────────────
@@ -541,7 +549,24 @@ export class TabManager {
     });
     this.live.set(item.id, tab);
     this.attach(tab.view);
+    this.announce(tab);
     return tab;
+  }
+
+  /**
+   * Web pages are tabs to extensions; internal pages aren't. Called on creation, activation
+   * and every state change (a new tab page becoming a website gets a new web view).
+   */
+  private announce(tab: TabController, select = false): void {
+    const extensions = this.deps.extensions;
+    const contents = tab.view.webContents;
+    if (!extensions || tab.state.kind !== 'web' || contents.isDestroyed()) return;
+    const fresh = !this.announced.has(contents);
+    if (fresh) {
+      this.announced.add(contents);
+      extensions.addTab(contents, this.deps.win);
+    }
+    if ((select || fresh) && this.activeId === tab.id) extensions.selectTab(contents);
   }
 
   /** How a tab in this window reports back (looked up by id, so a tab can be handed over). */
@@ -566,6 +591,7 @@ export class TabManager {
         // A crashed page is hidden so the shell's Reload card shows through.
         if (this.shownIds().includes(id)) this.place();
         this.deps.store.updateLive(id, { url, title, favicon });
+        this.announce(tab);
         this.scheduleNotify();
       },
       onViewReplaced: (oldView, newView) => this.replaceView(id, oldView, newView),
@@ -578,6 +604,8 @@ export class TabManager {
         if (this.disposed || this.activeId === id || !inSplit(this.split, id)) return;
         this.activeId = id;
         this.deps.store.updateSpace(this.spaceId, { lastActiveItemId: id });
+        const tab = this.live.get(id);
+        if (tab) this.announce(tab, true);
         this.scheduleNotify();
       },
     };

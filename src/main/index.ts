@@ -10,6 +10,7 @@ import { chromeUserAgent } from './app/user-agent';
 import { Broadcaster } from './ipc/broadcaster';
 import { CommandBarService, copyActiveUrl } from './commandbar/service';
 import { registerAppHandlers } from './ipc/handlers/app';
+import { ExtensionHost } from './extensions/host';
 import { registerSiteControlsHandlers } from './ipc/handlers/site-controls';
 import { registerCommandBarHandlers } from './ipc/handlers/command-bar';
 import { registerFindHandlers } from './ipc/handlers/find';
@@ -294,6 +295,27 @@ void app.whenReady().then(() => {
     const owner = windows?.tabForContents(contents.id);
     return owner?.window.overlay ?? null;
   });
+  // Chrome extensions (ADR-008): chrome.tabs calls land in the focused window.
+  const extensionHost = new ExtensionHost({
+    createTab: (url, active) => {
+      const controller = windows?.focused();
+      if (!controller) return null;
+      const tab = controller.tabs.create(url, { activate: active });
+      return [tab.view.webContents, controller.win];
+    },
+    selectTab: (contents) => {
+      const owner = windows?.tabForContents(contents.id);
+      owner?.window.tabs.activate(owner.tab.id);
+    },
+    removeTab: (contents) => {
+      const owner = windows?.tabForContents(contents.id);
+      owner?.window.tabs.close(owner.tab.id);
+    },
+  });
+  // Extension updates: a minute after launch, then every 6 hours.
+  const updateExtensions = () => void extensionHost.update();
+  setTimeout(updateExtensions, 60_000).unref();
+  setInterval(updateExtensions, 6 * 3_600_000).unref();
   const sessionFor = (profileId: string): Session | undefined => {
     const profile = store.profiles.find((p) => p.id === profileId);
     const s =
@@ -302,6 +324,7 @@ void app.whenReady().then(() => {
         : session.fromPartition(profile.partition);
     permissions.configure(s); // once per session
     downloads.configure(s, profileId);
+    void extensionHost.configure(s);
     return s;
   };
   sessionFor(DEFAULT_PROFILE_ID);
@@ -312,6 +335,7 @@ void app.whenReady().then(() => {
     sessionFor,
     history: persistence.history,
     zoomFor: (url) => persistence?.siteSettings.zoomFor(url) ?? 0,
+    extensions: extensionHost,
     siteSetting: (url, key) => {
       try {
         return persistence?.siteSettings.get(new URL(url).origin, key) ?? null;
@@ -388,6 +412,7 @@ void app.whenReady().then(() => {
   });
   registerSiteControlsHandlers(router, windowManager, {
     siteSettings: persistence.siteSettings,
+    extensions: extensionHost,
     toast,
     resetZoom: (controller) => zoom(controller, 'reset'),
   });

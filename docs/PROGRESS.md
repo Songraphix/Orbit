@@ -13,7 +13,7 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - [ ] Two Google accounts in two spaces via space menu → Set Profile → New Profile
 - [ ] Look at the translucent sidebar / theme colours (can't be screenshotted from here)
 - [ ] Remaining Arc exports from PLAN.md "Do this first": passwords, Boost CSS/JS, Easels
-- [ ] Fill "Usage" / "Blocker?" in docs/reference/extensions.md (extensions arrive in Phase 7)
+- [ ] Add your extensions: open each Web Store page in Orbit → site controls (sliders button) → Add to Orbit; then fill "Usage" / "Blocker?" in docs/reference/extensions.md
 
 ## Done
 
@@ -54,9 +54,11 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 - 2026-11-01 — Phase 7: site controls popover + Developer Mode [F-12, F-30] — toolbar sliders button opens the Img 3 popover in the overlay: Share (macOS share sheet), Screenshot (visible page → clipboard), Copy Link, Boost placeholder; settings for this site (Notifications, Preview/Peek, Developer Mode, plus camera/mic/location once asked) as native radio menus over `site_settings` (pure `siteSettingRows` / `storedValueFor`); Secure / Not Secure footer and "…" (copy, reset zoom, clear site data with confirmation). Developer Mode per site: full URL in the toolbar, DevTools button with console-error badge, no Peek and no auto-archive; suggested for localhost / 127.0.0.1. Extensions grid is a placeholder until the extensions slice
 
+- 2026-11-01 — Phase 7: Chrome extensions (ADR-008) — `electron-chrome-extensions@4.9.0` per profile session (chrome.tabs/windows/action…, tabs announced as they become web pages, extension context-menu items in the page menu) and `electron-chrome-web-store@0.13.0` for downloads only: on a Web Store page, Site controls → **Add to Orbit** (native confirmation; ID taken from the tab's URL, the store page gets no API); extension buttons with icons and badges in the site controls grid open their popups, right-click → Options / Remove; updates checked every 6 h. All 11 audited extensions install, load and run their service workers (docs/reference/extensions.md); packaged app includes the new modules and launches clean
+
 ## In progress
 
-- Phase 7 (ahead of schedule): extensions (electron-chrome-extensions), then region screenshot
+- Phase 7 (ahead of schedule): wrap-up, then Phase 8 (Boosts)
 
 ## Decisions made
 
@@ -64,6 +66,7 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - 2026-11-01 — Command bar list built in-house rather than with cmdk: results are ranked in main, so cmdk's own fuzzy filter would fight it, and it pulls in several Radix packages
 - 2026-11-01 — New tabs open at the top of Today (Arc behaviour)
 - 2026-11-01 — Default profile keeps Electron's default session so existing logins carry over; other profiles get `persist:profile-<id>`
+- 2026-11-01 — Extensions: pinned to the newest releases older than two weeks; the store page's install preload is not used, so no page JavaScript gains an API (ADR-008). GPL-3.0 licence: fine while Orbit stays personal
 - 2026-11-01 — Peek v1 catches links that would open a new tab (target=_blank, window.open), not same-tab navigations: those include OAuth/SSO redirects that must stay in the pinned tab. Covers Gmail, Slack, etc.
 - 2026-11-01 — Split view v1 is two panes and not persisted; a split tree and restore come later (backlog)
 - 2026-11-01 — New tab page added at the owner's request (F-32): "+ New Tab" always opens it; ⌘T opens it until the Phase 2 command bar, then ⌘T → command bar

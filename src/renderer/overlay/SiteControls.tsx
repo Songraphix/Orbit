@@ -10,11 +10,13 @@ import {
   MapPin,
   Mic,
   Plus,
+  Puzzle,
   Share,
   Wand2,
 } from 'lucide-react';
 import { useEffect } from 'react';
-import type { ReactNode } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
+import type { ExtensionAction } from '@shared/types/extensions';
 import type { SiteAction, SiteControlsView, SiteSettingRow } from '@shared/types/site-controls';
 
 const WIDTH = 248;
@@ -82,8 +84,26 @@ export function SiteControls({ view }: { view: SiteControlsView }) {
         </div>
 
         <Heading>Extensions</Heading>
+        {view.storeExtension && (
+          <button
+            type="button"
+            disabled={view.storeExtension.installed}
+            onClick={() => void window.orbit.invoke('extensions:install', {})}
+            className="mb-1.5 flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[var(--accent,#5b5bd6)] font-semibold text-white hover:brightness-110 disabled:bg-white/10 disabled:text-white/60"
+            data-testid="site-extension-install"
+          >
+            {view.storeExtension.installed ? 'Added to Orbit' : 'Add to Orbit'}
+          </button>
+        )}
         <div className="grid grid-cols-4 gap-1.5">
-          <Action label="Extensions arrive later in Phase 7" disabled testId="site-extensions-add">
+          {view.extensions.map((ext) => (
+            <ExtensionButton key={ext.id} ext={ext} />
+          ))}
+          <Action
+            label="Get Extensions"
+            onClick={() => void window.orbit.invoke('extensions:openStore', {})}
+            testId="site-extensions-add"
+          >
             <Plus size={16} />
           </Action>
         </div>
@@ -139,6 +159,39 @@ export function SiteControls({ view }: { view: SiteControlsView }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function ExtensionButton({ ext }: { ext: ExtensionAction }) {
+  const activate = (event: ReactMouseEvent<HTMLButtonElement>, menu: boolean) => {
+    const r = event.currentTarget.getBoundingClientRect();
+    const anchor = { x: r.x, y: r.y, width: r.width, height: r.height };
+    void window.orbit.invoke('extensions:activate', { id: ext.id, anchor, menu });
+  };
+  return (
+    <button
+      type="button"
+      aria-label={ext.title}
+      title={ext.title}
+      onClick={(event) => activate(event, false)}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        activate(event, true);
+      }}
+      className="relative grid h-10 place-items-center rounded-xl bg-white/10 hover:bg-white/20"
+      data-testid="site-extension"
+      data-extension-id={ext.id}
+    >
+      {ext.icon ? <img src={ext.icon} alt="" className="size-5" /> : <Puzzle size={16} />}
+      {ext.badgeText && (
+        <span
+          className="absolute right-0.5 bottom-0.5 rounded px-1 text-[9px] leading-3 font-semibold text-white"
+          style={{ background: ext.badgeColor ?? '#d33' }}
+        >
+          {ext.badgeText}
+        </span>
+      )}
+    </button>
   );
 }
 

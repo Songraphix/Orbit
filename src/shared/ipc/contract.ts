@@ -303,6 +303,26 @@ export const contract = {
     output: z.void(),
     surfaces: ['overlay'],
   },
+  /** An extension's button in site controls: its popup / click, or (menu) its context menu. */
+  'extensions:activate': {
+    input: z
+      .object({ id: z.string().regex(/^[a-p]{32}$/), anchor: rectSchema, menu: z.boolean() })
+      .strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  /** "Add to Orbit" on a Chrome Web Store page (the ID comes from the active tab, not input). */
+  'extensions:install': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  /** "+": the Chrome Web Store in a new tab. */
+  'extensions:openStore': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
   /** Developer Mode's toolbar button (F-30). */
   'tabs:devtools': {
     input: z.object({ tabId }).strict(),

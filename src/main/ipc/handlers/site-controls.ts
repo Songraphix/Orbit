@@ -5,10 +5,13 @@ import type { SiteControlsView } from '@shared/types/site-controls';
 import type { IpcRouter } from '../router';
 import type { SiteSettingsRepository } from '../../persistence/repositories/site-settings';
 import { siteSettingRows, storedValueFor } from '../../site-controls/model';
+import type { ExtensionHost } from '../../extensions/host';
+import { webStoreIdFrom } from '../../extensions/model';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
 
 export type SiteControlsDeps = {
   siteSettings: SiteSettingsRepository;
+  extensions: ExtensionHost;
   toast: (controller: WindowController, message: string) => void;
   /** ⌘0 for the active page. */
   resetZoom: (controller: WindowController) => void;
@@ -56,9 +59,83 @@ export function registerSiteControlsHandlers(
       host: site.host,
       secure: site.secure,
       settings: siteSettingRows(deps.siteSettings.all(site.origin), site.url),
+      extensions: deps.extensions.actions(site.tab.view.webContents),
+      storeExtension: storeExtension(site.url, site.tab.view.webContents.session),
       openedAt: Date.now(),
     };
   };
+
+  const storeExtension = (url: string, session: Electron.Session) => {
+    const id = webStoreIdFrom(url);
+    return id ? { id, installed: deps.extensions.isInstalled(session, id) } : null;
+  };
+
+  router.handle('extensions:activate', ({ id, anchor, menu }, { sender }) => {
+    const controller = windowFor(sender.webContentsId);
+    const site = activeSite(controller);
+    if (!site) return;
+    controller.overlay.closeSiteControls(); // popups are windows of their own
+    const contents = site.tab.view.webContents;
+    if (!menu) {
+      deps.extensions.activate(contents, id, anchor);
+      return;
+    }
+    const info = deps.extensions.info(contents.session, id);
+    if (!info) return;
+    Menu.buildFromTemplate([
+      { label: info.name, enabled: false },
+      { type: 'separator' },
+      {
+        label: 'Options',
+        enabled: info.optionsUrl !== null,
+        click: () => info.optionsUrl && controller.tabs.create(info.optionsUrl),
+      },
+      {
+        label: `Remove “${info.name}” from Orbit…`,
+        click: async () => {
+          const { response } = await dialog.showMessageBox(controller.win, {
+            type: 'warning',
+            message: `Remove “${info.name}”?`,
+            buttons: ['Remove', 'Cancel'],
+            defaultId: 1,
+            cancelId: 1,
+          });
+          if (response !== 0) return;
+          await deps.extensions.uninstall(id);
+          deps.toast(controller, `Removed ${info.name}`);
+        },
+      },
+    ]).popup({
+      window: controller.win,
+      x: Math.round(anchor.x),
+      y: Math.round(anchor.y + anchor.height),
+    });
+  });
+
+  router.handle('extensions:install', async (_input, { sender }) => {
+    const controller = windowFor(sender.webContentsId);
+    const site = activeSite(controller);
+    const id = site ? webStoreIdFrom(site.url) : null;
+    if (!site || !id) return;
+    controller.overlay.closeSiteControls();
+    try {
+      const name = await deps.extensions.install(id, controller.win);
+      if (name) deps.toast(controller, `Added ${name}`);
+    } catch (error) {
+      console.error('[orbit] extension install failed', error);
+      await dialog.showMessageBox(controller.win, {
+        type: 'error',
+        message: 'Couldn’t add this extension',
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  router.handle('extensions:openStore', (_input, { sender }) => {
+    const controller = windowFor(sender.webContentsId);
+    controller.overlay.closeSiteControls();
+    controller.tabs.create('https://chromewebstore.google.com/category/extensions');
+  });
 
   /** Re-reads the settings after a change, keeping the popover where it is. */
   const refresh = (controller: WindowController) => {
