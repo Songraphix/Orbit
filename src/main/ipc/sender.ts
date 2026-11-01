@@ -1,6 +1,8 @@
+import type { Surface } from '@shared/ipc/contract';
+
 /**
- * Decides whether an IPC message comes from one of Orbit's own surfaces (PLAN.md section 4.8).
- * Pure: no Electron imports, so it can be unit tested.
+ * Decides whether an IPC message comes from one of Orbit's own surfaces (PLAN.md section 4.8),
+ * and which kind. Pure: no Electron imports, so it can be unit tested.
  */
 export type SenderInfo = {
   /** webContents id of the sender. */
@@ -12,22 +14,28 @@ export type SenderInfo = {
 };
 
 export class SenderRegistry {
-  private readonly trusted = new Set<number>();
+  private readonly surfaces = new Map<number, Surface>();
 
   /** @param allowedUrlPrefixes e.g. the dev-server origin or the packaged renderer directory. */
   constructor(private readonly allowedUrlPrefixes: readonly string[]) {}
 
-  add(webContentsId: number): void {
-    this.trusted.add(webContentsId);
+  add(webContentsId: number, surface: Surface): void {
+    this.surfaces.set(webContentsId, surface);
   }
 
   remove(webContentsId: number): void {
-    this.trusted.delete(webContentsId);
+    this.surfaces.delete(webContentsId);
+  }
+
+  /** The surface that sent this message, or null if it isn't a trusted Orbit page. */
+  surfaceOf(sender: SenderInfo): Surface | null {
+    const surface = this.surfaces.get(sender.webContentsId);
+    if (!surface || !sender.isMainFrame || sender.frameUrl === null) return null;
+    const url = sender.frameUrl;
+    return this.allowedUrlPrefixes.some((prefix) => url.startsWith(prefix)) ? surface : null;
   }
 
   isTrusted(sender: SenderInfo): boolean {
-    if (!this.trusted.has(sender.webContentsId)) return false;
-    if (!sender.isMainFrame || sender.frameUrl === null) return false;
-    return this.allowedUrlPrefixes.some((prefix) => sender.frameUrl!.startsWith(prefix));
+    return this.surfaceOf(sender) !== null;
   }
 }

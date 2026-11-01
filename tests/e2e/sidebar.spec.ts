@@ -17,7 +17,8 @@ test('sidebar toggles from the menu, resizes by drag, and both persist', async (
   expect((await box(win, 'sidebar')).width).toBe(260);
   expect((await box(win, 'content-card')).x).toBe(260);
 
-  // Drag the right edge from 260 → 320 px.
+  // Drag the right edge from 260 → 320 px. The new tab page's native view sits in the card,
+  // so this also proves the drag isn't swallowed once the pointer crosses onto the page.
   const handle = await box(win, 'sidebar-resize-handle');
   const y = handle.y + 200;
   await win.mouse.move(handle.x + handle.width / 2, y);
@@ -27,6 +28,17 @@ test('sidebar toggles from the menu, resizes by drag, and both persist', async (
   await win.mouse.up();
   await expect.poll(async () => (await box(win, 'sidebar')).width).toBe(320);
   expect((await box(win, 'content-card')).x).toBe(320);
+  // After the drag the live page is back (snapshot gone, view visible at the new position).
+  await expect(win.getByTestId('resize-snapshot')).toHaveCount(0);
+  await expect
+    .poll(() =>
+      app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0]!
+          .contentView.children.filter((v) => v.getVisible())
+          .map((v) => v.getBounds().x),
+      ),
+    )
+    .toEqual([320]);
 
   // Toggle via the real View → Toggle Sidebar menu item (⌘S).
   const clickToggle = () =>

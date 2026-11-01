@@ -12,7 +12,8 @@ function setup() {
   const listeners = new Map<string, Listener>();
   const ipcMain: IpcMainLike = { handle: (channel, l) => void listeners.set(channel, l) };
   const senders = new SenderRegistry([ORIGIN]);
-  senders.add(1);
+  senders.add(1, 'shell');
+  senders.add(2, 'internal');
   const router = new IpcRouter(ipcMain, senders);
   const call = (channel: string, payload: unknown, event: Partial<InvokeEventLike> = {}) => {
     const listener = listeners.get(channel);
@@ -70,6 +71,18 @@ describe('IpcRouter', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  it('rejects a trusted surface calling a channel not meant for it', async () => {
+    const { router, call } = setup();
+    const handler = vi.fn(() => INFO);
+    router.handle('app:getInfo', handler); // default surfaces: shell + overlay
+
+    // webContents 2 is an internal page (e.g. the new tab page) — trusted, but not the shell.
+    await expect(call('app:getInfo', {}, { sender: { id: 2 } })).rejects.toThrow(
+      'untrusted_sender',
+    );
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it('rejects handler output that does not match the contract', async () => {
     const { router, call } = setup();
     router.handle('app:getInfo', () => ({ ...INFO, version: 1 }) as unknown as typeof INFO);
@@ -91,15 +104,15 @@ describe('SenderRegistry', () => {
   it('stops trusting a webContents once removed', () => {
     const senders = new SenderRegistry([ORIGIN]);
     const info = { webContentsId: 7, frameUrl: `${ORIGIN}shell/index.html`, isMainFrame: true };
-    senders.add(7);
-    expect(senders.isTrusted(info)).toBe(true);
+    senders.add(7, 'shell');
+    expect(senders.surfaceOf(info)).toBe('shell');
     senders.remove(7);
     expect(senders.isTrusted(info)).toBe(false);
   });
 
   it('does not treat a lookalike origin as trusted', () => {
     const senders = new SenderRegistry(['http://localhost:5173/']);
-    senders.add(1);
+    senders.add(1, 'shell');
     expect(
       senders.isTrusted({
         webContentsId: 1,

@@ -1,9 +1,11 @@
 import { BrowserWindow, screen } from 'electron';
+import type { WebContentsView } from 'electron';
 import { APP_NAME } from '@shared/constants';
 import type { RendererEntry } from '@shared/constants';
 import type { Broadcaster } from '../ipc/broadcaster';
 import type { SenderRegistry } from '../ipc/sender';
 import type { SettingsRepository } from '../persistence/repositories/settings';
+import { TabManager } from '../tabs/tab-manager';
 import { LayoutEngine } from './layout-engine';
 import { MIN_SIZE, resolveWindowBounds } from './window-state';
 
@@ -18,13 +20,17 @@ export type WindowManagerDeps = {
   senders: SenderRegistry;
   broadcaster: Broadcaster;
   preloadPath: string;
+  internalPreloadPath: string;
   loadRenderer: (win: BrowserWindow, entry: RendererEntry) => void;
+  /** Loads an internal orbit:// page (e.g. orbit://newtab) into a tab's view. */
+  loadInternal: (view: WebContentsView, url: string) => void;
 };
 
 /** One Orbit window and the services scoped to it. */
 export type WindowController = {
   win: BrowserWindow;
   layout: LayoutEngine;
+  tabs: TabManager;
 };
 
 /** Creates and restores Orbit's windows (PLAN.md section 4.3). */
@@ -80,12 +86,25 @@ export class WindowManager {
     if (saved.isMaximized) win.maximize();
 
     const contents = win.webContents;
-    const layout = new LayoutEngine(win, settings, (next) =>
-      broadcaster.sendTo(contents, 'state:layout', next),
-    );
+    let tabs: TabManager | null = null;
+    const layout = new LayoutEngine(win, settings, (next) => {
+      tabs?.applyLayout(); // web views move in the same tick the shell is told
+      broadcaster.sendTo(contents, 'state:layout', next);
+    });
+    tabs = new TabManager({
+      win,
+      getLayout: () => layout.current(),
+      internalPreload: this.deps.internalPreloadPath,
+      loadInternal: this.deps.loadInternal,
+      registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
+      unregisterInternal: (webContentsId) => senders.remove(webContentsId),
+      onChange: (snapshot) => broadcaster.sendTo(contents, 'state:tabs', snapshot),
+    });
+    const tabManager = tabs;
+
     const id = contents.id;
-    this.controllers.set(id, { win, layout });
-    senders.add(id);
+    this.controllers.set(id, { win, layout, tabs: tabManager });
+    senders.add(id, 'shell');
     broadcaster.add(contents);
     contents.once('destroyed', () => {
       this.controllers.delete(id);
@@ -94,6 +113,10 @@ export class WindowManager {
     });
     win.on('resize', () => layout.update());
     win.on('close', () => layout.flush());
+    win.on('closed', () => tabManager.destroyAll());
+
+    // Every window opens with a new tab page until session restore lands (step 11).
+    tabManager.create();
 
     // The shell never navigates or opens windows itself (PLAN.md section 4.8).
     contents.on('will-navigate', (event) => event.preventDefault());

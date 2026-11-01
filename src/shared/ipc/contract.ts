@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { layoutSchema } from '../types/layout';
+import { tabsSnapshotSchema } from '../types/tabs';
 
 /**
  * Every IPC channel lives here (PLAN.md section 4.4). Names follow `domain:verb`.
@@ -10,7 +11,19 @@ import { layoutSchema } from '../types/layout';
  *
  * Add a channel here first, then its handler in src/main/ipc/handlers/.
  */
-export type ChannelSpec = { input: z.ZodType; output: z.ZodType };
+/** Orbit's own UI surfaces (PLAN.md section 4.2). Web content is never a surface. */
+export type Surface = 'shell' | 'overlay' | 'internal';
+
+export type ChannelSpec = {
+  input: z.ZodType;
+  output: z.ZodType;
+  /** Who may call this channel. Defaults to the shell and overlay. */
+  surfaces?: readonly Surface[];
+};
+
+export const DEFAULT_SURFACES: readonly Surface[] = ['shell', 'overlay'];
+
+const tabId = z.string().min(1).max(64);
 
 export const contract = {
   'app:getInfo': {
@@ -35,11 +48,40 @@ export const contract = {
     input: z.object({ width: z.number().finite() }).strict(),
     output: z.void(),
   },
+  /** Native web views swallow pointer events, so while the sidebar edge is dragged the active
+   *  view is hidden and the shell shows this still snapshot (JPEG data: URL) in its place. */
+  'sidebar:beginResize': {
+    input: z.object({}).strict(),
+    output: z.object({ snapshot: z.string().nullable() }),
+  },
+  'sidebar:endResize': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
+  'tabs:get': {
+    input: z.object({}).strict(),
+    output: tabsSnapshotSchema,
+  },
+  'tabs:create': {
+    /** No url → the new tab page. */
+    input: z.object({ url: z.string().max(8192).optional() }).strict(),
+    output: z.object({ tabId }),
+  },
+  'tabs:activate': {
+    input: z.object({ tabId }).strict(),
+    output: z.void(),
+  },
+  'tabs:close': {
+    input: z.object({ tabId }).strict(),
+    output: z.void(),
+  },
 } as const satisfies Record<string, ChannelSpec>;
 
 export const events = {
   /** Sent to a window's shell whenever its layout changes. */
   'state:layout': layoutSchema,
+  /** Sent to a window's shell whenever its tabs change. */
+  'state:tabs': tabsSnapshotSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type Contract = typeof contract;

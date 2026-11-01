@@ -1,6 +1,6 @@
 import type { z } from 'zod';
-import { contract } from '@shared/ipc/contract';
-import type { Channel, Contract, InvokeOutput } from '@shared/ipc/contract';
+import { contract, DEFAULT_SURFACES } from '@shared/ipc/contract';
+import type { Channel, ChannelSpec, Contract, InvokeOutput } from '@shared/ipc/contract';
 import type { SenderInfo, SenderRegistry } from './sender';
 
 /** The subset of Electron's ipcMain the router uses (lets tests pass a fake). */
@@ -55,12 +55,17 @@ export class IpcRouter {
   handle<C extends Channel>(channel: C, handler: Handler<C>): void {
     if (this.registered.has(channel)) throw new Error(`Handler already registered: ${channel}`);
     this.registered.add(channel);
-    const spec = contract[channel];
+    const spec: ChannelSpec = contract[channel];
+    const allowed = spec.surfaces ?? DEFAULT_SURFACES;
 
     this.ipcMain.handle(channel, async (event, payload) => {
       const sender = toSenderInfo(event);
-      if (!this.senders.isTrusted(sender)) {
-        throw new IpcError('untrusted_sender', `${channel} from ${sender.frameUrl ?? 'unknown'}`);
+      const surface = this.senders.surfaceOf(sender);
+      if (!surface || !allowed.includes(surface)) {
+        throw new IpcError(
+          'untrusted_sender',
+          `${channel} from ${surface ?? 'unknown'} ${sender.frameUrl ?? ''}`,
+        );
       }
       const input = spec.input.safeParse(payload);
       if (!input.success) {

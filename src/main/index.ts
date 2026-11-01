@@ -1,11 +1,13 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { app, BrowserWindow, ipcMain } from 'electron';
-import { APP_NAME } from '@shared/constants';
+import type { WebContentsView } from 'electron';
+import { APP_NAME, isInternalPage } from '@shared/constants';
 import type { RendererEntry } from '@shared/constants';
 import { Broadcaster } from './ipc/broadcaster';
 import { registerAppHandlers } from './ipc/handlers/app';
 import { registerLayoutHandlers } from './ipc/handlers/layout';
+import { registerTabHandlers } from './ipc/handlers/tabs';
 import { installAppMenu } from './menus/app-menu';
 import { IpcRouter } from './ipc/router';
 import { SenderRegistry } from './ipc/sender';
@@ -42,6 +44,14 @@ function loadRenderer(win: BrowserWindow, entry: RendererEntry): void {
   else void win.loadFile(join(rendererDir, entry, 'index.html'));
 }
 
+/** orbit://<page> → the internal renderer with `#/<page>`. Unknown pages show "not found". */
+function loadInternal(view: WebContentsView, url: string): void {
+  const page = new URL(url).hostname;
+  const hash = `/${isInternalPage(page) ? page : 'not-found'}`;
+  if (devServer) void view.webContents.loadURL(`${devServer}/internal/index.html#${hash}`);
+  else void view.webContents.loadFile(join(rendererDir, 'internal', 'index.html'), { hash });
+}
+
 app.on('second-instance', () => {
   const [win] = BrowserWindow.getAllWindows();
   if (win) {
@@ -70,7 +80,9 @@ void app.whenReady().then(() => {
     senders,
     broadcaster,
     preloadPath: join(import.meta.dirname, '../preload/shell.cjs'),
+    internalPreloadPath: join(import.meta.dirname, '../preload/internal.cjs'),
     loadRenderer,
+    loadInternal,
   });
   const windowManager = windows;
 
@@ -78,8 +90,17 @@ void app.whenReady().then(() => {
   const router = new IpcRouter(ipcMain, senders);
   registerAppHandlers(router);
   registerLayoutHandlers(router, windowManager);
+  registerTabHandlers(router, windowManager);
   router.assertComplete();
 
-  installAppMenu({ toggleSidebar: () => windowManager.focused()?.layout.toggleSidebar() });
+  installAppMenu({
+    toggleSidebar: () => windowManager.focused()?.layout.toggleSidebar(),
+    newTab: () => windowManager.focused()?.tabs.create(),
+    closeTab: () => {
+      const tabs = windowManager.focused()?.tabs;
+      const active = tabs?.active;
+      if (tabs && active) tabs.close(active.id);
+    },
+  });
   windowManager.createMainWindow();
 });
