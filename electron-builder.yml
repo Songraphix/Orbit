@@ -1,0 +1,19 @@
+appId: com.songraphix.orbit
+productName: Orbit
+directories:
+  buildResources: resources
+  output: release/${version}
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - '**/*.node'
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: arm64
+  # Unsigned for personal use (M1–M2). Signing + notarisation: PLAN.md section 12.
+  identity: null
+# http/https protocol registration (default browser) is added in Phase 6.
+# Electron Fuses are applied in Phase 11.

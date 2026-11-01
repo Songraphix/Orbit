@@ -1,0 +1,9 @@
+out/
+dist/
+release/
+coverage/
+test-results/
+playwright-report/
+package-lock.json
+# The plan is hand-authored; keep its formatting as written.
+docs/PLAN.md

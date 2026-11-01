@@ -1,0 +1,28 @@
+@import 'tailwindcss';
+
+/*
+ * Theme tokens. ThemeEngine (Phase 3) rewrites these per space, so components
+ * should read colours from these variables rather than hard-coding them.
+ */
+:root {
+  --sidebar-bg: #1b1530;
+  --sidebar-fg: #ece9f5;
+  --accent: #8b7cf6;
+  --tile-bg: rgb(255 255 255 / 0.08);
+  --hover: rgb(255 255 255 / 0.06);
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}

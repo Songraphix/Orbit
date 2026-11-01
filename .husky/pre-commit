@@ -1,0 +1,4 @@
+# Node lives in ~/.local/node (no admin rights); GUI git clients may not load ~/.zshrc.
+export PATH="$HOME/.local/node/bin:$PATH"
+npx lint-staged
+npm run typecheck
