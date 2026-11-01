@@ -17,6 +17,10 @@ const ROUTES: Record<string, string> = {
     '<a id="popup" href="/two" target="_blank">open two</a> <a id="next" href="/three">three</a>',
   ),
   '/two': page('Page Two'),
+  '/notify': page(
+    'Notify',
+    `<button id="ask" onclick="Notification.requestPermission().then((p) => { document.title = 'perm:' + p; })">Ask</button>`,
+  ),
   '/words': page('Words', '<p>orbit one, orbit two, orbit three. Arc.</p>'),
   // Mimics a video player's fullscreen button.
   '/video': page(
@@ -46,6 +50,16 @@ export type TestServer = { url: (path: string) => string; close: () => Promise<v
 export async function startTestServer(): Promise<TestServer> {
   const server = createServer((req, res) => {
     const path = (req.url ?? '/').split('?')[0]!;
+    if (path === '/auth') {
+      // HTTP Basic auth: user "orbit", password "s3cret".
+      const expected = `Basic ${Buffer.from('orbit:s3cret').toString('base64')}`;
+      if (req.headers.authorization !== expected) {
+        res.writeHead(401, { 'www-authenticate': 'Basic realm="Orbit test"' }).end('nope');
+        return;
+      }
+      res.writeHead(200, { 'content-type': 'text/html' }).end(page('Secret'));
+      return;
+    }
     if (path === '/icon.png') {
       res.writeHead(200, { 'content-type': 'image/png' }).end(PNG);
       return;

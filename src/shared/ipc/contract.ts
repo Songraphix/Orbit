@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { layoutSchema } from '../types/layout';
-import { commandBarModeSchema, commandItemSchema, overlayStateSchema } from '../types/command-bar';
+import {
+  commandBarModeSchema,
+  commandItemSchema,
+  overlayStateSchema,
+  promptAnswerSchema,
+} from '../types/command-bar';
 import { findStateSchema } from '../types/find';
 import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
 import { sidebarSnapshotSchema, spaceThemeSchema } from '../types/space';
@@ -192,6 +197,11 @@ export const contract = {
   'overlay:get': {
     input: z.object({}).strict(),
     output: overlayStateSchema,
+    surfaces: ['overlay'],
+  },
+  'overlay:answer': {
+    input: promptAnswerSchema.strict(),
+    output: z.void(),
     surfaces: ['overlay'],
   },
   'overlay:close': {

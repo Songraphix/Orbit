@@ -30,6 +30,10 @@ export function registerCommandBarHandlers(
     (_input, { sender }) => windowFor(sender.webContentsId).overlay.current,
   );
 
+  router.handle('overlay:answer', (answer, { sender }) => {
+    windowFor(sender.webContentsId).overlay.answer(answer);
+  });
+
   router.handle('overlay:close', (_input, { sender }) => {
     windowFor(sender.webContentsId).overlay.close();
   });

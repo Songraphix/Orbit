@@ -24,6 +24,7 @@ import { openPersistence } from './persistence';
 import { clampZoom } from './persistence/repositories/site-settings';
 import type { Persistence } from './persistence';
 import { SidebarStore } from './sidebar/store';
+import { PermissionService } from './permissions/service';
 import { ArcImporter, findArcSources } from './importer/arc/import';
 import { WindowManager } from './windows/window-manager';
 import type { WindowController } from './windows/window-manager';
@@ -182,6 +183,20 @@ function runCommand(controller: WindowController, commandId: string): void {
   }
 }
 
+// HTTP authentication (F-31): ask for a username and password in the page's window.
+app.on('login', (event, contents, details, authInfo, callback) => {
+  const owner = contents ? windows?.tabForContents(contents.id) : null;
+  if (!owner) return; // let it fail (popups, background requests)
+  event.preventDefault();
+  void owner.window.overlay
+    .ask({ kind: 'login', host: authInfo.host, realm: authInfo.realm || details.url })
+    .then((answer) => {
+      if (answer.allow && answer.username !== undefined)
+        callback(answer.username, answer.password ?? '');
+      else callback();
+    });
+});
+
 app.on('second-instance', () => {
   const [win] = BrowserWindow.getAllWindows();
   if (win) {
@@ -211,11 +226,21 @@ void app.whenReady().then(() => {
   arcImporter = new ArcImporter(store, persistence.history);
   /** One session per profile (F-17). The default profile keeps Electron's default session, so
    *  logins from before profiles existed carry over. */
+  // Site permissions: ask in the window's overlay, remember per site (F-31).
+  const permissions = new PermissionService(persistence.siteSettings, (contents) => {
+    const owner = windows?.tabForContents(contents.id);
+    return owner?.window.overlay ?? null;
+  });
   const sessionFor = (profileId: string): Session | undefined => {
     const profile = store.profiles.find((p) => p.id === profileId);
-    if (!profile || profile.id === DEFAULT_PROFILE_ID) return session.defaultSession;
-    return session.fromPartition(profile.partition);
+    const s =
+      !profile || profile.id === DEFAULT_PROFILE_ID
+        ? session.defaultSession
+        : session.fromPartition(profile.partition);
+    permissions.configure(s); // once per session
+    return s;
   };
+  sessionFor(DEFAULT_PROFILE_ID);
   windows = new WindowManager({
     settings: persistence.settings,
     store,

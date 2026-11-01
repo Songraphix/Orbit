@@ -29,10 +29,11 @@ Target end: 2026-12-10 · Branch: `phase-3/spaces` (Phase 2 merged to `main` at 
 - 2026-11-01 — Phase 3: sidebar tree + Arc parsers — `sidebar/model.ts` (pure: favorites per profile, pinned/Today per space, nested folders, fractional keys, pin home-URL rules); Arc `StorableSidebar.json` and Chromium History parsers (verified locally against the owner's backup: 3 spaces, 12 favorites, 7 pinned, 6 Today)
 - 2026-11-01 — Phase 3: spaces [F-02…F-08, F-16] — migration 004 (profiles, spaces, sidebar_items; Phase 1 tabs migrated in), `SidebarStore` (structure written at once, live details debounced), `TabManager` now store-driven (a tab gets a live page only when opened; Today closes remove, pinned/favorite closes unload and go home), sidebar UI (favorites grid, pinned + folders, space header with Clear, New Tab, Today, bottom bar with space switcher and +), native item/space/create menus (Img 5), inline rename, ⌘D pin, ⌃1…⌃9 / ⌘⌥←→ spaces, ThemeEngine (CSS variables, WCAG AA text) with preset themes and grain; fixes: closing the active tab activates the next; quitting no longer hangs on late page events (store closed before the DB; main-process errors logged, never a blocking dialog)
 - 2026-11-01 — Phase 3: Arc importer [F-27] — File → Import from Arc… (and the command bar): finds the newest `~/ArcBackup/*` (then Arc's own folder, then asks), previews counts in a dialog, imports spaces (names, icons, themes, profiles), pinned folders, Today tabs, favorites and history; idempotent (spaces keyed by Arc id, favorites by URL, history merged). Verified locally against the owner's backup in a throwaway profile: 3 spaces, 12 favorites, 13 tabs
+- 2026-11-01 — Phase 3: permissions + HTTP auth [F-31] — Electron grants every permission by default; now `PermissionService` on every profile session: harmless ones allowed, sensitive ones (camera/mic, location, notifications, clipboard read, screen share…) asked in an overlay prompt and remembered per site, insecure origins and unknown permissions refused (`decide()`, pure); HTTP Basic/Digest sign-in prompt; certificate errors keep Chromium's default (refuse)
 
 ## In progress
 
-- Phase 3: permissions + HTTP auth + certificate errors; drag and drop; theme editor
+- Phase 3: drag and drop; then Phase 4 (archive, sleeping tabs, crash recovery, settings)
 
 ## Decisions made
 

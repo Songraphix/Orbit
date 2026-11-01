@@ -1,6 +1,6 @@
 import { WebContentsView } from 'electron';
 import type { BrowserWindow } from 'electron';
-import type { CommandBarMode, OverlayState } from '@shared/types/command-bar';
+import type { CommandBarMode, OverlayState, Prompt, PromptAnswer } from '@shared/types/command-bar';
 
 export type OverlayDeps = {
   win: BrowserWindow;
@@ -13,14 +13,20 @@ export type OverlayDeps = {
   refocus: () => void;
 };
 
+type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never;
+type PendingPrompt = { prompt: Prompt; resolve: (answer: PromptAnswer) => void };
+
 /**
  * The transparent, top-most view that hosts floating UI (ADR-006, PLAN.md section 4.5).
  * Web pages are native views above the shell, so anything that must float over a page lives
- * here. Hidden whenever nothing is open, so it never steals clicks.
+ * here: the command bar and site prompts (permissions, sign-in). Hidden whenever nothing is
+ * open, so it never steals clicks.
  */
 export class OverlayController {
   readonly view: WebContentsView;
-  private state: OverlayState = { commandBar: null };
+  private commandBar: OverlayState['commandBar'] = null;
+  private readonly prompts: PendingPrompt[] = [];
+  private nextPromptId = 1;
 
   constructor(private readonly deps: OverlayDeps) {
     this.view = new WebContentsView({
@@ -46,29 +52,44 @@ export class OverlayController {
   }
 
   get current(): OverlayState {
-    return this.state;
+    return { commandBar: this.commandBar, prompt: this.prompts[0]?.prompt ?? null };
   }
 
   get isOpen(): boolean {
-    return this.state.commandBar !== null;
+    return this.commandBar !== null || this.prompts.length > 0;
   }
 
   get mode(): CommandBarMode | null {
-    return this.state.commandBar?.mode ?? null;
+    return this.commandBar?.mode ?? null;
   }
 
   openCommandBar(mode: CommandBarMode, initialQuery = ''): void {
-    this.setState({ commandBar: { mode, initialQuery, openedAt: Date.now() } });
-    this.fit();
-    this.view.setVisible(true);
-    this.view.webContents.focus();
+    this.commandBar = { mode, initialQuery, openedAt: Date.now() };
+    this.show();
   }
 
+  /** Closes the command bar (prompts stay until answered). */
   close(): void {
-    if (!this.isOpen) return;
-    this.setState({ commandBar: null });
-    this.view.setVisible(false);
-    this.deps.refocus();
+    if (!this.commandBar) return;
+    this.commandBar = null;
+    this.sync();
+  }
+
+  /** Asks the user something on a site's behalf; resolves with their answer. Queued. */
+  ask(prompt: DistributiveOmit<Prompt, 'id'>): Promise<PromptAnswer> {
+    const id = this.nextPromptId++;
+    return new Promise((resolve) => {
+      this.prompts.push({ prompt: { ...prompt, id } as Prompt, resolve });
+      this.show();
+    });
+  }
+
+  answer(answer: PromptAnswer): void {
+    const index = this.prompts.findIndex((p) => p.prompt.id === answer.id);
+    if (index === -1) return;
+    const [pending] = this.prompts.splice(index, 1);
+    pending!.resolve(answer);
+    this.sync();
   }
 
   /** Keep covering the whole window while open (call on resize). */
@@ -79,11 +100,28 @@ export class OverlayController {
   }
 
   destroy(): void {
+    // Unanswered prompts are declined so the page isn't left waiting.
+    for (const p of this.prompts.splice(0)) p.resolve({ id: p.prompt.id, allow: false });
     if (!this.view.webContents.isDestroyed()) this.view.webContents.close();
   }
 
-  private setState(next: OverlayState): void {
-    this.state = next;
-    if (!this.view.webContents.isDestroyed()) this.deps.send(this.view.webContents, next);
+  private show(): void {
+    this.fit();
+    this.view.setVisible(true);
+    this.view.webContents.focus();
+    this.send();
+  }
+
+  /** After something closed: hide if nothing is left, and send the new state. */
+  private sync(): void {
+    if (!this.isOpen) {
+      this.view.setVisible(false);
+      this.deps.refocus();
+    }
+    this.send();
+  }
+
+  private send(): void {
+    if (!this.view.webContents.isDestroyed()) this.deps.send(this.view.webContents, this.current);
   }
 }
