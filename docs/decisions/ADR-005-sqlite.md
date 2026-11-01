@@ -1,6 +1,6 @@
 # ADR-005: SQLite for persistence
 
-- Status: accepted
+- Status: accepted; library choice superseded by ADR-007
 - Date: 2026-11-01
 
 ## Context

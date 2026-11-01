@@ -156,7 +156,7 @@ Your setup is macOS. Targeting one platform lets the app use vibrancy, the nativ
 | Long lists | @tanstack/react-virtual | Archive, history and very long Today lists. |
 | UI state | Zustand (renderer) | Mirrors main-process state; holds view-only state (hover, open menus). |
 | Validation | zod | Every IPC payload is validated in the main process. |
-| Database | SQLite via better-sqlite3 | WAL mode, FTS5 full-text search for history and archive. Native module — rebuilt for Electron by electron-builder. |
+| Database | SQLite via the built-in `node:sqlite` module (ADR-007) | WAL mode, FTS5 full-text search for history and archive. Ships inside Electron — no native module to rebuild. |
 | Ordering | fractional-indexing | Reorder sidebar items without renumbering siblings. |
 | URL parsing | tldts | Decides whether omnibox input is a URL or a search. |
 | Code editor (Boosts) | CodeMirror 6 | Lighter than Monaco. |
@@ -174,7 +174,7 @@ All browser state (windows, spaces, sidebar tree, tabs, downloads, media) lives 
 
 ### 3.5 ADR-005 — SQLite for persistence
 
-History search, archive search and the sidebar tree all benefit from a real database with full-text search. JSON files are fine for settings but become fragile for thousands of history entries. SQLite in WAL mode is crash-safe and fast.
+History search, archive search and the sidebar tree all benefit from a real database with full-text search. JSON files are fine for settings but become fragile for thousands of history entries. SQLite in WAL mode is crash-safe and fast. *(Library choice superseded by ADR-007: built-in `node:sqlite` instead of better-sqlite3.)*
 
 ### 3.6 ADR-006 — A dedicated overlay layer for popovers
 
@@ -243,7 +243,7 @@ Web pages are native `WebContentsView`s drawn on top of the shell UI, which mean
 | ExtensionHost | Loads/installs Chrome extensions per profile, toolbar actions | `electron-chrome-extensions`, `electron-chrome-web-store` |
 | BoostService | Stores Boosts, injects CSS/JS on matching sites | `insertCSS`, `executeJavaScript` |
 | MenuService / ShortcutService | Native menu bar (with accelerators), context menus, global shortcuts | `Menu`, `globalShortcut`, `before-input-event` |
-| Persistence | SQLite connection, migrations, repositories, backups | better-sqlite3 |
+| Persistence | SQLite connection, migrations, repositories, backups | `node:sqlite` (`DatabaseSync`) |
 | Importer | Reads the Arc backup and creates spaces/tabs/history | fs, SQLite |
 | AIService | Tidy, tab naming (Phase 10) | `safeStorage` for the API key |
 
@@ -1311,7 +1311,7 @@ These are written from memory without live web access, so double-check each link
 - electron-vite: https://electron-vite.org
 - electron-chrome-extensions and electron-chrome-web-store (by Samuel Maddock): https://github.com/samuelmaddock/electron-browser-shell
 - castLabs Electron for Content Security (Widevine): https://github.com/castlabs/electron-releases
-- better-sqlite3: https://github.com/WiseLibs/better-sqlite3
+- Node.js `node:sqlite`: https://nodejs.org/api/sqlite.html
 - dnd-kit: https://dndkit.com · cmdk: https://cmdk.paco.me · Motion: https://motion.dev
 - Excalidraw: https://github.com/excalidraw/excalidraw · CodeMirror 6: https://codemirror.net
 - Zen Browser source (design reference for vertical tabs and workspaces): https://github.com/zen-browser/desktop

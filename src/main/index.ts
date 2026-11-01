@@ -7,6 +7,8 @@ import { Broadcaster } from './ipc/broadcaster';
 import { registerAppHandlers } from './ipc/handlers/app';
 import { IpcRouter } from './ipc/router';
 import { SenderRegistry } from './ipc/sender';
+import { openPersistence } from './persistence';
+import type { Persistence } from './persistence';
 
 app.setName(APP_NAME);
 
@@ -87,6 +89,14 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
+let persistence: Persistence | null = null;
+
+app.on('will-quit', () => {
+  persistence?.close();
+  persistence = null;
+});
+
 void app.whenReady().then(() => {
+  persistence = openPersistence(app.getPath('userData'));
   createMainWindow();
 });

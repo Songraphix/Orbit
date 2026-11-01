@@ -12,17 +12,19 @@ Target end: 2026-11-16 · Branch: `phase-1/foundations`
 - 2026-10-31 — Repo initialised; plan + screenshots (Img 1–7) committed (0e4acd4)
 - 2026-11-01 — Scaffold: electron-vite with shell / overlay / internal renderers, shell + internal preloads, ESLint, Prettier, Vitest, Playwright, husky pre-commit, CLAUDE.md, ADR-001…006
 - 2026-11-01 — Phase 1 step 1: typed IPC router (zod input + output validation, trusted-sender checks), main→renderer Broadcaster, typed `window.orbit.invoke/on`, first channel `app:getInfo`; e2e runs in a throwaway profile via `ORBIT_USER_DATA_DIR`
+- 2026-11-01 — Phase 1 step 2: persistence — `<userData>/orbit.db` (WAL), migration runner on `PRAGMA user_version` (per-migration transactions, refuses newer schemas), typed `SettingsRepository` (zod-validated, falls back to defaults on bad data)
 
 ## In progress
 
-- Phase 1 step 2: persistence (SQLite + migrations + settings) — awaiting decision on node:sqlite vs better-sqlite3
+- Phase 1 step 3: WindowManager (hidden inset title bar, traffic lights, vibrancy, persisted bounds) — awaiting review of steps 1–2
 
 ## Decisions made
 
 - Pinned versions: Electron 45.2.1 (Chromium 156, Node 24.22), electron-vite 6.0.0, Vite 8.3.5, React 19.3.1, TypeScript 6.0.3, Tailwind 4.3.3, Vitest 5.0.5, Playwright 1.64.1, electron-builder 26.18.0
 - TypeScript 6.0.x rather than 7.x: typescript-eslint 8.72 supports `<6.1.0`
 - Preloads output as CommonJS (`.cjs`) so the shell can stay `sandbox: true`
-- Phase-specific libraries (better-sqlite3, dnd-kit, cmdk, Motion, Zustand, …) are installed in the phase that first needs them, not up front
+- 2026-11-01 — Built-in `node:sqlite` instead of better-sqlite3 (ADR-007): no native modules
+- Phase-specific libraries ( dnd-kit, cmdk, Motion, Zustand, …) are installed in the phase that first needs them, not up front
 
 ## Known issues
 

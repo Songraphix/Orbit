@@ -4,7 +4,13 @@ import { join } from 'node:path';
 import { _electron as electron } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 
-export type Orbit = { app: ElectronApplication; win: Page; close: () => Promise<void> };
+export type Orbit = {
+  app: ElectronApplication;
+  win: Page;
+  /** The throwaway profile directory this instance uses. */
+  userData: string;
+  close: () => Promise<void>;
+};
 
 /** Launches the built app with a throwaway profile, so tests never touch real data. */
 export async function launchOrbit(): Promise<Orbit> {
@@ -20,6 +26,7 @@ export async function launchOrbit(): Promise<Orbit> {
   return {
     app,
     win,
+    userData,
     close: async () => {
       await app.close();
       rmSync(userData, { recursive: true, force: true });
