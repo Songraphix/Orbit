@@ -215,3 +215,304 @@ body {
     transform: rotate(-8deg);
   }
 }
+
+/* ── Tooltips (Arc-style): a dark indigo pill, white label, light key caps ──────────────── */
+.orbit-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 9px;
+  background: #1b1c4b;
+  color: #fff;
+  font:
+    600 12.5px/1 -apple-system,
+    BlinkMacSystemFont,
+    'SF Pro Text',
+    system-ui,
+    sans-serif;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  box-shadow:
+    0 8px 22px -8px rgb(0 0 0 / 0.55),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.14);
+  animation: orbit-tip-in 150ms var(--ease-out) both;
+}
+.orbit-tip[data-keys='true'] {
+  padding-right: 5px;
+}
+.orbit-tip kbd {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 5px;
+  background: #dfe3ff;
+  color: #1b1c4b;
+  font:
+    700 11px/1 -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    sans-serif;
+}
+@keyframes orbit-tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--tip-from, -3px)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Icon motion (the small things): replayed by remounting the icon on each click ───────── */
+.anim-spin {
+  animation: orbit-spin-once 560ms var(--ease-out) both;
+}
+.anim-nudge-left {
+  animation: orbit-nudge-left 340ms var(--ease-out) both;
+}
+.anim-nudge-right {
+  animation: orbit-nudge-right 340ms var(--ease-out) both;
+}
+.anim-pop {
+  animation: orbit-icon-pop 440ms var(--ease-spring) both;
+}
+.anim-drop {
+  animation: orbit-drop-bounce 640ms var(--ease-out) both;
+}
+@keyframes orbit-spin-once {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes orbit-nudge-left {
+  35% {
+    transform: translateX(-3px);
+  }
+}
+@keyframes orbit-nudge-right {
+  35% {
+    transform: translateX(3px);
+  }
+}
+@keyframes orbit-icon-pop {
+  35% {
+    transform: scale(0.8);
+  }
+  70% {
+    transform: scale(1.14);
+  }
+}
+@keyframes orbit-drop-bounce {
+  0% {
+    transform: translateY(-9px);
+    opacity: 0;
+  }
+  45% {
+    transform: translateY(1.5px);
+    opacity: 1;
+  }
+  65% {
+    transform: translateY(-2.5px);
+  }
+  82% {
+    transform: translateY(0.8px);
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+/* Hover touches: + turns, the Library's books lean. */
+.hover-turn > svg,
+.hover-lean > svg {
+  transition: transform var(--dur) var(--ease-spring);
+}
+.hover-turn:hover > svg {
+  transform: rotate(90deg);
+}
+.hover-lean:hover > svg {
+  transform: rotate(-9deg) translateY(-1px);
+}
+
+/* ── Library icons: colour and one small movement when their section opens ─────────────── */
+.lib-icon {
+  overflow: visible;
+  transition: transform var(--dur) var(--ease-spring);
+}
+.lib-icon * {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+button:hover > .lib-icon {
+  transform: translateY(-1px);
+}
+.lib-icon .li-back {
+  transform: rotate(-6deg);
+}
+.lib-icon[data-active='true'] .li-back {
+  animation: li-fan-back 560ms var(--ease-spring) both;
+}
+.lib-icon[data-active='true'] .li-front {
+  animation: li-lift 520ms var(--ease-spring) both;
+}
+.lib-icon[data-active='true'] .li-sun {
+  animation: li-pop 460ms 160ms var(--ease-spring) both;
+}
+.lib-icon[data-active='true'] .li-arrow {
+  animation: orbit-drop-bounce 680ms 40ms var(--ease-out) both;
+}
+.lib-icon .li-stroke {
+  stroke-dasharray: 1;
+}
+.lib-icon[data-active='true'] .li-stroke {
+  animation: li-draw 640ms 120ms var(--ease-out) both;
+}
+.lib-icon[data-active='true'] .li-card-back {
+  animation: li-fan-right 560ms var(--ease-spring) both;
+}
+.lib-icon[data-active='true'] .li-card-mid {
+  animation: li-fan-mid 560ms var(--ease-spring) both;
+}
+.lib-icon[data-active='true'] .li-card-front {
+  animation: li-lift 520ms var(--ease-spring) both;
+}
+.lib-icon[data-active='true'] .li-wand {
+  transform-origin: 0% 100%;
+  animation: li-flick 600ms var(--ease-spring) both;
+}
+.lib-icon[data-active='true'] .li-spark {
+  animation: li-twinkle 720ms var(--ease-out) both;
+}
+.lib-icon[data-active='true'] .li-spark-2 {
+  animation-delay: 120ms;
+}
+.lib-icon[data-active='true'] .li-spark-3 {
+  animation-delay: 240ms;
+}
+.lib-icon[data-active='true'] .li-lid {
+  animation: li-lid 680ms var(--ease-out) both;
+}
+@keyframes li-fan-back {
+  0% {
+    transform: rotate(-6deg);
+  }
+  55% {
+    transform: rotate(-18deg) translateX(-1px);
+  }
+  100% {
+    transform: rotate(-13deg);
+  }
+}
+@keyframes li-lift {
+  0% {
+    transform: translateY(1.5px) scale(0.94);
+  }
+  60% {
+    transform: translateY(-1px) scale(1.04);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes li-pop {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes li-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes li-fan-right {
+  0% {
+    transform: none;
+  }
+  60% {
+    transform: rotate(12deg) translate(1.5px, -0.5px);
+  }
+  100% {
+    transform: rotate(8deg) translate(1px, 0);
+  }
+}
+@keyframes li-fan-mid {
+  0% {
+    transform: none;
+  }
+  60% {
+    transform: rotate(6deg) translateX(0.6px);
+  }
+  100% {
+    transform: rotate(4deg);
+  }
+}
+@keyframes li-flick {
+  0% {
+    transform: rotate(0);
+  }
+  35% {
+    transform: rotate(-14deg);
+  }
+  70% {
+    transform: rotate(5deg);
+  }
+  100% {
+    transform: rotate(0);
+  }
+}
+@keyframes li-twinkle {
+  0% {
+    transform: scale(0) rotate(-45deg);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.35) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes li-lid {
+  0% {
+    transform: none;
+  }
+  35% {
+    transform: translateY(-3.5px) rotate(-7deg);
+  }
+  70% {
+    transform: translateY(0.6px) rotate(1deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+/* Orbit's mark: the moon goes round once when the Library opens. */
+.orbit-mark-moon {
+  transform-box: view-box;
+  transform-origin: 16px 16px;
+  animation: orbit-moon 1400ms var(--ease-in-out) both;
+}
+@keyframes orbit-moon {
+  from {
+    transform: rotate(-360deg);
+  }
+  to {
+    transform: rotate(0);
+  }
+}

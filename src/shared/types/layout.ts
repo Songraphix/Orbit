@@ -40,7 +40,7 @@ export type Layout = z.output<typeof layoutSchema>;
 export const SIDEBAR_WIDTH = { min: 150, max: 400, default: 260 } as const;
 
 /** Library mode's columns: Arc's narrow sections column, then a panel (wide for Spaces). */
-export const LIBRARY_WIDTH = { nav: 104, panel: 300, pageMin: 360 } as const;
+export const LIBRARY_WIDTH = { nav: 116, panel: 300, pageMin: 360 } as const;
 export type LibraryPanel = 'narrow' | 'wide';
 
 /** The tab strip's height: the traffic lights (at y 18, 12 tall) sit centred in it. */

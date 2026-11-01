@@ -18,6 +18,7 @@ import { formatAddress } from '@shared/format-address';
 import type { FindState } from '@shared/types/find';
 import type { TabState } from '@shared/types/tabs';
 import { FindBar } from './FindBar';
+import { Tip } from '../tooltip/Tip';
 import type { ProfileView } from '@shared/profile';
 import { Avatar } from '../profile/Avatar';
 
@@ -81,7 +82,8 @@ export function Toolbar({
     >
       {!sidebarVisible && (
         <ToolbarButton
-          label="Show sidebar"
+          label="Show Sidebar"
+          keys="⌘S"
           onClick={() => void window.orbit.invoke('sidebar:toggle', {})}
           testId="toolbar-sidebar"
         >
@@ -90,6 +92,8 @@ export function Toolbar({
       )}
       <ToolbarButton
         label="Back"
+        keys="⌘["
+        anim="nudge-left"
         disabled={!tab?.canGoBack}
         onClick={() => navigate('back')}
         testId="toolbar-back"
@@ -98,6 +102,8 @@ export function Toolbar({
       </ToolbarButton>
       <ToolbarButton
         label="Forward"
+        keys="⌘]"
+        anim="nudge-right"
         disabled={!tab?.canGoForward}
         onClick={() => navigate('forward')}
         testId="toolbar-forward"
@@ -106,6 +112,8 @@ export function Toolbar({
       </ToolbarButton>
       <ToolbarButton
         label={tab?.isLoading ? 'Stop' : 'Reload'}
+        keys={tab?.isLoading ? undefined : '⌘R'}
+        anim={tab?.isLoading ? undefined : 'spin'}
         disabled={!tab}
         onClick={() => navigate(tab?.isLoading ? 'stop' : 'reload')}
         testId="toolbar-reload"
@@ -203,7 +211,9 @@ export function Toolbar({
         )}
         {notesOpen !== undefined && (
           <ToolbarButton
-            label={notesOpen ? 'Hide Notes (⇧⌘N)' : 'Notes (⇧⌘N)'}
+            label={notesOpen ? 'Hide Notes' : 'Notes'}
+            keys="⇧⌘N"
+            anim="pop"
             onClick={() => void window.orbit.invoke('notes:panel', {})}
             active={notesOpen}
             testId="toolbar-notes"
@@ -212,20 +222,23 @@ export function Toolbar({
           </ToolbarButton>
         )}
         {profile && (
-          <button
-            type="button"
-            aria-label={`Profile: ${profile.name}`}
-            title={`${profile.name} profile`}
-            onClick={(event) => {
-              const r = event.currentTarget.getBoundingClientRect();
-              const anchor = { x: r.x, y: r.y, width: r.width, height: r.height };
-              void window.orbit.invoke('profile:menu', { anchor });
-            }}
-            className="press no-drag grid size-7 place-items-center rounded-full hover:ring-2 hover:ring-black/10"
-            data-testid="toolbar-profile"
+          <Tip
+            label={profile.displayName ? `${profile.name} · ${profile.displayName}` : profile.name}
           >
-            <Avatar profile={profile} size={22} />
-          </button>
+            <button
+              type="button"
+              aria-label={`Profile: ${profile.name}`}
+              onClick={(event) => {
+                const r = event.currentTarget.getBoundingClientRect();
+                const anchor = { x: r.x, y: r.y, width: r.width, height: r.height };
+                void window.orbit.invoke('profile:menu', { anchor });
+              }}
+              className="press no-drag grid size-7 place-items-center rounded-full hover:ring-2 hover:ring-black/10"
+              data-testid="toolbar-profile"
+            >
+              <Avatar profile={profile} size={22} />
+            </button>
+          </Tip>
         )}
         {inSplit && (
           <>
@@ -263,6 +276,10 @@ export function Toolbar({
 
 function ToolbarButton(props: {
   label: string;
+  /** Its shortcut, shown in the tooltip ("⌘R"). */
+  keys?: string;
+  /** A little motion when clicked (reload spins, back nudges left…). */
+  anim?: 'spin' | 'nudge-left' | 'nudge-right' | 'pop';
   onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   disabled?: boolean;
   /** A toggle that's on (e.g. the Notes panel is open). */
@@ -270,20 +287,30 @@ function ToolbarButton(props: {
   testId: string;
   children: ReactNode;
 }) {
+  const [played, setPlayed] = useState(0);
   return (
-    <button
-      type="button"
-      aria-label={props.label}
-      aria-pressed={props.active}
-      title={props.label}
-      disabled={props.disabled}
-      onClick={props.onClick}
-      className={`press no-drag grid size-7 place-items-center rounded-[10px] hover:bg-black/[0.06] disabled:opacity-30 disabled:hover:bg-transparent ${
-        props.active ? 'bg-black/[0.07] text-neutral-900' : ''
-      }`}
-      data-testid={props.testId}
-    >
-      {props.children}
-    </button>
+    <Tip label={props.label} keys={props.keys}>
+      <button
+        type="button"
+        aria-label={props.label}
+        aria-pressed={props.active}
+        disabled={props.disabled}
+        onClick={(event) => {
+          if (props.anim) setPlayed((n) => n + 1);
+          props.onClick(event);
+        }}
+        className={`press no-drag grid size-7 place-items-center rounded-[10px] hover:bg-black/[0.06] disabled:opacity-30 disabled:hover:bg-transparent ${
+          props.active ? 'bg-black/[0.07] text-neutral-900' : ''
+        }`}
+        data-testid={props.testId}
+      >
+        <span
+          key={played}
+          className={`grid place-items-center ${played > 0 && props.anim ? `anim-${props.anim}` : ''}`}
+        >
+          {props.children}
+        </span>
+      </button>
+    </Tip>
   );
 }

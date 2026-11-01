@@ -1,6 +1,8 @@
 import {
   ArrowLeft,
   ArrowRight,
+  Check,
+  ListFilter,
   Ellipsis,
   File,
   Folder,
@@ -17,6 +19,8 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { groupByDay } from '@shared/time';
+import { DOWNLOAD_FILTERS, downloadCategory, downloadSubtitle } from '@shared/download-format';
+import type { DownloadFilter } from '@shared/download-format';
 import type {
   BoostEntry,
   DownloadEntry,
@@ -182,8 +186,75 @@ function MediaTile({ item }: { item: MediaItem }) {
   );
 }
 
+/** Arc's Filter: a pill beside the search, with a small menu of kinds. */
+function FilterButton({
+  value,
+  onChange,
+}: {
+  value: DownloadFilter;
+  onChange: (value: DownloadFilter) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = DOWNLOAD_FILTERS.find((f) => f.id === value)!;
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className={`press flex h-10 items-center gap-1.5 rounded-[14px] px-3 text-[13px] font-semibold ${
+          value === 'all'
+            ? 'bg-[var(--tile-bg)] text-[var(--sidebar-fg)] hover:bg-[var(--hover)]'
+            : 'bg-[var(--accent)] text-white'
+        }`}
+        data-testid="downloads-filter"
+      >
+        <ListFilter size={15} />
+        {value === 'all' ? 'Filter' : current.label}
+      </button>
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-label="Close"
+            className="fixed inset-0 z-10 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            role="menu"
+            // --sidebar-bg is a gradient, so it's set as the whole background (not a colour).
+            style={{ background: 'var(--sidebar-bg)' }}
+            className="animate-pop absolute top-full right-0 z-20 mt-1.5 w-56 origin-top-right rounded-[14px] p-1 shadow-[0_14px_36px_-10px_rgb(0_0_0/0.55)] ring-1 ring-white/10"
+          >
+            {DOWNLOAD_FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                role="menuitemradio"
+                aria-checked={f.id === value}
+                onClick={() => {
+                  onChange(f.id);
+                  setOpen(false);
+                }}
+                className="flex h-8 w-full items-center gap-2 rounded-[9px] px-2.5 text-left text-[13px] hover:bg-[var(--hover)]"
+                data-testid="downloads-filter-option"
+                data-filter={f.id}
+              >
+                <span className="w-3.5">{f.id === value && <Check size={13} />}</span>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function DownloadsSection() {
   const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<DownloadFilter>('all');
   const [loaded, setLoaded] = useState<{ items: DownloadEntry[]; at: number } | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -193,7 +264,8 @@ function DownloadsSection() {
     }, 80);
     return () => clearTimeout(timer);
   }, [query]);
-  const items = loaded?.items ?? null;
+  const items =
+    loaded?.items.filter((d) => filter === 'all' || downloadCategory(d.kind) === filter) ?? null;
 
   return (
     <>
@@ -202,12 +274,17 @@ function DownloadsSection() {
         onChange={setQuery}
         placeholder="Search Downloads…"
         testId="downloads-search"
-      />
+      >
+        <FilterButton value={filter} onChange={setFilter} />
+      </SearchField>
       {items && items.length === 0 && (
-        <Empty>{query ? 'No downloads match.' : 'Files you download show up here.'}</Empty>
+        <Empty>
+          {query || filter !== 'all' ? 'No downloads match.' : 'Files you download show up here.'}
+        </Empty>
       )}
       {loaded &&
-        groupByDay(loaded.items, (d) => d.startedAt, loaded.at).map(([label, group]) => (
+        items &&
+        groupByDay(items, (d) => d.startedAt, loaded.at).map(([label, group]) => (
           <section key={label} className="mb-4">
             <h2 className="mb-1 px-1 text-[12px] font-semibold text-[var(--sidebar-muted)]">
               {label}
@@ -236,12 +313,15 @@ function DownloadsSection() {
                     </span>
                     <span className="min-w-0">
                       <span
-                        className={`block truncate text-sm ${d.exists ? '' : 'line-through opacity-50'}`}
+                        className={`block truncate text-[13.5px] font-semibold ${d.exists ? '' : 'line-through opacity-50'}`}
                       >
                         {d.filename}
                       </span>
-                      <span className="block truncate text-[12px] text-[var(--sidebar-muted)]">
-                        {d.exists ? d.kind : 'Moved or deleted'}
+                      <span
+                        className="block truncate text-[12px] text-[var(--sidebar-muted)]"
+                        data-testid="download-subtitle"
+                      >
+                        {d.exists ? downloadSubtitle(d.kind, d.url) : 'Moved or deleted'}
                       </span>
                     </span>
                   </button>

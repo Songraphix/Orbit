@@ -123,13 +123,13 @@ describe('Library mode layout', () => {
       sidebarWidth: 260,
       library: 'narrow',
     });
-    expect(layout.sidebar).toEqual({ visible: true, width: 104 });
+    expect(layout.sidebar).toEqual({ visible: true, width: 116 });
     expect(layout.library).toEqual({
-      nav: { x: 0, y: 0, width: 104, height: 900 },
-      panel: { x: 104, y: 8, width: 300, height: 884 },
+      nav: { x: 0, y: 0, width: 116, height: 900 },
+      panel: { x: 116, y: 8, width: 300, height: 884 },
     });
-    expect(layout.card.x).toBe(412);
-    expect(layout.card.width).toBe(1400 - 412 - 8);
+    expect(layout.card.x).toBe(424);
+    expect(layout.card.width).toBe(1400 - 424 - 8);
   });
 
   it('a wide panel (Spaces) leaves a strip of the page in view', () => {
@@ -140,7 +140,7 @@ describe('Library mode layout', () => {
       sidebarWidth: 260,
       library: 'wide',
     });
-    expect(layout.library!.panel.width).toBe(1400 - 104 - 8 - 360);
+    expect(layout.library!.panel.width).toBe(1400 - 116 - 8 - 360);
     expect(layout.card.width).toBe(360 - 8);
     // A small window still gets the full narrow panel.
     const small = computeLayout({
@@ -179,7 +179,7 @@ describe('Notes panel layout', () => {
     const split = computeLayout({ ...base, notes: true, splitRatio: 0.5 });
     expect(split.panes.at(-1)!.card.x + split.panes.at(-1)!.card.width).toBe(split.notes!.x - 8);
     const library = computeLayout({ ...base, windowWidth: 1400, notes: true, library: 'narrow' });
-    expect(library.card.x).toBe(412);
+    expect(library.card.x).toBe(424);
     expect(library.notes!.x).toBe(library.card.x + library.card.width + 8);
     expect(computeLayout({ ...base, notes: true, htmlFullscreen: true }).notes).toBeNull();
   });

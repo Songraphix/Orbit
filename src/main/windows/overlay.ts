@@ -9,6 +9,8 @@ import type {
 } from '@shared/types/command-bar';
 import type { SiteControlsView } from '@shared/types/site-controls';
 import type { Rect } from '@shared/types/layout';
+import { tipWidth, tooltipBox } from './tooltip';
+import type { TooltipSide } from './tooltip';
 
 export type OverlayDeps = {
   win: BrowserWindow;
@@ -45,6 +47,7 @@ export class OverlayController {
   private quickNote: OverlayState['quickNote'] = null;
   private profileMenu: OverlayState['profileMenu'] = null;
   private captureCard: OverlayState['captureCard'] = null;
+  private tooltip: Omit<NonNullable<OverlayState['tooltip']>, 'alone'> | null = null;
   private flight: OverlayState['flight'] = null;
   private flightTimer: ReturnType<typeof setTimeout> | null = null;
   private backdrop: OverlayState['backdrop'] = null;
@@ -85,6 +88,7 @@ export class OverlayController {
       quickNote: this.quickNote,
       profileMenu: this.profileMenu,
       captureCard: this.captureCard,
+      tooltip: this.tooltip && { ...this.tooltip, alone: this.onlyTooltip },
       flight: this.flight,
       backdrop: this.backdrop,
     };
@@ -104,6 +108,33 @@ export class OverlayController {
       this.flight !== null ||
       this.sidebarPeek !== null
     );
+  }
+
+  /** Only a tooltip is showing: the overlay is just its box (no clicks taken anywhere else). */
+  private get onlyTooltip(): boolean {
+    return this.tooltip !== null && !this.othersOpen && this.sidebarPeek === null;
+  }
+
+  /**
+   * An Arc-style tooltip under (or over, or beside) a shell control. Shown without taking focus
+   * or clicks: alone, the overlay shrinks to the tooltip's own box.
+   */
+  showTooltip(tip: { label: string; keys: string[]; anchor: Rect; side: TooltipSide }): void {
+    if (this.deps.win.isDestroyed()) return;
+    const [width = 0, height = 0] = this.deps.win.getContentSize();
+    const box = tooltipBox(tip.anchor, tip.side, tipWidth(tip.label, tip.keys), { width, height });
+    this.tooltip = { label: tip.label, keys: tip.keys, box, side: tip.side, at: Date.now() };
+    this.fit();
+    this.view.setVisible(true);
+    this.send();
+  }
+
+  hideTooltip(): void {
+    if (!this.tooltip) return;
+    this.tooltip = null;
+    if (this.isOpen) this.fit();
+    else this.view.setVisible(false);
+    this.send();
   }
 
   /** Only the slid-out sidebar is showing: the overlay covers just that strip, so the rest of
@@ -198,7 +229,7 @@ export class OverlayController {
     this.flightTimer = setTimeout(() => {
       this.flightTimer = null;
       this.flight = null;
-      if (this.isOpen) {
+      if (this.isOpen || this.tooltip) {
         this.fit();
         this.send();
       } else {
@@ -234,7 +265,7 @@ export class OverlayController {
     if (width === (this.sidebarPeek?.width ?? null)) return;
     this.sidebarPeek = width === null ? null : { width };
     if (width === null) {
-      if (this.othersOpen) this.fit();
+      if (this.othersOpen || this.tooltip) this.fit();
       else this.view.setVisible(false);
     } else {
       this.fit();
@@ -324,8 +355,15 @@ export class OverlayController {
   fit(): void {
     if (this.deps.win.isDestroyed()) return;
     const [width = 0, height = 0] = this.deps.win.getContentSize();
-    // Room for the sidebar's shadow when it's the only thing showing.
-    const strip = this.onlySidebar ? Math.min(width, this.sidebarPeek!.width + 24) : width;
+    if (this.onlyTooltip) {
+      this.view.setBounds(this.tooltip!.box);
+      return;
+    }
+    // Room for the sidebar's shadow when it's the only thing showing (and its tooltips).
+    const tipRight = this.tooltip ? this.tooltip.box.x + this.tooltip.box.width : 0;
+    const strip = this.onlySidebar
+      ? Math.min(width, Math.max(this.sidebarPeek!.width + 24, tipRight + 4))
+      : width;
     this.view.setBounds({ x: 0, y: 0, width: strip, height });
   }
 
@@ -363,7 +401,9 @@ export class OverlayController {
   /** After something closed: hide if nothing is left, and send the new state. */
   private sync(): void {
     if (!this.isOpen) {
-      this.view.setVisible(false);
+      // A tooltip may still be showing: the overlay shrinks to it, otherwise it hides.
+      if (this.tooltip) this.fit();
+      else this.view.setVisible(false);
       this.deps.refocus();
     } else {
       this.fit(); // e.g. back to just the slid-out sidebar

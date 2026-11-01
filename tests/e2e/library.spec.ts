@@ -82,7 +82,7 @@ test('Library: sections in the sidebar, media from screenshots, downloads, back 
       .map((v) => v.getBounds());
     return views.map((b) => b.x).sort((a, b) => a - b);
   });
-  expect(panelRight[0]).toBe(104); // the panel starts after the sections column
+  expect(panelRight[0]).toBe(116); // the panel starts after the sections column
   expect(panelRight[1]).toBeGreaterThan(400); // the page, pushed right
   const library = await libraryPage(app);
   const media = library.getByTestId('media-item');

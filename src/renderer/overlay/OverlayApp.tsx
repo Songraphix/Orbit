@@ -9,6 +9,7 @@ import { FloatingSidebar } from './FloatingSidebar';
 import { CreateMenu } from './CreateMenu';
 import { ProfileMenu } from './ProfileMenu';
 import { CaptureCard } from './CaptureCard';
+import { TooltipPill } from '../tooltip/TooltipPill';
 import { DownloadFlight } from './DownloadFlight';
 import { BackdropContext } from './backdrop';
 
@@ -31,6 +32,7 @@ export function OverlayApp() {
     quickNote: null,
     profileMenu: null,
     captureCard: null,
+    tooltip: null,
     flight: null,
     backdrop: null,
   });
@@ -73,6 +75,27 @@ export function OverlayApp() {
       {state.peek && <PeekFrame peek={state.peek} interactive={top === null} />}
       {top}
       {state.flight && <DownloadFlight key={state.flight.at} flight={state.flight} />}
+      {state.tooltip && (
+        // Alone, the overlay is just the tooltip's box; otherwise it sits at its place.
+        <div
+          className={`pointer-events-none fixed z-[100] flex items-center ${
+            state.tooltip.side === 'right' ? 'justify-start' : 'justify-center'
+          }`}
+          style={{
+            left: state.tooltip.alone ? 0 : state.tooltip.box.x,
+            top: state.tooltip.alone ? 0 : state.tooltip.box.y,
+            width: state.tooltip.box.width,
+            height: state.tooltip.box.height,
+          }}
+        >
+          <TooltipPill
+            key={state.tooltip.at}
+            label={state.tooltip.label}
+            keys={state.tooltip.keys}
+            side={state.tooltip.side}
+          />
+        </div>
+      )}
     </BackdropContext.Provider>
   );
 }

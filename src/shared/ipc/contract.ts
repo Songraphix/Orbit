@@ -1012,6 +1012,23 @@ export const contract = {
     output: z.void(),
     surfaces: ['internal'],
   },
+
+  // Arc-style tooltips for shell controls, drawn by the overlay so they show over pages.
+  'tooltip:show': {
+    input: z
+      .object({
+        label: z.string().min(1).max(80),
+        keys: z.array(z.string().min(1).max(8)).max(5),
+        anchor: rectSchema,
+        side: z.enum(['top', 'bottom', 'right']),
+      })
+      .strict(),
+    output: z.void(),
+  },
+  'tooltip:hide': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
 } as const satisfies Record<string, ChannelSpec>;
 
 export const events = {

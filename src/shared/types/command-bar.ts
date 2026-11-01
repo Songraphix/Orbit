@@ -97,6 +97,18 @@ export const overlayStateSchema = z.object({
     .nullable(),
   /** The profile menu (owner request), under the toolbar's avatar at `anchor`. */
   profileMenu: z.object({ anchor: rectSchema, openedAt: z.number() }).nullable(),
+  /** An Arc-style tooltip for a shell control: label, key caps, and its box in the window.
+   *  `alone`: nothing else is showing, so the overlay is just this box. */
+  tooltip: z
+    .object({
+      label: z.string(),
+      keys: z.array(z.string()),
+      box: rectSchema,
+      side: z.enum(['top', 'bottom', 'right']),
+      alone: z.boolean(),
+      at: z.number(),
+    })
+    .nullable(),
   /** Orbit Capture (roadmap P2.1): the card that saves a finding to a project. */
   captureCard: z.object({ openedAt: z.number() }).nullable(),
   /** A quick note (F-33): a glass card over the page; it writes into note `id`. */

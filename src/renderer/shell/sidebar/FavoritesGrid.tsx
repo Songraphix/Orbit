@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { SidebarRow } from '@shared/types/space';
 import { TabIcon } from './Rows';
+import { Tip } from '../../tooltip/Tip';
 
 const invoke = window.orbit.invoke;
 
@@ -120,35 +121,36 @@ function FavoriteTile({
       : {};
   return (
     <li>
-      <button
-        type="button"
-        title={row.title}
-        aria-label={row.title}
-        aria-current={active ? 'page' : undefined}
-        className={`press relative grid w-full place-items-center rounded-[16px] ${
-          active
-            ? 'bg-[var(--row-active)] shadow-[var(--row-shadow)]'
-            : 'bg-[var(--tile-bg)] hover:bg-[var(--row-active)]'
-        }`}
-        style={{ ...tint, height }}
-        onClick={() => void invoke('tabs:activate', { tabId: row.id })}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          void invoke('sidebar:itemMenu', { itemId: row.id });
-        }}
-        data-testid="favorite-tile"
-      >
-        <span className="grid size-[18px] place-items-center [&>*]:size-[18px]">
-          <TabIcon row={row} />
-        </span>
-        {hasCount(row.title) && (
-          <span
-            className="absolute right-2.5 bottom-2 size-[7px] rounded-full bg-[#ff453a] shadow-[0_0_0_1.5px_var(--tile-bg)]"
-            aria-label="Something new"
-            data-testid="favorite-dot"
-          />
-        )}
-      </button>
+      <Tip label={row.title}>
+        <button
+          type="button"
+          aria-label={row.title}
+          aria-current={active ? 'page' : undefined}
+          className={`press relative grid w-full place-items-center rounded-[16px] ${
+            active
+              ? 'bg-[var(--row-active)] shadow-[var(--row-shadow)]'
+              : 'bg-[var(--tile-bg)] hover:bg-[var(--row-active)]'
+          }`}
+          style={{ ...tint, height }}
+          onClick={() => void invoke('tabs:activate', { tabId: row.id })}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            void invoke('sidebar:itemMenu', { itemId: row.id });
+          }}
+          data-testid="favorite-tile"
+        >
+          <span className="grid size-[18px] place-items-center [&>*]:size-[18px]">
+            <TabIcon row={row} />
+          </span>
+          {hasCount(row.title) && (
+            <span
+              className="absolute right-2.5 bottom-2 size-[7px] rounded-full bg-[#ff453a] shadow-[0_0_0_1.5px_var(--tile-bg)]"
+              aria-label="Something new"
+              data-testid="favorite-dot"
+            />
+          )}
+        </button>
+      </Tip>
     </li>
   );
 }

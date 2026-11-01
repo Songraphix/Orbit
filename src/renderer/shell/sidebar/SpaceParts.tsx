@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { SidebarSnapshot, SpaceView } from '@shared/types/space';
 import { RenameInput } from './Rows';
 import { RecentFiles } from './RecentFiles';
+import { Tip } from '../../tooltip/Tip';
 import { SpaceIcon } from './SpaceIcon';
 
 const invoke = window.orbit.invoke;
@@ -132,60 +133,69 @@ export function BottomBar({
           <RecentFiles />
         </div>
       )}
-      <button
-        onPointerEnter={showRecent}
-        onPointerLeave={hideRecent}
-        type="button"
-        aria-label="Library"
-        onClick={() => {
-          setRecent(false);
-          window.clearTimeout(timer.current);
-          void invoke('library:open', { section: 'media' });
-        }}
-        className="grid size-8 place-items-center rounded-[11px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
-        data-testid="library-button"
-      >
-        <Library size={16} />
-      </button>
+      <Tip label="View Library" keys="⌥⌘L" side="right">
+        <button
+          onPointerEnter={showRecent}
+          onPointerLeave={hideRecent}
+          type="button"
+          aria-label="Library"
+          onClick={() => {
+            setRecent(false);
+            window.clearTimeout(timer.current);
+            void invoke('library:open', { section: 'media' });
+          }}
+          className="hover-lean grid size-8 place-items-center rounded-[11px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+          data-testid="library-button"
+        >
+          <Library size={16} />
+        </button>
+      </Tip>
       <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-hidden">
         {spaces.map((space, i) => (
-          <button
-            key={space.id}
-            type="button"
-            aria-label={space.name}
-            aria-current={space.id === activeSpaceId ? 'true' : undefined}
-            title={`${space.name}${i < 9 ? ` (⌃${i + 1})` : ''}`}
-            className={`grid size-8 place-items-center rounded-[11px] transition ${
-              space.id === activeSpaceId
-                ? 'bg-[var(--row-active)] opacity-100'
-                : 'opacity-55 hover:bg-[var(--hover)] hover:opacity-90'
-            }`}
-            onClick={() => void invoke('spaces:activate', { spaceId: space.id })}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              void invoke('sidebar:spaceMenu', { spaceId: space.id });
-            }}
-            data-testid="space-button"
-          >
-            <SpaceIcon icon={space.icon} size={15} />
-          </button>
+          <Tip key={space.id} label={space.name} keys={i < 9 ? `⌃${i + 1}` : undefined} side="top">
+            <button
+              type="button"
+              aria-label={space.name}
+              aria-current={space.id === activeSpaceId ? 'true' : undefined}
+              className={`grid size-8 place-items-center rounded-[11px] transition ${
+                space.id === activeSpaceId
+                  ? 'bg-[var(--row-active)] opacity-100'
+                  : 'opacity-55 hover:bg-[var(--hover)] hover:opacity-90'
+              }`}
+              onClick={() => void invoke('spaces:activate', { spaceId: space.id })}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                void invoke('sidebar:spaceMenu', { spaceId: space.id });
+              }}
+              data-testid="space-button"
+            >
+              {/* Switching to a space gives its icon a little bounce. */}
+              <span
+                key={space.id === activeSpaceId ? 'active' : 'idle'}
+                className={`grid ${space.id === activeSpaceId ? 'anim-pop' : ''}`}
+              >
+                <SpaceIcon icon={space.icon} size={15} />
+              </span>
+            </button>
+          </Tip>
         ))}
       </div>
-      <button
-        type="button"
-        aria-label="Create"
-        title="New space, folder or tab"
-        className="press grid size-8 place-items-center rounded-[11px] hover:bg-[var(--hover)]"
-        onClick={(e) => {
-          const r = e.currentTarget.getBoundingClientRect();
-          void invoke('sidebar:createMenu', {
-            anchor: { x: r.x, y: r.y, width: r.width, height: r.height },
-          });
-        }}
-        data-testid="create-button"
-      >
-        <Plus size={17} />
-      </button>
+      <Tip label="New Space, Folder, Note…" side="top">
+        <button
+          type="button"
+          aria-label="Create"
+          className="press hover-turn grid size-8 place-items-center rounded-[11px] hover:bg-[var(--hover)]"
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            void invoke('sidebar:createMenu', {
+              anchor: { x: r.x, y: r.y, width: r.width, height: r.height },
+            });
+          }}
+          data-testid="create-button"
+        >
+          <Plus size={17} />
+        </button>
+      </Tip>
     </div>
   );
 }

@@ -45,6 +45,7 @@ export const COMMANDS: readonly CommandDef[] = [
     id: 'library',
     title: 'Library',
     keywords: ['media', 'downloads', 'easels', 'spaces', 'boosts'],
+    shortcut: '⌥⌘L',
   },
   {
     id: 'new-easel',

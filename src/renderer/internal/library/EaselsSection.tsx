@@ -31,7 +31,7 @@ export function EaselsSection() {
         <button
           type="button"
           onClick={() => void invoke('library:easelAct', { action: 'new' })}
-          className="flex h-10 items-center gap-1.5 rounded-[14px] bg-[var(--tile-bg)] px-3 text-sm font-medium hover:bg-[var(--hover)]"
+          className="press flex h-10 shrink-0 items-center gap-1.5 rounded-[14px] bg-[var(--tile-bg)] px-3 text-[13px] font-semibold whitespace-nowrap hover:bg-[var(--hover)]"
           data-testid="easel-new"
         >
           <Plus size={15} /> New Easel

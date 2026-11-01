@@ -25,3 +25,52 @@ export function timeLeftLabel(remaining: number, bytesPerSecond: number | null):
   if (m < 60) return `${m}m`;
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
+
+/** Library → Downloads' Filter (like Arc's): what a kind of file counts as. */
+export const DOWNLOAD_FILTERS = [
+  { id: 'all', label: 'All Files' },
+  { id: 'images', label: 'Images' },
+  { id: 'videos', label: 'Videos' },
+  { id: 'audio', label: 'Audio' },
+  { id: 'documents', label: 'Documents' },
+  { id: 'installers', label: 'Disk Images & Installers' },
+  { id: 'archives', label: 'Archives' },
+  { id: 'other', label: 'Other' },
+] as const;
+export type DownloadFilter = (typeof DOWNLOAD_FILTERS)[number]['id'];
+
+/** A file's filter from its kind label ("Image", "PDF", "Disk Image"…). Pure. */
+export function downloadCategory(kind: string): Exclude<DownloadFilter, 'all'> {
+  switch (kind) {
+    case 'Image':
+      return 'images';
+    case 'Video':
+      return 'videos';
+    case 'Audio':
+      return 'audio';
+    case 'PDF':
+    case 'Document':
+    case 'Spreadsheet':
+    case 'Presentation':
+      return 'documents';
+    case 'Disk Image':
+    case 'Installer':
+      return 'installers';
+    case 'Archive':
+      return 'archives';
+    default:
+      return 'other';
+  }
+}
+
+/** Arc's second line: "Disk Image from wavebox.app" (or just the kind). Pure. */
+export function downloadSubtitle(kind: string, url: string): string {
+  const host = (() => {
+    try {
+      return new URL(url).hostname.replace(/^www\./, '');
+    } catch {
+      return '';
+    }
+  })();
+  return host ? `${kind} from ${host}` : kind;
+}

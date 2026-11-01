@@ -12,6 +12,7 @@ import { FavoritesGrid } from './sidebar/FavoritesGrid';
 import { RowList } from './sidebar/Rows';
 import { BottomBar, SpaceHeader } from './sidebar/SpaceParts';
 import { LibraryNav } from './sidebar/LibraryNav';
+import { Tip } from '../tooltip/Tip';
 import { WorkspaceNav } from './sidebar/WorkspaceNav';
 import { AddressPill } from './sidebar/AddressPill';
 import type { TabState } from '@shared/types/tabs';
@@ -150,16 +151,17 @@ export function Sidebar({
         {/* Beside the traffic lights, like Arc: hide the sidebar (⌘S), or pin it back. The
             Library's narrow column has no room for it. */}
         {!librarySection && (
-          <button
-            type="button"
-            aria-label={floating ? 'Keep Sidebar Open' : 'Hide Sidebar'}
-            title={floating ? 'Keep Sidebar Open (⌘S)' : 'Hide Sidebar (⌘S)'}
-            onClick={() => void window.orbit.invoke('sidebar:toggle', {})}
-            className="no-drag absolute top-[11px] left-[78px] grid size-6 place-items-center rounded-md text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
-            data-testid="sidebar-toggle"
-          >
-            <PanelLeft size={15} />
-          </button>
+          <Tip label={floating ? 'Keep Sidebar Open' : 'Hide Sidebar'} keys="⌘S">
+            <button
+              type="button"
+              aria-label={floating ? 'Keep Sidebar Open' : 'Hide Sidebar'}
+              onClick={() => void window.orbit.invoke('sidebar:toggle', {})}
+              className="no-drag absolute top-[11px] left-[78px] grid size-6 place-items-center rounded-md text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+              data-testid="sidebar-toggle"
+            >
+              <PanelLeft size={15} />
+            </button>
+          </Tip>
         )}
       </div>
       {!librarySection && <AddressPill tab={activeTab} />}

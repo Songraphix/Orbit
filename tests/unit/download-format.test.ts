@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { progressLabel, timeLeftLabel } from '@shared/download-format';
+import {
+  downloadCategory,
+  downloadSubtitle,
+  progressLabel,
+  timeLeftLabel,
+} from '@shared/download-format';
 import { nextSpeed } from '../../src/main/downloads/model';
 
 const MB = 1024 ** 2;
@@ -28,5 +33,25 @@ describe('download progress like Arc', () => {
       0.7 * MB + 0.3 * 4 * MB,
     );
     expect(nextSpeed(MB, { bytes: 1, at: 1000 }, { bytes: 1, at: 1000 })).toBe(MB);
+  });
+});
+
+describe('Library downloads filter and subtitle', () => {
+  it('sorts kinds into filters', () => {
+    expect(downloadCategory('Image')).toBe('images');
+    expect(downloadCategory('PDF')).toBe('documents');
+    expect(downloadCategory('Spreadsheet')).toBe('documents');
+    expect(downloadCategory('Disk Image')).toBe('installers');
+    expect(downloadCategory('Installer')).toBe('installers');
+    expect(downloadCategory('Archive')).toBe('archives');
+    expect(downloadCategory('TTF')).toBe('other');
+  });
+
+  it('says where a file came from, like Arc', () => {
+    expect(downloadSubtitle('Disk Image', 'https://www.wavebox.app/download/x.dmg')).toBe(
+      'Disk Image from wavebox.app',
+    );
+    expect(downloadSubtitle('Image', 'blob:nothing')).toBe('Image');
+    expect(downloadSubtitle('PDF', '')).toBe('PDF');
   });
 });
