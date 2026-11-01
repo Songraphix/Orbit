@@ -299,6 +299,18 @@ export class WindowManager {
       unregister: (webContentsId) => senders.remove(webContentsId),
       send: (target, state) => broadcaster.sendTo(target, 'state:overlay', state),
       refocus: () => tabManager.active?.view.webContents.focus(),
+      // A third-size JPEG is plenty: it's blurred by 28 px anyway, and it's quick to capture.
+      snapshot: async () => {
+        const view = tabManager.active?.view;
+        if (!view || view.webContents.isDestroyed() || !view.getVisible()) return null;
+        const image = await view.webContents.capturePage();
+        if (image.isEmpty()) return null;
+        const small = image.resize({ width: Math.max(1, Math.round(image.getSize().width / 3)) });
+        return {
+          image: `data:image/jpeg;base64,${small.toJPEG(70).toString('base64')}`,
+          rect: view.getBounds(),
+        };
+      },
     });
     overlayRef = overlay;
     /** The hidden sidebar slides out over the page while the pointer is on it (F-01). */

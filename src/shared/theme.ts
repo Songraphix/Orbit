@@ -12,7 +12,8 @@ export type ThemeVars = Record<
   | '--row-active'
   | '--tile-bg'
   | '--accent'
-  | '--grain',
+  | '--grain'
+  | '--row-shadow',
   string
 >;
 
@@ -89,5 +90,9 @@ export function themeToVars(theme: SpaceTheme): ThemeVars {
     '--tile-bg': onDark ? 'rgb(255 255 255 / 0.09)' : 'rgb(255 255 255 / 0.55)',
     '--accent': rgba(accent, 1),
     '--grain': String(Math.min(0.35, theme.noise * 0.35)),
+    // The active row lifts off the sidebar: a lit top edge on dark themes, a soft drop on light.
+    '--row-shadow': onDark
+      ? '0 1px 2px rgb(0 0 0 / 0.28), inset 0 0.5px 0 rgb(255 255 255 / 0.14)'
+      : '0 1px 3px rgb(0 0 0 / 0.1), 0 0 0 0.5px rgb(0 0 0 / 0.05)',
   };
 }

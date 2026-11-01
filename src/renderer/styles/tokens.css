@@ -15,7 +15,18 @@
   --hover: rgb(255 255 255 / 0.06);
   --row-active: rgb(255 255 255 / 0.16);
   --grain: 0.1;
+  --row-shadow: 0 1px 2px rgb(0 0 0 / 0.25), inset 0 0.5px 0 rgb(255 255 255 / 0.12);
   color-scheme: dark;
+
+  /* Motion (Phase 11): one set of curves everywhere, so every movement feels related.
+     Out: quick start, long soft settle (most UI). Spring: a touch of overshoot for things that
+     appear (popovers, the command bar). */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.32, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 320ms;
 }
 
 html,
@@ -54,6 +65,123 @@ body {
 @keyframes orbit-fade-in {
   from {
     opacity: 0;
+  }
+}
+
+/* ── Materials ───────────────────────────────────────────────────────────────
+   Glass for floating UI: a dark tint over a blurred copy of the page (GlassBackdrop), a hairline
+   rim with a lit top edge, and layered shadows for real depth. */
+.glass {
+  position: relative;
+  isolation: isolate;
+  /* The tint itself is a layer inside (see Glass.tsx), above the blurred page copy. */
+  border: 0.5px solid rgb(255 255 255 / 0.14);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.1),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.04),
+    0 0 0 0.5px rgb(0 0 0 / 0.5),
+    0 2px 6px rgb(0 0 0 / 0.18),
+    0 22px 60px -12px rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(24px) saturate(160%);
+  color: rgb(245 245 247);
+}
+/* Where there's no page copy to blur yet, a denser tint keeps it readable. */
+.glass-solid {
+  background: rgb(26 25 32 / 0.6);
+}
+
+/* The page card's edge: a hairline and a soft lift off the sidebar (F-01). */
+.card-depth {
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.16),
+    0 1px 2px rgb(0 0 0 / 0.12),
+    0 10px 30px -10px rgb(0 0 0 / 0.4);
+}
+
+/* ── Motion ──────────────────────────────────────────────────────────────── */
+/* Appearing popovers and the command bar: a small, springy settle. */
+@keyframes orbit-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.965);
+  }
+}
+.animate-pop {
+  animation: orbit-pop var(--dur-slow) var(--ease-spring) both;
+}
+
+/* Toasts and sheets rise into place. */
+@keyframes orbit-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+.animate-rise {
+  animation: orbit-rise var(--dur-slow) var(--ease-spring) both;
+}
+
+/* New sidebar rows grow in; switching spaces slides the list the way you moved. */
+@keyframes orbit-row-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+.animate-row-in {
+  animation: orbit-row-in var(--dur) var(--ease-out) both;
+}
+@keyframes orbit-space-next {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes orbit-space-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+.animate-space-next {
+  animation: orbit-space-next var(--dur-slow) var(--ease-out) both;
+}
+.animate-space-prev {
+  animation: orbit-space-prev var(--dur-slow) var(--ease-out) both;
+}
+
+/* Library panel and other side surfaces. */
+@keyframes orbit-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+.animate-panel-in {
+  animation: orbit-panel-in var(--dur-slow) var(--ease-out) both;
+}
+
+/* Things you can press give a little under your finger. */
+.press {
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+.press:active {
+  transform: scale(0.975);
+}
+
+/* Respect "Reduce motion". */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }
 

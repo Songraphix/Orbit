@@ -179,11 +179,17 @@ function ContentCard(props: {
   const webViewTop = pane.webView.y - pane.card.y;
   return (
     <div
-      className="absolute overflow-hidden bg-white shadow-sm transition-shadow"
+      className="card-depth absolute overflow-hidden bg-white transition-[box-shadow] duration-200"
       style={{
         ...toStyle(pane.card),
         borderRadius: props.radius,
-        boxShadow: inSplit && focused ? '0 0 0 2px var(--accent)' : undefined,
+        // Split view: the focused pane gets a soft accent rim on top of its depth.
+        ...(inSplit && focused
+          ? {
+              boxShadow:
+                '0 0 0 2px color-mix(in srgb, var(--accent) 80%, transparent), 0 10px 30px -10px rgb(0 0 0 / 0.4)',
+            }
+          : {}),
       }}
       // Clicking the other pane's toolbar focuses that pane first.
       onMouseDownCapture={() => {

@@ -125,8 +125,10 @@ export function TabRow({
         tabIndex={0}
         aria-current={active ? 'page' : undefined}
         {...dnd.props}
-        className={`group flex h-8 items-center gap-2.5 rounded-lg pr-1 text-[13px] ${
-          active ? 'bg-[var(--row-active)] shadow-sm' : 'hover:bg-[var(--hover)]'
+        className={`press animate-row-in group flex h-[34px] items-center gap-2.5 rounded-[9px] pr-1 text-[13px] ${
+          active
+            ? 'bg-[var(--row-active)] font-medium shadow-[var(--row-shadow)]'
+            : 'hover:bg-[var(--hover)]'
         } ${dnd.indicator} ${dnd.isDragging ? 'opacity-40' : ''}`}
         style={{ paddingLeft: 8 + row.depth * INDENT_PX }}
         onClick={() => void invoke('tabs:activate', { tabId: row.id })}
@@ -217,7 +219,7 @@ export function FolderRow({
         tabIndex={0}
         aria-expanded={!row.collapsed}
         {...dnd.props}
-        className={`flex h-8 items-center gap-2 rounded-lg pr-1 text-[13px] font-medium hover:bg-[var(--hover)] ${dnd.indicator} ${dnd.isDragging ? 'opacity-40' : ''}`}
+        className={`press animate-row-in flex h-[34px] items-center gap-2 rounded-[9px] pr-1 text-[13px] font-medium hover:bg-[var(--hover)] ${dnd.indicator} ${dnd.isDragging ? 'opacity-40' : ''}`}
         style={{ paddingLeft: 6 + row.depth * INDENT_PX }}
         onClick={() => void invoke('sidebar:toggleFolder', { itemId: row.id })}
         onContextMenu={(e) => {

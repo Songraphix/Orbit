@@ -16,6 +16,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEffect } from 'react';
+import { Glass } from './Glass';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import type { BoostSummary } from '@shared/types/boosts';
 import type { ExtensionAction } from '@shared/types/extensions';
@@ -63,123 +64,129 @@ export function SiteControls({ view }: { view: SiteControlsView }) {
       }}
       data-testid="site-controls-backdrop"
     >
-      <div
-        className="absolute flex max-h-[calc(100vh-60px)] flex-col overflow-y-auto rounded-2xl border border-white/10 bg-neutral-800/90 p-2.5 text-[13px] text-white shadow-[0_18px_60px_rgb(0_0_0/0.4)] backdrop-blur-xl animate-[orbit-fade-in_100ms_ease-out]"
+      <Glass
+        className="animate-pop absolute origin-top-right rounded-[18px] text-[13px]"
         style={{ left, top, width: WIDTH }}
         role="dialog"
         aria-label={`Controls for ${view.host}`}
         data-testid="site-controls"
       >
-        <div className="grid grid-cols-4 gap-1.5">
-          <Action label="Share" onClick={() => act('share')} testId="site-share">
-            <Share size={16} />
-          </Action>
-          <Action label="New Boost for this site" onClick={() => act('boost')} testId="site-boost">
-            <Wand2 size={16} />
-          </Action>
-          <Action
-            label="Screenshot (drag an area)"
-            onClick={() => act('screenshot')}
-            testId="site-screenshot"
-          >
-            <Camera size={16} />
-          </Action>
-          <Action label="Copy Link" onClick={() => act('copyUrl')} testId="site-copy">
-            <Link size={16} />
-          </Action>
-        </div>
-
-        <Heading>Extensions</Heading>
-        {view.storeExtension && (
-          <button
-            type="button"
-            disabled={view.storeExtension.installed}
-            onClick={() => void window.orbit.invoke('extensions:install', {})}
-            className="mb-1.5 flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[var(--accent,#5b5bd6)] font-semibold text-white hover:brightness-110 disabled:bg-white/10 disabled:text-white/60"
-            data-testid="site-extension-install"
-          >
-            {view.storeExtension.installed ? 'Added to Orbit' : 'Add to Orbit'}
-          </button>
-        )}
-        <div className="grid grid-cols-4 gap-1.5">
-          {view.extensions.map((ext) => (
-            <ExtensionButton key={ext.id} ext={ext} />
-          ))}
-          <Action
-            label="Get Extensions"
-            onClick={() => void window.orbit.invoke('extensions:openStore', {})}
-            testId="site-extensions-add"
-          >
-            <Plus size={16} />
-          </Action>
-        </div>
-
-        <Heading>Boosts</Heading>
-        {view.boosts.length === 0 && (
-          <p className="px-1 pb-1 text-[12px] text-white/50">No Boosts for this site yet.</p>
-        )}
-        {view.boosts.map((boost) => (
-          <BoostRow key={boost.id} boost={boost} />
-        ))}
-        <button
-          type="button"
-          onClick={() => act('zap')}
-          className="flex items-center gap-2.5 rounded-lg px-1 py-1.5 text-left hover:bg-white/10"
-          data-testid="site-zap"
-        >
-          <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/10">
-            <Zap size={14} />
-          </span>
-          <span className="font-semibold">Zap Elements…</span>
-        </button>
-
-        <Heading>Settings</Heading>
-        <div className="flex flex-col">
-          {view.settings.map((row) => (
-            <button
-              key={row.key}
-              type="button"
-              onClick={() => void window.orbit.invoke('sitecontrols:pick', { key: row.key })}
-              className="flex items-center gap-2.5 rounded-lg px-1 py-1.5 text-left hover:bg-white/10"
-              data-testid="site-setting"
-              data-key={row.key}
-              data-value={row.value}
+        <div className="flex max-h-[calc(100vh-60px)] flex-col overflow-y-auto p-2.5">
+          <div className="grid grid-cols-4 gap-1.5">
+            <Action label="Share" onClick={() => act('share')} testId="site-share">
+              <Share size={16} />
+            </Action>
+            <Action
+              label="New Boost for this site"
+              onClick={() => act('boost')}
+              testId="site-boost"
             >
-              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/90 text-neutral-800">
-                {ICONS[row.icon]}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate font-semibold">{row.label}</span>
-                <span className="block truncate text-[12px] text-white/55">{row.valueLabel}</span>
-              </span>
-            </button>
-          ))}
-        </div>
+              <Wand2 size={16} />
+            </Action>
+            <Action
+              label="Screenshot (drag an area)"
+              onClick={() => act('screenshot')}
+              testId="site-screenshot"
+            >
+              <Camera size={16} />
+            </Action>
+            <Action label="Copy Link" onClick={() => act('copyUrl')} testId="site-copy">
+              <Link size={16} />
+            </Action>
+          </div>
 
-        <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
-          <span
-            className={`flex items-center gap-1.5 rounded-lg px-2 py-1 font-medium ${view.secure ? 'bg-white/10' : 'bg-amber-500/25 text-amber-200'}`}
-            title={
-              view.secure
-                ? `Connection to ${view.host} is encrypted`
-                : 'Connection is not encrypted'
-            }
-            data-testid="site-security"
-          >
-            {view.secure ? <Lock size={12} /> : <LockOpen size={12} />}
-            {view.secure ? 'Secure' : 'Not Secure'}
-          </span>
+          <Heading>Extensions</Heading>
+          {view.storeExtension && (
+            <button
+              type="button"
+              disabled={view.storeExtension.installed}
+              onClick={() => void window.orbit.invoke('extensions:install', {})}
+              className="mb-1.5 flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[var(--accent,#5b5bd6)] font-semibold text-white hover:brightness-110 disabled:bg-white/10 disabled:text-white/60"
+              data-testid="site-extension-install"
+            >
+              {view.storeExtension.installed ? 'Added to Orbit' : 'Add to Orbit'}
+            </button>
+          )}
+          <div className="grid grid-cols-4 gap-1.5">
+            {view.extensions.map((ext) => (
+              <ExtensionButton key={ext.id} ext={ext} />
+            ))}
+            <Action
+              label="Get Extensions"
+              onClick={() => void window.orbit.invoke('extensions:openStore', {})}
+              testId="site-extensions-add"
+            >
+              <Plus size={16} />
+            </Action>
+          </div>
+
+          <Heading>Boosts</Heading>
+          {view.boosts.length === 0 && (
+            <p className="px-1 pb-1 text-[12px] text-white/50">No Boosts for this site yet.</p>
+          )}
+          {view.boosts.map((boost) => (
+            <BoostRow key={boost.id} boost={boost} />
+          ))}
           <button
             type="button"
-            aria-label="More"
-            onClick={() => act('more')}
-            className="grid size-7 place-items-center rounded-full bg-white/10 hover:bg-white/20"
-            data-testid="site-more"
+            onClick={() => act('zap')}
+            className="flex items-center gap-2.5 rounded-lg px-1 py-1.5 text-left hover:bg-white/10"
+            data-testid="site-zap"
           >
-            <Ellipsis size={15} />
+            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/10">
+              <Zap size={14} />
+            </span>
+            <span className="font-semibold">Zap Elements…</span>
           </button>
+
+          <Heading>Settings</Heading>
+          <div className="flex flex-col">
+            {view.settings.map((row) => (
+              <button
+                key={row.key}
+                type="button"
+                onClick={() => void window.orbit.invoke('sitecontrols:pick', { key: row.key })}
+                className="flex items-center gap-2.5 rounded-lg px-1 py-1.5 text-left hover:bg-white/10"
+                data-testid="site-setting"
+                data-key={row.key}
+                data-value={row.value}
+              >
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/90 text-neutral-800">
+                  {ICONS[row.icon]}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{row.label}</span>
+                  <span className="block truncate text-[12px] text-white/55">{row.valueLabel}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
+            <span
+              className={`flex items-center gap-1.5 rounded-lg px-2 py-1 font-medium ${view.secure ? 'bg-white/10' : 'bg-amber-500/25 text-amber-200'}`}
+              title={
+                view.secure
+                  ? `Connection to ${view.host} is encrypted`
+                  : 'Connection is not encrypted'
+              }
+              data-testid="site-security"
+            >
+              {view.secure ? <Lock size={12} /> : <LockOpen size={12} />}
+              {view.secure ? 'Secure' : 'Not Secure'}
+            </span>
+            <button
+              type="button"
+              aria-label="More"
+              onClick={() => act('more')}
+              className="grid size-7 place-items-center rounded-full bg-white/10 hover:bg-white/20"
+              data-testid="site-more"
+            >
+              <Ellipsis size={15} />
+            </button>
+          </div>
         </div>
-      </div>
+      </Glass>
     </div>
   );
 }
@@ -200,7 +207,7 @@ function ExtensionButton({ ext }: { ext: ExtensionAction }) {
         event.preventDefault();
         activate(event, true);
       }}
-      className="relative grid h-10 place-items-center rounded-xl bg-white/10 hover:bg-white/20"
+      className="press relative grid h-11 place-items-center rounded-xl bg-white/[0.09] shadow-[inset_0_0.5px_0_rgb(255_255_255/0.1)] hover:bg-white/[0.16]"
       data-testid="site-extension"
       data-extension-id={ext.id}
     >
@@ -273,7 +280,7 @@ function Action(props: {
       title={props.label}
       disabled={props.disabled}
       onClick={props.onClick}
-      className="grid h-10 place-items-center rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-35 disabled:hover:bg-white/10"
+      className="press grid h-11 place-items-center rounded-xl bg-white/[0.09] shadow-[inset_0_0.5px_0_rgb(255_255_255/0.1)] hover:bg-white/[0.16] disabled:opacity-35 disabled:hover:bg-white/[0.09]"
       data-testid={props.testId}
     >
       {props.children}

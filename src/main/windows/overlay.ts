@@ -19,6 +19,8 @@ export type OverlayDeps = {
   send: (contents: Electron.WebContents, state: OverlayState) => void;
   /** Where keyboard focus goes back to when the overlay closes (the active tab). */
   refocus: () => void;
+  /** A small copy of the page under the overlay, for glass surfaces to blur. */
+  snapshot?: () => Promise<OverlayState['backdrop']>;
 };
 
 type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never;
@@ -39,6 +41,8 @@ export class OverlayController {
   private siteControls: SiteControlsView | null = null;
   private capture: OverlayState['capture'] = null;
   private sidebarPeek: OverlayState['sidebarPeek'] = null;
+  private backdrop: OverlayState['backdrop'] = null;
+  private snapshotting = false;
 
   constructor(private readonly deps: OverlayDeps) {
     this.view = new WebContentsView({
@@ -71,6 +75,7 @@ export class OverlayController {
       siteControls: this.siteControls,
       capture: this.capture,
       sidebarPeek: this.sidebarPeek,
+      backdrop: this.backdrop,
     };
   }
 
@@ -216,6 +221,24 @@ export class OverlayController {
     this.view.setVisible(true);
     this.view.webContents.focus();
     this.send();
+    void this.refreshBackdrop();
+  }
+
+  /** Takes a fresh copy of the page for the glass to blur (the old one shows meanwhile). */
+  private async refreshBackdrop(): Promise<void> {
+    if (!this.deps.snapshot || this.snapshotting) return;
+    this.snapshotting = true;
+    try {
+      const backdrop = await this.deps.snapshot();
+      if (backdrop && this.isOpen) {
+        this.backdrop = backdrop;
+        this.send();
+      }
+    } catch {
+      // No glass this time: the surfaces fall back to their solid tint.
+    } finally {
+      this.snapshotting = false;
+    }
   }
 
   /** After something closed: hide if nothing is left, and send the new state. */

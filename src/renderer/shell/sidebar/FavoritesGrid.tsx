@@ -22,10 +22,10 @@ export function FavoritesGrid({ rows, activeId }: { rows: SidebarRow[]; activeId
             title={row.title}
             aria-label={row.title}
             aria-current={row.id === activeId ? 'page' : undefined}
-            className={`grid h-12 w-full place-items-center rounded-xl transition ${
+            className={`press grid h-12 w-full place-items-center rounded-xl ${
               row.id === activeId
-                ? 'bg-[var(--row-active)] shadow-sm'
-                : 'bg-[var(--tile-bg)] hover:brightness-110'
+                ? 'bg-[var(--row-active)] shadow-[var(--row-shadow)]'
+                : 'bg-[var(--tile-bg)] hover:bg-[var(--row-active)]'
             }`}
             onClick={() => void invoke('tabs:activate', { tabId: row.id })}
             onContextMenu={(e) => {

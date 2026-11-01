@@ -6,6 +6,7 @@ import { SiteControls } from './SiteControls';
 import { CaptureLayer } from './CaptureLayer';
 import { PromptView } from './PromptView';
 import { FloatingSidebar } from './FloatingSidebar';
+import { BackdropContext } from './backdrop';
 
 /**
  * Transparent top-most layer for floating UI (ADR-006). Main shows this view only while
@@ -19,6 +20,7 @@ export function OverlayApp() {
     siteControls: null,
     capture: null,
     sidebarPeek: null,
+    backdrop: null,
   });
 
   useEffect(() => {
@@ -44,10 +46,10 @@ export function OverlayApp() {
     if (busy && state.sidebarPeek) void window.orbit.invoke('sidebar:peek', { open: false });
   }, [busy, state.sidebarPeek]);
   return (
-    <>
+    <BackdropContext.Provider value={state.backdrop}>
       {state.sidebarPeek && !busy && <FloatingSidebar width={state.sidebarPeek.width} />}
       {state.peek && <PeekFrame peek={state.peek} interactive={top === null} />}
       {top}
-    </>
+    </BackdropContext.Provider>
   );
 }

@@ -16,7 +16,7 @@ export function LibraryNav({ section }: { section: LibrarySection }) {
   return (
     <>
       <nav
-        className="no-drag flex min-h-0 flex-1 flex-col justify-center gap-1.5 overflow-y-auto px-2"
+        className="animate-panel-in no-drag flex min-h-0 flex-1 flex-col justify-center gap-1.5 overflow-y-auto px-2"
         aria-label="Library"
         data-testid="library-nav"
       >
@@ -26,9 +26,9 @@ export function LibraryNav({ section }: { section: LibrarySection }) {
             type="button"
             aria-current={s.id === section ? 'page' : undefined}
             onClick={() => void window.orbit.invoke('library:open', { section: s.id })}
-            className={`flex flex-col items-center gap-1.5 rounded-xl py-3 text-[12px] font-semibold transition ${
+            className={`press flex flex-col items-center gap-1.5 rounded-[14px] py-3.5 text-[11.5px] font-semibold tracking-[0.01em] ${
               s.id === section
-                ? 'bg-[var(--row-active)] text-[var(--sidebar-fg)]'
+                ? 'bg-[var(--row-active)] text-[var(--sidebar-fg)] shadow-[var(--row-shadow)]'
                 : 'text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]'
             }`}
             data-testid="library-section"
@@ -45,7 +45,7 @@ export function LibraryNav({ section }: { section: LibrarySection }) {
           aria-label="Back to tabs"
           title="Back to tabs"
           onClick={() => void window.orbit.invoke('library:close', {})}
-          className="grid size-8 place-items-center rounded-lg text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+          className="press grid size-8 place-items-center rounded-lg text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
           data-testid="library-back"
         >
           <ArrowLeft size={16} />

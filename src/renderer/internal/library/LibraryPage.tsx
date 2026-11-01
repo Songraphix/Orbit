@@ -40,7 +40,7 @@ export function LibraryPage({ section }: { section: LibrarySection }) {
   if (!mode) return null;
   return (
     <main
-      className="min-h-screen px-2 pt-1 pb-10 text-[var(--sidebar-fg)]"
+      className="animate-panel-in min-h-screen px-2 pt-1 pb-10 text-[var(--sidebar-fg)]"
       data-testid="library-page"
     >
       {section === 'media' && <MediaSection />}

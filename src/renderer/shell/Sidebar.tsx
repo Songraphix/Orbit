@@ -105,6 +105,23 @@ export function Sidebar({
   const space = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId);
   const renamingItem = renaming?.target === 'item' ? renaming.id : null;
 
+  // Switching spaces slides the list the way you moved (next space: from the right).
+  const [spaceMotion, setSpaceMotion] = useState<{
+    id: string | null;
+    dir: 'next' | 'prev' | null;
+  }>({ id: null, dir: null });
+  const activeSpaceId = sidebar?.activeSpaceId ?? null;
+  if (activeSpaceId !== spaceMotion.id) {
+    const ids = sidebar?.spaces.map((s) => s.id) ?? [];
+    const dir =
+      spaceMotion.id === null || activeSpaceId === null
+        ? null
+        : ids.indexOf(activeSpaceId) > ids.indexOf(spaceMotion.id)
+          ? 'next'
+          : 'prev';
+    setSpaceMotion({ id: activeSpaceId, dir });
+  }
+
   return (
     <aside
       className="absolute inset-y-0 left-0 flex flex-col"
@@ -116,22 +133,34 @@ export function Sidebar({
         style={{ height: TITLE_STRIP_HEIGHT }}
         data-testid="title-strip"
       >
-        {/* Beside the traffic lights, like Arc: hide the sidebar (⌘S), or pin it back. */}
-        <button
-          type="button"
-          aria-label={floating ? 'Keep Sidebar Open' : 'Hide Sidebar'}
-          title={floating ? 'Keep Sidebar Open (⌘S)' : 'Hide Sidebar (⌘S)'}
-          onClick={() => void window.orbit.invoke('sidebar:toggle', {})}
-          className="no-drag absolute top-[11px] left-[78px] grid size-6 place-items-center rounded-md text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
-          data-testid="sidebar-toggle"
-        >
-          <PanelLeft size={15} />
-        </button>
+        {/* Beside the traffic lights, like Arc: hide the sidebar (⌘S), or pin it back. The
+            Library's narrow column has no room for it. */}
+        {!librarySection && (
+          <button
+            type="button"
+            aria-label={floating ? 'Keep Sidebar Open' : 'Hide Sidebar'}
+            title={floating ? 'Keep Sidebar Open (⌘S)' : 'Hide Sidebar (⌘S)'}
+            onClick={() => void window.orbit.invoke('sidebar:toggle', {})}
+            className="no-drag absolute top-[11px] left-[78px] grid size-6 place-items-center rounded-md text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+            data-testid="sidebar-toggle"
+          >
+            <PanelLeft size={15} />
+          </button>
+        )}
       </div>
       {librarySection && <LibraryNav section={librarySection} />}
       {!librarySection && sidebar && space && (
         <DndContext.Provider value={dnd}>
-          <div className="no-drag min-h-0 flex-1 overflow-y-auto pb-2">
+          <div
+            key={space.id}
+            className={`no-drag min-h-0 flex-1 overflow-y-auto pb-2 ${
+              spaceMotion.dir === 'next'
+                ? 'animate-space-next'
+                : spaceMotion.dir === 'prev'
+                  ? 'animate-space-prev'
+                  : ''
+            }`}
+          >
             <div
               {...dropZone(dnd, { kind: 'favorites' })}
               className={`rounded-xl ${isTarget({ kind: 'favorites' }) ? 'bg-[var(--hover)] ring-2 ring-[var(--accent)]' : ''} ${
@@ -163,7 +192,7 @@ export function Sidebar({
               />
               <button
                 type="button"
-                className="flex h-8 items-center gap-2.5 rounded-lg px-2 text-left text-[13px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+                className="press flex h-[34px] items-center gap-2.5 rounded-[9px] px-2 text-left text-[13px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
                 onClick={() => void window.orbit.invoke('tabs:create', {})}
                 data-testid="new-tab-row"
               >

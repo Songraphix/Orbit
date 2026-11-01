@@ -108,7 +108,7 @@ export function Toolbar({
         <FindBar state={find} />
       ) : toast ? (
         <div
-          className="absolute inset-x-28 flex items-center justify-center gap-1.5 text-[13px] font-medium text-neutral-700"
+          className="animate-rise absolute inset-x-28 flex items-center justify-center gap-1.5 text-[13px] font-medium text-neutral-700"
           role="status"
           data-testid="toolbar-toast"
         >
@@ -234,7 +234,7 @@ function ToolbarButton(props: {
       title={props.label}
       disabled={props.disabled}
       onClick={props.onClick}
-      className="no-drag grid size-7 place-items-center rounded-md hover:bg-black/5 disabled:opacity-30 disabled:hover:bg-transparent"
+      className="press no-drag grid size-7 place-items-center rounded-[7px] hover:bg-black/[0.06] disabled:opacity-30 disabled:hover:bg-transparent"
       data-testid={props.testId}
     >
       {props.children}

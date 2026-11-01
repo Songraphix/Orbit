@@ -21,7 +21,7 @@ export function RecentFiles() {
   const { items, at: now } = loaded;
   return (
     <div
-      className="absolute right-0 bottom-full left-0 mb-1 rounded-xl bg-[var(--tile-bg)] p-1 shadow-lg backdrop-blur-xl animate-[orbit-fade-in_100ms_ease-out]"
+      className="animate-pop absolute right-0 bottom-full left-0 mb-1.5 origin-bottom-left rounded-[14px] p-1 backdrop-blur-2xl shadow-[var(--row-shadow),0_12px_32px_-8px_rgb(0_0_0/0.45)]"
       style={{ background: 'var(--sidebar-bg)' }}
       data-testid="recent-files"
     >

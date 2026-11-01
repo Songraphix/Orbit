@@ -30,7 +30,7 @@ export function FloatingSidebar({ width }: { width: number }) {
 
   return (
     <div
-      className="fixed inset-y-0 left-0 overflow-hidden rounded-r-xl shadow-[6px_0_28px_rgb(0_0_0/0.35)] animate-[orbit-slide-in_120ms_ease-out]"
+      className="fixed inset-y-0 left-0 overflow-hidden rounded-r-[14px] border-r-[0.5px] border-white/15 shadow-[inset_-0.5px_0_0_rgb(255_255_255/0.08),8px_0_32px_-4px_rgb(0_0_0/0.45)] animate-[orbit-slide-in_var(--dur-slow)_var(--ease-out)]"
       style={{ ...(vars as CSSProperties), width }}
       data-testid="sidebar-peek"
     >

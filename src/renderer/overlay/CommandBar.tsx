@@ -1,3 +1,4 @@
+import { Glass } from './Glass';
 import { ArrowRight, Clock, Globe, Layers, Search, Sparkles, TerminalSquare } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
@@ -69,18 +70,18 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
 
   return (
     <div
-      className="fixed inset-0 flex justify-center bg-black/20 pt-[16vh]"
+      className="fixed inset-0 flex justify-center bg-black/[0.14] pt-[17vh] animate-[orbit-fade-in_160ms_var(--ease-out)]"
       onMouseDown={(e) => e.target === e.currentTarget && close()}
       data-testid="command-bar-backdrop"
     >
-      <div
-        className="h-fit w-[min(640px,90vw)] overflow-hidden rounded-2xl border border-white/10 bg-neutral-900/85 text-neutral-100 shadow-[0_24px_80px_rgb(0_0_0/0.45)] backdrop-blur-2xl"
+      <Glass
+        className="animate-pop h-fit w-[min(660px,90vw)] rounded-[18px]"
         role="dialog"
         aria-label={mode === 'edit' ? 'Edit address' : 'New tab'}
         data-testid="command-bar"
       >
-        <div className="flex h-14 items-center gap-3 px-4">
-          <Search size={18} className="shrink-0 opacity-60" />
+        <div className="flex h-[60px] items-center gap-3 px-5">
+          <Search size={19} strokeWidth={2.2} className="shrink-0 opacity-50" />
           <input
             ref={input}
             value={query}
@@ -90,7 +91,7 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
             aria-label="Search or enter address"
             aria-controls="command-results"
             aria-activedescendant={items[selected] ? `cmd-${selected}` : undefined}
-            className="h-full min-w-0 flex-1 bg-transparent text-[17px] outline-none placeholder:text-white/40"
+            className="h-full min-w-0 flex-1 bg-transparent text-[19px] font-medium tracking-[-0.01em] outline-none placeholder:font-normal placeholder:text-white/35"
             spellCheck={false}
             autoComplete="off"
             data-testid="command-input"
@@ -100,7 +101,7 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
           <ul
             id="command-results"
             role="listbox"
-            className="max-h-[420px] overflow-y-auto border-t border-white/10 p-1.5"
+            className="max-h-[440px] overflow-y-auto border-t border-white/[0.08] p-2"
             data-testid="command-results"
           >
             {items.map((item, i) => (
@@ -109,8 +110,10 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
                 id={`cmd-${i}`}
                 role="option"
                 aria-selected={i === selected}
-                className={`flex h-10 cursor-default items-center gap-3 rounded-lg px-3 text-sm ${
-                  i === selected ? 'bg-[var(--accent)]/80 text-white' : 'hover:bg-white/5'
+                className={`flex h-11 cursor-default items-center gap-3 rounded-[11px] px-3 text-[14px] transition-colors duration-100 ${
+                  i === selected
+                    ? 'bg-white/[0.12] text-white shadow-[inset_0_0.5px_0_rgb(255_255_255/0.12)]'
+                    : 'text-white/85'
                 }`}
                 onMouseMove={() => setSelected(i)}
                 onMouseDown={(e) => {
@@ -123,7 +126,7 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
                 <ItemIcon item={item} />
                 <span className="min-w-0 flex-1 truncate">{item.title}</span>
                 <span
-                  className={`shrink-0 text-xs ${i === selected ? 'opacity-80' : 'opacity-45'}`}
+                  className={`shrink-0 text-[12px] ${i === selected ? 'text-white/70' : 'text-white/35'}`}
                 >
                   {item.subtitle}
                 </span>
@@ -131,12 +134,21 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
             ))}
           </ul>
         )}
-      </div>
+      </Glass>
     </div>
   );
 }
 
+/** Each result's icon sits on a small lit tile, like Arc's. */
 function ItemIcon({ item }: { item: CommandItem }) {
+  return (
+    <span className="grid size-[26px] shrink-0 place-items-center rounded-[7px] bg-white/[0.08] shadow-[inset_0_0.5px_0_rgb(255_255_255/0.1)]">
+      <Glyph item={item} />
+    </span>
+  );
+}
+
+function Glyph({ item }: { item: CommandItem }) {
   if (item.favicon) return <img src={item.favicon} alt="" className="size-4 shrink-0 rounded-sm" />;
   const props = { size: 16, className: 'shrink-0 opacity-70' };
   switch (item.kind) {
