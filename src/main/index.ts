@@ -9,6 +9,7 @@ import { IpcRouter } from './ipc/router';
 import { SenderRegistry } from './ipc/sender';
 import { openPersistence } from './persistence';
 import type { Persistence } from './persistence';
+import { WindowManager } from './windows/window-manager';
 
 app.setName(APP_NAME);
 
@@ -39,40 +40,6 @@ function loadRenderer(win: BrowserWindow, entry: RendererEntry): void {
   else void win.loadFile(join(rendererDir, entry, 'index.html'));
 }
 
-function createMainWindow(): BrowserWindow {
-  const win = new BrowserWindow({
-    title: APP_NAME,
-    width: 1280,
-    height: 820,
-    minWidth: 640,
-    minHeight: 400,
-    show: false,
-    webPreferences: {
-      preload: join(import.meta.dirname, '../preload/shell.cjs'),
-      sandbox: true,
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  const contents = win.webContents;
-  senders.add(contents.id);
-  broadcaster.add(contents);
-  contents.once('destroyed', () => {
-    senders.remove(contents.id);
-    broadcaster.remove(contents);
-  });
-
-  win.once('ready-to-show', () => win.show());
-
-  // The shell never navigates or opens windows itself (PLAN.md section 4.8).
-  contents.on('will-navigate', (event) => event.preventDefault());
-  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
-
-  loadRenderer(win, 'shell');
-  return win;
-}
-
 app.on('second-instance', () => {
   const [win] = BrowserWindow.getAllWindows();
   if (win) {
@@ -82,7 +49,7 @@ app.on('second-instance', () => {
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+  if (windows && BrowserWindow.getAllWindows().length === 0) windows.createMainWindow();
 });
 
 app.on('window-all-closed', () => {
@@ -90,6 +57,7 @@ app.on('window-all-closed', () => {
 });
 
 let persistence: Persistence | null = null;
+let windows: WindowManager | null = null;
 
 app.on('will-quit', () => {
   persistence?.close();
@@ -98,5 +66,12 @@ app.on('will-quit', () => {
 
 void app.whenReady().then(() => {
   persistence = openPersistence(app.getPath('userData'));
-  createMainWindow();
+  windows = new WindowManager({
+    settings: persistence.settings,
+    senders,
+    broadcaster,
+    preloadPath: join(import.meta.dirname, '../preload/shell.cjs'),
+    loadRenderer,
+  });
+  windows.createMainWindow();
 });

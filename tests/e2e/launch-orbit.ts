@@ -9,12 +9,13 @@ export type Orbit = {
   win: Page;
   /** The throwaway profile directory this instance uses. */
   userData: string;
-  close: () => Promise<void>;
+  /** Quits the app; deletes the profile unless `keepData` (to relaunch on the same profile). */
+  close: (options?: { keepData?: boolean }) => Promise<void>;
 };
 
 /** Launches the built app with a throwaway profile, so tests never touch real data. */
-export async function launchOrbit(): Promise<Orbit> {
-  const userData = mkdtempSync(join(tmpdir(), 'orbit-e2e-'));
+export async function launchOrbit(options: { userData?: string } = {}): Promise<Orbit> {
+  const userData = options.userData ?? mkdtempSync(join(tmpdir(), 'orbit-e2e-'));
   // Editors built on Electron (VS Code) export ELECTRON_RUN_AS_NODE, which would start
   // Electron as plain Node with no window. Strip it for the app under test.
   const { ELECTRON_RUN_AS_NODE: _, ...env } = process.env;
@@ -27,9 +28,9 @@ export async function launchOrbit(): Promise<Orbit> {
     app,
     win,
     userData,
-    close: async () => {
+    close: async ({ keepData = false } = {}) => {
       await app.close();
-      rmSync(userData, { recursive: true, force: true });
+      if (!keepData) rmSync(userData, { recursive: true, force: true });
     },
   };
 }
