@@ -20,10 +20,11 @@ Target end: 2026-11-16 · Branch: `phase-1/foundations`
 - 2026-11-01 — Phase 1 step 5b: new tab page [F-32] — `orbit://newtab` with 8 built-in gradient wallpapers, your own image (validated, downscaled, stored in the profile), clock + greeting, focused search box; `newtab:*` channels limited to internal pages
 - 2026-11-01 — Phase 1 step 6: toolbar v1 [F-14] — back / forward / reload-or-stop, centred `domain / title` with lock for https, indeterminate loading bar, sidebar button when the sidebar is hidden; menu: Reload ⌘R, Force Reload ⇧⌘R, Back ⌘[, Forward ⌘], page DevTools ⌥⌘I; sidebar drag now uses document listeners (pointer capture was cancelled when the live view hid)
 - 2026-11-01 — Phase 1 step 7: web compatibility [F-31] — reduced Chrome user agent (no "Electron"); `decideWindowOpen()` (pure): links → tabs (⌘-click → background), `window.open` with features → real sandboxed popup windows that keep `window.opener` (sign-in flows), non-web schemes refused; shared `guardWebContents()` applies the same rules to tabs and popups
+- 2026-11-01 — Phase 1 step 8: web page right-click menu [F-31] — pure `buildContextMenu()` (links, images, selection + Google search, editable fields with spelling suggestions / Add to Dictionary / undo-redo-cut-copy-paste, page Back/Forward/Reload, Inspect Element); native menu wiring in `context-menu.ts`
 
 ## In progress
 
-- Phase 1 step 8: web page right-click menu
+- Phase 1 step 9: HTML fullscreen
 
 ## Decisions made
 

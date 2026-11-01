@@ -2,6 +2,7 @@ import { WebContentsView } from 'electron';
 import type { Session } from 'electron';
 import type { TabState } from '@shared/types/tabs';
 import { fetchFaviconDataUrl } from './favicon';
+import { attachContextMenu } from './context-menu';
 import { guardWebContents } from './web-guards';
 
 /** What a tab needs from the outside world. Keeps TabController free of window/manager details. */
@@ -148,6 +149,7 @@ export class TabController {
 
     // Scheme rules, links → tabs, real popups (sign-in) → sandboxed popup windows.
     guardWebContents(contents, (url, activate) => this.env.openInNewTab(url, activate));
+    attachContextMenu(contents, (url, activate) => this.env.openInNewTab(url, activate));
 
     contents.on('did-start-loading', () => this.update({ isLoading: true }));
     contents.on('did-stop-loading', () => this.update({ isLoading: false, ...this.navState() }));

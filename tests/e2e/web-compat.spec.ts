@@ -39,6 +39,17 @@ test('pages see a plain Chrome user agent, not Electron', async () => {
   expect(ua).not.toMatch(/Electron|Orbit/);
 });
 
+test('web tabs have a right-click menu attached', async () => {
+  const { app, win } = orbit;
+  await openTab(win, server.url('/one'));
+  await expect(win.getByTestId('toolbar-address')).toContainText('Page One');
+  const listeners = await app.evaluate(({ webContents }) => {
+    const tab = webContents.getAllWebContents().find((w) => w.getURL().includes('/one'));
+    return tab?.listenerCount('context-menu') ?? 0;
+  });
+  expect(listeners).toBeGreaterThan(0);
+});
+
 test('sign-in style popups open as real windows with window.opener, then close', async () => {
   const { app, win } = orbit;
   await openTab(win, server.url('/opener'));
