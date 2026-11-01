@@ -124,7 +124,7 @@ export class SidebarActions {
   clearToday(): number {
     const ids = this.store.rows('today', this.space).map((r) => r.item);
     const tabs = ids.filter((i) => i.kind === 'tab');
-    for (const tab of tabs) this.tabs.close(tab.id);
+    for (const tab of tabs) this.tabs.close(tab.id, 'cleared');
     for (const folder of ids.filter((i) => i.kind === 'folder')) {
       if (this.store.item(folder.id)) this.store.remove(folder.id);
     }

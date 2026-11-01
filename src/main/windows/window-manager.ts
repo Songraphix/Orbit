@@ -1,9 +1,10 @@
-import { BrowserWindow, screen } from 'electron';
+import { BrowserWindow, dialog, screen } from 'electron';
 import type { WebContentsView } from 'electron';
 import { APP_NAME } from '@shared/constants';
 import type { RendererEntry } from '@shared/constants';
 import type { Broadcaster } from '../ipc/broadcaster';
 import type { SenderRegistry } from '../ipc/sender';
+import type { ArchiveRepository } from '../persistence/repositories/archive';
 import type { SettingsRepository } from '../persistence/repositories/settings';
 import type { TabController } from '../tabs/tab-controller';
 import type { HistorySink } from '../tabs/tab-controller';
@@ -25,6 +26,7 @@ const SAVE_DELAY_MS = 500;
 export type WindowManagerDeps = {
   settings: SettingsRepository;
   store: SidebarStore;
+  archive: ArchiveRepository;
   sessionFor: (profileId: string) => Session | undefined;
   history: HistorySink;
   zoomFor: (url: string) => number;
@@ -56,6 +58,11 @@ export class WindowManager {
   private readonly controllers = new Map<number, WindowController>();
 
   constructor(private readonly deps: WindowManagerDeps) {}
+
+  /** Every open window (each controller once). */
+  all(): WindowController[] {
+    return [...new Set(this.controllers.values())];
+  }
 
   /** The window whose shell sent an IPC message. */
   forSender(webContentsId: number): WindowController | undefined {
@@ -132,6 +139,7 @@ export class WindowManager {
     tabs = new TabManager({
       win,
       store: this.deps.store,
+      archive: this.deps.archive,
       initialSpaceId: settings.get('window.activeSpace') ?? '',
       sessionFor: this.deps.sessionFor,
       onSpaceChange: (spaceId) => settings.set('window.activeSpace', spaceId),
@@ -143,6 +151,24 @@ export class WindowManager {
       history: this.deps.history,
       zoomFor: this.deps.zoomFor,
       onFoundInPage: (result) => find.onResult(result),
+      // A frozen page: offer to wait or reload (F-31).
+      onUnresponsive: (tabId) => {
+        void dialog
+          .showMessageBox(win, {
+            type: 'warning',
+            message: 'This page isn’t responding',
+            detail: 'You can wait for it, or reload it.',
+            buttons: ['Wait', 'Reload'],
+            defaultId: 0,
+            cancelId: 0,
+          })
+          .then(({ response }) => {
+            const tab = tabs?.get(tabId);
+            if (response !== 1 || !tab) return;
+            tab.view.webContents.forcefullyCrashRenderer();
+            tab.reload();
+          });
+      },
       onChange: (snapshot, sidebar) => {
         broadcaster.sendTo(contents, 'state:tabs', snapshot);
         broadcaster.sendTo(contents, 'state:sidebar', sidebar);

@@ -16,6 +16,8 @@ export const COMMANDS: readonly CommandDef[] = [
   { id: 'reopen-tab', title: 'Reopen Closed Tab', keywords: ['undo', 'restore'], shortcut: '⇧⌘T' },
   { id: 'import-arc', title: 'Import from Arc…', keywords: ['arc', 'migrate', 'bookmarks'] },
   { id: 'new-space', title: 'New Space', keywords: ['workspace'] },
+  { id: 'archived-tabs', title: 'Archived Tabs', keywords: ['archive', 'closed', 'history'] },
+  { id: 'settings', title: 'Settings', keywords: ['preferences', 'options'], shortcut: '⌘,' },
 ];
 
 const SUGGEST_TIMEOUT_MS = 700;
@@ -72,7 +74,12 @@ export class CommandBarService {
     }
     if (!item.url) return;
     // Only web addresses may be opened from here (item URLs come from main, but be strict).
-    if (!/^https?:\/\//i.test(item.url) && !item.url.startsWith('orbit://newtab')) return;
+    if (
+      !/^https?:\/\//i.test(item.url) &&
+      !/^orbit:\/\/(newtab|archive|settings)\b/.test(item.url)
+    ) {
+      return;
+    }
 
     if (mode === 'edit' && tabs.active) {
       tabs.active.load(item.url);

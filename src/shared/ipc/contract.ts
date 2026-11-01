@@ -9,6 +9,7 @@ import {
 import { findStateSchema } from '../types/find';
 import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
 import { sidebarSnapshotSchema, spaceThemeSchema } from '../types/space';
+import { userSettingsSchema } from '../settings';
 import { tabsSnapshotSchema } from '../types/tabs';
 
 /**
@@ -213,6 +214,44 @@ export const contract = {
     input: z.object({}).strict(),
     output: z.void(),
     surfaces: ['overlay'],
+  },
+
+  // Archived Tabs (orbit://archive) and Settings (orbit://settings): internal pages only.
+  'archive:list': {
+    input: z.object({ query: z.string().max(500) }).strict(),
+    output: z.object({
+      entries: z.array(
+        z.object({
+          id: z.string(),
+          title: z.string(),
+          url: z.string(),
+          favicon: z.string().nullable(),
+          reason: z.enum(['auto', 'closed', 'cleared']),
+          archivedAt: z.number(),
+        }),
+      ),
+    }),
+    surfaces: ['internal'],
+  },
+  'archive:restore': {
+    input: z.object({ id: z.string().min(1).max(64) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'settings:get': {
+    input: z.object({}).strict(),
+    output: userSettingsSchema,
+    surfaces: ['internal'],
+  },
+  'settings:set': {
+    input: userSettingsSchema.partial().strict(),
+    output: userSettingsSchema,
+    surfaces: ['internal'],
+  },
+  'history:clear': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
   },
 
   // New tab page (orbit://newtab). Only internal pages may call these.

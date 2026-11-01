@@ -12,6 +12,7 @@ import { CommandBarService, copyActiveUrl } from './commandbar/service';
 import { registerAppHandlers } from './ipc/handlers/app';
 import { registerCommandBarHandlers } from './ipc/handlers/command-bar';
 import { registerFindHandlers } from './ipc/handlers/find';
+import { registerInternalPageHandlers } from './ipc/handlers/internal-pages';
 import { registerSidebarHandlers } from './ipc/handlers/sidebar';
 import { registerLayoutHandlers } from './ipc/handlers/layout';
 import { registerNewTabHandlers } from './ipc/handlers/newtab';
@@ -21,9 +22,13 @@ import { installAppMenu } from './menus/app-menu';
 import { IpcRouter } from './ipc/router';
 import { SenderRegistry } from './ipc/sender';
 import { openPersistence } from './persistence';
+import { backupDatabase } from './persistence/backup';
 import { clampZoom } from './persistence/repositories/site-settings';
 import type { Persistence } from './persistence';
 import { SidebarStore } from './sidebar/store';
+import { TabLifecycle } from './archive/lifecycle';
+import { setSearchEngine } from './omnibox/classify';
+import { SEARCH_ENGINES } from '@shared/settings';
 import { PermissionService } from './permissions/service';
 import { ArcImporter, findArcSources } from './importer/arc/import';
 import { WindowManager } from './windows/window-manager';
@@ -55,6 +60,7 @@ const broadcaster = new Broadcaster();
 
 let persistence: Persistence | null = null;
 let sidebarStore: SidebarStore | null = null;
+let lifecycle: TabLifecycle | null = null;
 let arcImporter: ArcImporter | null = null;
 
 // A stray error in main must never show Electron's blocking error dialog (a browser that can't
@@ -180,6 +186,12 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'new-space':
       controller.sidebar.newSpace();
       return;
+    case 'archived-tabs':
+      controller.tabs.create('orbit://archive');
+      return;
+    case 'settings':
+      controller.tabs.create('orbit://settings');
+      return;
   }
 }
 
@@ -214,6 +226,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  lifecycle?.stop();
   sidebarStore?.close();
   persistence?.close();
   persistence = null;
@@ -244,6 +257,7 @@ void app.whenReady().then(() => {
   windows = new WindowManager({
     settings: persistence.settings,
     store,
+    archive: persistence.archive,
     sessionFor,
     history: persistence.history,
     zoomFor: (url) => persistence?.siteSettings.zoomFor(url) ?? 0,
@@ -269,6 +283,11 @@ void app.whenReady().then(() => {
   );
   registerFindHandlers(router, windowManager);
   registerSidebarHandlers(router, windowManager);
+  registerInternalPageHandlers(router, windowManager, {
+    archive: persistence.archive,
+    settings: persistence.settings,
+    history: persistence.history,
+  });
   registerCommandBarHandlers(
     router,
     windowManager,
@@ -317,6 +336,12 @@ void app.whenReady().then(() => {
     },
     newSpace: () => windowManager.focused()?.sidebar.newSpace(),
     newFolder: () => windowManager.focused()?.sidebar.newFolder('pinned'),
+    runLifecycle: () => {
+      const result = lifecycle?.runNow();
+      const controller = windowManager.focused();
+      if (result && controller)
+        toast(controller, `Archived ${result.archived}, slept ${result.slept}`);
+    },
     importFromArc: () => {
       const controller = windowManager.focused();
       if (controller) void importFromArc(controller);
@@ -340,5 +365,22 @@ void app.whenReady().then(() => {
       else contents.openDevTools({ mode: 'detach' });
     },
   });
+  // Search engine from Settings (and kept in sync when it changes there).
+  setSearchEngine(SEARCH_ENGINES[persistence.settings.get('search.engine')].url);
+
+  lifecycle = new TabLifecycle(() => windowManager.all().map((c) => c.tabs), persistence.settings);
+  lifecycle.start();
+
+  // Daily database backup and archive trim, a few seconds after launch (never blocks startup).
+  const db = persistence;
+  setTimeout(() => {
+    try {
+      backupDatabase(db.db, join(app.getPath('userData'), 'backups'));
+      db.archive.prune();
+    } catch (error) {
+      console.error('[orbit] backup failed', error);
+    }
+  }, 5_000);
+
   windowManager.createMainWindow();
 });

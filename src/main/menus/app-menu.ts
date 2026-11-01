@@ -22,6 +22,8 @@ export type AppMenuActions = {
   newSpace: () => void;
   newFolder: () => void;
   importFromArc: () => void;
+  /** Debug: run the auto-archive and sleep passes now. */
+  runLifecycle: () => void;
   /** ⌃1…⌃9. */
   goToSpace: (n: number) => void;
   /** ⌘⌥← / ⌘⌥→. */
@@ -42,7 +44,27 @@ export type AppMenuActions = {
  */
 export function installAppMenu(actions: AppMenuActions): void {
   const template: MenuItemConstructorOptions[] = [
-    { role: 'appMenu' },
+    {
+      role: 'appMenu',
+      submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        {
+          id: 'settings',
+          label: 'Settings…',
+          accelerator: 'CmdOrCtrl+,',
+          click: () => actions.command('settings'),
+        },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' },
+      ],
+    },
     {
       label: 'File',
       submenu: [
@@ -191,6 +213,11 @@ export function installAppMenu(actions: AppMenuActions): void {
               ? []
               : ([
                   { label: 'Orbit Shell DevTools', role: 'toggleDevTools', accelerator: '' },
+                  {
+                    id: 'run-lifecycle',
+                    label: 'Archive & Sleep Now',
+                    click: actions.runLifecycle,
+                  },
                 ] satisfies MenuItemConstructorOptions[])),
           ],
         },
@@ -221,6 +248,22 @@ export function installAppMenu(actions: AppMenuActions): void {
           accelerator: `Ctrl+${i + 1}`,
           click: () => actions.goToSpace(i + 1),
         })),
+      ],
+    },
+    {
+      label: 'Archive',
+      submenu: [
+        {
+          id: 'archived-tabs',
+          label: 'Archived Tabs',
+          accelerator: 'Alt+CmdOrCtrl+A',
+          click: () => actions.command('archived-tabs'),
+        },
+        {
+          id: 'reopen-tab-archive',
+          label: 'Reopen Last Archived Tab',
+          click: () => actions.command('reopen-tab'),
+        },
       ],
     },
     {

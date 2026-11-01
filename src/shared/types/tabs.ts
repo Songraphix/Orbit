@@ -13,6 +13,8 @@ export const tabStateSchema = z.object({
   canGoForward: z.boolean(),
   /** `internal` = an Orbit page such as the new tab page. */
   kind: z.enum(['web', 'internal']),
+  /** The page's renderer process died; the shell shows a Reload card instead of the page. */
+  crashed: z.boolean(),
 });
 export type TabState = z.output<typeof tabStateSchema>;
 

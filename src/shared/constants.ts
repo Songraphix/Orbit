@@ -5,7 +5,7 @@ export const RENDERER_ENTRIES = ['shell', 'overlay', 'internal'] as const;
 export type RendererEntry = (typeof RENDERER_ENTRIES)[number];
 
 /** Internal pages served at orbit://<page> by the internal renderer. More arrive in Phase 4/9. */
-export const INTERNAL_PAGES = ['newtab'] as const;
+export const INTERNAL_PAGES = ['newtab', 'archive', 'settings'] as const;
 export type InternalPage = (typeof INTERNAL_PAGES)[number];
 
 export function isInternalPage(page: string): page is InternalPage {

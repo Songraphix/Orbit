@@ -3,6 +3,12 @@ import type { Layout } from '@shared/types/layout';
 import type { SidebarRow, SidebarSnapshot } from '@shared/types/space';
 import { NEW_TAB_URL } from '@shared/types/tabs';
 import type { TabState, TabsSnapshot } from '@shared/types/tabs';
+import type { TabFacts } from '../archive/policy';
+import type {
+  ArchiveEntry,
+  ArchiveReason,
+  ArchiveRepository,
+} from '../persistence/repositories/archive';
 import type { Space } from '../persistence/repositories/sidebar';
 import type { Section, SidebarItem } from '../sidebar/model';
 import type { SidebarStore } from '../sidebar/store';
@@ -12,8 +18,6 @@ import type { TabEnv } from './tab-controller';
 
 /** A pre-drag snapshot older than this is stale (the page may have changed). */
 const SNAPSHOT_MAX_AGE_MS = 10_000;
-/** How many closed tabs ⇧⌘T can bring back. */
-const CLOSED_TAB_MEMORY = 25;
 
 export type TabManagerDeps = Pick<
   TabEnv,
@@ -26,6 +30,7 @@ export type TabManagerDeps = Pick<
 > & {
   win: BrowserWindow;
   store: SidebarStore;
+  archive: ArchiveRepository;
   initialSpaceId: string;
   getLayout: () => Layout;
   /** Session for a profile (each profile has its own cookies and logins). */
@@ -36,9 +41,9 @@ export type TabManagerDeps = Pick<
   onHtmlFullscreen: (enter: boolean) => void;
   /** Find-in-page results from the active tab. */
   onFoundInPage: TabEnv['onFoundInPage'];
+  /** A tab's page stopped responding. */
+  onUnresponsive?: (tabId: string) => void;
 };
-
-type ClosedTab = { url: string; title: string; favicon: string | null; spaceId: string };
 
 const isInternal = (url: string | null) => (url ?? '').startsWith('orbit://');
 
@@ -54,7 +59,6 @@ export class TabManager {
   private notifyScheduled = false;
   private frozen = false;
   private prepared: { tabId: string; at: number; dataUrl: string } | null = null;
-  private readonly closed: ClosedTab[] = [];
   private readonly unsubscribe: () => void;
   /** Set once the window closes; late page events (pages unloading) are then ignored. */
   private disposed = false;
@@ -176,7 +180,7 @@ export class TabManager {
     this.activeId = id;
     this.frozen = false;
     this.place(next.view);
-    next.view.setVisible(true);
+    next.view.setVisible(!next.state.crashed);
     next.view.webContents.focus();
     this.deps.store.updateSpace(this.spaceId, { lastActiveItemId: id });
     this.deps.store.updateLive(id, { lastActiveAt: Date.now() });
@@ -187,7 +191,7 @@ export class TabManager {
    * Closing a Today tab removes it (⇧⌘T can bring it back). Closing a pinned tab or favorite
    * only unloads it and resets it to its home URL, like Arc.
    */
-  close(id: string): void {
+  close(id: string, reason: ArchiveReason = 'closed'): void {
     const item = this.deps.store.item(id);
     if (!item) return;
     const order = this.deps.store.tabsInOrder(this.space).map((i) => i.id);
@@ -196,8 +200,18 @@ export class TabManager {
 
     this.unload(id);
     if (item.section === 'today') {
-      const { url, title, favicon } = item;
-      if (url) this.remember({ url, title, favicon, spaceId: item.spaceId ?? this.spaceId });
+      const { url, title, favicon } = this.live.get(id)?.state ?? item;
+      // Into the archive (F-20); new tab pages aren't worth keeping.
+      if (url && !isInternal(url)) {
+        this.deps.archive.add({
+          spaceId: item.spaceId,
+          profileId: item.profileId,
+          url,
+          title: item.titleOverride || title,
+          favicon,
+          reason,
+        });
+      }
       this.deps.store.remove(id);
     } else if (item.homeUrl) {
       this.deps.store.updateLive(id, { url: item.homeUrl });
@@ -231,16 +245,47 @@ export class TabManager {
     this.activate(id);
   }
 
-  /** ⇧⌘T: reopens the most recently closed tab, at the top of Today in its space. */
+  /** ⇧⌘T: reopens the most recently archived tab, at the top of Today in its space. */
   reopenClosed(): TabController | null {
-    const last = this.closed.pop();
-    if (!last) return null;
-    if (this.deps.store.space(last.spaceId) && last.spaceId !== this.spaceId) {
-      this.setSpace(last.spaceId, false);
+    const entry = this.deps.archive.takeLatest();
+    return entry ? this.restoreEntry(entry) : null;
+  }
+
+  /** Restores a tab from the archive (Archived Tabs page). */
+  restoreFromArchive(archiveId: string): TabController | null {
+    const entry = this.deps.archive.get(archiveId);
+    if (!entry) return null;
+    this.deps.archive.remove(archiveId);
+    return this.restoreEntry(entry);
+  }
+
+  private restoreEntry(entry: ArchiveEntry): TabController {
+    if (entry.spaceId && this.deps.store.space(entry.spaceId) && entry.spaceId !== this.spaceId) {
+      this.setSpace(entry.spaceId, false);
     }
-    const tab = this.create(last.url);
-    this.deps.store.updateLive(tab.id, { title: last.title, favicon: last.favicon });
+    const tab = this.create(entry.url);
+    this.deps.store.updateLive(tab.id, { title: entry.title, favicon: entry.favicon });
     return tab;
+  }
+
+  /** What the archive and sleep policies need to know about this window's tabs. */
+  facts(): TabFacts[] {
+    return this.deps.store
+      .all()
+      .filter((i) => i.kind === 'tab')
+      .map((i) => {
+        const tab = this.live.get(i.id);
+        return {
+          id: i.id,
+          section: i.section,
+          lastActiveAt: i.lastActiveAt,
+          live: tab !== undefined,
+          isActive: i.id === this.activeId,
+          isAudible: tab
+            ? !tab.view.webContents.isDestroyed() && tab.view.webContents.isCurrentlyAudible()
+            : false,
+        };
+      });
   }
 
   /** Switches the window to another space, showing the tab it had open. */
@@ -344,11 +389,6 @@ export class TabManager {
     this.scheduleNotify();
   }
 
-  private remember(tab: ClosedTab): void {
-    this.closed.push(tab);
-    if (this.closed.length > CLOSED_TAB_MEMORY) this.closed.shift();
-  }
-
   private ensureLive(item: SidebarItem): TabController {
     const existing = this.live.get(item.id);
     if (existing) return existing;
@@ -367,9 +407,12 @@ export class TabManager {
           if (this.activeId === id) this.deps.onFoundInPage(result);
         },
         openInNewTab: (link, activate) => this.create(link, { activate }),
+        onUnresponsive: () => this.deps.onUnresponsive?.(id),
         onChange: () => {
           if (this.disposed) return;
-          const { url, title, favicon } = tab.state;
+          const { url, title, favicon, crashed } = tab.state;
+          // A crashed page is hidden so the shell's Reload card shows through.
+          if (this.activeId === id && !this.frozen) tab.view.setVisible(!crashed);
           this.deps.store.updateLive(id, { url, title, favicon });
           this.scheduleNotify();
         },
@@ -406,6 +449,7 @@ export class TabManager {
       canGoBack: false,
       canGoForward: false,
       kind: isInternal(url) ? 'internal' : 'web',
+      crashed: false,
     };
   }
 

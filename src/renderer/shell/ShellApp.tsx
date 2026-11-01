@@ -113,6 +113,25 @@ function Chrome({
             data-testid="resize-snapshot"
           />
         )}
+        {activeTab?.crashed && (
+          <div
+            className="flex h-full flex-col items-center justify-center gap-3 pb-9 text-sm text-neutral-500"
+            data-testid="crashed"
+          >
+            <span className="text-3xl">☁︎</span>
+            This page crashed.
+            <button
+              type="button"
+              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-white hover:brightness-110"
+              onClick={() =>
+                void window.orbit.invoke('tabs:navigate', { tabId: activeTab.id, action: 'reload' })
+              }
+              data-testid="crashed-reload"
+            >
+              Reload
+            </button>
+          </div>
+        )}
         {!hasActiveTab && (
           <div className="flex h-full items-center justify-center pb-9 text-sm text-neutral-400">
             No tab open — press ⌘T

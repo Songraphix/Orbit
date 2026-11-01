@@ -26,6 +26,8 @@ export type TabEnv = {
   history: HistorySink;
   /** Saved zoom level for a page's site (applied on every navigation). */
   zoomFor(url: string): number;
+  /** The page stopped responding (the window offers Wait / Reload). */
+  onUnresponsive?(): void;
   /** Find-in-page results from Chromium. */
   onFoundInPage(result: { requestId: number; activeMatchOrdinal: number; matches: number }): void;
 };
@@ -75,6 +77,7 @@ export class TabController {
       canGoBack: false,
       canGoForward: false,
       kind,
+      crashed: false,
     };
     this.view = this.createView(kind);
     this.pendingLoad = options.deferLoad ?? false;
@@ -115,6 +118,7 @@ export class TabController {
       favicon: null,
       canGoBack: false,
       canGoForward: false,
+      crashed: false,
     });
     this.loadIntoView(url);
   }
@@ -132,7 +136,10 @@ export class TabController {
   /** Reloads (or stops, if loading). `hard` bypasses the cache (⇧⌘R). */
   reload(hard = false): void {
     const contents = this.view.webContents;
-    if (this.stateValue.kind === 'internal') {
+    if (this.stateValue.crashed) {
+      this.update({ crashed: false });
+      contents.reload();
+    } else if (this.stateValue.kind === 'internal') {
       this.env.loadInternal(this.view, this.stateValue.url);
     } else if (hard) {
       contents.reloadIgnoringCache();
@@ -193,7 +200,12 @@ export class TabController {
     contents.on('enter-html-full-screen', () => this.env.onHtmlFullscreen(true));
     contents.on('leave-html-full-screen', () => this.env.onHtmlFullscreen(false));
 
-    contents.on('did-start-loading', () => this.update({ isLoading: true }));
+    contents.on('did-start-loading', () => this.update({ isLoading: true, crashed: false }));
+    // Crash recovery (F-31): show a Reload card rather than a dead page.
+    contents.on('render-process-gone', (_e, details) => {
+      if (details.reason !== 'clean-exit') this.update({ crashed: true, isLoading: false });
+    });
+    contents.on('unresponsive', () => this.env.onUnresponsive?.());
     contents.on('did-stop-loading', () => this.update({ isLoading: false, ...this.navState() }));
     contents.on('did-navigate', () => {
       const url = contents.getURL();
