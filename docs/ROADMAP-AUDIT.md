@@ -57,3 +57,20 @@ Data safety: migrations only add nullable columns; the database is backed up dai
   restart, on production and development builds. Next: Phase 2 (Capture, research collections,
   universal search, Focus mode, saved split layouts, workspace templates), after the owner has
   used Phase 1.
+
+## Phase 2 audit and plan — "Connect the workflow"
+
+Acceptance (roadmap §5): _research a subject, save useful findings to a project, turn a finding
+into a task, and resume the work from a saved workspace._
+
+| Phase 2 item                                  | Status              | Evidence                                                                                            | Plan                                                                                                                                    |
+| --------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Orbit Capture (URLs, text, screenshots, code) | **Build** (reuse)   | Area screenshots exist (Site Controls, Easels) via `CaptureRequests`; the page menu has no "save"   | P2.1: one Capture card in the overlay, fed by ⇧⌘S, the page's right-click menu and the command bar; reuses the area screenshot          |
+| Project-linked research collections           | **Build**           | Nothing stores findings                                                                             | P2.1: captures belong to a project (or Unsorted); a Research section on the project page, a Research view; **Make Task** from a finding |
+| Universal search                              | **Improve**         | ⌘T finds this Space's tabs, history, projects, tasks, notes (P1.3)                                  | P2.2: tabs in every Space, captures, archived tabs                                                                                      |
+| Focus mode                                    | **Build** (minimal) | —                                                                                                   | P2.3: focus on a task: its workspace, sidebar out of the way, a timer pill with Done/End; survives a restart                            |
+| Split Screen saved layouts / tab-to-pane      | **Improve**         | "Open in Split View" exists; a split ends when another tab is opened and isn't kept across restarts | P2.4: each Space keeps its split; going back to either tab brings it back; kept across restarts; ⌥⏎ in ⌘T opens a result in split       |
+| Pinned web apps and quick launch              | **Keep**            | Favorites, pinned tabs, new tab shortcuts, Little Orbit, ⌘T                                         | Nothing to build                                                                                                                        |
+| Reusable workspace templates                  | **Build**           | —                                                                                                   | P2.5: save a Space's tabs as a template; new Spaces (and project workspaces) from it; manage in Settings                                |
+
+- 2026-11-01 — **P2.1 done**: Orbit Capture and project research (`capture.spec.ts`).

@@ -13,6 +13,7 @@ import m011 from './011-profile-look.sql?raw';
 import m012 from './012-home.sql?raw';
 import m013 from './013-work.sql?raw';
 import m014 from './014-links.sql?raw';
+import m015 from './015-captures.sql?raw';
 
 /** Ordered list of schema migrations. Append only — never edit or reorder a shipped entry. */
 export const migrations: readonly Migration[] = [
@@ -30,4 +31,5 @@ export const migrations: readonly Migration[] = [
   { version: 12, name: 'home', sql: m012 },
   { version: 13, name: 'work', sql: m013 },
   { version: 14, name: 'links', sql: m014 },
+  { version: 15, name: 'captures', sql: m015 },
 ];

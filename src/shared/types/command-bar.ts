@@ -97,6 +97,8 @@ export const overlayStateSchema = z.object({
     .nullable(),
   /** The profile menu (owner request), under the toolbar's avatar at `anchor`. */
   profileMenu: z.object({ anchor: rectSchema, openedAt: z.number() }).nullable(),
+  /** Orbit Capture (roadmap P2.1): the card that saves a finding to a project. */
+  captureCard: z.object({ openedAt: z.number() }).nullable(),
   /** A quick note (F-33): a glass card over the page; it writes into note `id`. */
   quickNote: z.object({ id: z.string(), openedAt: z.number() }).nullable(),
   /** The sidebar's + popover (Img 2), above the button at `anchor`. */

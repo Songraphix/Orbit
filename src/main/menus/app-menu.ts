@@ -91,6 +91,12 @@ export function installAppMenu(actions: AppMenuActions): void {
           accelerator: 'Ctrl+Shift+E',
           click: () => actions.command('new-easel'),
         },
+        {
+          id: 'capture',
+          label: 'Save to Orbit…',
+          accelerator: 'Shift+CmdOrCtrl+S',
+          click: () => actions.command('capture'),
+        },
         { id: 'new-note', label: 'New Note', click: () => actions.command('new-note') },
         {
           id: 'quick-note',

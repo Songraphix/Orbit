@@ -35,6 +35,7 @@ import {
 } from './parts';
 import type { MenuItem } from './parts';
 import { TaskRow } from './TaskRow';
+import { ProjectResearch, UnsortedResearch } from './research';
 
 const invoke = window.orbit.invoke;
 
@@ -161,6 +162,7 @@ export function ProjectsView() {
           ]}
         />
       </div>
+      <UnsortedResearch />
       <ul className="flex flex-col gap-2 px-3" data-testid="project-list">
         {shown.map((project) => {
           const progress = projectProgress(project.id, tasks);
@@ -391,6 +393,7 @@ export function ProjectDetail({ id }: { id: string }) {
           }}
         />
       )}
+      <ProjectResearch projectId={project.id} />
       <ProjectNotes
         projectId={project.id}
         notes={work.data.notes.filter((n) => n.projectId === project.id)}

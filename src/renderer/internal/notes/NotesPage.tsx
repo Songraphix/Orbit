@@ -24,6 +24,7 @@ import { BoardView } from '../work/BoardView';
 import { ProjectDetail, ProjectsView } from '../work/ProjectsView';
 import { QuickActions } from '../work/QuickActions';
 import { TasksView } from '../work/TasksView';
+import { ResearchView } from '../work/research';
 import { WorkProvider } from '../work/WorkProvider';
 import { saveOpenNotes } from '../../notes/save-notes';
 import { useAppearance } from '../appearance';
@@ -125,7 +126,11 @@ export function NotesPanelPage() {
   const hash = useSyncExternalStore(subscribe, panelRoute);
   const [a = '', b = ''] = hash.split('/').slice(3);
   const tab: PanelTab =
-    a === 'projects' || a === 'board' ? 'projects' : a === 'tasks' ? 'tasks' : 'notes';
+    a === 'projects' || a === 'board' || a === 'research'
+      ? 'projects'
+      : a === 'tasks'
+        ? 'tasks'
+        : 'notes';
   // The board's Back returns to whichever list opened it.
   const lastList = useRef<PanelTab>('projects');
   useEffect(() => {
@@ -142,6 +147,7 @@ export function NotesPanelPage() {
   let body: ReactNode;
   if (a === 'projects') body = b ? <ProjectDetail key={b} id={b} /> : <ProjectsView />;
   else if (a === 'tasks') body = <TasksView />;
+  else if (a === 'research') body = <ResearchView filter={b} />;
   else if (a === 'board') body = <BoardView onBack={() => showPanelView(lastList.current)} />;
   else body = a ? <PanelNote key={a} id={a} /> : <NotesList />;
   // Lists get the Quick Actions at their foot; a note, a project's page and the board don't.
@@ -154,7 +160,7 @@ export function NotesPanelPage() {
     >
       <WorkProvider>
         <PanelTabs current={tab} />
-        {a === '' || (a !== 'projects' && a !== 'tasks' && a !== 'board') ? (
+        {a === '' || !['projects', 'tasks', 'board', 'research'].includes(a) ? (
           body
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto" data-testid="panel-body">

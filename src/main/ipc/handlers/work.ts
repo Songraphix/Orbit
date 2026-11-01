@@ -1,6 +1,7 @@
-import { dialog } from 'electron';
+import { clipboard, ClipboardItem, dialog, nativeImage } from 'electron';
 import type { IpcRouter } from '../router';
 import type { WorkData } from '@shared/work';
+import type { CaptureRepository } from '../../persistence/repositories/captures';
 import type { NotesRepository } from '../../persistence/repositories/notes';
 import type { WorkRepository } from '../../persistence/repositories/work';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
@@ -14,6 +15,7 @@ export function registerWorkHandlers(
   windows: WindowManager,
   work: WorkRepository,
   notes: NotesRepository,
+  captures: CaptureRepository,
 ): void {
   const panelOf = (webContentsId: number) => {
     const window = windows.notesPanelFor(webContentsId);
@@ -22,7 +24,7 @@ export function registerWorkHandlers(
   };
 
   /** Everything the panel shows: projects (a deleted Space reads as none), tasks, the Spaces
-   *  a project can use, and notes that belong to projects. */
+   *  a project can use, research (findings) and notes that belong to projects. */
   const everything = (window: WindowController): WorkData => {
     const spaces = window.store.spaces.map(({ id, name, icon }) => ({ id, name, icon }));
     const known = new Set(spaces.map((s) => s.id));
@@ -33,6 +35,7 @@ export function registerWorkHandlers(
       ),
       tasks,
       spaces,
+      captures: captures.list(),
       notes: notes.linked(),
     };
   };
@@ -87,6 +90,9 @@ export function registerWorkHandlers(
     const notesLine = notes.linked().some((n) => n.projectId === id)
       ? ' Its notes stay in Notes.'
       : '';
+    const researchLine = captures.list().some((c) => c.projectId === id)
+      ? ' Its research moves to Unsorted.'
+      : '';
     const { response } = await dialog.showMessageBox(window.win, {
       type: 'warning',
       message: `Delete “${project.name}”?`,
@@ -96,6 +102,7 @@ export function registerWorkHandlers(
           : `It has ${tasks === 1 ? '1 task' : `${tasks} tasks`}. Delete them with the project, ` +
             'or keep them in Tasks without a project. This can’t be undone.') +
         notesLine +
+        researchLine +
         (project.spaceId ? ' Its Space and tabs are kept.' : ''),
       buttons:
         tasks === 0 ? ['Delete', 'Cancel'] : ['Delete Project and Tasks', 'Keep Tasks', 'Cancel'],
@@ -104,14 +111,21 @@ export function registerWorkHandlers(
     });
     const cancel = tasks === 0 ? 1 : 2;
     if (response === cancel) return { deleted: false, data: everything(window) };
+    // Tasks deleted with it free the findings they were made from.
+    if (response === 0) {
+      for (const t of work.all().tasks) if (t.projectId === id) captures.unlinkTask(t.id);
+    }
     work.deleteProject(id, response === 1);
     notes.unlinkProject(id);
+    captures.unlinkProject(id);
     return { deleted: true, data: everything(window) };
   });
 
-  router.handle('work:saveTask', (input, { sender }) => {
+  router.handle('work:saveTask', ({ captureId, ...input }, { sender }) => {
     const window = panelOf(sender.webContentsId);
     const id = work.saveTask(input);
+    // Made from a finding (Research → Make Task): link them.
+    if (captureId && captures.get(captureId)) captures.linkTask(captureId, id);
     return { id, data: everything(window) };
   });
 
@@ -135,7 +149,51 @@ export function registerWorkHandlers(
     });
     if (response !== 0) return { deleted: false, data: everything(window) };
     work.deleteTask(id);
+    captures.unlinkTask(id);
     return { deleted: true, data: everything(window) };
+  });
+
+  // Research (roadmap P2.1): findings saved with Orbit Capture.
+  router.handle('research:image', ({ id, size }, { sender }) => {
+    panelOf(sender.webContentsId);
+    return { image: captures.image(id, size) };
+  });
+
+  router.handle('research:move', ({ id, projectId }, { sender }) => {
+    const window = panelOf(sender.webContentsId);
+    captures.setProject(id, projectId && work.project(projectId) ? projectId : null);
+    return everything(window);
+  });
+
+  router.handle('research:delete', async ({ id }, { sender }) => {
+    const window = panelOf(sender.webContentsId);
+    const capture = captures.get(id);
+    if (!capture) return { deleted: false, data: everything(window) };
+    const { response } = await dialog.showMessageBox(window.win, {
+      type: 'warning',
+      message: 'Delete this finding?',
+      detail: (capture.taskId ? 'The task made from it stays. ' : '') + 'This can’t be undone.',
+      buttons: ['Delete', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    if (response !== 0) return { deleted: false, data: everything(window) };
+    captures.delete(id);
+    return { deleted: true, data: everything(window) };
+  });
+
+  router.handle('research:copy', async ({ id }, { sender }) => {
+    panelOf(sender.webContentsId);
+    const capture = captures.get(id);
+    if (!capture) return;
+    const image = capture.hasImage ? captures.image(id, 'full') : null;
+    if (image) {
+      const bytes = nativeImage.createFromDataURL(image).toPNG();
+      const png = new Blob([new Uint8Array(bytes)], { type: 'image/png' });
+      await clipboard.write([new ClipboardItem({ 'image/png': png })]);
+    } else {
+      clipboard.writeText(capture.text || capture.url);
+    }
   });
 
   router.handle('work:panelWide', ({ wide }, { sender }) => {

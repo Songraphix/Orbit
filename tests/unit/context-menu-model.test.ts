@@ -32,6 +32,8 @@ describe('buildContextMenu', () => {
       '(Forward)',
       'Reload',
       '---',
+      'Save Page to Orbit…',
+      '---',
       'Inspect Element',
     ]);
   });
@@ -40,6 +42,7 @@ describe('buildContextMenu', () => {
     expect(labels(buildContextMenu(params({ linkURL: 'https://a.com' }), page))).toEqual([
       'Open Link in New Tab',
       'Copy Link Address',
+      'Save Link to Orbit…',
       '---',
       'Inspect Element',
     ]);
@@ -60,11 +63,13 @@ describe('buildContextMenu', () => {
     expect(items).toEqual([
       'Open Link in New Tab',
       'Copy Link Address',
+      'Save Link to Orbit…',
       '---',
       'Open Image in New Tab',
       'Save Image As…',
       'Copy Image',
       'Copy Image Address',
+      'Save Image to Orbit…',
       '---',
       'Inspect Element',
     ]);
@@ -74,6 +79,7 @@ describe('buildContextMenu', () => {
     expect(labels(buildContextMenu(params({ selectionText: '  hello  world ' }), page))).toEqual([
       'Copy',
       'Search Google for “hello world”',
+      'Save Selection to Orbit…',
       '---',
       'Inspect Element',
     ]);

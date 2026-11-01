@@ -74,6 +74,14 @@ export class NotesPanelController {
     this.save();
   }
 
+  /** Something changed elsewhere (a capture saved…): the panel's page reloads its data. */
+  refresh(): void {
+    if (!this.view || this.view.webContents.isDestroyed()) return;
+    void this.view.webContents
+      .executeJavaScript(`window.dispatchEvent(new Event('orbit-work-changed'))`)
+      .catch(() => undefined);
+  }
+
   /** The page moved (a tab, a project, a note): remember it for the next launch. */
   setRoute(route: string): void {
     this.route = route;

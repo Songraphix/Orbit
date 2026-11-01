@@ -20,6 +20,7 @@ import { PeekController } from '../peek/controller';
 import { LibraryController } from '../library/controller';
 import { NotesPanelController } from '../notes/panel';
 import { notesHash } from '../notes/model';
+import type { PageCaptureRequest } from '../tabs/context-menu';
 import { shouldPeek } from '../peek/policy';
 import { LayoutEngine } from './layout-engine';
 import { OverlayController } from './overlay';
@@ -53,6 +54,8 @@ export type WindowManagerDeps = {
   loadOverlay: (view: WebContentsView) => void;
   /** Runs an app command for a window (the sidebar's + menu). */
   runCommand?: (controller: WindowController, id: string) => void;
+  /** Orbit Capture from a page's right-click menu (roadmap P2.1). */
+  capture?: (controller: WindowController, tabId: string, request: PageCaptureRequest) => void;
   /** Tidy's state per space (F-29), shown in the space header. */
   tidyState?: TabManagerDeps['tidyState'];
   /** Live Folders (F-28), for the space and folder menus. */
@@ -209,6 +212,7 @@ export class WindowManager {
       onFoundInPage: (result) => find.onResult(result),
       onMedia: (tabId, event) => media?.onMedia(tabId, event),
       // A frozen page: offer to wait or reload (F-31).
+      onCapture: (tabId, request) => this.deps.capture?.(controller, tabId, request),
       onUnresponsive: (tabId) => {
         void dialog
           .showMessageBox(win, {

@@ -64,6 +64,10 @@ describe('notesHash', () => {
     expect(notesHash('panel/board')).toBe('/notes/panel/board');
     expect(notesHash('panel/tasks/x')).toBe('/not-found');
     expect(notesHash('panel/projects/../x')).toBe('/not-found');
+    expect(notesHash('panel/research')).toBe('/notes/panel/research');
+    expect(notesHash('panel/research/unsorted')).toBe('/notes/panel/research/unsorted');
+    expect(notesHash(`panel/research/${id}`)).toBe(`/notes/panel/research/${id}`);
+    expect(notesHash('panel/research/x')).toBe('/not-found');
   });
 });
 

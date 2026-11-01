@@ -51,6 +51,8 @@ export const settingsSchema = {
     .max(50),
   /** The productivity panel: open or not, and where (`panel/projects/<id>`…), for a restart. */
   'panel.state': z.object({ open: z.boolean(), route: z.string().max(120) }),
+  /** Orbit Capture's last project, the default next time (null = Unsorted). */
+  'capture.lastProject': z.string().nullable(),
   /** Search engine URL with %s for the query. */
   'search.engine': z.enum(['google', 'duckduckgo', 'bing', 'kagi', 'ecosia']),
 } as const;
@@ -75,6 +77,7 @@ export const settingsDefaults: Settings = {
   'little.globalShortcut': true,
   'notes.floating': [],
   'panel.state': { open: false, route: 'panel' },
+  'capture.lastProject': null,
 };
 
 /** Query URL templates for `search.engine`. */

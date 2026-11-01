@@ -39,6 +39,11 @@ export type ContextAction =
   | 'search-selection'
   | 'add-to-dictionary'
   | 'inspect'
+  // Orbit Capture (roadmap P2.1): save what's under the pointer to a project.
+  | 'capture-page'
+  | 'capture-selection'
+  | 'capture-link'
+  | 'capture-image'
   | `spell:${string}`;
 
 export type ContextItem =
@@ -91,6 +96,7 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
     groups.push([
       item('open-link', 'Open Link in New Tab'),
       item('copy-link', 'Copy Link Address'),
+      item('capture-link', 'Save Link to Orbit…'),
     ]);
   }
 
@@ -100,12 +106,17 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
       item('save-image', 'Save Image As…'),
       item('copy-image', 'Copy Image'),
       item('copy-image-url', 'Copy Image Address'),
+      item('capture-image', 'Save Image to Orbit…', isWeb(params.srcURL)),
     ]);
   }
 
   const selection = params.selectionText.trim();
   if (selection && !params.isEditable) {
-    groups.push([item('copy', 'Copy'), item('search-selection', searchLabel(selection))]);
+    groups.push([
+      item('copy', 'Copy'),
+      item('search-selection', searchLabel(selection)),
+      item('capture-selection', 'Save Selection to Orbit…'),
+    ]);
   }
 
   // Nothing specific under the pointer: page navigation, like Chrome.
@@ -115,6 +126,7 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
       item('forward', 'Forward', page.canGoForward),
       item('reload', 'Reload'),
     ]);
+    groups.push([item('capture-page', 'Save Page to Orbit…')]);
   }
 
   groups.push([item('inspect', 'Inspect Element')]);

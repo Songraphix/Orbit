@@ -1,8 +1,16 @@
 import { createContext, useContext } from 'react';
+import type { Capture } from '@shared/capture';
 import type { Project, Task, WorkData } from '@shared/work';
 
-/** What a task form starts from: a task to edit, or a new one (perhaps in a project). */
-export type TaskDraft = { task: Task } | { projectId: string | null };
+/** What a task form starts from: a task to edit, or a new one (perhaps in a project, perhaps
+ *  made from a finding — then it starts filled in, and they're linked). */
+export type TaskDraft =
+  | { task: Task }
+  | {
+      projectId: string | null;
+      prefill?: { title: string; description: string };
+      captureId?: string;
+    };
 
 export type Work = {
   data: WorkData | null;
@@ -13,6 +21,8 @@ export type Work = {
   flash: (message: string) => void;
   editProject: (project?: Project) => void;
   editTask: (draft: TaskDraft) => void;
+  /** A finding's own sheet: all of it, its source, its project, its actions. */
+  openCapture: (capture: Capture) => void;
 };
 
 export const WorkContext = createContext<Work | null>(null);
@@ -35,4 +45,7 @@ export const showProject = (id: string | null) => {
 };
 export const showPanelView = (view: 'notes' | 'projects' | 'tasks' | 'board') => {
   window.location.hash = view === 'notes' ? '#/notes/panel' : `#/notes/panel/${view}`;
+};
+export const showResearch = (filter: string) => {
+  window.location.hash = filter ? `#/notes/panel/research/${filter}` : '#/notes/panel/research';
 };

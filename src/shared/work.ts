@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { captureSchema } from './capture';
 
 /**
  * Projects and tasks (owner request, "Browser Project Management"): the data the productivity
@@ -86,6 +87,8 @@ export const workDataSchema = z.object({
   tasks: z.array(taskSchema),
   /** Spaces a project can use as its workspace. */
   spaces: z.array(z.object({ id: z.string(), name: z.string(), icon: z.string() })),
+  /** Findings saved with Orbit Capture (research), newest first. */
+  captures: z.array(captureSchema),
   /** Notes that belong to a project. */
   notes: z.array(
     z.object({ id: z.string(), title: z.string(), projectId: z.string(), updatedAt: z.number() }),
@@ -118,6 +121,8 @@ export const taskInputSchema = z
     priority: z.enum(PRIORITIES),
     status: z.enum(TASK_STATUSES),
     dueDate: dateKeySchema.nullable(),
+    /** Made from this finding (Research → Make Task): they're linked. */
+    captureId: z.string().max(64).optional(),
   })
   .strict();
 export type TaskInput = z.output<typeof taskInputSchema>;

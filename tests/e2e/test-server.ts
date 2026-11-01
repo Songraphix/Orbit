@@ -46,6 +46,12 @@ const ROUTES: Record<string, string> = {
      </script>`,
   ),
   '/words': page('Words', '<p>orbit one, orbit two, orbit three. Arc.</p>'),
+  // Orbit Capture: a quote and a code block to select.
+  '/research': page(
+    'Layout Basics',
+    '<p id="quote">Grids give rhythm. Use an 8 pt baseline.</p>' +
+      '<pre><code id="code" class="language-ts">const grid = 8;</code></pre>',
+  ),
   // Mimics a video player's fullscreen button.
   '/video': page(
     'Video',

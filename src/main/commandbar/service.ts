@@ -53,6 +53,12 @@ export const COMMANDS: readonly CommandDef[] = [
     shortcut: '⌃⇧E',
   },
   {
+    id: 'capture',
+    title: 'Save to Orbit…',
+    keywords: ['capture', 'clip', 'research', 'save', 'snippet', 'screenshot', 'bookmark'],
+    shortcut: '⇧⌘S',
+  },
+  {
     id: 'quick-note',
     title: 'Quick Note',
     keywords: ['notes', 'write', 'jot', 'memo', 'scratch'],

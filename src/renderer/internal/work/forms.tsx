@@ -20,7 +20,12 @@ const invoke = window.orbit.invoke;
 const NEW_SPACE = '__new__';
 
 /** A form sliding up over the panel; Esc or a click on the dim area cancels. */
-function Sheet(props: { title: string; onClose: () => void; children: ReactNode; testId: string }) {
+export function Sheet(props: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  testId: string;
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && props.onClose();
     window.addEventListener('keydown', onKey);
@@ -289,8 +294,10 @@ export function ProjectForm({ project, onClose }: { project?: Project; onClose: 
 export function TaskForm({ draft, onClose }: { draft: TaskDraft; onClose: () => void }) {
   const { data, set, run, flash } = useWork();
   const task = 'task' in draft ? draft.task : null;
-  const [title, setTitle] = useState(task?.title ?? '');
-  const [description, setDescription] = useState(task?.description ?? '');
+  const prefill = 'task' in draft ? undefined : draft.prefill;
+  const captureId = 'task' in draft ? undefined : draft.captureId;
+  const [title, setTitle] = useState(task?.title ?? prefill?.title ?? '');
+  const [description, setDescription] = useState(task?.description ?? prefill?.description ?? '');
   const [projectId, setProjectId] = useState<string>(
     task ? (task.projectId ?? '') : 'projectId' in draft ? (draft.projectId ?? '') : '',
   );
@@ -312,6 +319,7 @@ export function TaskForm({ draft, onClose }: { draft: TaskDraft; onClose: () => 
     const result = await run(
       invoke('work:saveTask', {
         ...(task ? { id: task.id } : {}),
+        ...(captureId ? { captureId } : {}),
         projectId: projectId || null,
         title,
         description,

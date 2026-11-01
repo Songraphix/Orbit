@@ -5,6 +5,13 @@ import { searchUrl } from '../omnibox/classify';
 import { buildContextMenu } from './context-menu-model';
 import type { ContextAction } from './context-menu-model';
 
+/** What the page's menu asked Orbit Capture to save (roadmap P2.1). */
+export type PageCaptureRequest =
+  | { kind: 'page' }
+  | { kind: 'selection'; text: string }
+  | { kind: 'link'; url: string; text: string }
+  | { kind: 'image'; src: string };
+
 /**
  * Electron shows no right-click menu in web pages; this builds Chrome's essentials (F-31).
  * `openInTab(url, activate)` opens links/images/searches as Orbit tabs.
@@ -12,6 +19,7 @@ import type { ContextAction } from './context-menu-model';
 export function attachContextMenu(
   contents: WebContents,
   openInTab: (url: string, activate: boolean) => void,
+  capture?: (request: PageCaptureRequest) => void,
 ): void {
   contents.on('context-menu', (_event, params) => {
     const history = contents.navigationHistory;
@@ -60,6 +68,14 @@ export function attachContextMenu(
           return openInTab(searchUrl(params.selectionText.trim()), true);
         case 'add-to-dictionary':
           return contents.session.addWordToSpellCheckerDictionary(params.misspelledWord);
+        case 'capture-page':
+          return capture?.({ kind: 'page' });
+        case 'capture-selection':
+          return capture?.({ kind: 'selection', text: params.selectionText });
+        case 'capture-link':
+          return capture?.({ kind: 'link', url: params.linkURL, text: params.linkText });
+        case 'capture-image':
+          return capture?.({ kind: 'image', src: params.srcURL });
         case 'inspect':
           contents.inspectElement(params.x, params.y);
           if (contents.isDevToolsOpened()) contents.devToolsWebContents?.focus();

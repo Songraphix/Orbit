@@ -34,6 +34,7 @@ import { sidebarSnapshotSchema, spaceThemeSchema } from '../types/space';
 import { userSettingsSchema } from '../settings';
 import { profilePatchSchema, profileViewSchema } from '../profile';
 import { homeSettingsSchema } from '../types/home';
+import { CAPTURE_LIMITS, captureDraftSchema } from '../capture';
 import {
   PROJECT_STATUSES,
   TASK_STATUSES,
@@ -949,6 +950,65 @@ export const contract = {
   /** The Project Board widens the panel while it shows. */
   'work:panelWide': {
     input: z.object({ wide: z.boolean() }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+
+  // Orbit Capture (roadmap P2.1). The card lives in the overlay; ⇧⌘S, the page's right-click
+  // menu and the command bar open it (main reads the page — never the other way round).
+  'capture:draft': {
+    input: z.object({}).strict(),
+    output: captureDraftSchema.nullable(),
+    surfaces: ['overlay'],
+  },
+  /** The card's chips: the page/link, or the selection. */
+  'capture:kind': {
+    input: z.object({ kind: z.enum(['link', 'text']) }).strict(),
+    output: captureDraftSchema.nullable(),
+    surfaces: ['overlay'],
+  },
+  /** Area screenshot: the card steps aside, then comes back with it. */
+  'capture:screenshot': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'capture:save': {
+    input: z
+      .object({
+        projectId: z.string().max(64).nullable(),
+        comment: z.string().max(CAPTURE_LIMITS.comment),
+        makeTask: z.boolean(),
+      })
+      .strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'capture:close': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  // A project's research, in the productivity panel.
+  'research:image': {
+    input: z.object({ id: z.string().max(64), size: z.enum(['thumb', 'full']) }).strict(),
+    output: z.object({ image: z.string().nullable() }),
+    surfaces: ['internal'],
+  },
+  'research:move': {
+    input: z.object({ id: z.string().max(64), projectId: z.string().max(64).nullable() }).strict(),
+    output: workDataSchema,
+    surfaces: ['internal'],
+  },
+  /** Asks first. */
+  'research:delete': {
+    input: z.object({ id: z.string().max(64) }).strict(),
+    output: z.object({ deleted: z.boolean(), data: workDataSchema }),
+    surfaces: ['internal'],
+  },
+  /** The quote, snippet, link or screenshot onto the clipboard. */
+  'research:copy': {
+    input: z.object({ id: z.string().max(64) }).strict(),
     output: z.void(),
     surfaces: ['internal'],
   },

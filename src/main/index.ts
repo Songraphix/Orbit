@@ -68,6 +68,8 @@ import { notesHash } from './notes/model';
 import { enableQuietMode } from './app/quiet';
 import { registerProfileHandlers } from './ipc/handlers/profiles';
 import { registerWorkHandlers } from './ipc/handlers/work';
+import { registerCaptureHandlers } from './ipc/handlers/capture';
+import { CaptureService } from './capture/service';
 import { FloatingNotes } from './notes/floating';
 import { newNoteTab, noteUrl, registerNotesHandlers, toggleQuickNote } from './ipc/handlers/notes';
 import { noteIdSchema } from '@shared/types/notes';
@@ -116,6 +118,7 @@ process.on('uncaughtException', (error) => console.error('[orbit] uncaught excep
 process.on('unhandledRejection', (reason) => console.error('[orbit] unhandled rejection', reason));
 let windows: WindowManager | null = null;
 let floatingNotes: FloatingNotes | null = null;
+let captureService: CaptureService | null = null;
 
 function loadRenderer(win: BrowserWindow, entry: RendererEntry, query?: string): void {
   if (devServer) void win.loadURL(`${devServer}/${entry}/index.html${query ? `?${query}` : ''}`);
@@ -365,6 +368,9 @@ function runCommand(controller: WindowController, commandId: string): void {
       applyTabLayout(next);
       return;
     }
+    case 'capture':
+      void captureService?.begin(controller, controller.tabs.active, null);
+      return;
     case 'toggle-notes':
       controller.notes.toggle();
       return;
@@ -527,6 +533,15 @@ void app.whenReady().then(() => {
   );
   downloadService = downloads;
   const captures = new CaptureRequests();
+  captureService = new CaptureService({
+    captures: persistence.captures,
+    work: persistence.work,
+    settings: persistence.settings,
+    requests: captures,
+    toast,
+    changed: (controller) => controller.notes.refresh(),
+  });
+  const captureFlow = captureService;
   const media = new MediaLibrary(join(app.getPath('userData'), 'Captures'), downloads);
 
   // Site permissions: ask in the window's overlay, remember per site (F-31).
@@ -590,6 +605,8 @@ void app.whenReady().then(() => {
     loadInternal,
     loadOverlay,
     runCommand,
+    capture: (controller, tabId, request) =>
+      void captureService?.begin(controller, controller.tabs.get(tabId), request),
     tidyState: (spaceId) => tidy.state(spaceId),
     liveFolders: {
       add: (controller, kind, spaceId) => void addLiveFolder(controller, kind, spaceId),
@@ -733,7 +750,14 @@ void app.whenReady().then(() => {
   floatingNotes = floating;
   registerNotesHandlers(router, windowManager, { notes: notesRepo, floating });
   registerProfileHandlers(router, windowManager, { runCommand });
-  registerWorkHandlers(router, windowManager, persistence.work, persistence.notes);
+  registerWorkHandlers(
+    router,
+    windowManager,
+    persistence.work,
+    persistence.notes,
+    persistence.captures,
+  );
+  registerCaptureHandlers(router, windowManager, captureFlow);
   registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
   router.handle('tabs:copyUrl', (_input, { sender }) => {

@@ -44,6 +44,7 @@ export class OverlayController {
   private createMenu: OverlayState['createMenu'] = null;
   private quickNote: OverlayState['quickNote'] = null;
   private profileMenu: OverlayState['profileMenu'] = null;
+  private captureCard: OverlayState['captureCard'] = null;
   private flight: OverlayState['flight'] = null;
   private flightTimer: ReturnType<typeof setTimeout> | null = null;
   private backdrop: OverlayState['backdrop'] = null;
@@ -83,6 +84,7 @@ export class OverlayController {
       createMenu: this.createMenu,
       quickNote: this.quickNote,
       profileMenu: this.profileMenu,
+      captureCard: this.captureCard,
       flight: this.flight,
       backdrop: this.backdrop,
     };
@@ -98,6 +100,7 @@ export class OverlayController {
       this.createMenu !== null ||
       this.quickNote !== null ||
       this.profileMenu !== null ||
+      this.captureCard !== null ||
       this.flight !== null ||
       this.sidebarPeek !== null
     );
@@ -119,8 +122,29 @@ export class OverlayController {
       this.createMenu !== null ||
       this.quickNote !== null ||
       this.profileMenu !== null ||
+      this.captureCard !== null ||
       this.flight !== null
     );
+  }
+
+  get captureCardOpen(): boolean {
+    return this.captureCard !== null;
+  }
+
+  /** The Capture card (roadmap P2.1); reopening it (after a screenshot) shows the new draft. */
+  openCaptureCard(): void {
+    this.siteControls = null;
+    this.createMenu = null;
+    this.profileMenu = null;
+    this.commandBar = null;
+    this.captureCard = { openedAt: Date.now() };
+    this.show();
+  }
+
+  closeCaptureCard(): void {
+    if (!this.captureCard) return;
+    this.captureCard = null;
+    this.sync();
   }
 
   /** The profile menu under the toolbar's avatar; the avatar toggles it. */

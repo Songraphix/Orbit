@@ -19,6 +19,7 @@ import { TabController } from './tab-controller';
 import type { TabEnv } from './tab-controller';
 import { randomUUID } from 'node:crypto';
 import { profileView } from '../sidebar/profiles';
+import type { PageCaptureRequest } from './context-menu';
 
 /** A pre-drag snapshot older than this is stale (the page may have changed). */
 const SNAPSHOT_MAX_AGE_MS = 10_000;
@@ -47,6 +48,8 @@ export type TabManagerDeps = Pick<
   onFoundInPage: TabEnv['onFoundInPage'];
   /** A tab's page stopped responding. */
   onUnresponsive?: (tabId: string) => void;
+  /** "Save … to Orbit" from a page's right-click menu. */
+  onCapture?: (tabId: string, request: PageCaptureRequest) => void;
   /** A tab's media started or stopped. */
   onMedia?: (tabId: string, event: 'playing' | 'paused') => void;
   /** Chrome extensions see web tabs as tabs (chrome.tabs.*). */
@@ -598,6 +601,7 @@ export class TabManager {
       },
       openInNewTab: (link, activate) => this.openLink(id, link, activate),
       onUnresponsive: () => this.deps.onUnresponsive?.(id),
+      onCapture: (request) => this.deps.onCapture?.(id, request),
       onMedia: (event) => this.deps.onMedia?.(id, event),
       onChange: () => {
         const tab = this.live.get(id);
