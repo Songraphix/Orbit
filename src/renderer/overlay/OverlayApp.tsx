@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import type { OverlayState } from '@shared/types/command-bar';
 import { CommandBar } from './CommandBar';
 import { PeekFrame } from './PeekFrame';
@@ -9,6 +9,9 @@ import { FloatingSidebar } from './FloatingSidebar';
 import { CreateMenu } from './CreateMenu';
 import { DownloadFlight } from './DownloadFlight';
 import { BackdropContext } from './backdrop';
+
+// The note editor (Tiptap) loads the first time a quick note opens.
+const QuickNote = lazy(() => import('./QuickNote').then((m) => ({ default: m.QuickNote })));
 
 /**
  * Transparent top-most layer for floating UI (ADR-006). Main shows this view only while
@@ -23,6 +26,7 @@ export function OverlayApp() {
     capture: null,
     sidebarPeek: null,
     createMenu: null,
+    quickNote: null,
     flight: null,
     backdrop: null,
   });
@@ -45,6 +49,10 @@ export function OverlayApp() {
     <SiteControls view={state.siteControls} />
   ) : state.createMenu ? (
     <CreateMenu key={state.createMenu.openedAt} anchor={state.createMenu.anchor} />
+  ) : state.quickNote ? (
+    <Suspense fallback={null}>
+      <QuickNote key={state.quickNote.id} id={state.quickNote.id} />
+    </Suspense>
   ) : null;
   // Anything else opening takes over the overlay: the slid-out sidebar goes back in.
   const busy = top !== null || state.peek !== null;

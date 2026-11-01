@@ -1,6 +1,6 @@
-import { SIDEBAR_WIDTH } from './types/layout';
 import { z } from 'zod';
 import { wallpaperChoiceSchema } from './types/newtab';
+import { rectSchema, SIDEBAR_WIDTH } from './types/layout';
 
 /**
  * Every persisted setting, with its schema and default. Stored as JSON in the `settings` table.
@@ -40,6 +40,10 @@ export const settingsSchema = {
   'peek.scope': z.enum(['all', 'pinned']),
   /** ⌥⌘N opens an empty Little Orbit from any app (F-24). */
   'little.globalShortcut': z.boolean(),
+  /** Floating notes (F-33) open when Orbit quit, reopened at launch. */
+  'notes.floating': z
+    .array(z.object({ id: z.string(), bounds: rectSchema, onTop: z.boolean() }))
+    .max(50),
   /** Search engine URL with %s for the query. */
   'search.engine': z.enum(['google', 'duckduckgo', 'bing', 'kagi', 'ecosia']),
 } as const;
@@ -60,6 +64,7 @@ export const settingsDefaults: Settings = {
   'peek.enabled': true,
   'peek.scope': 'all',
   'little.globalShortcut': true,
+  'notes.floating': [],
 };
 
 /** Query URL templates for `search.engine`. */

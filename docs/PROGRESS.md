@@ -85,6 +85,7 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 - 2026-11-01 — Owner feedback (Arc/Comet): downloads fly — a blue badge jumps out of the page, arcs over and docks into the sidebar's shelf (overlay, CSS motion path, skipped under Reduce Motion); the shelf card matches Arc's (progress ring, "176.8/320.7 MB · 14s" from a smoothed speed, rounded close); a tab opened only to download closes itself. Arc's address pill at the top of the sidebar: the site, a link icon that copies the address, click to edit. Rounder, calmer look: card radius 14, rows 12, tiles 16, popovers 20–24; gentler spring and macOS-like timings; quieter tints on dark themes
 - 2026-11-01 — Owner feedback: the sidebar narrows to 150 px (was 200), where favorites become two square tiles like Arc's; dragging below 110 px still hides it. Right-clicking empty sidebar space opens a menu: New Tab, Folder, Split View, Easel; Paste and Go; Tidy Today (with an AI key) and Clear Today; the space's own menu; Library; Hide Sidebar. The download flight is shorter (0.9 s), so the page is clickable again sooner
 - 2026-11-01 — Owner feedback: Peek works from any tab, not only pinned ones — a link that opens a new tab on another site (an ad on YouTube, a search result) opens in the floating preview over the page; same-site links and ⌘-click background tabs still open as tabs. Settings → Peek → "Preview links from" switches back to Arc's pinned-only behaviour
+- 2026-11-01 — Owner request: **Notes** [F-33, new — not in Arc's current feature set]. One rich-text note editor (titles from the first line; # headings, lists, [ ] checklists, bold/italic/strike, links — ⌘-click opens them) in four places: the **Notes panel** docked on the right (toolbar button or ⇧⌘N; the page narrows and stays usable; list with search ↔ one note), the **quick note** glass card over the page (⌃⇧N, Esc closes, empty ones vanish), **floating notes** (own small frosted window, kept above other apps until unpinned, remembered across launches), and a note **tab** (orbit://note/<id>) that pins and favorites like any tab. A note moves between them from its header; every open copy stays in step. Stored in SQLite (migration 010); empty notes are cleaned up. Also in the + popover, the sidebar's right-click menu, the File/View menus and the command bar
 
 ## In progress
 
@@ -111,6 +112,7 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 - Preloads output as CommonJS (`.cjs`) so the shell can stay `sandbox: true`
 - 2026-11-01 — Built-in `node:sqlite` instead of better-sqlite3 (ADR-007): no native modules
 - Phase-specific libraries (dnd-kit, cmdk, Motion, Zustand, …) are installed in the phase that first needs them, not up front
+- 2026-11-01 — Notes use Tiptap 3.32.0 (ProseMirror) for the editor: contenteditable by hand is unreliable for lists/checklists/undo. Renderer-only devDependencies, lazy-loaded (not in the new tab page or overlay start-up bundles); five ProseMirror/linkify packages newer than two weeks are pinned back via `overrides`
 
 ## Known issues
 

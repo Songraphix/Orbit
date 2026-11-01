@@ -1,0 +1,194 @@
+/* Notes (F-33): calm, readable typography for the note editor in every place it appears.
+   Each surface sets --note-fg / --note-muted / --note-accent / --note-line for its theme. */
+
+.note-prose {
+  color: var(--note-fg);
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: -0.003em;
+  caret-color: var(--note-accent);
+}
+.note-prose .ProseMirror {
+  outline: none;
+  min-height: 100%;
+  padding-bottom: 40px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+.note-prose .ProseMirror > * + * {
+  margin-top: 0.45em;
+}
+/* The first line is the note's title, like Apple Notes. */
+.note-prose .ProseMirror > :first-child {
+  font-size: 1.55em;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.35em;
+}
+.note-prose h1 {
+  font-size: 1.45em;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  margin-top: 1em;
+}
+.note-prose h2 {
+  font-size: 1.2em;
+  font-weight: 650;
+  line-height: 1.3;
+  margin-top: 0.9em;
+}
+.note-prose h3 {
+  font-size: 1.05em;
+  font-weight: 650;
+  margin-top: 0.8em;
+}
+.note-prose strong {
+  font-weight: 650;
+}
+.note-prose a {
+  color: var(--note-accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--note-accent) 40%, transparent);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.note-prose ul,
+.note-prose ol {
+  padding-left: 1.35em;
+}
+.note-prose ul {
+  list-style: disc;
+}
+.note-prose ol {
+  list-style: decimal;
+}
+.note-prose li > p {
+  margin: 0;
+}
+.note-prose li + li {
+  margin-top: 0.15em;
+}
+.note-prose li::marker {
+  color: var(--note-muted);
+}
+.note-prose blockquote {
+  border-left: 3px solid var(--note-line);
+  padding-left: 0.9em;
+  color: var(--note-muted);
+}
+.note-prose code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.88em;
+  padding: 0.12em 0.35em;
+  border-radius: 6px;
+  background: var(--note-line);
+}
+.note-prose pre {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.85em;
+  line-height: 1.5;
+  padding: 0.8em 1em;
+  border-radius: 12px;
+  background: var(--note-line);
+  overflow-x: auto;
+}
+.note-prose pre code {
+  padding: 0;
+  background: none;
+}
+.note-prose hr {
+  border: none;
+  border-top: 1px solid var(--note-line);
+  margin: 1.2em 0;
+}
+
+/* Checklists: round checkboxes that fill with the accent, done items fade. */
+.note-prose ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.1em;
+}
+.note-prose ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55em;
+}
+.note-prose ul[data-type='taskList'] li > label {
+  flex: none;
+  margin-top: 0.22em;
+  user-select: none;
+}
+.note-prose ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+  transition: opacity var(--dur, 240ms) var(--ease-out, ease);
+}
+.note-prose ul[data-type='taskList'] li[data-checked='true'] > div {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.note-prose ul[data-type='taskList'] input[type='checkbox'] {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 1.05em;
+  height: 1.05em;
+  margin: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--note-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast, 140ms) var(--ease-out, ease),
+    border-color var(--dur-fast, 140ms) var(--ease-out, ease),
+    transform var(--dur-fast, 140ms) var(--ease-out, ease);
+}
+.note-prose ul[data-type='taskList'] input[type='checkbox']:active {
+  transform: scale(0.88);
+}
+.note-prose ul[data-type='taskList'] input[type='checkbox']:checked {
+  background: var(--note-accent);
+  border-color: var(--note-accent);
+}
+.note-prose ul[data-type='taskList'] input[type='checkbox']:checked::after {
+  content: '';
+  width: 0.28em;
+  height: 0.52em;
+  margin-top: -0.1em;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* The hint on an empty line. */
+.note-prose .ProseMirror p.is-empty::before,
+.note-prose .ProseMirror h1.is-empty::before,
+.note-prose .ProseMirror h2.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--note-muted);
+  opacity: 0.7;
+}
+.note-prose ::selection {
+  background: color-mix(in srgb, var(--note-accent) 28%, transparent);
+}
+
+/* Light and dark palettes; a surface picks one with data-note-theme. */
+[data-note-theme='light'] {
+  --note-fg: #1d1d1f;
+  --note-muted: rgb(60 60 67 / 0.55);
+  --note-accent: #b8860b;
+  --note-line: rgb(0 0 0 / 0.07);
+  --note-bg: #fffdf8;
+  --note-hover: rgb(0 0 0 / 0.05);
+}
+[data-note-theme='dark'] {
+  --note-fg: rgb(255 255 255 / 0.92);
+  --note-muted: rgb(235 235 245 / 0.5);
+  --note-accent: #f5c451;
+  --note-line: rgb(255 255 255 / 0.09);
+  --note-bg: #1f1f22;
+  --note-hover: rgb(255 255 255 / 0.07);
+}

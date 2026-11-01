@@ -42,6 +42,7 @@ export class OverlayController {
   private capture: OverlayState['capture'] = null;
   private sidebarPeek: OverlayState['sidebarPeek'] = null;
   private createMenu: OverlayState['createMenu'] = null;
+  private quickNote: OverlayState['quickNote'] = null;
   private flight: OverlayState['flight'] = null;
   private flightTimer: ReturnType<typeof setTimeout> | null = null;
   private backdrop: OverlayState['backdrop'] = null;
@@ -79,6 +80,7 @@ export class OverlayController {
       capture: this.capture,
       sidebarPeek: this.sidebarPeek,
       createMenu: this.createMenu,
+      quickNote: this.quickNote,
       flight: this.flight,
       backdrop: this.backdrop,
     };
@@ -92,6 +94,7 @@ export class OverlayController {
       this.siteControls !== null ||
       this.capture !== null ||
       this.createMenu !== null ||
+      this.quickNote !== null ||
       this.flight !== null ||
       this.sidebarPeek !== null
     );
@@ -111,8 +114,31 @@ export class OverlayController {
       this.siteControls !== null ||
       this.capture !== null ||
       this.createMenu !== null ||
+      this.quickNote !== null ||
       this.flight !== null
     );
+  }
+
+  get quickNoteId(): string | null {
+    return this.quickNote?.id ?? null;
+  }
+
+  /** The quick-note card (F-33) over the page, writing into note `id`. */
+  openQuickNote(id: string): void {
+    this.siteControls = null;
+    this.createMenu = null;
+    this.commandBar = null;
+    this.quickNote = { id, openedAt: Date.now() };
+    this.show();
+  }
+
+  /** Closes the quick note; returns the note it showed (null if none was open). */
+  closeQuickNote(): string | null {
+    const id = this.quickNote?.id ?? null;
+    if (id === null) return null;
+    this.quickNote = null;
+    this.sync();
+    return id;
   }
 
   /** Arc's download flourish: a badge flies from the page to the shelf (about a second). Keyboard

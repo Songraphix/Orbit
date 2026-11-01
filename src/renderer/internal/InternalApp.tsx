@@ -12,6 +12,17 @@ const BoostEditor = lazy(() =>
   import('./boost/BoostEditor').then((m) => ({ default: m.BoostEditor })),
 );
 
+// Notes bring the editor (Tiptap); load it only on note pages.
+const NoteTabPage = lazy(() =>
+  import('./notes/NotesPage').then((m) => ({ default: m.NoteTabPage })),
+);
+const NotesPanelPage = lazy(() =>
+  import('./notes/NotesPage').then((m) => ({ default: m.NotesPanelPage })),
+);
+const FloatingNotePage = lazy(() =>
+  import('./notes/NotesPage').then((m) => ({ default: m.FloatingNotePage })),
+);
+
 const TITLES: Record<string, string> = {
   newtab: 'New Tab',
   archive: 'Archived Tabs',
@@ -19,6 +30,8 @@ const TITLES: Record<string, string> = {
   boost: 'Boost',
   library: 'Library',
   easel: 'Easel',
+  note: 'Note',
+  notes: 'Notes',
 };
 
 /** The hash main loaded; the Library changes it when switching sections. */
@@ -31,13 +44,15 @@ const readHash = () => window.location.hash;
 /** orbit:// internal pages, routed by the hash main loads (`#/newtab`, `#/boost/<id>`, …). */
 export function InternalApp() {
   const hash = useSyncExternalStore(subscribe, readHash);
-  const [page = '', param = ''] = hash.replace(/^#\//, '').split('/');
+  const [page = '', param = '', sub = ''] = hash.replace(/^#\//, '').split('/');
 
   useEffect(() => {
     document.title = TITLES[page] ?? 'Not Found';
     // Internal pages use the normal light page background, except the new tab page (wallpaper)
     // and the Library (transparent, over the space's colours).
-    if (page !== 'newtab' && page !== 'library') document.documentElement.style.background = '#fff';
+    // Notes pages paint their own.
+    if (!['newtab', 'library', 'note', 'notes'].includes(page))
+      document.documentElement.style.background = '#fff';
   }, [page]);
 
   if (page === 'newtab') return <NewTabPage />;
@@ -50,6 +65,24 @@ export function InternalApp() {
       </Suspense>
     );
   if (page === 'easel' && param) return <EaselPage id={param} />;
+  if (page === 'note' && param)
+    return (
+      <Suspense fallback={null}>
+        <NoteTabPage key={param} id={param} />
+      </Suspense>
+    );
+  if (page === 'notes' && param === 'panel')
+    return (
+      <Suspense fallback={null}>
+        <NotesPanelPage />
+      </Suspense>
+    );
+  if (page === 'notes' && param === 'float' && sub)
+    return (
+      <Suspense fallback={null}>
+        <FloatingNotePage key={sub} id={sub} />
+      </Suspense>
+    );
   const section = librarySectionSchema.safeParse(param);
   if (page === 'library' && section.success)
     return <LibraryPage key={section.data} section={section.data} />;

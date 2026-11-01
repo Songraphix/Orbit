@@ -149,9 +149,19 @@ function Chrome({
             focused={!split || tab?.id === tabs?.activeTabId}
             inSplit={split !== null}
             snapshot={split ? null : snapshot}
+            // The right-most toolbar has the Notes button.
+            notesOpen={i === paneTabs.length - 1 ? layout.notes !== null : undefined}
           />
         );
       })}
+      {layout.notes && (
+        // Depth under the Notes panel (its page is a native view on top).
+        <div
+          className="card-depth absolute bg-[var(--sidebar-bg)]"
+          style={{ ...toStyle(layout.notes), borderRadius: layout.radius }}
+          data-testid="notes-card"
+        />
+      )}
       {split && layout.divider && (
         <SplitDivider rect={layout.divider} left={layout.panes[0]!} right={layout.panes[1]!} />
       )}
@@ -175,6 +185,7 @@ function ContentCard(props: {
   focused: boolean;
   inSplit: boolean;
   snapshot: string | null;
+  notesOpen: boolean | undefined;
 }) {
   const { pane, tab, inSplit, focused } = props;
   const webViewTop = pane.webView.y - pane.card.y;
@@ -209,6 +220,7 @@ function ContentCard(props: {
           find={props.find}
           focused={focused}
           inSplit={inSplit}
+          notesOpen={props.notesOpen}
         />
       )}
       {props.snapshot && (

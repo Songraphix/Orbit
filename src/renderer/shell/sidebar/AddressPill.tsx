@@ -1,4 +1,4 @@
-import { Link2, Lock, Sparkles } from 'lucide-react';
+import { Link2, Lock, NotebookPen, Sparkles } from 'lucide-react';
 import type { TabState } from '@shared/types/tabs';
 
 /** "perplexity.ai" from a page address (or the page's title for Orbit's own pages). */
@@ -37,7 +37,13 @@ export function AddressPill({ tab }: { tab: TabState | null }) {
         className="press grid size-7 shrink-0 place-items-center rounded-[10px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)] disabled:opacity-60 disabled:hover:bg-transparent"
         data-testid="address-copy"
       >
-        {web ? <Link2 size={15} /> : <Sparkles size={14} />}
+        {web ? (
+          <Link2 size={15} />
+        ) : tab?.url.startsWith('orbit://note/') ? (
+          <NotebookPen size={14} />
+        ) : (
+          <Sparkles size={14} />
+        )}
       </button>
       <button
         type="button"

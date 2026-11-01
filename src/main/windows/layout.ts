@@ -1,4 +1,4 @@
-import { LIBRARY_WIDTH, SIDEBAR_WIDTH } from '@shared/types/layout';
+import { LIBRARY_WIDTH, NOTES_WIDTH, SIDEBAR_WIDTH } from '@shared/types/layout';
 import type { Layout, LibraryPanel, Rect } from '@shared/types/layout';
 
 /** Arc-like defaults (PLAN.md section 4.6). */
@@ -19,7 +19,17 @@ export type LayoutInput = {
   splitRatio?: number | null;
   /** Library mode (F-11): its panel's size, or null. */
   library?: LibraryPanel | null;
+  /** The Notes panel (F-33) is open on the right. */
+  notes?: boolean;
 };
+
+/** How wide the Notes panel is: its usual width, giving way (down to its minimum) so the page
+ *  keeps at least `pageMin`. Pure. */
+export function notesWidth(windowWidth: number, pageLeft: number, inset: number): number {
+  const { panel, min, pageMin } = NOTES_WIDTH;
+  const spare = windowWidth - pageLeft - inset * 2 - pageMin;
+  return Math.max(min, Math.min(panel, spare));
+}
 
 /** Where Library mode's sections column and panel go, and where the page starts. Pure. */
 export function libraryColumns(
@@ -97,6 +107,7 @@ export function computeLayout(input: LayoutInput): Layout {
       radius: 0,
       fullscreen: true,
       library: null,
+      notes: null,
     };
   }
 
@@ -104,13 +115,19 @@ export function computeLayout(input: LayoutInput): Layout {
     ? libraryColumns(input.library, input.windowWidth, input.windowHeight, inset)
     : null;
   const left = library ? library.pageLeft : input.sidebarVisible ? sidebarWidth : inset;
+  // The Notes panel takes a column on the right, with the usual gap before it.
+  const notesW = input.notes ? notesWidth(input.windowWidth, left, inset) : 0;
+  const right = input.notes ? notesW + inset * 2 : inset;
 
   const card = {
     x: left,
     y: inset,
-    width: Math.max(0, input.windowWidth - left - inset),
+    width: Math.max(0, input.windowWidth - left - right),
     height: Math.max(0, input.windowHeight - inset * 2),
   };
+  const notes = input.notes
+    ? { x: card.x + card.width + inset, y: inset, width: notesW, height: card.height }
+    : null;
   // Split view: two cards side by side with a gap (the divider) between them.
   const panes =
     input.splitRatio == null
@@ -142,6 +159,7 @@ export function computeLayout(input: LayoutInput): Layout {
     radius,
     fullscreen: false,
     library: library && { nav: library.nav, panel: library.panel },
+    notes,
   };
 }
 

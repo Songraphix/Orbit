@@ -48,6 +48,11 @@
     "@excalidraw/excalidraw": "0.18.1",
     "@playwright/test": "1.64.1",
     "@tailwindcss/vite": "4.3.3",
+    "@tiptap/extension-list": "3.32.0",
+    "@tiptap/extensions": "3.32.0",
+    "@tiptap/pm": "3.32.0",
+    "@tiptap/react": "3.32.0",
+    "@tiptap/starter-kit": "3.32.0",
     "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -80,6 +85,11 @@
     "@lezer/lr": "1.4.11",
     "es-toolkit": "1.52.0",
     "vscode-languageserver-textdocument": "1.0.15",
-    "@opentelemetry/api": "1.9.1"
+    "@opentelemetry/api": "1.9.1",
+    "linkifyjs": "4.3.3",
+    "prosemirror-changeset": "2.4.4",
+    "prosemirror-schema-list": "1.5.1",
+    "prosemirror-transform": "1.12.2",
+    "prosemirror-view": "1.42.6"
   }
 }

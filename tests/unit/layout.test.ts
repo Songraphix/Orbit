@@ -154,6 +154,33 @@ describe('Library mode layout', () => {
   });
 });
 
+describe('Notes panel layout', () => {
+  it('docks the panel on the right and narrows the page', () => {
+    const layout = computeLayout({ ...base, notes: true });
+    // 1280 − 260 sidebar − 8 gap − 340 panel − 8 edge = 664 for the page.
+    expect(layout.card).toEqual({ x: 260, y: 8, width: 664, height: 804 });
+    expect(layout.notes).toEqual({ x: 932, y: 8, width: 340, height: 804 });
+    expect(computeLayout(base).notes).toBeNull();
+  });
+
+  it('gives way on small windows, but never below its minimum', () => {
+    const mid = computeLayout({ ...base, windowWidth: 1000, notes: true });
+    expect(mid.notes!.width).toBe(1000 - 260 - 16 - 420);
+    expect(mid.card.width).toBe(420);
+    const small = computeLayout({ ...base, windowWidth: 800, notes: true });
+    expect(small.notes!.width).toBe(260);
+  });
+
+  it('works beside split view and Library mode, and hides in fullscreen', () => {
+    const split = computeLayout({ ...base, notes: true, splitRatio: 0.5 });
+    expect(split.panes.at(-1)!.card.x + split.panes.at(-1)!.card.width).toBe(split.notes!.x - 8);
+    const library = computeLayout({ ...base, windowWidth: 1400, notes: true, library: 'narrow' });
+    expect(library.card.x).toBe(412);
+    expect(library.notes!.x).toBe(library.card.x + library.card.width + 8);
+    expect(computeLayout({ ...base, notes: true, htmlFullscreen: true }).notes).toBeNull();
+  });
+});
+
 describe('sidebar edge drag', () => {
   it('resizes within limits, and hides when pushed to the edge', () => {
     expect(sidebarDrag(300)).toEqual({ collapse: false, width: 300 });

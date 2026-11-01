@@ -1,5 +1,5 @@
 import { BrowserWindow, dialog, screen } from 'electron';
-import type { WebContentsView } from 'electron';
+import type { WebContents, WebContentsView } from 'electron';
 import { APP_NAME } from '@shared/constants';
 import type { RendererEntry } from '@shared/constants';
 import type { Broadcaster } from '../ipc/broadcaster';
@@ -18,6 +18,7 @@ import type { TabManagerDeps } from '../tabs/tab-manager';
 import { MediaController } from '../media/controller';
 import { PeekController } from '../peek/controller';
 import { LibraryController } from '../library/controller';
+import { NotesPanelController } from '../notes/panel';
 import { shouldPeek } from '../peek/policy';
 import { LayoutEngine } from './layout-engine';
 import { OverlayController } from './overlay';
@@ -46,7 +47,7 @@ export type WindowManagerDeps = {
   internalPreloadPath: string;
   loadRenderer: (win: BrowserWindow, entry: RendererEntry, query?: string) => void;
   /** Loads an internal orbit:// page (e.g. orbit://newtab) into a tab's view. */
-  loadInternal: (view: WebContentsView, url: string) => void;
+  loadInternal: (target: { webContents: WebContents }, url: string) => void;
   /** Loads the overlay renderer into the overlay view. */
   loadOverlay: (view: WebContentsView) => void;
   /** Runs an app command for a window (the sidebar's + menu). */
@@ -71,6 +72,8 @@ export type WindowController = {
   media: MediaController;
   peek: PeekController;
   library: LibraryController;
+  /** The Notes panel on the right (F-33). */
+  notes: NotesPanelController;
   /** Slides the hidden sidebar out over the page, or back in. */
   setSidebarPeek: (open: boolean) => void;
   store: SidebarStore;
@@ -92,6 +95,11 @@ export class WindowManager {
   /** The window whose shell sent an IPC message. */
   forSender(webContentsId: number): WindowController | undefined {
     return this.controllers.get(webContentsId);
+  }
+
+  /** The window whose Notes panel is this webContents. */
+  notesPanelFor(webContentsId: number): WindowController | null {
+    return this.all().find((c) => c.notes.owns(webContentsId)) ?? null;
   }
 
   /** The window whose Library page is this webContents. */
@@ -160,6 +168,7 @@ export class WindowManager {
     let tabs: TabManager | null = null;
     let peek: PeekController | null = null;
     let library: LibraryController | null = null;
+    let notes: NotesPanelController | null = null;
     let overlayRef: OverlayController | null = null;
     /** The shell's sidebar state also goes to the overlay, which draws the slid-out sidebar. */
     const toOverlay = <E extends 'state:sidebar' | 'state:tabs' | 'state:media' | 'state:library'>(
@@ -177,6 +186,7 @@ export class WindowManager {
       tabs?.applyLayout(); // web views move in the same tick the shell is told
       peek?.fit();
       library?.fit();
+      notes?.fit();
       // Pinning the sidebar (or a page going fullscreen) ends the slide-out.
       if (next.sidebar.visible || next.fullscreen) closeSidebarPeek();
       broadcaster.sendTo(contents, 'state:layout', next);
@@ -350,6 +360,16 @@ export class WindowManager {
       },
     });
     const libraryController = library;
+    notes = new NotesPanelController({
+      win,
+      getLayout: () => layout.current(),
+      setOpen: (open) => layout.setNotes(open),
+      internalPreload: this.deps.internalPreloadPath,
+      loadInternal: this.deps.loadInternal,
+      registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
+      unregisterInternal: (webContentsId) => senders.remove(webContentsId),
+    });
+    const notesPanel = notes;
 
     const id = contents.id;
     const overlayId = overlay.view.webContents.id;
@@ -374,6 +394,7 @@ export class WindowManager {
       media,
       peek: peekController,
       library: libraryController,
+      notes: notesPanel,
       setSidebarPeek,
       store: this.deps.store,
       sidebar,
@@ -399,6 +420,7 @@ export class WindowManager {
     win.on('closed', () => {
       peekController.close();
       libraryController.destroy();
+      notesPanel.destroy();
       tabManager.destroyAll();
       overlay.destroy();
     });

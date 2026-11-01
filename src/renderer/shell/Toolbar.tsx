@@ -8,6 +8,7 @@ import {
   Maximize2,
   PanelLeft,
   RotateCw,
+  NotebookPen,
   SlidersHorizontal,
   X,
 } from 'lucide-react';
@@ -46,6 +47,7 @@ export function Toolbar({
   find,
   focused = true,
   inSplit = false,
+  notesOpen,
 }: {
   tab: TabState | null;
   height: number;
@@ -56,6 +58,8 @@ export function Toolbar({
   focused?: boolean;
   /** Split view: show the swap and "show alone" buttons. */
   inSplit?: boolean;
+  /** The Notes button (right-most toolbar only): whether the panel is open. */
+  notesOpen?: boolean | undefined;
 }) {
   const toastMessage = useToast();
   const toast = focused ? toastMessage : null;
@@ -192,6 +196,16 @@ export function Toolbar({
             <SlidersHorizontal size={14} />
           </ToolbarButton>
         )}
+        {notesOpen !== undefined && (
+          <ToolbarButton
+            label={notesOpen ? 'Hide Notes (⇧⌘N)' : 'Notes (⇧⌘N)'}
+            onClick={() => void window.orbit.invoke('notes:panel', {})}
+            active={notesOpen}
+            testId="toolbar-notes"
+          >
+            <NotebookPen size={14} />
+          </ToolbarButton>
+        )}
         {inSplit && (
           <>
             <ToolbarButton
@@ -230,6 +244,8 @@ function ToolbarButton(props: {
   label: string;
   onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   disabled?: boolean;
+  /** A toggle that's on (e.g. the Notes panel is open). */
+  active?: boolean;
   testId: string;
   children: ReactNode;
 }) {
@@ -237,10 +253,13 @@ function ToolbarButton(props: {
     <button
       type="button"
       aria-label={props.label}
+      aria-pressed={props.active}
       title={props.label}
       disabled={props.disabled}
       onClick={props.onClick}
-      className="press no-drag grid size-7 place-items-center rounded-[10px] hover:bg-black/[0.06] disabled:opacity-30 disabled:hover:bg-transparent"
+      className={`press no-drag grid size-7 place-items-center rounded-[10px] hover:bg-black/[0.06] disabled:opacity-30 disabled:hover:bg-transparent ${
+        props.active ? 'bg-black/[0.07] text-neutral-900' : ''
+      }`}
       data-testid={props.testId}
     >
       {props.children}

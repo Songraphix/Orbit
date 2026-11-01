@@ -57,6 +57,7 @@ export function registerSidebarHandlers(router: IpcRouter, windows: WindowManage
     if (action === 'space') sidebar.newSpace();
     else if (action === 'folder') sidebar.newFolder('pinned');
     else if (action === 'tab') controller.overlay.openCommandBar('new');
+    else if (action === 'note') sidebar.runCommand('new-note');
     else
       sidebar.runCommand(
         action === 'easel' ? 'new-easel' : action === 'boost' ? 'new-boost' : 'split-view',

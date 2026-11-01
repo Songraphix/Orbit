@@ -81,6 +81,8 @@ export const overlayStateSchema = z.object({
       at: z.number(),
     })
     .nullable(),
+  /** A quick note (F-33): a glass card over the page; it writes into note `id`. */
+  quickNote: z.object({ id: z.string(), openedAt: z.number() }).nullable(),
   /** The sidebar's + popover (Img 2), above the button at `anchor`. */
   createMenu: z.object({ anchor: rectSchema, openedAt: z.number() }).nullable(),
   /** The hidden sidebar, slid out over the page while the pointer is on it (F-01). */

@@ -38,6 +38,7 @@ test('the + button opens Arc’s create popover: New Tab ready, keys move, Esc c
     'New Space',
     'New Folder',
     'New Easel⌃⇧E',
+    'New Note',
     'New Boost',
     'New Split⌃⇧=',
     'New Tab⌘T',
@@ -57,15 +58,13 @@ test('the + button opens Arc’s create popover: New Tab ready, keys move, Esc c
   await expect(bar.getByTestId('command-bar')).toBeVisible();
   await bar.keyboard.press('Escape');
 
-  // Up three times from New Tab (past Split and Boost) is New Easel.
+  // Up four times from New Tab (past Split, Boost and Note) is New Easel.
   await win.getByTestId('create-button').click();
   await expect(menu).toBeVisible(); // keys only count once it's open
   await expect(bar.locator('[data-testid="create-item"][data-action="tab"]')).toHaveClass(
     /bg-white/,
   );
-  await bar.keyboard.press('ArrowUp');
-  await bar.keyboard.press('ArrowUp');
-  await bar.keyboard.press('ArrowUp');
+  for (let i = 0; i < 4; i++) await bar.keyboard.press('ArrowUp');
   await bar.keyboard.press('Enter');
   // The first Easel after a build can take a few seconds to appear.
   await expect
@@ -158,6 +157,7 @@ test('right-clicking the sidebar’s empty space shows Arc’s sidebar menu', as
       'New Folder',
       'New Split View',
       'New Easel',
+      'Quick Note',
       '—',
       'Paste and Go to “example.com”',
       '—',

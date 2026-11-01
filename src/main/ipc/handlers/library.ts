@@ -156,6 +156,7 @@ export function registerLibraryHandlers(
   router.handle('appearance:get', (_input, { sender }) => {
     const controller =
       windows.libraryFor(sender.webContentsId) ??
+      windows.notesPanelFor(sender.webContentsId) ??
       windows.tabForContents(sender.webContentsId)?.window;
     if (!controller) throw new Error(`Sender ${sender.webContentsId} has no window`);
     const theme = controller.tabs.space.theme;

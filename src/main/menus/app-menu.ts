@@ -91,6 +91,18 @@ export function installAppMenu(actions: AppMenuActions): void {
           accelerator: 'Ctrl+Shift+E',
           click: () => actions.command('new-easel'),
         },
+        { id: 'new-note', label: 'New Note', click: () => actions.command('new-note') },
+        {
+          id: 'quick-note',
+          label: 'Quick Note',
+          accelerator: 'Ctrl+Shift+N',
+          click: () => actions.command('quick-note'),
+        },
+        {
+          id: 'float-note',
+          label: 'New Floating Note',
+          click: () => actions.command('float-note'),
+        },
         {
           id: 'open-location',
           label: 'Open Location…',
@@ -170,6 +182,12 @@ export function installAppMenu(actions: AppMenuActions): void {
           label: 'Toggle Sidebar',
           accelerator: 'CmdOrCtrl+S',
           click: actions.toggleSidebar,
+        },
+        {
+          id: 'toggle-notes',
+          label: 'Toggle Notes',
+          accelerator: 'Shift+CmdOrCtrl+N',
+          click: () => actions.command('toggle-notes'),
         },
         { type: 'separator' },
         {

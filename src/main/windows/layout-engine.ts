@@ -23,6 +23,7 @@ export class LayoutEngine {
   private fullscreen = false;
   private splitRatio: number | null = null;
   private library: LibraryPanel | null = null;
+  private notes = false;
   private layout: Layout;
 
   constructor(
@@ -88,6 +89,13 @@ export class LayoutEngine {
     this.update();
   }
 
+  /** The Notes panel opened or closed. Not persisted. */
+  setNotes(open: boolean): void {
+    if (open === this.notes) return;
+    this.notes = open;
+    this.update();
+  }
+
   /** Split view started/resized (ratio) or ended (null). Not persisted. */
   setSplitRatio(ratio: number | null): void {
     if (ratio === this.splitRatio) return;
@@ -118,6 +126,7 @@ export class LayoutEngine {
       htmlFullscreen: this.fullscreen,
       splitRatio: this.splitRatio,
       library: this.library,
+      notes: this.notes,
     });
   }
 }

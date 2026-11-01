@@ -3,6 +3,7 @@ import {
   CornerUpLeft,
   Folder,
   Globe,
+  NotebookPen,
   PenTool,
   Rss,
   Sparkles,
@@ -94,6 +95,8 @@ export function TabIcon({ row }: { row: SidebarRow }) {
     return <PenTool className={className} strokeWidth={1.75} />;
   if (row.url?.startsWith('orbit://boost/'))
     return <Wand2 className={className} strokeWidth={1.75} />;
+  if (row.url?.startsWith('orbit://note/'))
+    return <NotebookPen className={className} strokeWidth={1.75} />;
   if (row.url?.startsWith('orbit://')) return <Sparkles className={className} strokeWidth={1.75} />;
   if (row.favicon) return <img src={row.favicon} alt="" className={`${className} rounded-sm`} />;
   return <Globe className={`${className} opacity-60`} strokeWidth={1.75} />;

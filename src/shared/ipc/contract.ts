@@ -4,6 +4,13 @@ import { siteActionSchema } from '../types/site-controls';
 import { boostIdSchema, boostPatchSchema, boostSchema } from '../types/boosts';
 import { easelCaptureSchema, easelEntrySchema, easelIdSchema, easelSchema } from '../types/easels';
 import {
+  NOTE_LIMITS,
+  noteActionSchema,
+  noteEntrySchema,
+  noteIdSchema,
+  noteSchema,
+} from '../types/notes';
+import {
   boostEntrySchema,
   downloadEntrySchema,
   librarySectionSchema,
@@ -212,7 +219,7 @@ export const contract = {
   'sidebar:create': {
     input: z
       .object({
-        action: z.enum(['space', 'folder', 'easel', 'boost', 'split', 'tab']),
+        action: z.enum(['space', 'folder', 'easel', 'note', 'boost', 'split', 'tab']),
       })
       .strict(),
     output: z.void(),
@@ -710,6 +717,79 @@ export const contract = {
   'newtab:navigate': {
     input: z.object({ input: z.string().min(1).max(8192) }).strict(),
     output: z.void(),
+    surfaces: ['internal'],
+  },
+
+  // Notes (F-33). The editor runs in a note's tab (orbit://note/<id>), the Notes panel, a
+  // floating note window (all internal pages) and the quick-note card (overlay). Main checks
+  // each sender is one of those.
+  'notes:list': {
+    input: z.object({ query: z.string().max(200).optional() }).strict(),
+    output: z.object({ notes: z.array(noteEntrySchema) }),
+    surfaces: ['internal', 'overlay'],
+  },
+  'notes:get': {
+    input: z.object({ id: noteIdSchema }).strict(),
+    output: noteSchema.nullable(),
+    surfaces: ['internal', 'overlay'],
+  },
+  'notes:create': {
+    input: z.object({}).strict(),
+    output: z.object({ id: noteIdSchema }),
+    surfaces: ['internal', 'overlay'],
+  },
+  /** Saves the editor's document; returns its new version (null if the note was deleted). */
+  'notes:save': {
+    input: z
+      .object({
+        id: noteIdSchema,
+        doc: z.string().max(NOTE_LIMITS.doc),
+        text: z.string().max(NOTE_LIMITS.text),
+      })
+      .strict(),
+    output: z.object({ updatedAt: z.number().nullable() }),
+    surfaces: ['internal', 'overlay'],
+  },
+  /** The note's current version, so other open copies know to reload. */
+  'notes:version': {
+    input: z.object({ id: noteIdSchema }).strict(),
+    output: z.object({ updatedAt: z.number().nullable() }),
+    surfaces: ['internal', 'overlay'],
+  },
+  /** The editor is leaving this note: if nothing was written, the note goes. */
+  'notes:discardIfBlank': {
+    input: z.object({ id: noteIdSchema }).strict(),
+    output: z.object({ deleted: z.boolean() }),
+    surfaces: ['internal', 'overlay'],
+  },
+  /** Open the note in a tab, the panel or a floating window, or delete it (asks first). */
+  'notes:act': {
+    input: z.object({ id: noteIdSchema, action: noteActionSchema }).strict(),
+    output: z.object({ done: z.boolean() }),
+    surfaces: ['internal', 'overlay'],
+  },
+  /** ⌘-click on a link in a note: open it as a tab. */
+  'notes:openUrl': {
+    input: z.object({ url: z.string().max(8192) }).strict(),
+    output: z.void(),
+    surfaces: ['internal', 'overlay'],
+  },
+  /** The Notes panel: toggle (no `open`), open (optionally on a note) or close. */
+  'notes:panel': {
+    input: z.object({ open: z.boolean().optional(), id: noteIdSchema.optional() }).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  /** The quick-note card over the page: open (a new note) or close. */
+  'notes:quick': {
+    input: z.object({ open: z.boolean() }).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay'],
+  },
+  /** A floating note: keep it above other apps' windows (no `onTop` = just read it). */
+  'notes:onTop': {
+    input: z.object({ onTop: z.boolean().optional() }).strict(),
+    output: z.object({ onTop: z.boolean() }),
     surfaces: ['internal'],
   },
 } as const satisfies Record<string, ChannelSpec>;

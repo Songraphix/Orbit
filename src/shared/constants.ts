@@ -12,6 +12,8 @@ export const INTERNAL_PAGES = [
   'boost',
   'library',
   'easel',
+  'note',
+  'notes',
 ] as const;
 export type InternalPage = (typeof INTERNAL_PAGES)[number];
 

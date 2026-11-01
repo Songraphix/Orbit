@@ -29,6 +29,8 @@ export const layoutSchema = z.object({
   /** Library mode (F-11, like Arc): the sections column and the panel beside it; the page moves
    *  over to make room. */
   library: z.object({ nav: rectSchema, panel: rectSchema }).nullable(),
+  /** The Notes panel (F-33), docked on the right; the page narrows to make room. */
+  notes: rectSchema.nullable(),
 });
 export type Layout = z.output<typeof layoutSchema>;
 
@@ -38,3 +40,6 @@ export const SIDEBAR_WIDTH = { min: 150, max: 400, default: 260 } as const;
 /** Library mode's columns: Arc's narrow sections column, then a panel (wide for Spaces). */
 export const LIBRARY_WIDTH = { nav: 104, panel: 300, pageMin: 360 } as const;
 export type LibraryPanel = 'narrow' | 'wide';
+
+/** The Notes panel: its width, the least it shrinks to, and the page width it leaves at least. */
+export const NOTES_WIDTH = { panel: 340, min: 260, pageMin: 420 } as const;

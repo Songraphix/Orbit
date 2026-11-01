@@ -1,10 +1,18 @@
-import { Columns2, FolderPlus, PenLine, SquarePlus, SquareStack, Wand2 } from 'lucide-react';
+import {
+  Columns2,
+  FolderPlus,
+  NotebookPen,
+  PenLine,
+  SquarePlus,
+  SquareStack,
+  Wand2,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Rect } from '@shared/types/layout';
 import { Glass } from './Glass';
 
-type Action = 'space' | 'folder' | 'easel' | 'boost' | 'split' | 'tab';
+type Action = 'space' | 'folder' | 'easel' | 'note' | 'boost' | 'split' | 'tab';
 
 /** Arc's + popover (Img 2), in its order and groups. */
 const GROUPS: { action: Action; label: string; icon: ReactNode; keys?: string }[][] = [
@@ -14,6 +22,7 @@ const GROUPS: { action: Action; label: string; icon: ReactNode; keys?: string }[
   ],
   [
     { action: 'easel', label: 'New Easel', icon: <PenLine size={17} />, keys: '⌃⇧E' },
+    { action: 'note', label: 'New Note', icon: <NotebookPen size={17} /> },
     { action: 'boost', label: 'New Boost', icon: <Wand2 size={17} /> },
   ],
   [

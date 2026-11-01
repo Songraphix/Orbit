@@ -64,6 +64,10 @@ import { ArcImporter, findArcSources } from './importer/arc/import';
 import { WindowManager } from './windows/window-manager';
 import { acceptExternalUrl, LittleWindow } from './windows/little';
 import type { WindowController } from './windows/window-manager';
+import { notesHash } from './notes/model';
+import { FloatingNotes } from './notes/floating';
+import { newNoteTab, noteUrl, registerNotesHandlers, toggleQuickNote } from './ipc/handlers/notes';
+import { noteIdSchema } from '@shared/types/notes';
 
 app.setName(APP_NAME);
 
@@ -104,6 +108,7 @@ let runTidy: ((controller: WindowController) => Promise<void>) | null = null;
 process.on('uncaughtException', (error) => console.error('[orbit] uncaught exception', error));
 process.on('unhandledRejection', (reason) => console.error('[orbit] unhandled rejection', reason));
 let windows: WindowManager | null = null;
+let floatingNotes: FloatingNotes | null = null;
 
 function loadRenderer(win: BrowserWindow, entry: RendererEntry, query?: string): void {
   if (devServer) void win.loadURL(`${devServer}/${entry}/index.html${query ? `?${query}` : ''}`);
@@ -140,7 +145,7 @@ app.on('will-finish-launching', () => {
 
 /** orbit://<page> → the internal renderer with `#/<page>` (`#/boost/<id>` for a Boost's editor).
  *  Unknown pages show "not found". */
-function loadInternal(view: WebContentsView, url: string): void {
+function loadInternal(view: { webContents: Electron.WebContents }, url: string): void {
   const { hostname: page, pathname } = new URL(url);
   const param = pathname.slice(1);
   let hash = `/${isInternalPage(page) ? page : 'not-found'}`;
@@ -151,6 +156,10 @@ function loadInternal(view: WebContentsView, url: string): void {
     hash = easelIdSchema.safeParse(param).success ? `/easel/${param}` : '/not-found';
   if (page === 'library')
     hash = librarySectionSchema.safeParse(param).success ? `/library/${param}` : '/not-found';
+  // A note's tab (note/<id>), the Notes panel (notes/panel[/<id>]), a floating note (notes/float/<id>).
+  if (page === 'note')
+    hash = noteIdSchema.safeParse(param).success ? `/note/${param}` : '/not-found';
+  if (page === 'notes') hash = notesHash(param);
   if (devServer) void view.webContents.loadURL(`${devServer}/internal/index.html#${hash}`);
   else void view.webContents.loadFile(join(rendererDir, 'internal', 'index.html'), { hash });
 }
@@ -329,6 +338,18 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'new-easel':
       if (persistence) newEasel(persistence.easels, controller);
       return;
+    case 'new-note':
+      if (persistence) newNoteTab(persistence.notes, controller);
+      return;
+    case 'quick-note':
+      if (persistence) toggleQuickNote(persistence.notes, controller);
+      return;
+    case 'toggle-notes':
+      controller.notes.toggle();
+      return;
+    case 'float-note':
+      if (persistence) floatingNotes?.show(persistence.notes.create());
+      return;
     case 'live-rss':
     case 'live-pulls':
     case 'live-issues':
@@ -381,7 +402,12 @@ app.on('second-instance', () => {
 });
 
 app.on('activate', () => {
-  if (windows && BrowserWindow.getAllWindows().length === 0) windows.createMainWindow();
+  // Floating notes are windows too: reopen the main window whenever none is open.
+  if (windows && windows.all().length === 0) windows.createMainWindow();
+});
+
+app.on('before-quit', () => {
+  floatingNotes?.willQuit(); // they close with the app, but reopen next launch
 });
 
 app.on('window-all-closed', () => {
@@ -661,6 +687,23 @@ void app.whenReady().then(() => {
     captures,
   });
   registerEaselHandlers(router, windowManager, { easels: persistence.easels, captures, toast });
+  const notesRepo = persistence.notes;
+  const settingsRepo = persistence.settings;
+  const floating = new FloatingNotes({
+    internalPreload: join(import.meta.dirname, '../preload/internal.cjs'),
+    loadInternal,
+    registerInternal: (id) => senders.add(id, 'internal'),
+    unregisterInternal: (id) => senders.remove(id),
+    persist: (open) => settingsRepo.set('notes.floating', open),
+    onClosed: (id) => {
+      const inTab = windowManager
+        .all()
+        .some((c) => c.tabs.snapshot().tabs.some((t) => t.url === noteUrl(id)));
+      if (!inTab) notesRepo.deleteIfBlank(id);
+    },
+  });
+  floatingNotes = floating;
+  registerNotesHandlers(router, windowManager, { notes: notesRepo, floating });
   registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
   router.handle('tabs:copyUrl', (_input, { sender }) => {
@@ -798,5 +841,15 @@ void app.whenReady().then(() => {
 
   windowManager.createMainWindow();
   for (const url of pendingUrls.splice(0)) openLittle(url);
+
+  // Notes left empty last time go (unless a tab or floating note still shows them); floating
+  // notes come back where they were.
+  const savedFloating = settingsRepo.get('notes.floating');
+  const shown = new Set(savedFloating.map((n) => n.id));
+  for (const item of store.all()) {
+    if (item.url?.startsWith('orbit://note/')) shown.add(item.url.slice('orbit://note/'.length));
+  }
+  notesRepo.pruneBlank(shown);
+  floating.restore(savedFloating, (id) => notesRepo.get(id) !== null);
   applyLittleShortcut(persistence?.settings.get('little.globalShortcut') ?? false);
 });

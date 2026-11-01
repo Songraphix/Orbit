@@ -332,6 +332,11 @@ export class SidebarActions {
         accelerator: 'Ctrl+Shift+E',
         click: () => this.ui.command('new-easel'),
       },
+      {
+        label: 'Quick Note',
+        accelerator: 'Ctrl+Shift+N',
+        click: () => this.ui.command('quick-note'),
+      },
       { type: 'separator' },
       {
         label: go
