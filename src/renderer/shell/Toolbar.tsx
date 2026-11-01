@@ -240,7 +240,7 @@ function ToolbarButton(props: {
       title={props.label}
       disabled={props.disabled}
       onClick={props.onClick}
-      className="press no-drag grid size-7 place-items-center rounded-[7px] hover:bg-black/[0.06] disabled:opacity-30 disabled:hover:bg-transparent"
+      className="press no-drag grid size-7 place-items-center rounded-[10px] hover:bg-black/[0.06] disabled:opacity-30 disabled:hover:bg-transparent"
       data-testid={props.testId}
     >
       {props.children}

@@ -25,7 +25,7 @@ export function PromptView({ prompt }: { prompt: Prompt }) {
       data-testid="prompt-backdrop"
     >
       <Glass
-        className="animate-pop absolute inset-x-0 top-14 mx-auto w-[min(380px,90vw)] origin-top rounded-[18px] p-4 text-sm"
+        className="animate-pop absolute inset-x-0 top-14 mx-auto w-[min(380px,90vw)] origin-top rounded-[22px] p-4 text-sm"
         role="dialog"
         aria-label="Site request"
         data-testid="prompt"

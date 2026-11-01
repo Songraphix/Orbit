@@ -419,6 +419,11 @@ export const contract = {
     surfaces: ['overlay'],
   },
   /** Developer Mode's toolbar button (F-30). */
+  /** The sidebar address pill's link icon (Arc): copies the active page's address. */
+  'tabs:copyUrl': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
   'tabs:devtools': {
     input: z.object({ tabId }).strict(),
     output: z.void(),

@@ -16,7 +16,7 @@ describe('computeLayout', () => {
     expect(layout.card).toEqual({ x: 260, y: 8, width: 1012, height: 804 });
     expect(layout.toolbar).toEqual({ x: 260, y: 8, width: 1012, height: 36 });
     expect(layout.webView).toEqual({ x: 260, y: 44, width: 1012, height: 768 });
-    expect(layout.radius).toBe(10);
+    expect(layout.radius).toBe(14);
   });
 
   it('gives the card the full width minus insets when the sidebar is hidden', () => {

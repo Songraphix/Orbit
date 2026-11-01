@@ -93,3 +93,28 @@ test('favorites: a page with a count in its title shows a dot', async () => {
   await expect(win.getByTestId('favorite-tile')).toHaveCount(1);
   await expect(win.getByTestId('favorite-dot')).toHaveCount(1);
 });
+
+test('downloads: the badge flies to the shelf; the card shows "x/y MB" while downloading', async () => {
+  const { app, win } = orbit;
+  await invoke(win, 'tabs:create', { url: server.url('/one') });
+  await expect(win.getByTestId('toolbar-address')).toContainText('Page One');
+  const bar = await overlay(app);
+  await invoke(win, 'tabs:create', { url: server.url('/big.bin') });
+  await expect(bar.getByTestId('download-flight')).toHaveCount(1);
+  const card = win.getByTestId('download-item');
+  await expect(card).toHaveAttribute('data-state', 'progressing');
+  await expect(card).toContainText(/\d+\.\d\/2\.9 MB/);
+  await expect(card).toHaveAttribute('data-state', 'completed', { timeout: 10_000 });
+  await expect(bar.getByTestId('download-flight')).toHaveCount(0); // gone after its second
+});
+
+test('the sidebar’s address pill: the site, and its link icon copies the address', async () => {
+  const { app, win } = orbit;
+  const url = server.url('/one');
+  await invoke(win, 'tabs:create', { url });
+  const pill = win.getByTestId('address-pill');
+  await expect(pill).toContainText('127.0.0.1');
+  await win.getByTestId('address-copy').click();
+  await expect(win.getByTestId('toolbar-toast')).toContainText('Copied link');
+  expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(url);
+});

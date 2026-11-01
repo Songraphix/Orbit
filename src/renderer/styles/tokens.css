@@ -22,11 +22,11 @@
      Out: quick start, long soft settle (most UI). Spring: a touch of overshoot for things that
      appear (popovers, the command bar). */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-spring: cubic-bezier(0.34, 1.32, 0.64, 1);
+  --ease-spring: cubic-bezier(0.32, 1.16, 0.6, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --dur-fast: 120ms;
-  --dur: 200ms;
-  --dur-slow: 320ms;
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 380ms;
 }
 
 html,
@@ -93,9 +93,9 @@ body {
 /* The page card's edge: a hairline and a soft lift off the sidebar (F-01). */
 .card-depth {
   box-shadow:
-    0 0 0 0.5px rgb(0 0 0 / 0.16),
-    0 1px 2px rgb(0 0 0 / 0.12),
-    0 10px 30px -10px rgb(0 0 0 / 0.4);
+    0 0 0 0.5px rgb(0 0 0 / 0.12),
+    0 1px 3px rgb(0 0 0 / 0.08),
+    0 14px 40px -14px rgb(0 0 0 / 0.38);
 }
 
 /* ── Motion ──────────────────────────────────────────────────────────────── */

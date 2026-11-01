@@ -18,6 +18,8 @@ export function FloatingSidebar({ width }: { width: number }) {
   const downloads = useMainState('state:downloads');
   const media = useMainState('state:media');
   const library = useMainState('state:library');
+  const tabs = useMainState('state:tabs');
+  const activeTab = tabs?.tabs.find((t) => t.id === tabs.activeTabId) ?? null;
   const theme = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId)?.theme ?? DEFAULT_THEME;
   const vars = useMemo(() => themeToVars(theme), [theme]);
 
@@ -30,7 +32,7 @@ export function FloatingSidebar({ width }: { width: number }) {
 
   return (
     <div
-      className="fixed inset-y-0 left-0 overflow-hidden rounded-r-[14px] border-r-[0.5px] border-white/15 shadow-[inset_-0.5px_0_0_rgb(255_255_255/0.08),8px_0_32px_-4px_rgb(0_0_0/0.45)] animate-[orbit-slide-in_var(--dur-slow)_var(--ease-out)]"
+      className="fixed inset-y-0 left-0 overflow-hidden rounded-r-[20px] border-r-[0.5px] border-white/15 shadow-[inset_-0.5px_0_0_rgb(255_255_255/0.08),8px_0_32px_-4px_rgb(0_0_0/0.45)] animate-[orbit-slide-in_var(--dur-slow)_var(--ease-out)]"
       style={{ ...(vars as CSSProperties), width }}
       data-testid="sidebar-peek"
     >
@@ -46,6 +48,7 @@ export function FloatingSidebar({ width }: { width: number }) {
         downloads={downloads?.items ?? []}
         media={media}
         librarySection={library?.section ?? null}
+        activeTab={activeTab}
         floating
         onResizeStart={noop}
         onResizeEnd={noop}

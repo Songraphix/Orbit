@@ -445,6 +445,28 @@ void app.whenReady().then(() => {
     persistence.db,
     () => process.env['ORBIT_DOWNLOADS_DIR'] ?? app.getPath('downloads'),
     (snapshot) => broadcaster.send('state:downloads', snapshot),
+    // Arc's flourish: the download flies from its page into the sidebar's shelf.
+    (from) => {
+      const owner = windows?.tabForContents(from.id);
+      if (!owner) return;
+      const { window, tab } = owner;
+      const page = tab.view.getBounds();
+      // A tab opened only to download (its first and only navigation) closes, like Chrome and
+      // Arc — the file is on the shelf, an empty tab would be left behind.
+      const history = from.navigationHistory;
+      if (history.length() <= 1 && !history.canGoBack() && tab.state.kind === 'web') {
+        const committed = from.getURL();
+        if (committed === '' || committed === tab.state.url) {
+          setTimeout(() => window.tabs.close(tab.id), 0);
+        }
+      }
+      const layout = window.layout.current();
+      const [, height = 0] = window.win.getContentSize();
+      window.overlay.flyDownload(
+        { x: page.x + page.width / 2, y: page.y + Math.min(page.height / 2, 260) },
+        layout.sidebar.visible ? { x: 34, y: height - 86 } : { x: 22, y: height - 30 },
+      );
+    },
   );
   downloadService = downloads;
   const captures = new CaptureRequests();
@@ -634,6 +656,10 @@ void app.whenReady().then(() => {
   registerEaselHandlers(router, windowManager, { easels: persistence.easels, captures, toast });
   registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
+  router.handle('tabs:copyUrl', (_input, { sender }) => {
+    const controller = windowManager.forSender(sender.webContentsId);
+    if (controller && copyActiveUrl(controller)) toast(controller, 'Copied link');
+  });
   router.handle('tabs:devtools', ({ tabId }, { sender }) => {
     const contents = windowManager.forSender(sender.webContentsId)?.tabs.get(tabId)
       ?.view.webContents;

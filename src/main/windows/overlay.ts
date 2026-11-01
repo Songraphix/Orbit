@@ -42,6 +42,8 @@ export class OverlayController {
   private capture: OverlayState['capture'] = null;
   private sidebarPeek: OverlayState['sidebarPeek'] = null;
   private createMenu: OverlayState['createMenu'] = null;
+  private flight: OverlayState['flight'] = null;
+  private flightTimer: ReturnType<typeof setTimeout> | null = null;
   private backdrop: OverlayState['backdrop'] = null;
   private snapshotting = false;
 
@@ -77,6 +79,7 @@ export class OverlayController {
       capture: this.capture,
       sidebarPeek: this.sidebarPeek,
       createMenu: this.createMenu,
+      flight: this.flight,
       backdrop: this.backdrop,
     };
   }
@@ -89,6 +92,7 @@ export class OverlayController {
       this.siteControls !== null ||
       this.capture !== null ||
       this.createMenu !== null ||
+      this.flight !== null ||
       this.sidebarPeek !== null
     );
   }
@@ -106,8 +110,30 @@ export class OverlayController {
       this.peek !== null ||
       this.siteControls !== null ||
       this.capture !== null ||
-      this.createMenu !== null
+      this.createMenu !== null ||
+      this.flight !== null
     );
+  }
+
+  /** Arc's download flourish: a badge flies from the page to the shelf (about a second). Keyboard
+   *  focus stays where it is. */
+  flyDownload(from: { x: number; y: number }, to: { x: number; y: number }): void {
+    this.flight = { from, to, at: Date.now() };
+    this.fit();
+    this.view.setVisible(true);
+    this.send();
+    if (this.flightTimer) clearTimeout(this.flightTimer);
+    this.flightTimer = setTimeout(() => {
+      this.flightTimer = null;
+      this.flight = null;
+      if (this.isOpen) {
+        this.fit();
+        this.send();
+      } else {
+        this.view.setVisible(false);
+        this.send();
+      }
+    }, 1150);
   }
 
   /** The sidebar's + popover (Img 2); the button toggles it. */

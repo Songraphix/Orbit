@@ -75,7 +75,11 @@ test('Library: sections in the sidebar, media from screenshots, downloads, back 
   await expect.poll(() => pageVisible(app, url)).toBe(true);
   const panelRight = await app.evaluate(({ BrowserWindow }) => {
     const win = BrowserWindow.getAllWindows().find((w) => w.contentView.children.length > 1)!;
-    const views = win.contentView.children.filter((v) => v.getVisible()).map((v) => v.getBounds());
+    const views = win.contentView.children
+      .filter((v) => v.getVisible())
+      // Not the overlay (a download's flight can still be showing).
+      .filter((v) => !(v as Electron.WebContentsView).webContents?.getURL().includes('/overlay/'))
+      .map((v) => v.getBounds());
     return views.map((b) => b.x).sort((a, b) => a - b);
   });
   expect(panelRight[0]).toBe(104); // the panel starts after the sections column

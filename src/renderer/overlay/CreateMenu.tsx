@@ -60,7 +60,7 @@ export function CreateMenu({ anchor }: { anchor: Rect }) {
           viewport maths, so it's right even while the window is still resizing). */}
       <div className="absolute h-0" style={{ left, top: anchor.y - 8, width: WIDTH }}>
         <Glass
-          className="animate-pop absolute bottom-0 left-0 w-full origin-bottom rounded-[16px] p-1.5"
+          className="animate-pop absolute bottom-0 left-0 w-full origin-bottom rounded-[20px] p-1.5"
           role="menu"
           aria-label="Create"
           data-testid="create-menu"
@@ -77,7 +77,7 @@ export function CreateMenu({ anchor }: { anchor: Rect }) {
                     role="menuitem"
                     onMouseEnter={() => setSelected(i)}
                     onClick={() => run(item.action)}
-                    className={`flex h-9 w-full items-center gap-3 rounded-[10px] px-2.5 text-left text-[14px] font-medium transition-colors duration-100 ${
+                    className={`flex h-9 w-full items-center gap-3 rounded-[12px] px-2.5 text-left text-[14px] font-medium transition-colors duration-100 ${
                       i === selected
                         ? 'bg-white/[0.13] text-white shadow-[inset_0_0.5px_0_rgb(255_255_255/0.12)]'
                         : 'text-white/90'

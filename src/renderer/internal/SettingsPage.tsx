@@ -213,7 +213,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-6">
       <h3 className="mb-2 px-1 text-[12px] font-semibold text-neutral-500">{title}</h3>
-      <div className="divide-y divide-neutral-100 rounded-xl border border-black/[0.07] bg-white shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
+      <div className="divide-y divide-neutral-100 rounded-[18px] border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
         {children}
       </div>
     </section>

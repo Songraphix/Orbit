@@ -82,6 +82,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 - 2026-11-01 — Owner feedback (Arc screenshots): the sidebar's + opens Arc's create popover (glass, icons, shortcuts, keyboard; New Tab ready) instead of a native menu; favorites in Arc's shape (2–4 columns by sidebar width, the open one tinted with its site's colour, a dot when the title carries a count like "Inbox (12)"); dragging the sidebar edge to the window edge hides it (`sidebarDrag`); toasts are dark pills by the toolbar's right edge; space menu's Share Space… (pinned links via the share sheet) and Manage Spaces… now work; `npm run dev` shows as "Orbit" with its icon (postinstall renames node_modules' Electron.app)
 - 2026-11-01 — Settings rebuilt with a sidebar (General, Profiles, Shortcuts, AI, Privacy, About). **Profiles** [F-17]: add, rename, delete (only unused, non-default; its cookies, storage and favorites go too), and choose each space's profile; moving a space keeps Orbit's own pages open. Shortcuts lists the keys; About shows versions and opens the profile folder
 
+- 2026-11-01 — Owner feedback (Arc/Comet): downloads fly — a blue badge jumps out of the page, arcs over and docks into the sidebar's shelf (overlay, CSS motion path, skipped under Reduce Motion); the shelf card matches Arc's (progress ring, "176.8/320.7 MB · 14s" from a smoothed speed, rounded close); a tab opened only to download closes itself. Arc's address pill at the top of the sidebar: the site, a link icon that copies the address, click to edit. Rounder, calmer look: card radius 14, rows 12, tiles 16, popovers 20–24; gentler spring and macOS-like timings; quieter tints on dark themes
+
 ## In progress
 
 - M1 buffer: owner dogfooding, then v0.1.0

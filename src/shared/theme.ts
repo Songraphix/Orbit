@@ -85,9 +85,9 @@ export function themeToVars(theme: SpaceTheme): ThemeVars {
     '--sidebar-bg': gradient,
     '--sidebar-fg': rgba(fg, 1),
     '--sidebar-muted': rgba(fg, 0.55),
-    '--hover': onDark ? 'rgb(255 255 255 / 0.07)' : 'rgb(0 0 0 / 0.05)',
-    '--row-active': onDark ? 'rgb(255 255 255 / 0.16)' : 'rgb(255 255 255 / 0.75)',
-    '--tile-bg': onDark ? 'rgb(255 255 255 / 0.09)' : 'rgb(255 255 255 / 0.55)',
+    '--hover': onDark ? 'rgb(255 255 255 / 0.06)' : 'rgb(0 0 0 / 0.045)',
+    '--row-active': onDark ? 'rgb(255 255 255 / 0.13)' : 'rgb(255 255 255 / 0.78)',
+    '--tile-bg': onDark ? 'rgb(255 255 255 / 0.075)' : 'rgb(255 255 255 / 0.5)',
     '--accent': rgba(accent, 1),
     '--grain': String(Math.min(0.35, theme.noise * 0.35)),
     // The active row lifts off the sidebar: a lit top edge on dark themes, a soft drop on light.

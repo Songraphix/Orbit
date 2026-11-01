@@ -7,6 +7,7 @@ import { CaptureLayer } from './CaptureLayer';
 import { PromptView } from './PromptView';
 import { FloatingSidebar } from './FloatingSidebar';
 import { CreateMenu } from './CreateMenu';
+import { DownloadFlight } from './DownloadFlight';
 import { BackdropContext } from './backdrop';
 
 /**
@@ -22,6 +23,7 @@ export function OverlayApp() {
     capture: null,
     sidebarPeek: null,
     createMenu: null,
+    flight: null,
     backdrop: null,
   });
 
@@ -54,6 +56,7 @@ export function OverlayApp() {
       {state.sidebarPeek && !busy && <FloatingSidebar width={state.sidebarPeek.width} />}
       {state.peek && <PeekFrame peek={state.peek} interactive={top === null} />}
       {top}
+      {state.flight && <DownloadFlight key={state.flight.at} flight={state.flight} />}
     </BackdropContext.Provider>
   );
 }

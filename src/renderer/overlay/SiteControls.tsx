@@ -65,7 +65,7 @@ export function SiteControls({ view }: { view: SiteControlsView }) {
       data-testid="site-controls-backdrop"
     >
       <Glass
-        className="animate-pop absolute origin-top-right rounded-[18px] text-[13px]"
+        className="animate-pop absolute origin-top-right rounded-[22px] text-[13px]"
         style={{ left, top, width: WIDTH }}
         role="dialog"
         aria-label={`Controls for ${view.host}`}
@@ -207,7 +207,7 @@ function ExtensionButton({ ext }: { ext: ExtensionAction }) {
         event.preventDefault();
         activate(event, true);
       }}
-      className="press relative grid h-11 place-items-center rounded-xl bg-white/[0.09] shadow-[inset_0_0.5px_0_rgb(255_255_255/0.1)] hover:bg-white/[0.16]"
+      className="press relative grid h-11 place-items-center rounded-[14px] bg-white/[0.09] shadow-[inset_0_0.5px_0_rgb(255_255_255/0.1)] hover:bg-white/[0.16]"
       data-testid="site-extension"
       data-extension-id={ext.id}
     >
@@ -280,7 +280,7 @@ function Action(props: {
       title={props.label}
       disabled={props.disabled}
       onClick={props.onClick}
-      className="press grid h-11 place-items-center rounded-xl bg-white/[0.09] shadow-[inset_0_0.5px_0_rgb(255_255_255/0.1)] hover:bg-white/[0.16] disabled:opacity-35 disabled:hover:bg-white/[0.09]"
+      className="press grid h-11 place-items-center rounded-[14px] bg-white/[0.09] shadow-[inset_0_0.5px_0_rgb(255_255_255/0.1)] hover:bg-white/[0.16] disabled:opacity-35 disabled:hover:bg-white/[0.09]"
       data-testid={props.testId}
     >
       {props.children}

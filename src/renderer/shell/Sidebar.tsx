@@ -12,6 +12,8 @@ import { FavoritesGrid } from './sidebar/FavoritesGrid';
 import { RowList } from './sidebar/Rows';
 import { BottomBar, SpaceHeader } from './sidebar/SpaceParts';
 import { LibraryNav } from './sidebar/LibraryNav';
+import { AddressPill } from './sidebar/AddressPill';
+import type { TabState } from '@shared/types/tabs';
 import type { LibrarySection } from '@shared/types/library';
 
 /** Height of the draggable strip that holds the traffic lights (F-01). */
@@ -26,6 +28,8 @@ type Props = {
   librarySection: LibrarySection | null;
   /** Drawn by the overlay as the hidden sidebar slid out over the page (no resize edge). */
   floating?: boolean;
+  /** The page on screen, for the address pill (Arc). */
+  activeTab: TabState | null;
   /** Called when an edge drag starts/ends, so the shell can stand in for the live web view. */
   onResizeStart: () => void;
   onResizeEnd: () => void;
@@ -96,6 +100,7 @@ export function Sidebar({
   media,
   librarySection,
   floating = false,
+  activeTab,
   onResizeStart,
   onResizeEnd,
 }: Props) {
@@ -148,6 +153,7 @@ export function Sidebar({
           </button>
         )}
       </div>
+      {!librarySection && <AddressPill tab={activeTab} />}
       {librarySection && <LibraryNav section={librarySection} />}
       {!librarySection && sidebar && space && (
         <DndContext.Provider value={dnd}>
@@ -196,7 +202,7 @@ export function Sidebar({
               />
               <button
                 type="button"
-                className="press flex h-[34px] items-center gap-2.5 rounded-[9px] px-2 text-left text-[13px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+                className="press flex h-[34px] items-center gap-2.5 rounded-[12px] px-2 text-left text-[13px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
                 onClick={() => void window.orbit.invoke('tabs:create', {})}
                 data-testid="new-tab-row"
               >

@@ -21,7 +21,7 @@ export function RecentFiles() {
   const { items, at: now } = loaded;
   return (
     <div
-      className="animate-pop absolute right-0 bottom-full left-0 mb-1.5 origin-bottom-left rounded-[14px] p-1 backdrop-blur-2xl shadow-[var(--row-shadow),0_12px_32px_-8px_rgb(0_0_0/0.45)]"
+      className="animate-pop absolute right-0 bottom-full left-0 mb-1.5 origin-bottom-left rounded-[18px] p-1.5 backdrop-blur-2xl shadow-[var(--row-shadow),0_12px_32px_-8px_rgb(0_0_0/0.45)]"
       style={{ background: 'var(--sidebar-bg)' }}
       data-testid="recent-files"
     >
@@ -41,7 +41,7 @@ export function RecentFiles() {
                 }}
                 onClick={(e) => act(d.id, e.metaKey ? 'reveal' : 'open')}
                 onKeyDown={(e) => e.key === 'Enter' && act(d.id, 'open')}
-                className="flex items-center gap-2.5 rounded-lg p-1.5 hover:bg-[var(--hover)]"
+                className="flex items-center gap-2.5 rounded-[12px] p-1.5 hover:bg-[var(--hover)]"
                 title="Open (⌘-click to show in Finder)"
                 data-testid="recent-file"
               >

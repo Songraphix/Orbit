@@ -4,7 +4,7 @@ import { app, nativeImage, shell } from 'electron';
 import type { DownloadItem, NativeImage, Session, WebContents } from 'electron';
 import type { DownloadView, DownloadsSnapshot, RecentDownload } from '@shared/types/downloads';
 import type { Database } from '../persistence/db';
-import { onShelf, uniquePath } from './model';
+import { nextSpeed, onShelf, uniquePath } from './model';
 
 type Tracked = DownloadView & {
   url: string;
@@ -13,6 +13,7 @@ type Tracked = DownloadView & {
   mime: string;
   dismissed: boolean;
   item: DownloadItem | null;
+  lastSample: { bytes: number; at: number } | null;
 };
 
 /** A download as stored, for Library → Downloads and Media. */
@@ -44,12 +45,17 @@ export class DownloadService {
     private readonly db: Database,
     private readonly dir: () => string,
     private readonly onChange: (snapshot: DownloadsSnapshot) => void,
+    /** A download started from this page (the window plays its fly-to-the-shelf animation). */
+    private readonly onStarted?: (from: WebContents) => void,
   ) {}
 
   configure(session: Session, profileId: string): void {
     if (this.configured.has(session)) return;
     this.configured.add(session);
-    session.on('will-download', (_event, item) => this.track(item, profileId));
+    session.on('will-download', (_event, item, contents) => {
+      this.track(item, profileId);
+      if (contents && !contents.isDestroyed()) this.onStarted?.(contents);
+    });
   }
 
   snapshot(now = Date.now()): DownloadsSnapshot {
@@ -57,7 +63,7 @@ export class DownloadService {
       .filter((d) => onShelf(d, now))
       .sort((a, b) => b.startedAt - a.startedAt)
       .map(
-        ({ id, filename, state, receivedBytes, totalBytes, startedAt, finishedAt, thumbnail }) => ({
+        ({
           id,
           filename,
           state,
@@ -66,6 +72,17 @@ export class DownloadService {
           startedAt,
           finishedAt,
           thumbnail,
+          speed,
+        }) => ({
+          id,
+          filename,
+          state,
+          receivedBytes,
+          totalBytes,
+          startedAt,
+          finishedAt,
+          thumbnail,
+          speed: state === 'progressing' ? speed : null,
         }),
       );
     return { items };
@@ -200,8 +217,10 @@ export class DownloadService {
       startedAt: Date.now(),
       finishedAt: null,
       thumbnail: null,
+      speed: null,
       dismissed: false,
       item,
+      lastSample: null,
     };
     this.items.set(id, d);
     this.save(d);
@@ -210,6 +229,9 @@ export class DownloadService {
     item.on('updated', (_e, state) => {
       d.receivedBytes = item.getReceivedBytes();
       d.totalBytes = item.getTotalBytes();
+      const sample = { bytes: d.receivedBytes, at: Date.now() };
+      d.speed = nextSpeed(d.speed, sample, d.lastSample);
+      d.lastSample = sample;
       if (state === 'interrupted') d.state = 'interrupted';
       this.emitSoon();
     });

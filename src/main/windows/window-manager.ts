@@ -162,7 +162,7 @@ export class WindowManager {
     let library: LibraryController | null = null;
     let overlayRef: OverlayController | null = null;
     /** The shell's sidebar state also goes to the overlay, which draws the slid-out sidebar. */
-    const toOverlay = <E extends 'state:sidebar' | 'state:media' | 'state:library'>(
+    const toOverlay = <E extends 'state:sidebar' | 'state:tabs' | 'state:media' | 'state:library'>(
       event: E,
       payload: EventPayload<E>,
     ) => {
@@ -217,6 +217,7 @@ export class WindowManager {
       },
       onChange: (snapshot, sidebar) => {
         broadcaster.sendTo(contents, 'state:tabs', snapshot);
+        toOverlay('state:tabs', snapshot);
         broadcaster.sendTo(contents, 'state:sidebar', sidebar);
         toOverlay('state:sidebar', sidebar);
         // Find belongs to the page it searched; switching tabs closes it.

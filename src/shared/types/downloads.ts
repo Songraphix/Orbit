@@ -11,6 +11,8 @@ export const downloadViewSchema = z.object({
   finishedAt: z.number().nullable(),
   /** A small preview (image thumbnail or file-type icon) as a data: URL. */
   thumbnail: z.string().nullable(),
+  /** Smoothed speed in bytes/s while downloading (for "14s" left), else null. */
+  speed: z.number().nullable(),
 });
 export type DownloadView = z.output<typeof downloadViewSchema>;
 

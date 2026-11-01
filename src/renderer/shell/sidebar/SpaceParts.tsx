@@ -142,7 +142,7 @@ export function BottomBar({
           window.clearTimeout(timer.current);
           void invoke('library:open', { section: 'media' });
         }}
-        className="grid size-8 place-items-center rounded-lg text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+        className="grid size-8 place-items-center rounded-[11px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
         data-testid="library-button"
       >
         <Library size={16} />
@@ -155,7 +155,7 @@ export function BottomBar({
             aria-label={space.name}
             aria-current={space.id === activeSpaceId ? 'true' : undefined}
             title={`${space.name}${i < 9 ? ` (⌃${i + 1})` : ''}`}
-            className={`grid size-8 place-items-center rounded-lg transition ${
+            className={`grid size-8 place-items-center rounded-[11px] transition ${
               space.id === activeSpaceId
                 ? 'bg-[var(--row-active)] opacity-100'
                 : 'opacity-55 hover:bg-[var(--hover)] hover:opacity-90'
@@ -175,7 +175,7 @@ export function BottomBar({
         type="button"
         aria-label="Create"
         title="New space, folder or tab"
-        className="press grid size-8 place-items-center rounded-lg hover:bg-[var(--hover)]"
+        className="press grid size-8 place-items-center rounded-[11px] hover:bg-[var(--hover)]"
         onClick={(e) => {
           const r = e.currentTarget.getBoundingClientRect();
           void invoke('sidebar:createMenu', {

@@ -63,7 +63,7 @@ export function SearchField(props: {
 }) {
   return (
     <div className="mb-4 flex items-center gap-2">
-      <label className="flex h-10 flex-1 items-center gap-2 rounded-xl bg-[var(--tile-bg)] px-3">
+      <label className="flex h-10 flex-1 items-center gap-2 rounded-[14px] bg-[var(--tile-bg)] px-3">
         <Search size={15} className="text-[var(--sidebar-muted)]" />
         <input
           value={props.value}
@@ -100,7 +100,7 @@ export function Heading({
 export function Empty({ children }: { children: ReactNode }) {
   return (
     <p
-      className="rounded-2xl bg-[var(--tile-bg)] px-6 py-12 text-center text-sm text-[var(--sidebar-muted)]"
+      className="rounded-[20px] bg-[var(--tile-bg)] px-6 py-12 text-center text-sm text-[var(--sidebar-muted)]"
       data-testid="library-empty"
     >
       {children}
@@ -151,7 +151,7 @@ function MediaTile({ item }: { item: MediaItem }) {
       <button
         type="button"
         onClick={() => void invoke('library:mediaAct', { id: item.id, action: 'open' })}
-        className="relative grid aspect-square w-full place-items-center overflow-hidden rounded-2xl bg-[var(--tile-bg)] p-3 hover:bg-[var(--hover)]"
+        className="relative grid aspect-square w-full place-items-center overflow-hidden rounded-[20px] bg-[var(--tile-bg)] p-3 hover:bg-[var(--hover)]"
         title={item.name}
       >
         {item.thumbnail ? (
@@ -216,7 +216,7 @@ function DownloadsSection() {
               {group.map((d) => (
                 <li
                   key={d.id}
-                  className="group flex items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-[var(--hover)]"
+                  className="group flex items-center gap-3 rounded-[14px] px-2 py-1.5 hover:bg-[var(--hover)]"
                   data-testid="download-entry"
                 >
                   <button
@@ -276,7 +276,7 @@ function SpacesSection() {
       {spaces.map((space, i) => (
         <section
           key={space.id}
-          className={`flex min-h-[70vh] w-64 shrink-0 flex-col rounded-2xl p-3 ${
+          className={`flex min-h-[70vh] w-64 shrink-0 flex-col rounded-[20px] p-3 ${
             space.active ? 'bg-[var(--row-active)]' : 'bg-[var(--tile-bg)]'
           }`}
           data-testid="space-entry"
@@ -417,7 +417,7 @@ function BoostsSection() {
         {boosts?.map((boost) => (
           <li
             key={boost.id}
-            className="flex items-center gap-3 rounded-xl bg-[var(--tile-bg)] px-3 py-2.5"
+            className="flex items-center gap-3 rounded-[14px] bg-[var(--tile-bg)] px-3 py-2.5"
             data-testid="boost-entry"
           >
             <span className="grid size-8 place-items-center rounded-lg bg-[var(--accent)] text-white">

@@ -113,7 +113,7 @@ function FavoriteTile({ row, active }: { row: SidebarRow; active: boolean }) {
         title={row.title}
         aria-label={row.title}
         aria-current={active ? 'page' : undefined}
-        className={`press relative grid h-12 w-full place-items-center rounded-[12px] ${
+        className={`press relative grid h-[52px] w-full place-items-center rounded-[16px] ${
           active
             ? 'bg-[var(--row-active)] shadow-[var(--row-shadow)]'
             : 'bg-[var(--tile-bg)] hover:bg-[var(--row-active)]'

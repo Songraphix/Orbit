@@ -129,6 +129,7 @@ function Chrome({
           downloads={downloads}
           media={media}
           librarySection={librarySection}
+          activeTab={activeTab}
           onResizeStart={onResizeStart}
           onResizeEnd={onResizeEnd}
         />

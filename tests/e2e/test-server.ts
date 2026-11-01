@@ -166,6 +166,24 @@ export async function startTestServer(): Promise<TestServer> {
       res.writeHead(200, headers).end(page(`cookie:${req.headers.cookie ?? 'none'}`));
       return;
     }
+    if (path === '/big.bin') {
+      // 3 MB over about 1.5 s, so a download is seen in progress.
+      res.writeHead(200, {
+        'content-type': 'application/octet-stream',
+        'content-length': String(30 * 102_400),
+        'content-disposition': 'attachment; filename="big.bin"',
+      });
+      let sent = 0;
+      const timer = setInterval(() => {
+        res.write(Buffer.alloc(102_400, 7));
+        if (++sent === 30) {
+          clearInterval(timer);
+          res.end();
+        }
+      }, 50);
+      req.on('close', () => clearInterval(timer));
+      return;
+    }
     if (path === '/report.txt') {
       res
         .writeHead(200, {

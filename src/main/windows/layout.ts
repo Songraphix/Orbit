@@ -4,7 +4,7 @@ import type { Layout, LibraryPanel, Rect } from '@shared/types/layout';
 /** Arc-like defaults (PLAN.md section 4.6). */
 export const LAYOUT_DEFAULTS = {
   inset: 8,
-  radius: 10,
+  radius: 14,
   toolbarHeight: 36,
 } as const;
 

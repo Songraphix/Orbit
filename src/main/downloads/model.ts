@@ -39,3 +39,17 @@ export function onShelf(
   if (d.state === 'progressing') return true;
   return now - (d.finishedAt ?? d.startedAt) < SHELF_WINDOW_MS;
 }
+
+/**
+ * A smoothed download speed (bytes/s) from the previous estimate and a new progress sample, so
+ * "time left" doesn't jump about. Null until there's a sample to compare. Pure.
+ */
+export function nextSpeed(
+  previous: number | null,
+  sample: { bytes: number; at: number },
+  last: { bytes: number; at: number } | null,
+): number | null {
+  if (!last || sample.at <= last.at) return previous;
+  const instant = Math.max(0, (sample.bytes - last.bytes) / ((sample.at - last.at) / 1000));
+  return previous === null ? instant : previous * 0.7 + instant * 0.3;
+}

@@ -75,7 +75,7 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
       data-testid="command-bar-backdrop"
     >
       <Glass
-        className="animate-pop h-fit w-[min(660px,90vw)] rounded-[18px]"
+        className="animate-pop h-fit w-[min(660px,90vw)] rounded-[24px]"
         role="dialog"
         aria-label={mode === 'edit' ? 'Edit address' : 'New tab'}
         data-testid="command-bar"
@@ -110,7 +110,7 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
                 id={`cmd-${i}`}
                 role="option"
                 aria-selected={i === selected}
-                className={`flex h-11 cursor-default items-center gap-3 rounded-[11px] px-3 text-[14px] transition-colors duration-100 ${
+                className={`flex h-11 cursor-default items-center gap-3 rounded-[13px] px-3 text-[14px] transition-colors duration-100 ${
                   i === selected
                     ? 'bg-white/[0.12] text-white shadow-[inset_0_0.5px_0_rgb(255_255_255/0.12)]'
                     : 'text-white/85'

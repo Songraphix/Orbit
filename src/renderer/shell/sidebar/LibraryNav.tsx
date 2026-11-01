@@ -26,7 +26,7 @@ export function LibraryNav({ section }: { section: LibrarySection }) {
             type="button"
             aria-current={s.id === section ? 'page' : undefined}
             onClick={() => void window.orbit.invoke('library:open', { section: s.id })}
-            className={`press flex flex-col items-center gap-1.5 rounded-[14px] py-3.5 text-[11.5px] font-semibold tracking-[0.01em] ${
+            className={`press flex flex-col items-center gap-1.5 rounded-[18px] py-3.5 text-[11.5px] font-semibold tracking-[0.01em] ${
               s.id === section
                 ? 'bg-[var(--row-active)] text-[var(--sidebar-fg)] shadow-[var(--row-shadow)]'
                 : 'text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]'

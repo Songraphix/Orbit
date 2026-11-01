@@ -31,7 +31,7 @@ export function EaselsSection() {
         <button
           type="button"
           onClick={() => void invoke('library:easelAct', { action: 'new' })}
-          className="flex h-10 items-center gap-1.5 rounded-xl bg-[var(--tile-bg)] px-3 text-sm font-medium hover:bg-[var(--hover)]"
+          className="flex h-10 items-center gap-1.5 rounded-[14px] bg-[var(--tile-bg)] px-3 text-sm font-medium hover:bg-[var(--hover)]"
           data-testid="easel-new"
         >
           <Plus size={15} /> New Easel
@@ -48,7 +48,7 @@ export function EaselsSection() {
             <button
               type="button"
               onClick={() => void invoke('library:easelAct', { id: easel.id, action: 'open' })}
-              className="grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-2xl bg-[var(--tile-bg)] p-2 hover:bg-[var(--hover)]"
+              className="grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-[20px] bg-[var(--tile-bg)] p-2 hover:bg-[var(--hover)]"
               title={`Open ${easel.title}`}
             >
               {easel.preview ? (
