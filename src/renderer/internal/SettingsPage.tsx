@@ -117,6 +117,10 @@ export function SettingsPage() {
         </Row>
       </Group>
 
+      <Group title="Default browser">
+        <DefaultBrowserRow />
+      </Group>
+
       <Group title="Privacy">
         <Row
           label="Browsing history"
@@ -160,5 +164,37 @@ function Row({ label, hint, children }: { label: string; hint: string; children:
       </div>
       {children}
     </div>
+  );
+}
+
+function DefaultBrowserRow() {
+  const [isDefault, setIsDefault] = useState<boolean | null>(null);
+  useEffect(() => {
+    void window.orbit.invoke('browser:defaultStatus', {}).then((r) => setIsDefault(r.isDefault));
+  }, []);
+  return (
+    <Row
+      label="Open links from other apps in Orbit"
+      hint="Links from Mail, Slack and others open in a small Little Orbit window."
+    >
+      {isDefault ? (
+        <span className="text-sm text-neutral-500" data-testid="default-browser-status">
+          Orbit is your default browser
+        </span>
+      ) : (
+        <button
+          type="button"
+          className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+          onClick={() =>
+            void window.orbit
+              .invoke('browser:makeDefault', {})
+              .then((r) => setIsDefault(r.isDefault))
+          }
+          data-testid="make-default"
+        >
+          Make Default
+        </button>
+      )}
+    </Row>
   );
 }

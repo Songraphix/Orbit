@@ -197,6 +197,26 @@ export const contract = {
     output: z.void(),
   },
 
+  // Little Orbit (F-24) and default browser.
+  'little:get': {
+    input: z.object({}).strict(),
+    output: z.object({ url: z.string(), title: z.string() }),
+  },
+  'little:promote': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
+  'browser:defaultStatus': {
+    input: z.object({}).strict(),
+    output: z.object({ isDefault: z.boolean() }),
+    surfaces: ['internal'],
+  },
+  'browser:makeDefault': {
+    input: z.object({}).strict(),
+    output: z.object({ isDefault: z.boolean() }),
+    surfaces: ['internal'],
+  },
+
   // Command bar (F-21). The shell opens it; the overlay (where it renders) queries and executes.
   'commandbar:open': {
     input: z.object({ mode: commandBarModeSchema }).strict(),
@@ -317,6 +337,8 @@ export const events = {
   'state:overlay': overlayStateSchema,
   /** Sent to a window's shell when its mini player changes. */
   'state:media': mediaStateSchema,
+  /** Sent to a Little Orbit window's bar when its page changes. */
+  'little:state': z.object({ url: z.string(), title: z.string() }),
   /** Sent to every shell when downloads change. */
   'state:downloads': downloadsSnapshotSchema,
   /** Sent to a window's shell when find-in-page changes. */

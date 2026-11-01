@@ -15,5 +15,10 @@ mac:
       arch: arm64
   # Unsigned for personal use (M1–M2). Signing + notarisation: PLAN.md section 12.
   identity: null
-# http/https protocol registration (default browser) is added in Phase 6.
+# Lets Orbit be chosen as the default browser (links from other apps open in Little Orbit).
+protocols:
+  - name: Web Page
+    schemes:
+      - http
+      - https
 # Electron Fuses are applied in Phase 11.

@@ -8,6 +8,7 @@ import type { DownloadView } from '@shared/types/downloads';
 import type { FindState } from '@shared/types/find';
 import type { MediaState } from '@shared/types/media';
 import type { TabsSnapshot } from '@shared/types/tabs';
+import { LittleBar } from './LittleBar';
 import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
 import { useMainState } from './use-main-state';
@@ -18,7 +19,13 @@ const GRAIN =
 
 const toStyle = (r: Rect) => ({ left: r.x, top: r.y, width: r.width, height: r.height });
 
+/** The same renderer draws the main window's chrome, or a Little Orbit window's bar. */
 export function ShellApp() {
+  const little = new URLSearchParams(window.location.search).get('mode') === 'little';
+  return little ? <LittleBar /> : <MainShell />;
+}
+
+function MainShell() {
   const layout = useMainState('state:layout');
   const tabs = useMainState('state:tabs');
   const find = useMainState('state:find');

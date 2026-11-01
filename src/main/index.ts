@@ -33,6 +33,7 @@ import { SEARCH_ENGINES } from '@shared/settings';
 import { PermissionService } from './permissions/service';
 import { ArcImporter, findArcSources } from './importer/arc/import';
 import { WindowManager } from './windows/window-manager';
+import { acceptExternalUrl, LittleWindow } from './windows/little';
 import type { WindowController } from './windows/window-manager';
 
 app.setName(APP_NAME);
@@ -71,10 +72,24 @@ process.on('uncaughtException', (error) => console.error('[orbit] uncaught excep
 process.on('unhandledRejection', (reason) => console.error('[orbit] unhandled rejection', reason));
 let windows: WindowManager | null = null;
 
-function loadRenderer(win: BrowserWindow, entry: RendererEntry): void {
-  if (devServer) void win.loadURL(`${devServer}/${entry}/index.html`);
-  else void win.loadFile(join(rendererDir, entry, 'index.html'));
+function loadRenderer(win: BrowserWindow, entry: RendererEntry, query?: string): void {
+  if (devServer) void win.loadURL(`${devServer}/${entry}/index.html${query ? `?${query}` : ''}`);
+  else void win.loadFile(join(rendererDir, entry, 'index.html'), query ? { search: query } : {});
 }
+
+// ── Links from other apps (default browser) → Little Orbit (F-24) ────────────
+const littleWindows = new Map<number, LittleWindow>();
+const pendingUrls: string[] = [];
+let openLittle: ((url: string) => void) | null = null;
+
+app.on('will-finish-launching', () => {
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    if (!acceptExternalUrl(url)) return;
+    if (openLittle) openLittle(url);
+    else pendingUrls.push(url); // arrived before Orbit finished starting
+  });
+});
 
 /** orbit://<page> → the internal renderer with `#/<page>`. Unknown pages show "not found". */
 function loadInternal(view: WebContentsView, url: string): void {
@@ -301,6 +316,22 @@ void app.whenReady().then(() => {
   router.handle('media:control', async ({ action }, { sender }) => {
     await windowManager.forSender(sender.webContentsId)?.media.control(action);
   });
+  router.handle('little:get', (_i, { sender }) => {
+    const little = littleWindows.get(sender.webContentsId);
+    return { url: little?.url ?? '', title: little?.title ?? '' };
+  });
+  router.handle('little:promote', (_i, { sender }) => {
+    littleWindows.get(sender.webContentsId)?.promote();
+  });
+  router.handle('browser:defaultStatus', () => ({
+    isDefault: app.isDefaultProtocolClient('https'),
+  }));
+  router.handle('browser:makeDefault', () => {
+    // macOS asks the user to confirm; the packaged app must be the one registering.
+    app.setAsDefaultProtocolClient('http');
+    app.setAsDefaultProtocolClient('https');
+    return { isDefault: app.isDefaultProtocolClient('https') };
+  });
   router.handle('downloads:get', () => downloadService?.snapshot() ?? { items: [] });
   router.handle('downloads:act', async ({ id, action }, { sender }) => {
     const service = downloadService;
@@ -413,5 +444,32 @@ void app.whenReady().then(() => {
     }
   }, 5_000);
 
+  /** Opens a URL as a tab in the main window (reopening the window if it was closed). */
+  const openInMain = (url: string) => {
+    const controller = windowManager.focused() ?? windowManager.all()[0];
+    if (!controller) {
+      windowManager.createMainWindow();
+      setTimeout(() => windowManager.all()[0]?.tabs.create(url), 300);
+      return;
+    }
+    controller.tabs.create(url);
+    controller.win.show();
+    controller.win.focus();
+  };
+  openLittle = (url: string) => {
+    const little = new LittleWindow(url, {
+      preloadPath: join(import.meta.dirname, '../preload/shell.cjs'),
+      loadRenderer,
+      register: (id) => senders.add(id, 'shell'),
+      unregister: (id) => senders.remove(id),
+      openInMain,
+      send: (bar, state) => broadcaster.sendTo(bar, 'little:state', state),
+    });
+    const barId = little.win.webContents.id;
+    littleWindows.set(barId, little);
+    little.win.on('closed', () => littleWindows.delete(barId));
+  };
+
   windowManager.createMainWindow();
+  for (const url of pendingUrls.splice(0)) openLittle(url);
 });

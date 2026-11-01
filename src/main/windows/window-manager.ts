@@ -35,7 +35,7 @@ export type WindowManagerDeps = {
   broadcaster: Broadcaster;
   preloadPath: string;
   internalPreloadPath: string;
-  loadRenderer: (win: BrowserWindow, entry: RendererEntry) => void;
+  loadRenderer: (win: BrowserWindow, entry: RendererEntry, query?: string) => void;
   /** Loads an internal orbit:// page (e.g. orbit://newtab) into a tab's view. */
   loadInternal: (view: WebContentsView, url: string) => void;
   /** Loads the overlay renderer into the overlay view. */
