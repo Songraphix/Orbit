@@ -4,6 +4,7 @@ import type { RendererEntry } from '@shared/constants';
 import type { Broadcaster } from '../ipc/broadcaster';
 import type { SenderRegistry } from '../ipc/sender';
 import type { SettingsRepository } from '../persistence/repositories/settings';
+import { LayoutEngine } from './layout-engine';
 import { MIN_SIZE, resolveWindowBounds } from './window-state';
 
 /** Where the macOS traffic lights sit, inside the sidebar's top-left corner (F-01). */
@@ -20,9 +21,30 @@ export type WindowManagerDeps = {
   loadRenderer: (win: BrowserWindow, entry: RendererEntry) => void;
 };
 
+/** One Orbit window and the services scoped to it. */
+export type WindowController = {
+  win: BrowserWindow;
+  layout: LayoutEngine;
+};
+
 /** Creates and restores Orbit's windows (PLAN.md section 4.3). */
 export class WindowManager {
+  /** Keyed by the shell's webContents id, so IPC handlers can find the sender's window. */
+  private readonly controllers = new Map<number, WindowController>();
+
   constructor(private readonly deps: WindowManagerDeps) {}
+
+  /** The window whose shell sent an IPC message. */
+  forSender(webContentsId: number): WindowController | undefined {
+    return this.controllers.get(webContentsId);
+  }
+
+  /** The focused window (for menu commands), falling back to any window. */
+  focused(): WindowController | undefined {
+    const win = BrowserWindow.getFocusedWindow();
+    const match = [...this.controllers.values()].find((c) => c.win === win);
+    return match ?? this.controllers.values().next().value;
+  }
 
   createMainWindow(): BrowserWindow {
     const { settings, senders, broadcaster, preloadPath, loadRenderer } = this.deps;
@@ -58,12 +80,20 @@ export class WindowManager {
     if (saved.isMaximized) win.maximize();
 
     const contents = win.webContents;
-    senders.add(contents.id);
+    const layout = new LayoutEngine(win, settings, (next) =>
+      broadcaster.sendTo(contents, 'state:layout', next),
+    );
+    const id = contents.id;
+    this.controllers.set(id, { win, layout });
+    senders.add(id);
     broadcaster.add(contents);
     contents.once('destroyed', () => {
-      senders.remove(contents.id);
+      this.controllers.delete(id);
+      senders.remove(id);
       broadcaster.remove(contents);
     });
+    win.on('resize', () => layout.update());
+    win.on('close', () => layout.flush());
 
     // The shell never navigates or opens windows itself (PLAN.md section 4.8).
     contents.on('will-navigate', (event) => event.preventDefault());

@@ -82,7 +82,8 @@ describe('IpcRouter', () => {
     expect(() => router.assertComplete()).toThrow('app:getInfo');
     router.handle('app:getInfo', () => INFO);
     expect(() => router.handle('app:getInfo', () => INFO)).toThrow('already registered');
-    expect(() => router.assertComplete()).not.toThrow();
+    // Other channels are still missing, but app:getInfo is no longer listed.
+    expect(() => router.assertComplete()).toThrow(/^(?!.*app:getInfo).*without handlers/);
   });
 });
 

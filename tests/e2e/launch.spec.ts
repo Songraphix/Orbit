@@ -15,8 +15,8 @@ test.afterAll(async () => {
 test('shows the shell window', async () => {
   const { win } = orbit;
   await expect(win).toHaveTitle('Orbit');
-  await expect(win.getByRole('heading', { name: 'Orbit' })).toBeVisible();
-  await expect(win.getByTestId('app-info')).toContainText('Electron');
+  await expect(win.getByTestId('sidebar')).toBeVisible();
+  await expect(win.getByTestId('content-card')).toBeVisible();
 });
 
 test('isolates the shell: no Node, only the window.orbit bridge', async () => {

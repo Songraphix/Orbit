@@ -5,6 +5,8 @@ import { APP_NAME } from '@shared/constants';
 import type { RendererEntry } from '@shared/constants';
 import { Broadcaster } from './ipc/broadcaster';
 import { registerAppHandlers } from './ipc/handlers/app';
+import { registerLayoutHandlers } from './ipc/handlers/layout';
+import { installAppMenu } from './menus/app-menu';
 import { IpcRouter } from './ipc/router';
 import { SenderRegistry } from './ipc/sender';
 import { openPersistence } from './persistence';
@@ -31,9 +33,9 @@ const senders = new SenderRegistry(
   devServer ? [`${new URL(devServer).origin}/`] : [pathToFileURL(`${rendererDir}/`).href],
 );
 const broadcaster = new Broadcaster();
-const router = new IpcRouter(ipcMain, senders);
-registerAppHandlers(router);
-router.assertComplete();
+
+let persistence: Persistence | null = null;
+let windows: WindowManager | null = null;
 
 function loadRenderer(win: BrowserWindow, entry: RendererEntry): void {
   if (devServer) void win.loadURL(`${devServer}/${entry}/index.html`);
@@ -56,9 +58,6 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-let persistence: Persistence | null = null;
-let windows: WindowManager | null = null;
-
 app.on('will-quit', () => {
   persistence?.close();
   persistence = null;
@@ -73,5 +72,14 @@ void app.whenReady().then(() => {
     preloadPath: join(import.meta.dirname, '../preload/shell.cjs'),
     loadRenderer,
   });
-  windows.createMainWindow();
+  const windowManager = windows;
+
+  // Handlers are registered before any window loads, so the shell's first call always lands.
+  const router = new IpcRouter(ipcMain, senders);
+  registerAppHandlers(router);
+  registerLayoutHandlers(router, windowManager);
+  router.assertComplete();
+
+  installAppMenu({ toggleSidebar: () => windowManager.focused()?.layout.toggleSidebar() });
+  windowManager.createMainWindow();
 });

@@ -14,10 +14,11 @@ Target end: 2026-11-16 · Branch: `phase-1/foundations`
 - 2026-11-01 — Phase 1 step 1: typed IPC router (zod input + output validation, trusted-sender checks), main→renderer Broadcaster, typed `window.orbit.invoke/on`, first channel `app:getInfo`; e2e runs in a throwaway profile via `ORBIT_USER_DATA_DIR`
 - 2026-11-01 — Phase 1 step 2: persistence — `<userData>/orbit.db` (WAL), migration runner on `PRAGMA user_version` (per-migration transactions, refuses newer schemas), typed `SettingsRepository` (zod-validated, falls back to defaults on bad data)
 - 2026-11-01 — Phase 1 step 3: WindowManager [F-01] — hidden inset title bar, traffic lights at (16, 18), `sidebar` vibrancy with a translucent theme tint, 44 px drag strip; window bounds + maximised state saved (debounced 500 ms, flushed on close) and restored safely across display changes
+- 2026-11-01 — Phase 1 step 4: LayoutEngine v1 [F-01] — pure `computeLayout()` (sidebar, card, toolbar, web-view rects; 8 px inset, 10 px radius), per-window `LayoutEngine` in main pushing `state:layout`; sidebar ⌘S toggle (menu item, hides traffic lights with it) and drag-to-resize 200–400 px, both persisted; minimal app menu
 
 ## In progress
 
-- Phase 1 step 4: LayoutEngine v1 + sidebar shell (⌘S toggle, resize) — awaiting review of step 3
+- Phase 1 step 5: TabManager + WebContentsView per tab, flat tab list, New Tab URL prompt — awaiting review of step 4
 
 ## Decisions made
 
@@ -39,5 +40,7 @@ Target end: 2026-11-16 · Branch: `phase-1/foundations`
 - (none yet)
 
 ## Backlog (ideas outside the current phase)
+
+- Hover the left edge to reveal the hidden sidebar as a floating panel (F-01) — needs the overlay view, so it lands in Phase 2
 
 - (none yet)

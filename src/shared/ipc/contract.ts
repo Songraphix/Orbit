@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { layoutSchema } from '../types/layout';
 
 /**
  * Every IPC channel lives here (PLAN.md section 4.4). Names follow `domain:verb`.
@@ -22,9 +23,24 @@ export const contract = {
       platform: z.string(),
     }),
   },
+  'layout:get': {
+    input: z.object({}).strict(),
+    output: layoutSchema,
+  },
+  'sidebar:toggle': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
+  'sidebar:setWidth': {
+    input: z.object({ width: z.number().finite() }).strict(),
+    output: z.void(),
+  },
 } as const satisfies Record<string, ChannelSpec>;
 
-export const events = {} as const satisfies Record<string, z.ZodType>;
+export const events = {
+  /** Sent to a window's shell whenever its layout changes. */
+  'state:layout': layoutSchema,
+} as const satisfies Record<string, z.ZodType>;
 
 export type Contract = typeof contract;
 export type Channel = keyof Contract;
