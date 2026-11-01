@@ -1,6 +1,15 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, net, session } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  globalShortcut,
+  ipcMain,
+  net,
+  safeStorage,
+  session,
+} from 'electron';
 import type { Session } from 'electron';
 import type { WebContentsView } from 'electron';
 import { APP_NAME, isInternalPage } from '@shared/constants';
@@ -23,6 +32,10 @@ import { CaptureRequests } from './easels/capture-requests';
 import { registerLibraryHandlers } from './ipc/handlers/library';
 import { MediaLibrary } from './library/media';
 import { LiveFolderService } from './live-folders/service';
+import { AiKeyStore, cleanApiKey } from './ai/key-store';
+import type { Cipher } from './ai/key-store';
+import { AIService, TIDY_MODEL } from './ai/service';
+import { TidyService } from './ai/tidy';
 import { feedInputUrl, githubRepo } from './live-folders/model';
 import type { LiveSource } from '@shared/types/live-folders';
 import { registerCommandBarHandlers } from './ipc/handlers/command-bar';
@@ -397,6 +410,27 @@ void app.whenReady().then(() => {
   });
   liveFolders = live;
   live.start();
+
+  // AI (F-29): the user's Anthropic key, Keychain-encrypted. Development builds can point the
+  // SDK at a stand-in server and skip the Keychain (the e2e tests do; packaged Orbit never).
+  const devOnly = (name: string) => (app.isPackaged ? undefined : process.env[name]);
+  const testCipher: Cipher | null = devOnly('ORBIT_TEST_PLAIN_KEYS')
+    ? {
+        isEncryptionAvailable: () => true,
+        encryptString: (text) => Buffer.from(text, 'utf8'),
+        decryptString: (data) => data.toString('utf8'),
+      }
+    : null;
+  const keyStore = new AiKeyStore(
+    join(app.getPath('userData'), 'anthropic-key.bin'),
+    testCipher ?? safeStorage,
+  );
+  const ai = new AIService({
+    apiKey: () => keyStore.get(),
+    baseURL: devOnly('ORBIT_ANTHROPIC_BASE_URL'),
+  });
+  const refreshSidebars = () => windows?.all().forEach((c) => c.tabs.refresh());
+  const tidy = new TidyService({ store, ai, onChange: refreshSidebars });
   app.on('web-contents-created', (_event, contents) => boosts.attach(contents));
   /** One session per profile (F-17). The default profile keeps Electron's default session, so
    *  logins from before profiles existed carry over. */
@@ -471,6 +505,7 @@ void app.whenReady().then(() => {
     loadInternal,
     loadOverlay,
     runCommand,
+    tidyState: (spaceId) => tidy.state(spaceId),
     liveFolders: {
       add: (controller, kind, spaceId) => void addLiveFolder(controller, kind, spaceId),
       refresh: (folderId) => void (folderId ? live.refresh(folderId) : live.refreshAll()),
@@ -538,6 +573,42 @@ void app.whenReady().then(() => {
     settings: persistence.settings,
     history: persistence.history,
     applyLittleShortcut,
+    ai: {
+      status: () => ({ hasKey: keyStore.has(), canStore: keyStore.canStore, model: TIDY_MODEL }),
+      setKey: (input) => {
+        const key = cleanApiKey(input);
+        if (!key)
+          return { ok: false, error: 'That doesn’t look like an Anthropic API key (sk-ant-…)' };
+        try {
+          keyStore.set(key);
+        } catch (error) {
+          return { ok: false, error: error instanceof Error ? error.message : String(error) };
+        }
+        refreshSidebars(); // Tidy appears
+        return { ok: true, error: null };
+      },
+      clearKey: () => {
+        keyStore.clear();
+        refreshSidebars();
+      },
+    },
+  });
+  router.handle('sidebar:tidy', async (_input, { sender }) => {
+    const controller = windowManager.forSender(sender.webContentsId);
+    if (!controller) return;
+    try {
+      const made = await tidy.tidy(controller.tabs.space);
+      toast(
+        controller,
+        made > 0 ? `Tidied into ${made} folder${made === 1 ? '' : 's'}` : 'Nothing to group',
+      );
+    } catch (error) {
+      toast(controller, error instanceof Error ? error.message : String(error));
+    }
+  });
+  router.handle('sidebar:untidy', (_input, { sender }) => {
+    const controller = windowManager.forSender(sender.webContentsId);
+    if (controller) tidy.untidy(controller.tabs.space);
   });
   registerSiteControlsHandlers(router, windowManager, {
     siteSettings: persistence.siteSettings,

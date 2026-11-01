@@ -51,6 +51,8 @@ export type WindowManagerDeps = {
   loadOverlay: (view: WebContentsView) => void;
   /** Runs an app command for a window (the sidebar's + menu). */
   runCommand?: (controller: WindowController, id: string) => void;
+  /** Tidy's state per space (F-29), shown in the space header. */
+  tidyState?: TabManagerDeps['tidyState'];
   /** Live Folders (F-28), for the space and folder menus. */
   liveFolders?: {
     add: (controller: WindowController, kind: 'rss' | 'pulls' | 'issues', spaceId: string) => void;
@@ -227,6 +229,7 @@ export class WindowManager {
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
       onSplitChange: (ratio) => layout.setSplitRatio(ratio),
       onActivate: () => library?.close(),
+      tidyState: this.deps.tidyState,
       siteSetting: this.deps.siteSetting,
       extensions: this.deps.extensions,
       peek: (fromTabId, url, activate) => {

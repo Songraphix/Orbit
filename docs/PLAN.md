@@ -1048,8 +1048,8 @@ Apr 26 ─ May 16  Phase 11 Polish, performance, packaging, signing, updates →
 
 **Features:** F-28, F-29.
 
-- [ ] AIService with key stored via `safeStorage`; Settings field for the key.
-- [ ] Tidy with zod-validated JSON output and undo.
+- [x] AIService with key stored via `safeStorage`; Settings field for the key.
+- [x] Tidy with zod-validated JSON output and undo.
 - [x] Live Folders: RSS/Atom first, then GitHub.
 - [ ] Optional: AI tab renaming; "summarise this page" command in the command bar.
 

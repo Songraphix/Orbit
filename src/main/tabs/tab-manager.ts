@@ -61,6 +61,8 @@ export type TabManagerDeps = Pick<
   onSplitChange?: (ratio: number | null) => void;
   /** A tab is about to be shown (the Library steps aside). */
   onActivate?: () => void;
+  /** Tidy's state for a space (F-29). */
+  tidyState?: (spaceId: string) => { available: boolean; running: boolean; canUndo: boolean };
 };
 
 const isInternal = (url: string | null) => (url ?? '').startsWith('orbit://');
@@ -177,6 +179,7 @@ export class TabManager {
       pinned: rows('pinned'),
       today: rows('today'),
       activeItemId: this.activeId,
+      tidy: this.deps.tidyState?.(space.id) ?? { available: false, running: false, canUndo: false },
     };
   }
 

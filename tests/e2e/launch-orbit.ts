@@ -28,7 +28,9 @@ async function shellPage(app: ElectronApplication): Promise<Page> {
 }
 
 /** Launches the built app with a throwaway profile, so tests never touch real data. */
-export async function launchOrbit(options: { userData?: string } = {}): Promise<Orbit> {
+export async function launchOrbit(
+  options: { userData?: string; env?: Record<string, string> } = {},
+): Promise<Orbit> {
   const userData = options.userData ?? mkdtempSync(join(tmpdir(), 'orbit-e2e-'));
   // Editors built on Electron (VS Code) export ELECTRON_RUN_AS_NODE, which would start
   // Electron as plain Node with no window. Strip it for the app under test.
@@ -42,6 +44,7 @@ export async function launchOrbit(options: { userData?: string } = {}): Promise<
       ORBIT_DISABLE_SUGGESTIONS: '1',
       // Downloads land inside the throwaway profile, never in ~/Downloads.
       ORBIT_DOWNLOADS_DIR: join(userData, 'Downloads'),
+      ...options.env,
     },
   });
   const win = await shellPage(app);

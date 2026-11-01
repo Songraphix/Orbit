@@ -73,7 +73,12 @@ const ROUTES: Record<string, string> = {
   ),
 };
 
-export type TestServer = { url: (path: string) => string; close: () => Promise<void> };
+export type TestServer = {
+  url: (path: string) => string;
+  close: () => Promise<void>;
+  /** The last request the stand-in Anthropic API received (headers and JSON body). */
+  lastAiRequest: () => { headers: Record<string, unknown>; body: Record<string, unknown> } | null;
+};
 
 /** Serves a few static pages on 127.0.0.1 so tests never depend on the internet. */
 export async function startTestServer(): Promise<TestServer> {
@@ -86,8 +91,40 @@ export async function startTestServer(): Promise<TestServer> {
         `<item><title>Post ${i + 1}</title><link>/post/${i + 1}</link><guid>post-${i + 1}</guid>` +
         `<pubDate>${new Date(Date.UTC(2026, 9, 1 + i)).toUTCString()}</pubDate></item>`,
     ).join('')}</channel></rss>`;
+  let lastAiRequest: ReturnType<TestServer['lastAiRequest']> = null;
   const server = createServer((req, res) => {
     const path = (req.url ?? '/').split('?')[0]!;
+    if (path === '/v1/messages' && req.method === 'POST') {
+      // A stand-in for the Anthropic Messages API (Tidy tests): groups tabs whose titles start
+      // with "Page" into "Pages", answering in the structured-output JSON shape.
+      let raw = '';
+      req.on('data', (chunk: Buffer) => (raw += chunk.toString()));
+      req.on('end', () => {
+        const body = JSON.parse(raw) as {
+          messages: { content: string }[];
+        };
+        lastAiRequest = { headers: req.headers, body: body as Record<string, unknown> };
+        const lines = String(body.messages[0]?.content ?? '')
+          .split('\n')
+          .slice(1);
+        const pages = lines.filter((l) => / \| Page /.test(l)).map((l) => l.split(' | ')[0]!);
+        res.writeHead(200, { 'content-type': 'application/json' }).end(
+          JSON.stringify({
+            id: 'msg_test',
+            type: 'message',
+            role: 'assistant',
+            model: 'claude-haiku-5-5',
+            content: [
+              { type: 'text', text: JSON.stringify({ groups: [{ name: 'Pages', tabs: pages }] }) },
+            ],
+            stop_reason: 'end_turn',
+            stop_sequence: null,
+            usage: { input_tokens: 10, output_tokens: 10 },
+          }),
+        );
+      });
+      return;
+    }
     if (path === '/feed.xml') {
       res.writeHead(200, { 'content-type': 'application/rss+xml' }).end(feed());
       return;
@@ -153,5 +190,6 @@ export async function startTestServer(): Promise<TestServer> {
   return {
     url: (path) => `http://127.0.0.1:${port}${path}`,
     close: () => new Promise((resolve) => server.close(() => resolve())),
+    lastAiRequest: () => lastAiRequest,
   };
 }

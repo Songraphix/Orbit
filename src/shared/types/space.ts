@@ -63,6 +63,8 @@ export const sidebarSnapshotSchema = z.object({
   pinned: z.array(sidebarRowSchema),
   today: z.array(sidebarRowSchema),
   activeItemId: z.string().nullable(),
+  /** Tidy (F-29) for the active space: offered (a key is set), working, or undoable. */
+  tidy: z.object({ available: z.boolean(), running: z.boolean(), canUndo: z.boolean() }),
 });
 export type SidebarSnapshot = z.output<typeof sidebarSnapshotSchema>;
 

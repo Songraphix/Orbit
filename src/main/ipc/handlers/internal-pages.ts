@@ -17,6 +17,12 @@ export function registerInternalPageHandlers(
     history: HistoryRepository;
     /** Turns the ⌥⌘N global shortcut on or off. */
     applyLittleShortcut: (enabled: boolean) => void;
+    /** The Anthropic API key (F-29). */
+    ai: {
+      status: () => { hasKey: boolean; canStore: boolean; model: string };
+      setKey: (key: string) => { ok: boolean; error: string | null };
+      clearKey: () => void;
+    };
   },
 ): void {
   /** The page must be a tab currently showing that internal page (or, for Archived Tabs, the
@@ -95,6 +101,21 @@ export function registerInternalPageHandlers(
       deps.applyLittleShortcut(patch.littleShortcut);
     }
     return current();
+  });
+
+  router.handle('ai:status', (_input, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    return deps.ai.status();
+  });
+
+  router.handle('ai:setKey', ({ key }, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    return deps.ai.setKey(key);
+  });
+
+  router.handle('ai:clearKey', (_input, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    deps.ai.clearKey();
   });
 
   router.handle('history:clear', (_input, { sender }) => {

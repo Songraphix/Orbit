@@ -2,6 +2,7 @@ import { Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { UserSettings } from '@shared/settings';
+import type { InvokeOutput } from '@shared/ipc/contract';
 
 const ARCHIVE_AFTER: { value: UserSettings['archiveAfter']; label: string }[] = [
   { value: '12h', label: 'After 12 hours' },
@@ -151,6 +152,10 @@ export function SettingsPage() {
         <DefaultBrowserRow />
       </Group>
 
+      <Group title="AI">
+        <AiKeyRow />
+      </Group>
+
       <Group title="Privacy">
         <Row
           label="Browsing history"
@@ -224,6 +229,83 @@ function DefaultBrowserRow() {
         >
           Make Default
         </button>
+      )}
+    </Row>
+  );
+}
+
+/**
+ * Tidy (F-29) uses your own Anthropic API key. It's stored encrypted in the macOS Keychain and
+ * never shown again; only tab titles and sites are sent when you press Tidy.
+ */
+function AiKeyRow() {
+  const [status, setStatus] = useState<InvokeOutput<'ai:status'> | null>(null);
+  const [key, setKey] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const load = () => void window.orbit.invoke('ai:status', {}).then(setStatus);
+  useEffect(load, []);
+  if (!status) return null;
+  return (
+    <Row
+      label="Anthropic API key"
+      hint={
+        status.hasKey
+          ? `Saved in your Keychain. Tidy in the space header groups Today’s tabs with ${status.model} (titles and sites only).`
+          : 'For Tidy: groups Today’s tabs into folders. Get a key at console.anthropic.com.'
+      }
+    >
+      {status.hasKey ? (
+        <button
+          type="button"
+          className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+          onClick={() => void window.orbit.invoke('ai:clearKey', {}).then(load)}
+          data-testid="ai-key-remove"
+        >
+          Remove Key
+        </button>
+      ) : (
+        <form
+          className="flex flex-col items-end gap-1"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void window.orbit.invoke('ai:setKey', { key }).then((r) => {
+              setError(r.error);
+              if (r.ok) {
+                setKey('');
+                load();
+              }
+            });
+          }}
+        >
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="sk-ant-…"
+              autoComplete="off"
+              disabled={!status.canStore}
+              className="w-44 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+              data-testid="ai-key"
+            />
+            <button
+              type="submit"
+              disabled={!key.trim()}
+              className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50 disabled:opacity-40"
+              data-testid="ai-key-save"
+            >
+              Save
+            </button>
+          </div>
+          {error && (
+            <span className="text-xs text-red-600" data-testid="ai-key-error">
+              {error}
+            </span>
+          )}
+          {!status.canStore && (
+            <span className="text-xs text-neutral-400">Secure storage isn’t available.</span>
+          )}
+        </form>
       )}
     </Row>
   );

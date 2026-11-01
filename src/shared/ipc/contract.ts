@@ -161,6 +161,15 @@ export const contract = {
     input: z.object({ itemId: tabId }).strict(),
     output: z.void(),
   },
+  /** Tidy (F-29): group the space's loose Today tabs with Claude; or undo the last Tidy. */
+  'sidebar:tidy': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
+  'sidebar:untidy': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
   'sidebar:clearToday': {
     input: z.object({}).strict(),
     output: z.void(),
@@ -593,6 +602,22 @@ export const contract = {
   'settings:set': {
     input: userSettingsSchema.partial().strict(),
     output: userSettingsSchema,
+    surfaces: ['internal'],
+  },
+  /** The Anthropic API key for Tidy (Settings). The key itself is never sent back. */
+  'ai:status': {
+    input: z.object({}).strict(),
+    output: z.object({ hasKey: z.boolean(), canStore: z.boolean(), model: z.string() }),
+    surfaces: ['internal'],
+  },
+  'ai:setKey': {
+    input: z.object({ key: z.string().min(1).max(300) }).strict(),
+    output: z.object({ ok: z.boolean(), error: z.string().nullable() }),
+    surfaces: ['internal'],
+  },
+  'ai:clearKey': {
+    input: z.object({}).strict(),
+    output: z.void(),
     surfaces: ['internal'],
   },
   'history:clear': {

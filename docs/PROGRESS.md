@@ -12,6 +12,7 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - [ ] YouTube fullscreen, Google Meet camera/mic prompt
 - [ ] Two Google accounts in two spaces via space menu → Set Profile → New Profile
 - [ ] Look at the translucent sidebar / theme colours (can't be screenshotted from here)
+- [ ] Tidy: paste your Anthropic API key in Settings → AI, then press Tidy in a space with several Today tabs (only titles and sites are sent)
 - [ ] Remaining Arc exports from PLAN.md "Do this first": passwords, Easels (no Boosts to move: the owner had none)
 - [ ] Add your extensions: open each Web Store page in Orbit → site controls (sliders button) → Add to Orbit; then fill "Usage" / "Blocker?" in docs/reference/extensions.md
 
@@ -71,9 +72,11 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 - 2026-11-01 — Phase 10: Live Folders [F-28] — space menu → Live Folders › Add RSS Feed… / GitHub Pull Requests… / GitHub Issues… (also in Spaces → Add Live Folder and the command bar). Type a feed, or just the site (Orbit finds its advertised feed), or owner/repo. The folder goes in the space's pinned section with the newest 15 items; refreshed every 30 minutes (and Refresh Live Folders / the folder's menu); new items get a dot until opened; open tabs are never removed; errors show on the folder (amber RSS icon, tooltip). Fetching happens in main with a timeout and size cap; a pure RSS/Atom parser (CDATA, entities, relative links, non-web links refused) and refresh planner are unit tested. Stored as `sidebar_items.data_json` (migration 009)
 
+- 2026-11-01 — Phase 10: Tidy [F-29] — Settings → AI takes your Anthropic API key (checked for shape, encrypted with the macOS Keychain via `safeStorage` in its own file, never shown again or sent to a renderer). With a key, the space header shows **Tidy**: the space's loose Today tabs (titles and sites only — never paths or page content) go to Claude Haiku 5.5 through the official `@anthropic-ai/sdk` with structured output (zod), low effort; the answer is cleaned (unknown or repeated tabs, groups under 2, at most 6) and applied as Tidy folders at the top of Today; **Undo** (for a minute) restores the exact order. Refusals, bad keys, rate limits and offline get plain messages. Tests use a stand-in API on the test server (development builds only) — **Phase 10 complete** (optional AI tab renaming / page summaries stay in the backlog)
+
 ## In progress
 
-- Phase 10: Tidy (AI) [F-29] — needs the owner's Anthropic API key
+- Phase 11 (ahead of schedule): polish, performance, packaging — not started
 
 ## Decisions made
 
@@ -86,6 +89,7 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - 2026-11-01 — Boost JS runs in an isolated world (like Arc's Boosts, which are content scripts), so it shares the DOM but not the page's globals; CSS changes apply live, JS changes need Reload Pages
 - 2026-11-01 — CodeMirror 6 (`codemirror@6.0.2` + lang-css / lang-javascript); four transitive packages pinned via `overrides` to releases older than two weeks
 - 2026-11-01 — Excalidraw 0.18.1 for Easels (PLAN.md section 3); `es-toolkit` and `vscode-languageserver-textdocument` (via its Mermaid import) pinned via `overrides`. Its CDN font fallbacks stay blocked by the CSP: Chromium logs a warning per font face when an Easel opens, but nothing is fetched
+- 2026-11-01 — Tidy uses Claude Haiku 5.5 (`claude-haiku-5-5`), per PLAN.md F-29's "small, fast model" — Opus 5.5 is the general default, but Tidy is a quick grouping job with a ~3 s target. `@anthropic-ai/sdk` pinned to 0.135.0 (newest release older than two weeks; 1.x is newer), `@opentelemetry/api` pinned via `overrides`
 - 2026-11-01 — Library pages render in a per-window view rather than as tabs, so they never appear in Today; screenshots are kept in `<userData>/Captures` for Library → Media
 - 2026-11-01 — Split view v1 is two panes and not persisted; a split tree and restore come later (backlog)
 - 2026-11-01 — New tab page added at the owner's request (F-32): "+ New Tab" always opens it; ⌘T opens it until the Phase 2 command bar, then ⌘T → command bar

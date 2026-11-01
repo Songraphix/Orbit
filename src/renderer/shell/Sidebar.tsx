@@ -159,6 +159,7 @@ export function Sidebar({
                 renaming={renaming?.target === 'space'}
                 onRenamed={stopRenaming}
                 hasToday={sidebar.today.length > 0}
+                tidy={sidebar.tidy}
               />
               <button
                 type="button"

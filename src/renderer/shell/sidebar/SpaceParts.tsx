@@ -1,6 +1,6 @@
-import { ArrowDownToLine, Library, Plus } from 'lucide-react';
+import { ArrowDownToLine, Library, Plus, Sparkles, Undo2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { SpaceView } from '@shared/types/space';
+import type { SidebarSnapshot, SpaceView } from '@shared/types/space';
 import { RenameInput } from './Rows';
 import { RecentFiles } from './RecentFiles';
 import { SpaceIcon } from './SpaceIcon';
@@ -13,11 +13,13 @@ export function SpaceHeader({
   renaming,
   onRenamed,
   hasToday,
+  tidy,
 }: {
   space: SpaceView;
   renaming: boolean;
   onRenamed: () => void;
   hasToday: boolean;
+  tidy: SidebarSnapshot['tidy'];
 }) {
   return (
     <div
@@ -53,6 +55,33 @@ export function SpaceHeader({
         </span>
       )}
       <span className="h-px flex-1 bg-[var(--sidebar-muted)] opacity-40" />
+      {tidy.canUndo ? (
+        <button
+          type="button"
+          className="flex items-center gap-1 rounded px-1 text-xs text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+          onClick={() => void invoke('sidebar:untidy', {})}
+          title="Put the tabs back as they were"
+          data-testid="untidy"
+        >
+          <Undo2 size={12} />
+          Undo
+        </button>
+      ) : (
+        tidy.available &&
+        hasToday && (
+          <button
+            type="button"
+            disabled={tidy.running}
+            className={`flex items-center gap-1 rounded px-1 text-xs text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)] ${tidy.running ? 'animate-pulse' : ''}`}
+            onClick={() => void invoke('sidebar:tidy', {})}
+            title="Group Today’s tabs into folders with Claude (titles and sites only)"
+            data-testid="tidy"
+          >
+            <Sparkles size={12} />
+            {tidy.running ? 'Tidying…' : 'Tidy'}
+          </button>
+        )
+      )}
       {hasToday && (
         <button
           type="button"
