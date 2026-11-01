@@ -1,7 +1,9 @@
 import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent, PointerEvent } from 'react';
+import type { DownloadView } from '@shared/types/downloads';
 import type { SidebarSnapshot } from '@shared/types/space';
+import { DownloadsShelf } from './sidebar/DownloadsShelf';
 import { DndContext, moveFor, readDragged } from './sidebar/dnd';
 import type { DndState, DropTarget } from './sidebar/dnd';
 import { FavoritesGrid } from './sidebar/FavoritesGrid';
@@ -14,6 +16,7 @@ const TITLE_STRIP_HEIGHT = 44;
 type Props = {
   width: number;
   sidebar: SidebarSnapshot | null;
+  downloads: DownloadView[];
   /** Called when an edge drag starts/ends, so the shell can stand in for the live web view. */
   onResizeStart: () => void;
   onResizeEnd: () => void;
@@ -77,7 +80,7 @@ function dropZone(dnd: DndState, target: DropTarget) {
   };
 }
 
-export function Sidebar({ width, sidebar, onResizeStart, onResizeEnd }: Props) {
+export function Sidebar({ width, sidebar, downloads, onResizeStart, onResizeEnd }: Props) {
   const [renaming, stopRenaming] = useRenaming();
   const dnd = useDndState(sidebar);
   const isTarget = (t: DropTarget) => JSON.stringify(dnd.target) === JSON.stringify(t);
@@ -151,6 +154,7 @@ export function Sidebar({ width, sidebar, onResizeStart, onResizeEnd }: Props) {
           </div>
         </DndContext.Provider>
       )}
+      <DownloadsShelf items={downloads} />
       {sidebar && <BottomBar spaces={sidebar.spaces} activeSpaceId={sidebar.activeSpaceId} />}
       <ResizeHandle onStart={onResizeStart} onEnd={onResizeEnd} />
     </aside>

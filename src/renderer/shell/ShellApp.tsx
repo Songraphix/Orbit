@@ -4,6 +4,7 @@ import { themeToVars } from '@shared/theme';
 import { DEFAULT_THEME } from '@shared/types/space';
 import type { SidebarSnapshot } from '@shared/types/space';
 import type { Layout, Rect } from '@shared/types/layout';
+import type { DownloadView } from '@shared/types/downloads';
 import type { FindState } from '@shared/types/find';
 import type { TabsSnapshot } from '@shared/types/tabs';
 import { Sidebar } from './Sidebar';
@@ -21,6 +22,7 @@ export function ShellApp() {
   const tabs = useMainState('state:tabs');
   const find = useMainState('state:find');
   const sidebar = useMainState('state:sidebar');
+  const downloads = useMainState('state:downloads');
 
   // ThemeEngine: the active space's theme becomes CSS variables for the whole shell.
   const theme = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId)?.theme ?? DEFAULT_THEME;
@@ -36,7 +38,15 @@ export function ShellApp() {
         className="pointer-events-none absolute inset-0 mix-blend-overlay"
         style={{ background: GRAIN, opacity: 'var(--grain)' }}
       />
-      {layout && <Chrome layout={layout} tabs={tabs} find={find} sidebar={sidebar} />}
+      {layout && (
+        <Chrome
+          layout={layout}
+          tabs={tabs}
+          find={find}
+          sidebar={sidebar}
+          downloads={downloads?.items ?? []}
+        />
+      )}
     </div>
   );
 }
@@ -68,11 +78,13 @@ function Chrome({
   tabs,
   find,
   sidebar,
+  downloads,
 }: {
   layout: Layout;
   tabs: TabsSnapshot | null;
   find: FindState | null;
   sidebar: SidebarSnapshot | null;
+  downloads: DownloadView[];
 }) {
   const activeTab = tabs?.tabs.find((t) => t.id === tabs.activeTabId) ?? null;
   const hasActiveTab = activeTab !== null;
@@ -85,6 +97,7 @@ function Chrome({
         <Sidebar
           width={layout.sidebar.width}
           sidebar={sidebar}
+          downloads={downloads}
           onResizeStart={onResizeStart}
           onResizeEnd={onResizeEnd}
         />

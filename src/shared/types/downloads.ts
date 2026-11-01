@@ -1,0 +1,18 @@
+import { z } from 'zod';
+
+/** One download as the sidebar shelf shows it (F-10, Img 7). */
+export const downloadViewSchema = z.object({
+  id: z.string(),
+  filename: z.string(),
+  state: z.enum(['progressing', 'completed', 'cancelled', 'interrupted']),
+  receivedBytes: z.number(),
+  totalBytes: z.number(),
+  startedAt: z.number(),
+  finishedAt: z.number().nullable(),
+  /** A small preview (image thumbnail or file-type icon) as a data: URL. */
+  thumbnail: z.string().nullable(),
+});
+export type DownloadView = z.output<typeof downloadViewSchema>;
+
+export const downloadsSnapshotSchema = z.object({ items: z.array(downloadViewSchema) });
+export type DownloadsSnapshot = z.output<typeof downloadsSnapshotSchema>;

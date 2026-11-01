@@ -6,6 +6,7 @@ import {
   overlayStateSchema,
   promptAnswerSchema,
 } from '../types/command-bar';
+import { downloadsSnapshotSchema } from '../types/downloads';
 import { findStateSchema } from '../types/find';
 import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
 import { sidebarSnapshotSchema, spaceThemeSchema } from '../types/space';
@@ -170,6 +171,21 @@ export const contract = {
     output: z.void(),
   },
 
+  // Downloads shelf (F-10).
+  'downloads:get': {
+    input: z.object({}).strict(),
+    output: downloadsSnapshotSchema,
+  },
+  'downloads:act': {
+    input: z
+      .object({
+        id: z.string().min(1).max(64),
+        action: z.enum(['open', 'reveal', 'cancel', 'dismiss', 'drag']),
+      })
+      .strict(),
+    output: z.void(),
+  },
+
   // Command bar (F-21). The shell opens it; the overlay (where it renders) queries and executes.
   'commandbar:open': {
     input: z.object({ mode: commandBarModeSchema }).strict(),
@@ -288,6 +304,8 @@ export const events = {
   'state:sidebar': sidebarSnapshotSchema,
   /** Sent to a window's overlay when floating UI opens or closes. */
   'state:overlay': overlayStateSchema,
+  /** Sent to every shell when downloads change. */
+  'state:downloads': downloadsSnapshotSchema,
   /** Sent to a window's shell when find-in-page changes. */
   'state:find': findStateSchema,
   /** Ask the shell to start inline renaming (a sidebar item, or the space header). */

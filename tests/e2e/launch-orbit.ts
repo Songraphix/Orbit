@@ -40,6 +40,8 @@ export async function launchOrbit(options: { userData?: string } = {}): Promise<
       ORBIT_USER_DATA_DIR: userData,
       // Command bar results stay deterministic (no live Google suggestions).
       ORBIT_DISABLE_SUGGESTIONS: '1',
+      // Downloads land inside the throwaway profile, never in ~/Downloads.
+      ORBIT_DOWNLOADS_DIR: join(userData, 'Downloads'),
     },
   });
   const win = await shellPage(app);

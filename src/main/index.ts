@@ -27,6 +27,7 @@ import { clampZoom } from './persistence/repositories/site-settings';
 import type { Persistence } from './persistence';
 import { SidebarStore } from './sidebar/store';
 import { TabLifecycle } from './archive/lifecycle';
+import { DownloadService } from './downloads/service';
 import { setSearchEngine } from './omnibox/classify';
 import { SEARCH_ENGINES } from '@shared/settings';
 import { PermissionService } from './permissions/service';
@@ -61,6 +62,7 @@ const broadcaster = new Broadcaster();
 let persistence: Persistence | null = null;
 let sidebarStore: SidebarStore | null = null;
 let lifecycle: TabLifecycle | null = null;
+let downloadService: DownloadService | null = null;
 let arcImporter: ArcImporter | null = null;
 
 // A stray error in main must never show Electron's blocking error dialog (a browser that can't
@@ -239,6 +241,14 @@ void app.whenReady().then(() => {
   arcImporter = new ArcImporter(store, persistence.history);
   /** One session per profile (F-17). The default profile keeps Electron's default session, so
    *  logins from before profiles existed carry over. */
+  // Downloads go straight to ~/Downloads (tests use their own folder) and show on the shelf.
+  const downloads = new DownloadService(
+    persistence.db,
+    () => process.env['ORBIT_DOWNLOADS_DIR'] ?? app.getPath('downloads'),
+    (snapshot) => broadcaster.send('state:downloads', snapshot),
+  );
+  downloadService = downloads;
+
   // Site permissions: ask in the window's overlay, remember per site (F-31).
   const permissions = new PermissionService(persistence.siteSettings, (contents) => {
     const owner = windows?.tabForContents(contents.id);
@@ -251,6 +261,7 @@ void app.whenReady().then(() => {
         ? session.defaultSession
         : session.fromPartition(profile.partition);
     permissions.configure(s); // once per session
+    downloads.configure(s, profileId);
     return s;
   };
   sessionFor(DEFAULT_PROFILE_ID);
@@ -283,6 +294,19 @@ void app.whenReady().then(() => {
   );
   registerFindHandlers(router, windowManager);
   registerSidebarHandlers(router, windowManager);
+  router.handle('downloads:get', () => downloadService?.snapshot() ?? { items: [] });
+  router.handle('downloads:act', async ({ id, action }, { sender }) => {
+    const service = downloadService;
+    if (!service) return;
+    if (action === 'open') service.open(id);
+    else if (action === 'reveal') service.reveal(id);
+    else if (action === 'cancel') service.cancel(id);
+    else if (action === 'dismiss') service.dismiss(id);
+    else {
+      const contents = windowManager.forSender(sender.webContentsId)?.win.webContents;
+      if (contents) await service.startDrag(id, contents);
+    }
+  });
   registerInternalPageHandlers(router, windowManager, {
     archive: persistence.archive,
     settings: persistence.settings,

@@ -68,6 +68,15 @@ export async function startTestServer(): Promise<TestServer> {
       res.writeHead(200, headers).end(page(`cookie:${req.headers.cookie ?? 'none'}`));
       return;
     }
+    if (path === '/report.txt') {
+      res
+        .writeHead(200, {
+          'content-type': 'text/plain',
+          'content-disposition': 'attachment; filename="report.txt"',
+        })
+        .end('Orbit download test\n');
+      return;
+    }
     if (path === '/icon.png') {
       res.writeHead(200, { 'content-type': 'image/png' }).end(PNG);
       return;
