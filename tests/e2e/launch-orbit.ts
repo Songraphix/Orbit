@@ -42,6 +42,8 @@ export async function launchOrbit(
       ORBIT_USER_DATA_DIR: userData,
       // Command bar results stay deterministic (no live Google suggestions).
       ORBIT_DISABLE_SUGGESTIONS: '1',
+      // Test windows open in the background, so the owner can keep working (SHOW_TESTS=1 to watch).
+      ORBIT_QUIET: process.env['SHOW_TESTS'] === '1' ? '0' : '1',
       // Downloads land inside the throwaway profile, never in ~/Downloads.
       ORBIT_DOWNLOADS_DIR: join(userData, 'Downloads'),
       ...options.env,

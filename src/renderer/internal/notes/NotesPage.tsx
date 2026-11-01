@@ -17,10 +17,15 @@ import { noteTitle } from '@shared/note-text';
 import { relativeTime } from '@shared/time';
 import type { NoteAction, NoteEntry } from '@shared/types/notes';
 import { NoteEditor } from '../../notes/NoteEditor';
+import { saveOpenNotes } from '../../notes/save-notes';
 import { useAppearance } from '../appearance';
 
 const invoke = window.orbit.invoke;
-const act = (id: string, action: NoteAction) => invoke('notes:act', { id, action });
+/** Moves (or deletes) a note — after saving every keystroke, so the next place has it all. */
+const act = async (id: string, action: NoteAction) => {
+  await saveOpenNotes();
+  return invoke('notes:act', { id, action });
+};
 
 /** A button in a notes header: an icon with a tooltip. */
 function IconButton(props: {

@@ -185,3 +185,140 @@ test('floating notes come back after a relaunch', async () => {
     await second.close();
   }
 });
+
+/** Answers "Delete …?" with Delete. */
+const confirmDeletes = (app: ElectronApplication) =>
+  app.evaluate(({ dialog }) => {
+    dialog.showMessageBox = (async () => ({ response: 0, checkboxChecked: false })) as never;
+  });
+const floatCount = (app: ElectronApplication) =>
+  app.evaluate(
+    ({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows().filter((w) => w.webContents.getURL().includes('#/notes/float/'))
+        .length,
+  );
+
+test('every button in the panel works: format, open as tab, float, delete, close', async () => {
+  const orbit = await launchOrbit();
+  try {
+    const { app, win } = orbit;
+    await confirmDeletes(app);
+    await win.getByTestId('toolbar-notes').click();
+    const panel = await pageWith(app, '#/notes/panel');
+    await panel.getByTestId('notes-empty-new').click();
+    await write(panel, ['Formatting']);
+    await panel.keyboard.press('Enter');
+    await panel.getByTestId('note-checklist').click();
+    await panel.keyboard.type('a task');
+    await expect(panel.locator('ul[data-type="taskList"] li')).toHaveCount(1);
+    await panel.getByRole('button', { name: 'Bold (⌘B)' }).click();
+    await panel.keyboard.type(' strong');
+    await expect(panel.locator('.ProseMirror strong')).toHaveText('strong');
+
+    // Open as Tab: a tab shows it, the panel goes back to its list.
+    await panel.getByTestId('note-to-tab').click();
+    const tab = await pageWith(app, '#/note/');
+    await expect(tab.getByTestId('note-editor')).toContainText('a task strong');
+    await expect(panel.getByTestId('notes-item')).toHaveCount(1);
+
+    // Both open at once stay in step: typed in the tab, it shows in the panel's editor.
+    await panel.getByTestId('notes-item').click();
+    await tab.getByTestId('note-editor').click();
+    await tab.keyboard.press('End');
+    await tab.keyboard.type(' synced');
+    await expect(panel.getByTestId('note-editor')).toContainText('strong synced');
+
+    // Float from the panel, then delete from the panel: the tab and the float go too.
+    await panel.getByTestId('note-to-float').click();
+    await expect.poll(() => floatCount(app)).toBe(1);
+    await panel.getByTestId('notes-item').click();
+    await panel.getByTestId('note-delete').click();
+    await expect(panel.getByTestId('notes-item')).toHaveCount(0);
+    await expect.poll(() => floatCount(app)).toBe(0);
+    await expect(win.locator('[data-testid="tab-row"]', { hasText: 'Formatting' })).toHaveCount(0);
+
+    await panel.getByTestId('notes-close').click();
+    await expect.poll(() => layoutNotes(win)).toBeNull();
+  } finally {
+    await orbit.close();
+  }
+});
+
+test('every button in the quick note works: to panel, to tab, float; ⌃⇧N toggles', async () => {
+  const orbit = await launchOrbit();
+  try {
+    const { app, win } = orbit;
+    const overlay = await pageWith(app, '/overlay/');
+    const quick = overlay.getByTestId('quick-note');
+
+    await clickMenu(app, 'quick-note');
+    await expect(quick).toBeVisible();
+    await overlay.keyboard.type('To the panel');
+    await overlay.getByTestId('note-to-panel').click();
+    await expect(quick).toHaveCount(0);
+    const panel = await pageWith(app, '#/notes/panel');
+    await expect(panel.getByTestId('note-editor')).toContainText('To the panel');
+
+    await clickMenu(app, 'quick-note');
+    await expect(quick).toBeVisible();
+    await overlay.keyboard.type('To a tab');
+    await overlay.getByTestId('note-to-tab').click();
+    await expect(quick).toHaveCount(0);
+    await expect(win.locator('[data-testid="tab-row"]', { hasText: 'To a tab' })).toHaveCount(1);
+
+    await clickMenu(app, 'quick-note');
+    await expect(quick).toBeVisible();
+    await overlay.keyboard.type('Floating away');
+    await overlay.getByTestId('note-to-float').click();
+    await expect(quick).toHaveCount(0);
+    const float = await pageWith(app, '#/notes/float/');
+    await expect(float.getByTestId('note-editor')).toContainText('Floating away');
+
+    // ⌃⇧N again closes it; a click outside does too.
+    await clickMenu(app, 'quick-note');
+    await expect(quick).toBeVisible();
+    await clickMenu(app, 'quick-note');
+    await expect(quick).toHaveCount(0);
+    await clickMenu(app, 'quick-note');
+    await overlay.getByTestId('quick-note-backdrop').click({ position: { x: 5, y: 5 } });
+    await expect(quick).toHaveCount(0);
+  } finally {
+    await orbit.close();
+  }
+});
+
+test('floating and tab notes: their buttons move, pin and delete; ⌘-click opens links', async () => {
+  const orbit = await launchOrbit();
+  try {
+    const { app, win } = orbit;
+    await confirmDeletes(app);
+    await clickMenu(app, 'float-note');
+    const float = await pageWith(app, '#/notes/float/');
+    await write(float, ['Float to Orbit']);
+    await float.getByTestId('note-to-panel').click();
+    await expect.poll(() => floatCount(app)).toBe(0);
+    const panel = await pageWith(app, '#/notes/panel');
+    await expect(panel.getByTestId('note-editor')).toContainText('Float to Orbit');
+
+    await clickMenu(app, 'new-note');
+    const tab = await pageWith(app, '#/note/');
+    await expect(tab.getByTestId('note-editor')).toBeFocused();
+    await tab.keyboard.type('Tab note https://example.com/ ');
+    await tab.getByTestId('note-to-float').click();
+    await expect.poll(() => floatCount(app)).toBe(1);
+    await tab.getByTestId('note-to-panel').click();
+    await expect(panel.getByTestId('note-editor')).toContainText('Tab note');
+
+    // ⌘-click on a link opens it as a tab.
+    await tab.locator('.ProseMirror a').click({ modifiers: ['Meta'] });
+    await expect
+      .poll(() => app.windows().some((p) => p.url().startsWith('https://example.com')))
+      .toBe(true);
+
+    await tab.getByTestId('note-delete').click();
+    await expect(win.locator('[data-testid="tab-row"]', { hasText: 'Tab note' })).toHaveCount(0);
+    await expect.poll(() => floatCount(app)).toBe(0);
+  } finally {
+    await orbit.close();
+  }
+});

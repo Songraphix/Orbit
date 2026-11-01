@@ -3,9 +3,11 @@ import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { NoteAction } from '@shared/types/notes';
 import { NoteEditor } from '../notes/NoteEditor';
+import { saveOpenNotes } from '../notes/save-notes';
 import { Glass } from './Glass';
 
-const close = () => void window.orbit.invoke('notes:quick', { open: false });
+const close = () =>
+  void saveOpenNotes().then(() => window.orbit.invoke('notes:quick', { open: false }));
 
 function MoveButton(props: {
   label: string;
@@ -42,7 +44,9 @@ export function QuickNote({ id }: { id: string }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
-  const move = (action: NoteAction) => void window.orbit.invoke('notes:act', { id, action });
+  // Save every keystroke first, so the next place shows all of it.
+  const move = (action: NoteAction) =>
+    void saveOpenNotes().then(() => window.orbit.invoke('notes:act', { id, action }));
   return (
     <div
       className="fixed inset-0 flex justify-center bg-black/[0.14] pt-[14vh] animate-[orbit-fade-in_160ms_var(--ease-out)]"

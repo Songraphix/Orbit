@@ -65,6 +65,7 @@ import { WindowManager } from './windows/window-manager';
 import { acceptExternalUrl, LittleWindow } from './windows/little';
 import type { WindowController } from './windows/window-manager';
 import { notesHash } from './notes/model';
+import { enableQuietMode } from './app/quiet';
 import { FloatingNotes } from './notes/floating';
 import { newNoteTab, noteUrl, registerNotesHandlers, toggleQuickNote } from './ipc/handlers/notes';
 import { noteIdSchema } from '@shared/types/notes';
@@ -83,6 +84,10 @@ if (userDataOverride) app.setPath('userData', userDataOverride);
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 }
+
+// Automated test runs: windows open without stealing focus (see quiet.ts). Before launch
+// finishes, so the app is never activated at all.
+if (!app.isPackaged && process.env['ORBIT_QUIET'] === '1') enableQuietMode();
 
 const devServer = !app.isPackaged ? process.env['ELECTRON_RENDERER_URL'] : undefined;
 const rendererDir = join(import.meta.dirname, '../renderer');

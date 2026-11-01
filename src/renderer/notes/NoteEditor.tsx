@@ -7,6 +7,7 @@ import { Bold, Heading, Italic, List, ListChecks, Strikethrough } from 'lucide-r
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import './notes.css';
+import { savers } from './save-notes';
 
 const invoke = window.orbit.invoke;
 
@@ -14,6 +15,14 @@ const invoke = window.orbit.invoke;
 const SAVE_DELAY_MS = 350;
 /** How often an editor that isn't being typed in checks for edits made elsewhere. */
 const SYNC_EVERY_MS = 1500;
+/** Edits from elsewhere wait until this editor hasn't been typed in for this long. */
+const QUIET_MS = 1500;
+
+/** ProseMirror reads typing from the page a moment later; take it in now. */
+function readTyping(editor: Editor): void {
+  if (editor.isDestroyed) return;
+  (editor.view as unknown as { domObserver?: { flush(): void } }).domObserver?.flush();
+}
 
 const textOf = (editor: Editor) => editor.getText({ blockSeparator: '\n' });
 
@@ -51,6 +60,8 @@ export function NoteEditor({
   /** The latest document, kept outside the editor so it can still be saved while unmounting. */
   const latest = useRef<{ doc: string; text: string } | null>(null);
   const blank = useRef(true);
+  /** When this editor was last typed in: edits from elsewhere wait until it's been quiet. */
+  const typedAt = useRef(0);
   const [missing, setMissing] = useState(false);
   const onTextRef = useRef(onText);
   useEffect(() => {
@@ -86,7 +97,8 @@ export function NoteEditor({
         return true;
       },
     },
-    onUpdate: ({ editor: e }) => {
+    onUpdate: ({ editor: e, transaction }) => {
+      typedAt.current = transaction.time;
       const text = textOf(e);
       blank.current = text.trim() === '';
       latest.current = { doc: JSON.stringify(e.getJSON()), text };
@@ -95,21 +107,36 @@ export function NoteEditor({
       pending.current = setTimeout(flush, SAVE_DELAY_MS);
     },
     // Moving focus to a button (Float, Open as Tab…) saves first, so the next place sees it all.
-    onBlur: () => flush(),
+    onBlur: ({ editor: e }) => {
+      readTyping(e);
+      void flush();
+    },
   });
 
   /** Saves now if anything is waiting. IPC keeps order, so whatever is sent next sees it. */
-  function flush(): void {
+  function flush(): Promise<void> {
     if (pending.current) clearTimeout(pending.current);
     pending.current = null;
     const next = latest.current;
-    if (!next) return;
+    if (!next) return Promise.resolve();
     latest.current = null;
-    void invoke('notes:save', { id, ...next }).then(({ updatedAt }) => {
+    return invoke('notes:save', { id, ...next }).then(({ updatedAt }) => {
       if (updatedAt === null) setMissing(true);
       else version.current = Math.max(version.current, updatedAt);
     });
   }
+
+  useEffect(() => {
+    const saveNow = () => {
+      readTyping(editor);
+      return flush();
+    };
+    savers.add(saveNow);
+    return () => {
+      savers.delete(saveNow);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- flush only reads refs
+  }, [editor]);
 
   // Load the note, then keep in step with edits made elsewhere (another tab, the panel…).
   useEffect(() => {
@@ -126,7 +153,13 @@ export function NoteEditor({
       // Typing already started (a quick note opens empty and you type at once): keep it.
       if (latest.current || pending.current) return;
       if (!note.doc && editor.isEmpty) return; // a new note: nothing to load
+      // Keep the cursor where it was (clamped to the new text).
+      const { from, to } = editor.state.selection;
       editor.commands.setContent(parseDoc(note.doc), { emitUpdate: false });
+      if (!force) {
+        const end = editor.state.doc.content.size;
+        editor.commands.setTextSelection({ from: Math.min(from, end), to: Math.min(to, end) });
+      }
       const text = textOf(editor);
       blank.current = text.trim() === '';
       onTextRef.current?.(text);
@@ -134,8 +167,9 @@ export function NoteEditor({
     };
     void load(true);
     const check = async () => {
-      // Never pull the text out from under someone typing here.
-      if (document.hidden || editor.isFocused || pending.current) return;
+      // Never pull the text out from under someone typing here (focus can't tell: every page in
+      // the window may report it, so "typed in the last moment" is the test).
+      if (document.hidden || pending.current || Date.now() - typedAt.current < QUIET_MS) return;
       const { updatedAt } = await invoke('notes:version', { id });
       if (updatedAt === null) setMissing(true);
       else if (updatedAt > version.current) void load(false);
@@ -150,13 +184,47 @@ export function NoteEditor({
     };
   }, [id, editor, autoFocus]);
 
-  // Leaving (or the window closing): write what's still waiting, then drop an empty note.
+  // Typing straight away (⌃⇧N, then type) can beat the editor's focus by a keystroke: anything
+  // typed while nothing else has the focus goes into the note, so no letter is lost.
   useEffect(() => {
-    window.addEventListener('beforeunload', flush);
+    if (!autoFocus) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (editor.isDestroyed || editor.view.hasFocus() || e.isComposing) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, button, [contenteditable="true"]')) return;
+      if (e.key.length === 1) {
+        e.preventDefault();
+        editor.chain().focus('end').insertContent(e.key).run();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        editor.chain().focus('end').splitBlock().run();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [editor, autoFocus]);
+
+  // Leaving (or the window closing): write what's still waiting, then drop an empty note.
+  // The drop waits a tick and is called off if the editor mounts again at once: React's
+  // development Strict Mode unmounts and remounts every component, which isn't leaving.
+  const discardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (discardTimer.current) clearTimeout(discardTimer.current);
+    discardTimer.current = null;
+    const onUnload = () => {
+      readTyping(editor);
+      void flush();
+    };
+    window.addEventListener('beforeunload', onUnload);
     return () => {
-      window.removeEventListener('beforeunload', flush);
-      flush();
-      if (discardIfBlank && blank.current) void invoke('notes:discardIfBlank', { id });
+      window.removeEventListener('beforeunload', onUnload);
+      readTyping(editor);
+      void flush();
+      if (!discardIfBlank) return;
+      discardTimer.current = setTimeout(() => {
+        if (blank.current) void invoke('notes:discardIfBlank', { id });
+      }, 0);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per note (keyed by id)
   }, []);
