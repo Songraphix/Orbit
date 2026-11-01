@@ -67,7 +67,7 @@ export class TabManager {
       loadInternal: this.deps.loadInternal,
       registerInternal: this.deps.registerInternal,
       unregisterInternal: this.deps.unregisterInternal,
-      openInNewTab: (link) => this.create(link, { activate: true }),
+      openInNewTab: (link, activate) => this.create(link, { activate }),
       onChange: () => this.scheduleNotify(),
       onViewReplaced: (oldView, newView) => this.replaceView(id, oldView, newView),
     });

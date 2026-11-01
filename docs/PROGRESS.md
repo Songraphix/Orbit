@@ -19,10 +19,11 @@ Target end: 2026-11-16 · Branch: `phase-1/foundations`
 - 2026-11-01 — Phase 1 step 5a: tabs [F-04, F-31] — `TabController` (one WebContentsView per tab; web tabs have no preload and may only navigate to http(s); `target=_blank` → new tab; favicons as data: URLs), `TabManager` per window, `state:tabs`; IPC surface roles (shell / overlay / internal); `classifyInput()` (tldts) for URL vs search; sidebar tab list with "+ New Tab", close, middle-click; File → New Tab ⌘T / Close Tab ⌘W; sidebar resize swaps the live page for a snapshot so the drag isn't swallowed by the web view
 - 2026-11-01 — Phase 1 step 5b: new tab page [F-32] — `orbit://newtab` with 8 built-in gradient wallpapers, your own image (validated, downscaled, stored in the profile), clock + greeting, focused search box; `newtab:*` channels limited to internal pages
 - 2026-11-01 — Phase 1 step 6: toolbar v1 [F-14] — back / forward / reload-or-stop, centred `domain / title` with lock for https, indeterminate loading bar, sidebar button when the sidebar is hidden; menu: Reload ⌘R, Force Reload ⇧⌘R, Back ⌘[, Forward ⌘], page DevTools ⌥⌘I; sidebar drag now uses document listeners (pointer capture was cancelled when the live view hid)
+- 2026-11-01 — Phase 1 step 7: web compatibility [F-31] — reduced Chrome user agent (no "Electron"); `decideWindowOpen()` (pure): links → tabs (⌘-click → background), `window.open` with features → real sandboxed popup windows that keep `window.opener` (sign-in flows), non-web schemes refused; shared `guardWebContents()` applies the same rules to tabs and popups
 
 ## In progress
 
-- Phase 1 step 7: clean Chrome user agent + real popup windows for OAuth
+- Phase 1 step 8: web page right-click menu
 
 ## Decisions made
 
@@ -50,4 +51,3 @@ Target end: 2026-11-16 · Branch: `phase-1/foundations`
 - Hover the left edge to reveal the hidden sidebar as a floating panel (F-01) — needs the overlay view, so it lands in Phase 2
 - New tab page shortcut tiles (F-32): most-visited once history exists (Phase 2), favorites after the Arc import (Phase 3)
 - Open new tab pages don't update live when the wallpaper changes elsewhere (they pick it up next time they open)
-- Real OAuth popups ("Sign in with Google") currently open as tabs — fixed in Phase 1 step 7

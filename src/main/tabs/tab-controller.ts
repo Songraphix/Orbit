@@ -1,7 +1,8 @@
-import { shell, WebContentsView } from 'electron';
+import { WebContentsView } from 'electron';
 import type { Session } from 'electron';
 import type { TabState } from '@shared/types/tabs';
 import { fetchFaviconDataUrl } from './favicon';
+import { guardWebContents } from './web-guards';
 
 /** What a tab needs from the outside world. Keeps TabController free of window/manager details. */
 export type TabEnv = {
@@ -12,8 +13,8 @@ export type TabEnv = {
   /** Marks a webContents as a trusted internal surface for IPC, or removes it. */
   registerInternal(webContentsId: number): void;
   unregisterInternal(webContentsId: number): void;
-  /** A page asked to open a link in a new tab. */
-  openInNewTab(url: string): void;
+  /** A page asked to open a link in a new tab (⌘-click → in the background). */
+  openInNewTab(url: string, activate: boolean): void;
   /** Called whenever this tab's state (title, url, loading…) changes. */
   onChange(): void;
   /** Called when the tab swaps its view (e.g. new tab page → website). */
@@ -21,18 +22,6 @@ export type TabEnv = {
 };
 
 const isInternalUrl = (url: string) => url.startsWith('orbit://');
-/** Schemes a web page may navigate itself to. Everything else is blocked (PLAN.md section 4.8). */
-const WEB_SCHEMES = new Set(['http:', 'https:']);
-/** Schemes handed to macOS (Mail, FaceTime…) instead of loading in the tab. */
-const EXTERNAL_SCHEMES = new Set(['mailto:', 'tel:', 'facetime:', 'sms:']);
-
-function protocolOf(url: string): string | null {
-  try {
-    return new URL(url).protocol;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * One tab and its WebContentsView (PLAN.md section 4.7). Web tabs get no preload at all;
@@ -157,13 +146,8 @@ export class TabController {
       return view;
     }
 
-    contents.on('will-navigate', (event, url) => this.guardNavigation(event, url));
-    contents.on('will-redirect', (event, url) => this.guardNavigation(event, url));
-    // Links that open new windows become tabs. Real popups (OAuth) are handled in step 7.
-    contents.setWindowOpenHandler(({ url }) => {
-      if (WEB_SCHEMES.has(protocolOf(url) ?? '')) this.env.openInNewTab(url);
-      return { action: 'deny' };
-    });
+    // Scheme rules, links → tabs, real popups (sign-in) → sandboxed popup windows.
+    guardWebContents(contents, (url, activate) => this.env.openInNewTab(url, activate));
 
     contents.on('did-start-loading', () => this.update({ isLoading: true }));
     contents.on('did-stop-loading', () => this.update({ isLoading: false, ...this.navState() }));
@@ -181,13 +165,6 @@ export class TabController {
       });
     });
     return view;
-  }
-
-  private guardNavigation(event: { preventDefault(): void }, url: string): void {
-    const protocol = protocolOf(url);
-    if (protocol && WEB_SCHEMES.has(protocol)) return;
-    event.preventDefault();
-    if (protocol && EXTERNAL_SCHEMES.has(protocol)) void shell.openExternal(url);
   }
 
   private navState(): Pick<TabState, 'canGoBack' | 'canGoForward'> {

@@ -4,6 +4,7 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import type { WebContentsView } from 'electron';
 import { APP_NAME, isInternalPage } from '@shared/constants';
 import type { RendererEntry } from '@shared/constants';
+import { chromeUserAgent } from './app/user-agent';
 import { Broadcaster } from './ipc/broadcaster';
 import { registerAppHandlers } from './ipc/handlers/app';
 import { registerLayoutHandlers } from './ipc/handlers/layout';
@@ -18,6 +19,9 @@ import type { Persistence } from './persistence';
 import { WindowManager } from './windows/window-manager';
 
 app.setName(APP_NAME);
+
+// Sites see a plain Chrome, not "Electron" (Google sign-in rejects embedded browsers; §4.9 #1).
+app.userAgentFallback = chromeUserAgent(process.versions.chrome ?? '0');
 
 // Tests (and side-by-side dev instances) use their own profile so they never touch real data.
 // Must run before the single-instance lock, which is keyed on the userData path.

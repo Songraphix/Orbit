@@ -17,6 +17,19 @@ const ROUTES: Record<string, string> = {
     '<a id="popup" href="/two" target="_blank">open two</a> <a id="next" href="/three">three</a>',
   ),
   '/two': page('Page Two'),
+  // Mimics "Sign in with Google": a sized popup that reports back through window.opener.
+  '/opener': page(
+    'Opener',
+    `<button id="signin" onclick="window.open('/popup', 'signin', 'width=480,height=600')">Sign in</button>
+     <script>addEventListener('message', (e) => { document.title = 'got:' + e.data; });</script>`,
+  ),
+  '/popup': page(
+    'Sign-in popup',
+    `<script>
+       window.opener && window.opener.postMessage('signed-in', '*');
+       setTimeout(() => window.close(), 1500);
+     </script>`,
+  ),
   '/three': page('Page Three'),
 };
 
