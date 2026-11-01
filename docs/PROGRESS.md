@@ -1,8 +1,19 @@
 # Progress log
 
-## Current phase: Phase 4 — Archive and tab lifecycle
+## Current phase: M1 buffer — owner dogfooding, then v0.1.0
 
-Target end: 2026-12-17 · Branch: `phase-4/lifecycle` (Phase 3 merged to `main`)
+Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.0.1/Orbit-0.0.1-arm64.dmg` (built 2026-11-01, smoke-tested)
+
+## Needs the owner (can't be automated)
+
+- [ ] Run Orbit for real: `npm run dev`, or open the DMG (right-click → Open the first time; it's unsigned)
+- [ ] File → Import from Arc… (uses `~/ArcBackup/2026-11-01`)
+- [ ] Sign in to Gmail / Google (verifies the Chrome user agent + popup sign-in, R2)
+- [ ] YouTube fullscreen, Google Meet camera/mic prompt
+- [ ] Two Google accounts in two spaces via space menu → Set Profile → New Profile
+- [ ] Look at the translucent sidebar / theme colours (can't be screenshotted from here)
+- [ ] Remaining Arc exports from PLAN.md "Do this first": passwords, Boost CSS/JS, Easels
+- [ ] Fill "Usage" / "Blocker?" in docs/reference/extensions.md (extensions arrive in Phase 7)
 
 ## Done
 
@@ -31,10 +42,11 @@ Target end: 2026-12-17 · Branch: `phase-4/lifecycle` (Phase 3 merged to `main`)
 - 2026-11-01 — Phase 3: Arc importer [F-27] — File → Import from Arc… (and the command bar): finds the newest `~/ArcBackup/*` (then Arc's own folder, then asks), previews counts in a dialog, imports spaces (names, icons, themes, profiles), pinned folders, Today tabs, favorites and history; idempotent (spaces keyed by Arc id, favorites by URL, history merged). Verified locally against the owner's backup in a throwaway profile: 3 spaces, 12 favorites, 13 tabs
 - 2026-11-01 — Phase 3: permissions + HTTP auth [F-31] — Electron grants every permission by default; now `PermissionService` on every profile session: harmless ones allowed, sensitive ones (camera/mic, location, notifications, clipboard read, screen share…) asked in an overlay prompt and remembered per site, insecure origins and unknown permissions refused (`decide()`, pure); HTTP Basic/Digest sign-in prompt; certificate errors keep Chromium's default (refuse)
 - 2026-11-01 — Phase 3: drag and drop + profiles [F-04, F-05, F-17] — native HTML drag and drop in the sidebar (reorder, into/out of folders, Pinned ↔ Today, onto Favorites) with drop indicators; pure `moveFor()`; Set Profile › New Profile; `spaces:setProfile`; e2e proves a cookie set in one profile is invisible in another — **Phase 3 task list complete** (theme picker is presets via the space menu for now; swipe between spaces below the cut line)
+- 2026-11-01 — Phase 4: archive and tab lifecycle [F-03, F-20, F-25, F-31] — migration 005 `archive` + FTS; closing/clearing Today tabs archives them (reason recorded); ⇧⌘T and Archive → Archived Tabs (orbit://archive: search, grouped by day, restore) read from it; `TabLifecycle` auto-archives idle Today tabs (default 12 h; every 5 min and on wake) and sleeps pages (idle 30 min / max 8 awake; never the active or an audible tab) via pure `tabsToArchive` / `tabsToSleep`; crashed pages show a Reload card, frozen pages offer Wait / Reload; daily `VACUUM INTO` backup keeping 7; Settings page (⌘,) — **Phase 4 complete → M1 feature-complete**; unsigned arm64 DMG builds and the packaged app passes a smoke test
 
 ## In progress
 
-- Phase 4: archive + auto-archive, sleeping tabs, crash/unresponsive UI, daily DB backup, settings page
+- Phase 5 (started ahead of schedule while M1 waits for dogfooding): downloads shelf, media player
 
 ## Decisions made
 
