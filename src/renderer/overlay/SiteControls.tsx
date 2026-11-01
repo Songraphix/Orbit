@@ -75,7 +75,11 @@ export function SiteControls({ view }: { view: SiteControlsView }) {
           <Action label="Boost (coming in Phase 8)" disabled testId="site-boost">
             <Wand2 size={16} />
           </Action>
-          <Action label="Screenshot" onClick={() => act('screenshot')} testId="site-screenshot">
+          <Action
+            label="Screenshot (drag an area)"
+            onClick={() => act('screenshot')}
+            testId="site-screenshot"
+          >
             <Camera size={16} />
           </Action>
           <Action label="Copy Link" onClick={() => act('copyUrl')} testId="site-copy">

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { cropToPage } from '../../src/main/site-controls/capture';
 import { isLocalDev, siteSettingRows, storedValueFor } from '../../src/main/site-controls/model';
 
 describe('site settings rows', () => {
@@ -59,5 +60,26 @@ describe('isLocalDev', () => {
     expect(isLocalDev('http://[::1]:8080/')).toBe(true);
     expect(isLocalDev('https://example.com/')).toBe(false);
     expect(isLocalDev('orbit://newtab')).toBe(false);
+  });
+});
+
+describe('cropToPage', () => {
+  const page = { x: 260, y: 44, width: 1000, height: 700 };
+  it('moves a dragged area into page coordinates', () => {
+    expect(cropToPage({ x: 300, y: 100, width: 200, height: 50 }, page)).toEqual({
+      x: 40,
+      y: 56,
+      width: 200,
+      height: 50,
+    });
+  });
+  it('clips to the page and rejects areas outside it', () => {
+    expect(cropToPage({ x: 200, y: 0, width: 100, height: 100 }, page)).toEqual({
+      x: 0,
+      y: 0,
+      width: 40,
+      height: 56,
+    });
+    expect(cropToPage({ x: 0, y: 0, width: 100, height: 40 }, page)).toBeNull();
   });
 });

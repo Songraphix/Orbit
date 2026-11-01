@@ -7,6 +7,7 @@ import type { SiteSettingsRepository } from '../../persistence/repositories/site
 import { siteSettingRows, storedValueFor } from '../../site-controls/model';
 import type { ExtensionHost } from '../../extensions/host';
 import { webStoreIdFrom } from '../../extensions/model';
+import { cropToPage } from '../../site-controls/capture';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
 
 export type SiteControlsDeps = {
@@ -203,12 +204,28 @@ export function registerSiteControlsHandlers(
     } else if (action === 'share') {
       new ShareMenu({ urls: [site.url] }).popup({ window: controller.win });
     } else if (action === 'screenshot') {
-      const image = await site.tab.view.webContents.capturePage();
-      if (image.isEmpty()) return;
-      const png = new Blob([new Uint8Array(image.toPNG())], { type: 'image/png' });
-      await clipboard.write([new ClipboardItem({ 'image/png': png })]);
-      deps.toast(controller, 'Screenshot copied');
+      // Drag an area over the page (the overlay draws it); a click takes the whole page.
+      controller.overlay.startCapture(site.tab.view.getBounds());
     }
+  });
+
+  router.handle('capture:take', async ({ rect }, { sender }) => {
+    const controller = windowFor(sender.webContentsId);
+    const site = activeSite(controller);
+    controller.overlay.endCapture();
+    if (!site) return;
+    const area = site.tab.view.getBounds();
+    const crop = rect ? cropToPage(rect, area) : undefined;
+    if (crop === null) return;
+    const image = await site.tab.view.webContents.capturePage(crop);
+    if (image.isEmpty()) return;
+    const png = new Blob([new Uint8Array(image.toPNG())], { type: 'image/png' });
+    await clipboard.write([new ClipboardItem({ 'image/png': png })]);
+    deps.toast(controller, 'Screenshot copied');
+  });
+
+  router.handle('capture:cancel', (_input, { sender }) => {
+    windowFor(sender.webContentsId).overlay.endCapture();
   });
 
   /** The footer's "…": copy, zoom reset, clear site data. */

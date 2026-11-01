@@ -3,6 +3,7 @@ import type { OverlayState } from '@shared/types/command-bar';
 import { CommandBar } from './CommandBar';
 import { PeekFrame } from './PeekFrame';
 import { SiteControls } from './SiteControls';
+import { CaptureLayer } from './CaptureLayer';
 import { PromptView } from './PromptView';
 
 /**
@@ -15,6 +16,7 @@ export function OverlayApp() {
     prompt: null,
     peek: null,
     siteControls: null,
+    capture: null,
   });
 
   useEffect(() => {
@@ -29,6 +31,8 @@ export function OverlayApp() {
     <PromptView key={state.prompt.id} prompt={state.prompt} />
   ) : state.commandBar ? (
     <CommandBar key={state.commandBar.openedAt} {...state.commandBar} />
+  ) : state.capture ? (
+    <CaptureLayer key={state.capture.openedAt} area={state.capture.area} />
   ) : state.siteControls ? (
     <SiteControls view={state.siteControls} />
   ) : null;

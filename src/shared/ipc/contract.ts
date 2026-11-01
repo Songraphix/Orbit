@@ -323,6 +323,17 @@ export const contract = {
     output: z.void(),
     surfaces: ['overlay'],
   },
+  /** Area screenshot finished: `rect` in window coordinates, or null for the whole page. */
+  'capture:take': {
+    input: z.object({ rect: rectSchema.nullable() }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'capture:cancel': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
   /** Developer Mode's toolbar button (F-30). */
   'tabs:devtools': {
     input: z.object({ tabId }).strict(),

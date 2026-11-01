@@ -93,3 +93,34 @@ test('Developer Mode is per site: other sites keep the normal toolbar', async ()
   await expect(win.getByTestId('toolbar-full-url')).toHaveCount(0);
   await expect(win.getByTestId('toolbar-devtools')).toHaveCount(0);
 });
+
+test('Screenshot: drag an area over the page, it lands on the clipboard at that size', async () => {
+  const { app, win } = orbit;
+  await invoke(win, 'tabs:create', { url: server.url('/one') });
+  await expect(win.getByTestId('toolbar-address')).toContainText('Page One');
+  await win.getByTestId('toolbar-site-controls').click();
+  const bar = await overlay(app);
+  await bar.getByTestId('site-screenshot').click();
+  await expect(bar.getByTestId('capture-layer')).toBeVisible();
+
+  const page = await app.evaluate(({ BrowserWindow }) => {
+    const views = BrowserWindow.getAllWindows()[0]!.contentView.children;
+    return views.find((v) => v.getVisible() && v.getBounds().y > 30)!.getBounds();
+  });
+  await bar.mouse.move(page.x + 20, page.y + 20);
+  await bar.mouse.down();
+  await bar.mouse.move(page.x + 120, page.y + 70, { steps: 4 });
+  await bar.mouse.up();
+
+  await expect(win.getByTestId('toolbar-toast')).toContainText('Screenshot copied');
+  await expect(bar.getByTestId('capture-layer')).toHaveCount(0);
+  const size = await app.evaluate(async ({ clipboard, nativeImage }) => {
+    const [item] = await clipboard.read();
+    const blob = await item!.getType('image/png');
+    const image = nativeImage.createFromBuffer(Buffer.from(await blob.arrayBuffer()));
+    return image.getSize();
+  });
+  // Retina captures are at device pixels: 100×50 points → 100×50 or 200×100.
+  expect([100, 200]).toContain(size.width);
+  expect(size.height * 2).toBe(size.width);
+});

@@ -8,6 +8,7 @@ import type {
   PromptAnswer,
 } from '@shared/types/command-bar';
 import type { SiteControlsView } from '@shared/types/site-controls';
+import type { Rect } from '@shared/types/layout';
 
 export type OverlayDeps = {
   win: BrowserWindow;
@@ -36,6 +37,7 @@ export class OverlayController {
   private nextPromptId = 1;
   private peek: PeekView | null = null;
   private siteControls: SiteControlsView | null = null;
+  private capture: OverlayState['capture'] = null;
 
   constructor(private readonly deps: OverlayDeps) {
     this.view = new WebContentsView({
@@ -66,6 +68,7 @@ export class OverlayController {
       prompt: this.prompts[0]?.prompt ?? null,
       peek: this.peek,
       siteControls: this.siteControls,
+      capture: this.capture,
     };
   }
 
@@ -74,8 +77,22 @@ export class OverlayController {
       this.commandBar !== null ||
       this.prompts.length > 0 ||
       this.peek !== null ||
-      this.siteControls !== null
+      this.siteControls !== null ||
+      this.capture !== null
     );
+  }
+
+  /** Area screenshot: the overlay lets the user drag a rectangle over `area`. */
+  startCapture(area: Rect): void {
+    this.siteControls = null;
+    this.capture = { area, openedAt: Date.now() };
+    this.show();
+  }
+
+  endCapture(): void {
+    if (!this.capture) return;
+    this.capture = null;
+    this.sync();
   }
 
   get siteControlsOpen(): boolean {

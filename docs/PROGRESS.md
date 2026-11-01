@@ -56,9 +56,11 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 - 2026-11-01 — Phase 7: Chrome extensions (ADR-008) — `electron-chrome-extensions@4.9.0` per profile session (chrome.tabs/windows/action…, tabs announced as they become web pages, extension context-menu items in the page menu) and `electron-chrome-web-store@0.13.0` for downloads only: on a Web Store page, Site controls → **Add to Orbit** (native confirmation; ID taken from the tab's URL, the store page gets no API); extension buttons with icons and badges in the site controls grid open their popups, right-click → Options / Remove; updates checked every 6 h. All 11 audited extensions install, load and run their service workers (docs/reference/extensions.md); packaged app includes the new modules and launches clean
 
+- 2026-11-01 — Phase 7: area screenshot [F-12] — the camera action dims the page in the overlay; drag an area (or click for the whole page, Esc cancels) and it's copied to the clipboard at device resolution (pure `cropToPage`) — **Phase 7 complete** (saving captures to the Library comes with Phase 9; Boosts in the popover with Phase 8)
+
 ## In progress
 
-- Phase 7 (ahead of schedule): wrap-up, then Phase 8 (Boosts)
+- Phase 8 (ahead of schedule): Boosts
 
 ## Decisions made
 
@@ -90,7 +92,7 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 ## Backlog (ideas outside the current phase)
 
-- Site controls: Automatic Picture-in-Picture setting (with auto-PiP itself), certificate details on the Secure badge, region and full-page screenshots saved to the Library (Phase 9)
+- Site controls: Automatic Picture-in-Picture setting (with auto-PiP itself), certificate details on the Secure badge, full-page screenshots and saving captures to the Library (Phase 9)
 - Remember split views across relaunches; split more than two panes; drag a sidebar tab onto a page edge to split; show the split as one item in the sidebar (F-13)
 - Hover the left edge to reveal the hidden sidebar as a floating panel (F-01) — needs the overlay view, so it lands in Phase 2
 - New tab page shortcut tiles (F-32): most-visited once history exists (Phase 2), favorites after the Arc import (Phase 3)
