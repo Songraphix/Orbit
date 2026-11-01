@@ -29,6 +29,12 @@ export const COMMANDS: readonly CommandDef[] = [
     title: 'Library',
     keywords: ['media', 'downloads', 'easels', 'spaces', 'boosts'],
   },
+  {
+    id: 'new-easel',
+    title: 'New Easel',
+    keywords: ['canvas', 'draw', 'notes', 'whiteboard'],
+    shortcut: '⌃⇧E',
+  },
   { id: 'new-boost', title: 'New Boost', keywords: ['css', 'customise', 'customize', 'style'] },
   { id: 'archived-tabs', title: 'Archived Tabs', keywords: ['archive', 'closed', 'history'] },
   { id: 'settings', title: 'Settings', keywords: ['preferences', 'options'], shortcut: '⌘,' },

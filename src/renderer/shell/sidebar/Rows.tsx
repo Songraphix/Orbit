@@ -1,4 +1,13 @@
-import { ChevronRight, CornerUpLeft, Folder, Globe, Sparkles, X } from 'lucide-react';
+import {
+  ChevronRight,
+  CornerUpLeft,
+  Folder,
+  Globe,
+  PenTool,
+  Sparkles,
+  Wand2,
+  X,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent, MouseEvent } from 'react';
 import type { SidebarRow } from '@shared/types/space';
@@ -80,6 +89,10 @@ export function RenameInput({
 
 export function TabIcon({ row }: { row: SidebarRow }) {
   const className = `size-4 shrink-0 ${row.isLoading ? 'animate-pulse' : ''}`;
+  if (row.url?.startsWith('orbit://easel/'))
+    return <PenTool className={className} strokeWidth={1.75} />;
+  if (row.url?.startsWith('orbit://boost/'))
+    return <Wand2 className={className} strokeWidth={1.75} />;
   if (row.url?.startsWith('orbit://')) return <Sparkles className={className} strokeWidth={1.75} />;
   if (row.favicon) return <img src={row.favicon} alt="" className={`${className} rounded-sm`} />;
   return <Globe className={`${className} opacity-60`} strokeWidth={1.75} />;

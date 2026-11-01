@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { layoutSchema, rectSchema } from '../types/layout';
 import { siteActionSchema } from '../types/site-controls';
 import { boostIdSchema, boostPatchSchema, boostSchema } from '../types/boosts';
+import { easelCaptureSchema, easelEntrySchema, easelIdSchema, easelSchema } from '../types/easels';
 import {
   boostEntrySchema,
   downloadEntrySchema,
@@ -478,6 +479,51 @@ export const contract = {
       .object({ id: boostIdSchema, action: z.enum(['on', 'off', 'edit', 'delete']) })
       .strict(),
     output: z.void(),
+    surfaces: ['internal'],
+  },
+
+  'library:easels': {
+    input: z.object({}).strict(),
+    output: z.object({ easels: z.array(easelEntrySchema) }),
+    surfaces: ['internal'],
+  },
+  /** Open or (after confirming) delete an Easel, or make a new one. */
+  'library:easelAct': {
+    input: z
+      .object({ id: easelIdSchema.optional(), action: z.enum(['new', 'open', 'delete']) })
+      .strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+
+  // Easels (F-19): the editor (orbit://easel/<id>) loads and saves only its own Easel.
+  'easels:get': {
+    input: z.object({ id: easelIdSchema }).strict(),
+    output: easelSchema.nullable(),
+    surfaces: ['internal'],
+  },
+  'easels:save': {
+    input: z
+      .object({
+        id: easelIdSchema,
+        title: z.string().min(1).max(120).optional(),
+        // Captured and pasted images live in the scene, so it can be large.
+        scene: z.string().max(80_000_000).optional(),
+        preview: z
+          .string()
+          .max(2_000_000)
+          .regex(/^data:image\/(jpeg|png);base64,/)
+          .nullable()
+          .optional(),
+      })
+      .strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Area capture from a web page in this window; null if cancelled. */
+  'easels:capture': {
+    input: z.object({ id: easelIdSchema }).strict(),
+    output: easelCaptureSchema.nullable(),
     surfaces: ['internal'],
   },
 

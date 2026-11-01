@@ -1,10 +1,16 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useEffect, useSyncExternalStore } from 'react';
 import { librarySectionSchema } from '@shared/types/library';
 import { ArchivePage } from './ArchivePage';
-import { BoostEditor } from './boost/BoostEditor';
+import { EaselPage } from './easel/EaselPage';
 import { LibraryPage } from './library/LibraryPage';
 import { NewTabPage } from './newtab/NewTabPage';
 import { SettingsPage } from './SettingsPage';
+
+// The Boost editor brings CodeMirror; load it only on orbit://boost pages (the new tab page
+// shares this bundle and should stay light).
+const BoostEditor = lazy(() =>
+  import('./boost/BoostEditor').then((m) => ({ default: m.BoostEditor })),
+);
 
 const TITLES: Record<string, string> = {
   newtab: 'New Tab',
@@ -12,6 +18,7 @@ const TITLES: Record<string, string> = {
   settings: 'Settings',
   boost: 'Boost',
   library: 'Library',
+  easel: 'Easel',
 };
 
 /** The hash main loaded; the Library changes it when switching sections. */
@@ -35,7 +42,13 @@ export function InternalApp() {
   if (page === 'newtab') return <NewTabPage />;
   if (page === 'archive') return <ArchivePage />;
   if (page === 'settings') return <SettingsPage />;
-  if (page === 'boost' && param) return <BoostEditor id={param} />;
+  if (page === 'boost' && param)
+    return (
+      <Suspense fallback={null}>
+        <BoostEditor id={param} />
+      </Suspense>
+    );
+  if (page === 'easel' && param) return <EaselPage id={param} />;
   const section = librarySectionSchema.safeParse(param);
   if (page === 'library' && section.success)
     return <LibraryPage key={section.data} section={section.data} />;

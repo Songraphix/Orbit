@@ -17,6 +17,9 @@ import { BoostService } from './boosts/service';
 import { domainForPage } from './boosts/model';
 import { boostIdSchema } from '@shared/types/boosts';
 import { librarySectionSchema } from '@shared/types/library';
+import { easelIdSchema } from '@shared/types/easels';
+import { newEasel, registerEaselHandlers } from './ipc/handlers/easels';
+import { CaptureRequests } from './easels/capture-requests';
 import { registerLibraryHandlers } from './ipc/handlers/library';
 import { MediaLibrary } from './library/media';
 import { registerCommandBarHandlers } from './ipc/handlers/command-bar';
@@ -124,6 +127,8 @@ function loadInternal(view: WebContentsView, url: string): void {
   // Pages with a parameter: a Boost's editor, a Library section.
   if (page === 'boost')
     hash = boostIdSchema.safeParse(param).success ? `/boost/${param}` : '/not-found';
+  if (page === 'easel')
+    hash = easelIdSchema.safeParse(param).success ? `/easel/${param}` : '/not-found';
   if (page === 'library')
     hash = librarySectionSchema.safeParse(param).success ? `/library/${param}` : '/not-found';
   if (devServer) void view.webContents.loadURL(`${devServer}/internal/index.html#${hash}`);
@@ -249,6 +254,9 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'settings':
       controller.tabs.create('orbit://settings');
       return;
+    case 'new-easel':
+      if (persistence) newEasel(persistence.easels, controller);
+      return;
     case 'library':
       controller.library.open('media');
       return;
@@ -322,6 +330,7 @@ void app.whenReady().then(() => {
     (snapshot) => broadcaster.send('state:downloads', snapshot),
   );
   downloadService = downloads;
+  const captures = new CaptureRequests();
   const media = new MediaLibrary(join(app.getPath('userData'), 'Captures'), downloads);
 
   // Site permissions: ask in the window's overlay, remember per site (F-31).
@@ -452,7 +461,9 @@ void app.whenReady().then(() => {
     toast,
     resetZoom: (controller) => zoom(controller, 'reset'),
     saveCapture: (png) => media.saveCapture(png),
+    captures,
   });
+  registerEaselHandlers(router, windowManager, { easels: persistence.easels, captures, toast });
   registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
   router.handle('tabs:devtools', ({ tabId }, { sender }) => {

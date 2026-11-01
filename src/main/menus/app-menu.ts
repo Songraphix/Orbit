@@ -86,6 +86,12 @@ export function installAppMenu(actions: AppMenuActions): void {
           click: actions.newLittleWindow,
         },
         {
+          id: 'new-easel',
+          label: 'New Easel',
+          accelerator: 'Ctrl+Shift+E',
+          click: () => actions.command('new-easel'),
+        },
+        {
           id: 'open-location',
           label: 'Open Location…',
           accelerator: 'CmdOrCtrl+L',

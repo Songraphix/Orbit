@@ -9,6 +9,7 @@ import type { ExtensionHost } from '../../extensions/host';
 import type { BoostService } from '../../boosts/service';
 import { domainForPage } from '../../boosts/model';
 import { openBoostEditor, zapPage } from './boosts';
+import type { CaptureRequests } from '../../easels/capture-requests';
 import { webStoreIdFrom } from '../../extensions/model';
 import { cropToPage } from '../../site-controls/capture';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
@@ -22,6 +23,8 @@ export type SiteControlsDeps = {
   resetZoom: (controller: WindowController) => void;
   /** Keeps a screenshot for Library → Media. */
   saveCapture: (png: Buffer) => void;
+  /** Captures an Easel is waiting for. */
+  captures: CaptureRequests;
 };
 
 /**
@@ -238,13 +241,28 @@ export function registerSiteControlsHandlers(
     const controller = windowFor(sender.webContentsId);
     const site = activeSite(controller);
     controller.overlay.endCapture();
-    if (!site) return;
+    if (!site) {
+      deps.captures.settle(controller, null);
+      return;
+    }
     const area = site.tab.view.getBounds();
     const crop = rect ? cropToPage(rect, area) : undefined;
-    if (crop === null) return;
-    const image = await site.tab.view.webContents.capturePage(crop);
-    if (image.isEmpty()) return;
+    const image = crop === null ? null : await site.tab.view.webContents.capturePage(crop);
+    if (!image || image.isEmpty()) {
+      deps.captures.settle(controller, null);
+      return;
+    }
     const bytes = image.toPNG();
+    // An Easel asked for this capture: it goes there, not to the clipboard.
+    const size = crop ?? { width: area.width, height: area.height };
+    const forEasel = deps.captures.settle(controller, {
+      dataUrl: `data:image/png;base64,${bytes.toString('base64')}`,
+      width: size.width,
+      height: size.height,
+      sourceUrl: site.url,
+      sourceTitle: site.tab.state.title,
+    });
+    if (forEasel) return;
     deps.saveCapture(bytes);
     const png = new Blob([new Uint8Array(bytes)], { type: 'image/png' });
     await clipboard.write([new ClipboardItem({ 'image/png': png })]);
@@ -252,7 +270,9 @@ export function registerSiteControlsHandlers(
   });
 
   router.handle('capture:cancel', (_input, { sender }) => {
-    windowFor(sender.webContentsId).overlay.endCapture();
+    const controller = windowFor(sender.webContentsId);
+    controller.overlay.endCapture();
+    deps.captures.settle(controller, null);
   });
 
   /** The footer's "…": copy, zoom reset, clear site data. */

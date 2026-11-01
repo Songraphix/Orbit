@@ -62,9 +62,12 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 - 2026-11-01 — Phase 9: Library [F-11] — the sidebar's Library button switches it to the six sections as tiles (Img 4) with a back arrow; the content area shows `orbit://library/<section>` in a per-window view (`LibraryController`) while the pages stay loaded but hidden, and opening any tab leaves the Library. Media: images/videos from downloads plus screenshots, which are now also saved to `<userData>/Captures` (Quick Look thumbnails as JPEG data URLs; open / Show in Finder). Downloads: every download from SQLite, searchable, with open / reveal and "moved or deleted" detection. Spaces: open, move up/down, rename, delete (confirmed). Boosts: on/off, edit, delete. Archived Tabs: the existing page. Library pages may only be the window's own Library view (checked in main); sections switch by hash, without reloading. "Library" command. Fixed: leaving a new space's rename field without typing saved the previous space's name onto it
 
+- 2026-11-01 — Phase 9: Easels [F-19] — Excalidraw 0.18.1 (MIT) in `orbit://easel/<id>` tabs, lazy-loaded so other pages stay light; `easels` table (migration 008) with the scene and a JPEG preview, saved 0.6 s after each change. New Easel: ⌃⇧E (File menu), the + menu, the command bar, or Library → Easels. Title in the canvas corner renames the tab. **Capture** shows the page beside the Easel (or the most recent web page in the space) with the area-capture overlay and drops the image on the canvas, linked to its page (`CaptureRequests` routes the capture to the Easel instead of the clipboard). Library → Easels: previews, open, delete. Excalidraw's fonts ship with Orbit (inline Vite plugin; the 12 MB CJK font is left out) because the internal pages' CSP blocks its CDN — verified in the packaged app. The editor may only load and save its own Easel. Easel and Boost tabs get their own sidebar icons — **Phase 9 complete** (live-refreshing captures stay a stretch goal)
+- 2026-11-01 — Packaging: renderer-only libraries (React, lucide, CodeMirror, Excalidraw) moved to devDependencies — Vite bundles them, so electron-builder no longer copies them into the app: app.asar 263 MB → 25 MB. The Boost editor is lazy-loaded too, so the internal page bundle (new tab page) went from 2.8 MB to 58 KB
+
 ## In progress
 
-- Phase 9: Easels [F-19]
+- Phase 10 (ahead of schedule): Tidy and Live Folders — not started
 
 ## Decisions made
 
@@ -76,6 +79,8 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - 2026-11-01 — Peek v1 catches links that would open a new tab (target=_blank, window.open), not same-tab navigations: those include OAuth/SSO redirects that must stay in the pinned tab. Covers Gmail, Slack, etc.
 - 2026-11-01 — Boost JS runs in an isolated world (like Arc's Boosts, which are content scripts), so it shares the DOM but not the page's globals; CSS changes apply live, JS changes need Reload Pages
 - 2026-11-01 — CodeMirror 6 (`codemirror@6.0.2` + lang-css / lang-javascript); four transitive packages pinned via `overrides` to releases older than two weeks
+- 2026-11-01 — Excalidraw 0.18.1 for Easels (PLAN.md section 3); `es-toolkit` and `vscode-languageserver-textdocument` (via its Mermaid import) pinned via `overrides`. Its CDN font fallbacks stay blocked by the CSP: Chromium logs a warning per font face when an Easel opens, but nothing is fetched
+- 2026-11-01 — Library pages render in a per-window view rather than as tabs, so they never appear in Today; screenshots are kept in `<userData>/Captures` for Library → Media
 - 2026-11-01 — Split view v1 is two panes and not persisted; a split tree and restore come later (backlog)
 - 2026-11-01 — New tab page added at the owner's request (F-32): "+ New Tab" always opens it; ⌘T opens it until the Phase 2 command bar, then ⌘T → command bar
 

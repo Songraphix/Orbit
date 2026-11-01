@@ -1,9 +1,54 @@
-import { resolve } from 'node:path';
+import { createReadStream, existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { defineConfig } from 'electron-vite';
+import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 const alias = { '@shared': resolve(import.meta.dirname, 'src/shared') };
+
+const EXCALIDRAW_FONTS = resolve(
+  import.meta.dirname,
+  'node_modules/@excalidraw/excalidraw/dist/prod/fonts',
+);
+/**
+ * Xiaolai (CJK, 12 MB) is left out: Chinese and Japanese text use a system font instead.
+ * Excalidraw lists its CDN as a fallback for every face; the CSP blocks it (Chromium logs a
+ * warning per face at startup), so nothing is ever fetched from the network.
+ */
+const shippedFont = (rel: string) => rel.endsWith('.woff2') && !rel.startsWith('Xiaolai');
+
+/**
+ * Excalidraw's hand-drawn fonts for Easels (F-19), served from Orbit itself at
+ * `<renderer>/excalidraw/fonts/…`: internal pages' CSP blocks the CDN it would use otherwise.
+ */
+function excalidrawFonts(): Plugin {
+  const files = () =>
+    (readdirSync(EXCALIDRAW_FONTS, { recursive: true }) as string[])
+      .map((f) => f.split('\\').join('/'))
+      .filter(shippedFont);
+  return {
+    name: 'orbit-excalidraw-fonts',
+    configureServer(server) {
+      server.middlewares.use('/excalidraw/fonts/', (req, res, next) => {
+        const rel = decodeURIComponent((req.url ?? '').split('?')[0]!.replace(/^\/+/, ''));
+        const file = join(EXCALIDRAW_FONTS, rel);
+        if (rel.includes('..') || !shippedFont(rel) || !existsSync(file)) return next();
+        res.setHeader('content-type', 'font/woff2');
+        createReadStream(file).pipe(res);
+      });
+    },
+    generateBundle() {
+      for (const rel of files()) {
+        this.emitFile({
+          type: 'asset',
+          fileName: `excalidraw/fonts/${rel}`,
+          source: readFileSync(join(EXCALIDRAW_FONTS, rel)),
+        });
+      }
+    },
+  };
+}
 
 export default defineConfig({
   main: {
@@ -31,7 +76,7 @@ export default defineConfig({
   renderer: {
     root: resolve(import.meta.dirname, 'src/renderer'),
     resolve: { alias },
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), excalidrawFonts()],
     build: {
       rolldownOptions: {
         input: {

@@ -355,7 +355,11 @@ export class SidebarActions {
       { label: 'New Space', click: () => this.newSpace() },
       { label: 'New Folder', click: () => this.newFolder('pinned') },
       { type: 'separator' },
-      { label: 'New Easel', accelerator: 'Ctrl+Shift+E', enabled: false },
+      {
+        label: 'New Easel',
+        accelerator: 'Ctrl+Shift+E',
+        click: () => this.ui.command('new-easel'),
+      },
       { label: 'New Boost', click: () => this.ui.command('new-boost') },
       { type: 'separator' },
       {

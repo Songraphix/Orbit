@@ -1031,9 +1031,9 @@ Apr 26 ─ May 16  Phase 11 Polish, performance, packaging, signing, updates →
 
 **Features:** F-18.
 
-- [ ] BoostService: matching, CSS insert/remove, JS execution, enable/disable live.
-- [ ] Boost editor (`orbit://boost/<id>`) with CodeMirror 6 and live preview.
-- [ ] Colour, font and zap tools.
+- [x] BoostService: matching, CSS insert/remove, JS execution, enable/disable live.
+- [x] Boost editor (`orbit://boost/<id>`) with CodeMirror 6 and live preview.
+- [x] Colour, font and zap tools.
 - [ ] Re-create the Boosts from your backup.
 - [ ] ★ **M2 — Arc Parity.**
 
@@ -1041,8 +1041,8 @@ Apr 26 ─ May 16  Phase 11 Polish, performance, packaging, signing, updates →
 
 **Features:** F-11, F-19.
 
-- [ ] Library navigation mode in the sidebar (Img 4) + all six internal pages.
-- [ ] Easels with Excalidraw, sidebar integration, capture-from-tab; ⌃⇧E.
+- [x] Library navigation mode in the sidebar (Img 4) + all six internal pages.
+- [x] Easels with Excalidraw, sidebar integration, capture-from-tab; ⌃⇧E.
 
 ### 8.14 Phase 10 — Tidy, Live Folders, AI extras (Apr 5 – Apr 25)
 
