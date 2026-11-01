@@ -82,6 +82,8 @@ export class TabController {
       canGoForward: false,
       kind,
       crashed: false,
+      devMode: false,
+      consoleErrors: 0,
     };
     this.view = this.createView(kind);
     this.pendingLoad = options.deferLoad ?? false;
@@ -221,11 +223,16 @@ export class TabController {
     contents.on('did-stop-loading', () => this.update({ isLoading: false, ...this.navState() }));
     contents.on('did-navigate', () => {
       const url = contents.getURL();
-      this.update({ url, favicon: null, ...this.navState() });
+      this.update({ url, favicon: null, consoleErrors: 0, ...this.navState() });
       this.env.history.recordVisit(url, contents.getTitle());
       contents.setZoomLevel(this.env.zoomFor(url)); // per-site zoom survives restarts
     });
     contents.on('found-in-page', (_e, result) => this.env.onFoundInPage(result));
+    contents.on('console-message', (details) => {
+      if (details.level === 'error') {
+        this.update({ consoleErrors: this.stateValue.consoleErrors + 1 });
+      }
+    });
     contents.on('did-navigate-in-page', (_e, _url, isMainFrame) => {
       if (isMainFrame) this.update({ url: contents.getURL(), ...this.navState() });
     });

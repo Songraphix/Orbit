@@ -48,6 +48,8 @@ export type TabManagerDeps = Pick<
   onUnresponsive?: (tabId: string) => void;
   /** A tab's media started or stopped. */
   onMedia?: (tabId: string, event: 'playing' | 'paused') => void;
+  /** A site's own setting by page URL (Developer Mode…). */
+  siteSetting?: (url: string, key: string) => string | null;
   /** Offered every link that wants a new tab; returns true if Peek took it (F-23). */
   peek?: (fromTabId: string, url: string, activate: boolean) => boolean;
   /** Split view started, resized or ended (null): the layout needs the new ratio. */
@@ -422,6 +424,7 @@ export class TabManager {
           isAudible: tab
             ? !tab.view.webContents.isDestroyed() && tab.view.webContents.isCurrentlyAudible()
             : false,
+          keep: this.devModeFor(tab?.state.url ?? i.url),
         };
       });
   }
@@ -589,7 +592,7 @@ export class TabManager {
   private tabState(item: SidebarItem): TabState {
     const tab = this.live.get(item.id);
     if (tab) {
-      const state = tab.state;
+      const state = { ...tab.state, devMode: this.devModeFor(tab.state.url) };
       return item.titleOverride ? { ...state, title: item.titleOverride } : state;
     }
     const url = item.url ?? NEW_TAB_URL;
@@ -603,7 +606,18 @@ export class TabManager {
       canGoForward: false,
       kind: isInternal(url) ? 'internal' : 'web',
       crashed: false,
+      devMode: this.devModeFor(url),
+      consoleErrors: 0,
     };
+  }
+
+  private devModeFor(url: string | null): boolean {
+    return url !== null && !isInternal(url) && this.deps.siteSetting?.(url, 'devMode') === 'on';
+  }
+
+  /** Re-sends the snapshot (e.g. after a site setting changed). */
+  refresh(): void {
+    this.scheduleNotify();
   }
 
   /** The tabs on screen: both split panes, or just the active tab. */

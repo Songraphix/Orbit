@@ -28,6 +28,14 @@ export class SiteSettingsRepository {
       .run(PROFILE, origin, key, value);
   }
 
+  /** Everything stored for an origin (the site controls popover). */
+  all(origin: string): Record<string, string> {
+    const rows = this.db
+      .prepare('SELECT key, value FROM site_settings WHERE profile_id = ? AND origin = ?')
+      .all(PROFILE, origin) as { key: string; value: string }[];
+    return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  }
+
   /** Zoom level for a host (Chromium levels: 0 = 100%, each step ≈ ×1.2). */
   zoomFor(url: string): number {
     const origin = originOf(url);

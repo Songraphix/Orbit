@@ -2,15 +2,17 @@ import {
   ArrowLeft,
   ArrowLeftRight,
   ArrowRight,
+  Bug,
   Check,
   Lock,
   Maximize2,
   PanelLeft,
   RotateCw,
+  SlidersHorizontal,
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { formatAddress } from '@shared/format-address';
 import type { FindState } from '@shared/types/find';
 import type { TabState } from '@shared/types/tabs';
@@ -123,38 +125,86 @@ export function Toolbar({
             onClick={() => void window.orbit.invoke('commandbar:open', { mode: 'edit' })}
             data-testid="toolbar-address"
           >
-            {address.domain && address.secure && (
-              <Lock size={11} className="shrink-0 text-neutral-400" aria-label="Secure" />
+            {tab?.devMode ? (
+              // Developer Mode (F-30): the whole URL, port and path included.
+              <span
+                className="truncate font-mono text-[12px] text-neutral-700"
+                data-testid="toolbar-full-url"
+              >
+                {tab.url}
+              </span>
+            ) : (
+              <>
+                {address.domain && address.secure && (
+                  <Lock size={11} className="shrink-0 text-neutral-400" aria-label="Secure" />
+                )}
+                {address.domain && (
+                  <span className="shrink-0 font-medium text-neutral-800">{address.domain}</span>
+                )}
+                {address.domain && address.title && (
+                  <span className="shrink-0 text-neutral-300">/</span>
+                )}
+                {address.title && (
+                  <span className="truncate text-neutral-500">{address.title}</span>
+                )}
+              </>
             )}
-            {address.domain && (
-              <span className="shrink-0 font-medium text-neutral-800">{address.domain}</span>
-            )}
-            {address.domain && address.title && (
-              <span className="shrink-0 text-neutral-300">/</span>
-            )}
-            {address.title && <span className="truncate text-neutral-500">{address.title}</span>}
           </button>
         )
       )}
 
-      {inSplit && (
-        <div className="ml-auto flex items-center gap-0.5">
+      <div className="ml-auto flex items-center gap-0.5">
+        {tab?.devMode && (
           <ToolbarButton
-            label="Swap Panes"
-            onClick={() => void window.orbit.invoke('split:swap', {})}
-            testId="split-swap"
+            label={`Developer Tools${tab.consoleErrors ? ` (${tab.consoleErrors} errors)` : ''}`}
+            onClick={() => void window.orbit.invoke('tabs:devtools', { tabId: tab.id })}
+            testId="toolbar-devtools"
           >
-            <ArrowLeftRight size={14} />
+            <span className="relative">
+              <Bug size={14} />
+              {tab.consoleErrors > 0 && (
+                <span
+                  className="absolute -top-1.5 -right-2 min-w-3.5 rounded-full bg-red-500 px-1 text-[9px] leading-3.5 font-semibold text-white"
+                  data-testid="toolbar-errors"
+                >
+                  {tab.consoleErrors > 99 ? '99+' : tab.consoleErrors}
+                </span>
+              )}
+            </span>
           </ToolbarButton>
+        )}
+        {tab?.kind === 'web' && (
           <ToolbarButton
-            label="Show This Page Alone"
-            onClick={() => void window.orbit.invoke('split:exit', {})}
-            testId="split-exit"
+            label="Site Controls"
+            onClick={(event) => {
+              const r = event.currentTarget.getBoundingClientRect();
+              const anchor = { x: r.x, y: r.y, width: r.width, height: r.height };
+              void window.orbit.invoke('sitecontrols:open', { anchor });
+            }}
+            testId="toolbar-site-controls"
           >
-            <Maximize2 size={13} />
+            <SlidersHorizontal size={14} />
           </ToolbarButton>
-        </div>
-      )}
+        )}
+        {inSplit && (
+          <>
+            <ToolbarButton
+              label="Swap Panes"
+              onClick={() => void window.orbit.invoke('split:swap', {})}
+              testId="split-swap"
+            >
+              <ArrowLeftRight size={14} />
+            </ToolbarButton>
+            <ToolbarButton
+              label="Show This Page Alone"
+              onClick={() => void window.orbit.invoke('split:exit', {})}
+              testId="split-exit"
+            >
+              <Maximize2 size={13} />
+            </ToolbarButton>
+          </>
+        )}
+      </div>
 
       {tab?.isLoading && (
         <div
@@ -172,7 +222,7 @@ export function Toolbar({
 
 function ToolbarButton(props: {
   label: string;
-  onClick: () => void;
+  onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   disabled?: boolean;
   testId: string;
   children: ReactNode;

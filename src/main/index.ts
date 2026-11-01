@@ -10,6 +10,7 @@ import { chromeUserAgent } from './app/user-agent';
 import { Broadcaster } from './ipc/broadcaster';
 import { CommandBarService, copyActiveUrl } from './commandbar/service';
 import { registerAppHandlers } from './ipc/handlers/app';
+import { registerSiteControlsHandlers } from './ipc/handlers/site-controls';
 import { registerCommandBarHandlers } from './ipc/handlers/command-bar';
 import { registerFindHandlers } from './ipc/handlers/find';
 import { registerInternalPageHandlers } from './ipc/handlers/internal-pages';
@@ -384,6 +385,18 @@ void app.whenReady().then(() => {
     settings: persistence.settings,
     history: persistence.history,
     applyLittleShortcut,
+  });
+  registerSiteControlsHandlers(router, windowManager, {
+    siteSettings: persistence.siteSettings,
+    toast,
+    resetZoom: (controller) => zoom(controller, 'reset'),
+  });
+  router.handle('tabs:devtools', ({ tabId }, { sender }) => {
+    const contents = windowManager.forSender(sender.webContentsId)?.tabs.get(tabId)
+      ?.view.webContents;
+    if (!contents) return;
+    if (contents.isDevToolsOpened()) contents.closeDevTools();
+    else contents.openDevTools({ mode: 'detach' });
   });
   registerCommandBarHandlers(
     router,

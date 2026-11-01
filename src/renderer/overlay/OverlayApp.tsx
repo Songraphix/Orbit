@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { OverlayState } from '@shared/types/command-bar';
 import { CommandBar } from './CommandBar';
 import { PeekFrame } from './PeekFrame';
+import { SiteControls } from './SiteControls';
 import { PromptView } from './PromptView';
 
 /**
@@ -13,6 +14,7 @@ export function OverlayApp() {
     commandBar: null,
     prompt: null,
     peek: null,
+    siteControls: null,
   });
 
   useEffect(() => {
@@ -27,6 +29,8 @@ export function OverlayApp() {
     <PromptView key={state.prompt.id} prompt={state.prompt} />
   ) : state.commandBar ? (
     <CommandBar key={state.commandBar.openedAt} {...state.commandBar} />
+  ) : state.siteControls ? (
+    <SiteControls view={state.siteControls} />
   ) : null;
   return (
     <>

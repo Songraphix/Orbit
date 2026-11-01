@@ -192,6 +192,7 @@ export class WindowManager {
       },
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
       onSplitChange: (ratio) => layout.setSplitRatio(ratio),
+      siteSetting: this.deps.siteSetting,
       peek: (fromTabId, url, activate) => {
         const fromUrl = tabs?.get(fromTabId)?.state.url ?? null;
         const open = shouldPeek({
@@ -201,6 +202,7 @@ export class WindowManager {
           activate,
           enabled: settings.get('peek.enabled'),
           siteSetting: fromUrl ? this.deps.siteSetting(fromUrl, 'peek') : null,
+          devMode: fromUrl ? this.deps.siteSetting(fromUrl, 'devMode') === 'on' : false,
         });
         if (open) peek?.open(fromTabId, url);
         return open && peek !== null;

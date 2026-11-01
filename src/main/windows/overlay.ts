@@ -7,6 +7,7 @@ import type {
   Prompt,
   PromptAnswer,
 } from '@shared/types/command-bar';
+import type { SiteControlsView } from '@shared/types/site-controls';
 
 export type OverlayDeps = {
   win: BrowserWindow;
@@ -34,6 +35,7 @@ export class OverlayController {
   private readonly prompts: PendingPrompt[] = [];
   private nextPromptId = 1;
   private peek: PeekView | null = null;
+  private siteControls: SiteControlsView | null = null;
 
   constructor(private readonly deps: OverlayDeps) {
     this.view = new WebContentsView({
@@ -63,11 +65,33 @@ export class OverlayController {
       commandBar: this.commandBar,
       prompt: this.prompts[0]?.prompt ?? null,
       peek: this.peek,
+      siteControls: this.siteControls,
     };
   }
 
   get isOpen(): boolean {
-    return this.commandBar !== null || this.prompts.length > 0 || this.peek !== null;
+    return (
+      this.commandBar !== null ||
+      this.prompts.length > 0 ||
+      this.peek !== null ||
+      this.siteControls !== null
+    );
+  }
+
+  get siteControlsOpen(): boolean {
+    return this.siteControls !== null;
+  }
+
+  /** Opens (or refreshes) the site controls popover (F-12). */
+  showSiteControls(view: SiteControlsView): void {
+    this.siteControls = view;
+    this.show();
+  }
+
+  closeSiteControls(): void {
+    if (!this.siteControls) return;
+    this.siteControls = null;
+    this.sync();
   }
 
   /** Shows/updates the Peek frame (null hides it). Focus stays with the Peek page. */

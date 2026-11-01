@@ -15,6 +15,10 @@ export const tabStateSchema = z.object({
   kind: z.enum(['web', 'internal']),
   /** The page's renderer process died; the shell shows a Reload card instead of the page. */
   crashed: z.boolean(),
+  /** The site is in Developer Mode (F-30): full URL, DevTools button, error count. */
+  devMode: z.boolean(),
+  /** Console errors since the page loaded (shown in Developer Mode). */
+  consoleErrors: z.number(),
 });
 export type TabState = z.output<typeof tabStateSchema>;
 

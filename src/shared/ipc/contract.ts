@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { layoutSchema } from '../types/layout';
+import { layoutSchema, rectSchema } from '../types/layout';
+import { siteActionSchema } from '../types/site-controls';
 import {
   commandBarModeSchema,
   commandItemSchema,
@@ -277,6 +278,34 @@ export const contract = {
   },
   'find:close': {
     input: z.object({}).strict(),
+    output: z.void(),
+  },
+  /** Site controls popover (F-12): the toolbar button, at `anchor` in window coordinates. */
+  'sitecontrols:open': {
+    input: z.object({ anchor: rectSchema }).strict(),
+    output: z.void(),
+  },
+  'sitecontrols:close': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  /** A settings row was clicked: main shows its choices as a native menu (or sets `value`). */
+  'sitecontrols:pick': {
+    input: z
+      .object({ key: z.string().min(1).max(64), value: z.string().max(32).optional() })
+      .strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'sitecontrols:action': {
+    input: z.object({ action: siteActionSchema }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  /** Developer Mode's toolbar button (F-30). */
+  'tabs:devtools': {
+    input: z.object({ tabId }).strict(),
     output: z.void(),
   },
   /** Peek (F-23): close the preview, or open its page as a tab without reloading. */

@@ -52,9 +52,11 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 - 2026-11-01 — Phase 6: ⌥⌘N Little Orbit [F-24] — File → New Little Orbit Window and a global ⌥⌘N (Settings toggle, on by default; quietly skipped if another app owns it) open an empty Little Orbit whose bar takes an address or search; clicking the address of any Little Orbit edits it — **Phase 6 complete** (split restore, drag-to-edge split and the sidebar split item are in the backlog)
 
+- 2026-11-01 — Phase 7: site controls popover + Developer Mode [F-12, F-30] — toolbar sliders button opens the Img 3 popover in the overlay: Share (macOS share sheet), Screenshot (visible page → clipboard), Copy Link, Boost placeholder; settings for this site (Notifications, Preview/Peek, Developer Mode, plus camera/mic/location once asked) as native radio menus over `site_settings` (pure `siteSettingRows` / `storedValueFor`); Secure / Not Secure footer and "…" (copy, reset zoom, clear site data with confirmation). Developer Mode per site: full URL in the toolbar, DevTools button with console-error badge, no Peek and no auto-archive; suggested for localhost / 127.0.0.1. Extensions grid is a placeholder until the extensions slice
+
 ## In progress
 
-- Phase 7 (ahead of schedule): site controls popover (Img 3), developer mode, extensions
+- Phase 7 (ahead of schedule): extensions (electron-chrome-extensions), then region screenshot
 
 ## Decisions made
 
@@ -85,6 +87,7 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 ## Backlog (ideas outside the current phase)
 
+- Site controls: Automatic Picture-in-Picture setting (with auto-PiP itself), certificate details on the Secure badge, region and full-page screenshots saved to the Library (Phase 9)
 - Remember split views across relaunches; split more than two panes; drag a sidebar tab onto a page edge to split; show the split as one item in the sidebar (F-13)
 - Hover the left edge to reveal the hidden sidebar as a floating panel (F-01) — needs the overlay view, so it lands in Phase 2
 - New tab page shortcut tiles (F-32): most-visited once history exists (Phase 2), favorites after the Arc import (Phase 3)

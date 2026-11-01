@@ -32,6 +32,7 @@ describe('tabsToArchive', () => {
       tab('fav', { section: 'favorite', lastActiveAt: old }),
       tab('active', { isActive: true, lastActiveAt: old }),
       tab('music', { isAudible: true, lastActiveAt: old }),
+      tab('dev', { keep: true, lastActiveAt: old }),
       tab('never-shown', { lastActiveAt: null }),
     ];
     expect(tabsToArchive(tabs, now, '12h')).toEqual([]);

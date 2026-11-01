@@ -39,6 +39,7 @@ describe('shouldPeek', () => {
   it('can be turned off globally or for the source site', () => {
     expect(shouldPeek({ ...base, enabled: false })).toBe(false);
     expect(shouldPeek({ ...base, siteSetting: 'off' })).toBe(false);
+    expect(shouldPeek({ ...base, devMode: true })).toBe(false);
     expect(shouldPeek({ ...base, siteSetting: 'on' })).toBe(true);
   });
 

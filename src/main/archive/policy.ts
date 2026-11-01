@@ -11,6 +11,8 @@ export type TabFacts = {
   live: boolean;
   isActive: boolean;
   isAudible: boolean;
+  /** Sites in Developer Mode are never auto-archived (F-30). */
+  keep?: boolean;
 };
 
 export const ARCHIVE_AFTER_OPTIONS = {
@@ -30,7 +32,7 @@ export function tabsToArchive(
 ): string[] {
   const limit = ARCHIVE_AFTER_OPTIONS[after];
   return tabs
-    .filter((t) => t.section === 'today' && !t.isActive && !t.isAudible)
+    .filter((t) => t.section === 'today' && !t.isActive && !t.isAudible && !t.keep)
     .filter((t) => t.lastActiveAt !== null && now - t.lastActiveAt > limit)
     .map((t) => t.id);
 }

@@ -25,6 +25,8 @@ export type PeekRequest = {
   enabled: boolean;
   /** The source site's own setting ("off" turns Peek off there; Img 3 "Preview"). */
   siteSetting: string | null;
+  /** The source site is in Developer Mode (F-30): no Peek there. */
+  devMode?: boolean;
 };
 
 /**
@@ -32,7 +34,7 @@ export type PeekRequest = {
  * a Peek preview instead. Same-site links (Gmail → another Gmail view) open as usual. Pure.
  */
 export function shouldPeek(r: PeekRequest): boolean {
-  if (!r.enabled || !r.activate || r.siteSetting === 'off') return false;
+  if (!r.enabled || !r.activate || r.siteSetting === 'off' || r.devMode) return false;
   if (r.section !== 'pinned' && r.section !== 'favorite') return false;
   const from = siteOf(r.fromUrl);
   const to = siteOf(r.toUrl);

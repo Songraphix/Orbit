@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { rectSchema } from './layout';
+import { siteControlsViewSchema } from './site-controls';
 
 /** One row in the command bar (F-21). Main builds and ranks these; the overlay just draws them. */
 export const commandItemSchema = z.object({
@@ -58,6 +59,7 @@ export type PeekView = z.output<typeof peekViewSchema>;
 
 export const overlayStateSchema = z.object({
   peek: peekViewSchema.nullable(),
+  siteControls: siteControlsViewSchema.nullable(),
   /** The question currently being asked (others wait their turn). */
   prompt: promptSchema.nullable(),
   commandBar: z
