@@ -5,6 +5,7 @@ import type { RendererEntry } from '@shared/constants';
 import type { Broadcaster } from '../ipc/broadcaster';
 import type { SenderRegistry } from '../ipc/sender';
 import type { SettingsRepository } from '../persistence/repositories/settings';
+import type { TabsRepository } from '../persistence/repositories/tabs';
 import type { TabController } from '../tabs/tab-controller';
 import { TabManager } from '../tabs/tab-manager';
 import { LayoutEngine } from './layout-engine';
@@ -15,9 +16,12 @@ export const TRAFFIC_LIGHT_POSITION = { x: 16, y: 18 } as const;
 
 /** Window position/size writes are debounced; moving a window fires dozens of events. */
 const SAVE_DELAY_MS = 500;
+/** Tab list writes are debounced too (titles and favicons change in bursts). */
+const TAB_SAVE_DELAY_MS = 500;
 
 export type WindowManagerDeps = {
   settings: SettingsRepository;
+  tabsRepo: TabsRepository;
   senders: SenderRegistry;
   broadcaster: Broadcaster;
   preloadPath: string;
@@ -108,25 +112,55 @@ export class WindowManager {
       loadInternal: this.deps.loadInternal,
       registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
       unregisterInternal: (webContentsId) => senders.remove(webContentsId),
-      onChange: (snapshot) => broadcaster.sendTo(contents, 'state:tabs', snapshot),
+      onChange: (snapshot) => {
+        broadcaster.sendTo(contents, 'state:tabs', snapshot);
+        scheduleTabSave();
+      },
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
     });
     const tabManager = tabs;
 
+    // Session restore (PLAN.md section 5.3): open tabs are saved shortly after every change
+    // and immediately on close, so a force-quit loses at most the last half second.
+    let tabSaveTimer: ReturnType<typeof setTimeout> | null = null;
+    const saveTabs = () => {
+      if (tabSaveTimer) clearTimeout(tabSaveTimer);
+      tabSaveTimer = null;
+      this.deps.tabsRepo.saveAll(tabManager.toSaved());
+    };
+    function scheduleTabSave() {
+      if (tabSaveTimer) clearTimeout(tabSaveTimer);
+      tabSaveTimer = setTimeout(saveTabs, TAB_SAVE_DELAY_MS);
+    }
+
     // HTML fullscreen (section 4.6): Electron doesn't do this for us. The page takes the whole
     // window, and the window goes fullscreen unless it already was (then we leave it as is).
     let enteredWindowFullscreen = false;
+    // macOS ignores setFullScreen(false) while the enter animation is still running, so an exit
+    // requested mid-animation (Esc right after clicking fullscreen) is applied once it finishes.
+    let entering = false;
+    let exitAfterEnter = false;
     const setHtmlFullscreen = (enter: boolean) => {
       if (enter === layout.htmlFullscreen) return;
       layout.setHtmlFullscreen(enter);
       if (enter && !win.isFullScreen()) {
         enteredWindowFullscreen = true;
+        entering = true;
+        exitAfterEnter = false;
         win.setFullScreen(true);
       } else if (!enter && enteredWindowFullscreen) {
         enteredWindowFullscreen = false;
-        win.setFullScreen(false);
+        if (entering) exitAfterEnter = true;
+        else win.setFullScreen(false);
       }
     };
+    win.on('enter-full-screen', () => {
+      entering = false;
+      if (exitAfterEnter) {
+        exitAfterEnter = false;
+        win.setFullScreen(false);
+      }
+    });
     // Leaving window fullscreen (green button, ⌃⌘F) also ends the page's fullscreen.
     win.on('leave-full-screen', () => {
       if (!layout.htmlFullscreen) return;
@@ -147,11 +181,16 @@ export class WindowManager {
       broadcaster.remove(contents);
     });
     win.on('resize', () => layout.update());
-    win.on('close', () => layout.flush());
+    win.on('close', () => {
+      layout.flush();
+      saveTabs();
+    });
     win.on('closed', () => tabManager.destroyAll());
 
-    // Every window opens with a new tab page until session restore lands (step 11).
-    tabManager.create();
+    // Reopen last session's tabs, or start with a new tab page.
+    const savedTabs = this.deps.tabsRepo.load();
+    if (savedTabs.length > 0) tabManager.restore(savedTabs);
+    else tabManager.create();
 
     // The shell never navigates or opens windows itself (PLAN.md section 4.8).
     contents.on('will-navigate', (event) => event.preventDefault());

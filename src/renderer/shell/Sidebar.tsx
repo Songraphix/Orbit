@@ -56,6 +56,9 @@ function ResizeHandle({ onStart, onEnd }: { onStart: () => void; onEnd: () => vo
     onStart();
 
     const move = (ev: globalThis.PointerEvent) => {
+      // Hiding the web view makes Chromium send a hover move at the OS cursor position with no
+      // button held; only real drag moves (primary button down) count.
+      if ((ev.buttons & 1) === 0) return;
       pending.current = ev.clientX; // the sidebar starts at x = 0, so pointer x is the width
       frame.current ??= requestAnimationFrame(send); // at most one update per frame
     };

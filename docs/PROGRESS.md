@@ -22,10 +22,11 @@ Target end: 2026-11-16 · Branch: `phase-1/foundations`
 - 2026-11-01 — Phase 1 step 7: web compatibility [F-31] — reduced Chrome user agent (no "Electron"); `decideWindowOpen()` (pure): links → tabs (⌘-click → background), `window.open` with features → real sandboxed popup windows that keep `window.opener` (sign-in flows), non-web schemes refused; shared `guardWebContents()` applies the same rules to tabs and popups
 - 2026-11-01 — Phase 1 step 8: web page right-click menu [F-31] — pure `buildContextMenu()` (links, images, selection + Google search, editable fields with spelling suggestions / Add to Dictionary / undo-redo-cut-copy-paste, page Back/Forward/Reload, Inspect Element); native menu wiring in `context-menu.ts`
 - 2026-11-01 — Phase 1 step 9: HTML fullscreen [F-31] — page fullscreen (e.g. YouTube) puts the window in macOS fullscreen and gives the view the whole window with no chrome or corners; leaving (Esc, or the green button) restores the layout; window fullscreen is only undone if Orbit entered it
+- 2026-11-01 — Phase 1 steps 10–11: menu — Tabs menu (⌃Tab / ⌃⇧Tab, ⌘1…⌘8, ⌘9 = last); session restore — migration 002 `tabs`, `TabsRepository`, tabs saved 500 ms after changes and on close; restored tabs keep title/favicon and only the active one loads (others load on first click); fixes: sidebar drag ignores Chromium's synthetic no-button hover move; exiting HTML fullscreen during the macOS enter animation is deferred until it finishes
 
 ## In progress
 
-- Phase 1 step 10–11: app menu skeleton completion, tab persistence + session restore
+- Phase 1 exit check, then Phase 2 (overlay layer + command bar)
 
 ## Decisions made
 

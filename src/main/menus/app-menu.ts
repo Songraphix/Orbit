@@ -11,6 +11,10 @@ export type AppMenuActions = {
   navigate: (action: NavigateAction) => void;
   /** Opens DevTools for the active tab's page (⌥⌘I). */
   toggleTabDevTools: () => void;
+  /** Next (1) / previous (-1) tab. */
+  cycleTab: (direction: 1 | -1) => void;
+  /** ⌘1…⌘9. */
+  goToTab: (n: number) => void;
 };
 
 /**
@@ -79,6 +83,30 @@ export function installAppMenu(actions: AppMenuActions): void {
                 ] satisfies MenuItemConstructorOptions[])),
           ],
         },
+      ],
+    },
+    {
+      label: 'Tabs',
+      submenu: [
+        {
+          id: 'next-tab',
+          label: 'Next Tab',
+          accelerator: 'Ctrl+Tab',
+          click: () => actions.cycleTab(1),
+        },
+        {
+          id: 'previous-tab',
+          label: 'Previous Tab',
+          accelerator: 'Ctrl+Shift+Tab',
+          click: () => actions.cycleTab(-1),
+        },
+        { type: 'separator' },
+        ...Array.from({ length: 9 }, (_, i): MenuItemConstructorOptions => ({
+          id: `go-to-tab-${i + 1}`,
+          label: i === 8 ? 'Go to Last Tab' : `Go to Tab ${i + 1}`,
+          accelerator: `CmdOrCtrl+${i + 1}`,
+          click: () => actions.goToTab(i + 1),
+        })),
       ],
     },
     {

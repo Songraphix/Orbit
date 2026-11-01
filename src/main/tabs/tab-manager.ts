@@ -4,8 +4,9 @@ import type { Layout } from '@shared/types/layout';
 import { NEW_TAB_URL } from '@shared/types/tabs';
 import type { TabsSnapshot } from '@shared/types/tabs';
 import { insertAfter, nextActiveAfterClose } from './model';
+import type { SavedTab } from '../persistence/repositories/tabs';
 import { TabController } from './tab-controller';
-import type { TabEnv } from './tab-controller';
+import type { TabEnv, TabOptions } from './tab-controller';
 
 /** A pre-drag snapshot older than this is stale (the page may have changed). */
 const SNAPSHOT_MAX_AGE_MS = 10_000;
@@ -62,28 +63,77 @@ export class TabManager {
   }
 
   /** Opens a tab (default: the new tab page) right after the active tab and activates it. */
-  create(url: string = NEW_TAB_URL, options: { activate?: boolean } = {}): TabController {
-    const id = randomUUID();
-    const tab = new TabController(id, url, {
-      internalPreload: this.deps.internalPreload,
-      loadInternal: this.deps.loadInternal,
-      registerInternal: this.deps.registerInternal,
-      unregisterInternal: this.deps.unregisterInternal,
-      openInNewTab: (link, activate) => this.create(link, { activate }),
-      onChange: () => this.scheduleNotify(),
-      onViewReplaced: (oldView, newView) => this.replaceView(id, oldView, newView),
-      // Only the visible tab may take over the window; leaving is always honoured.
-      onHtmlFullscreen: (enter) => {
-        if (!enter || this.activeId === id) this.deps.onHtmlFullscreen(enter);
+  create(
+    url: string = NEW_TAB_URL,
+    options: { activate?: boolean; id?: string } & TabOptions = {},
+  ): TabController {
+    const { activate, id: savedId, ...tabOptions } = options;
+    const id = savedId ?? randomUUID();
+    const tab = new TabController(
+      id,
+      url,
+      {
+        internalPreload: this.deps.internalPreload,
+        loadInternal: this.deps.loadInternal,
+        registerInternal: this.deps.registerInternal,
+        unregisterInternal: this.deps.unregisterInternal,
+        openInNewTab: (link, activate) => this.create(link, { activate }),
+        onChange: () => this.scheduleNotify(),
+        onViewReplaced: (oldView, newView) => this.replaceView(id, oldView, newView),
+        // Only the visible tab may take over the window; leaving is always honoured.
+        onHtmlFullscreen: (enter) => {
+          if (!enter || this.activeId === id) this.deps.onHtmlFullscreen(enter);
+        },
       },
-    });
+      tabOptions,
+    );
     this.tabs.set(id, tab);
     this.order = insertAfter(this.order, id, this.activeId ?? undefined);
     this.attach(tab.view);
 
-    if (options.activate ?? true) this.activate(id);
+    if (activate ?? true) this.activate(id);
     else this.scheduleNotify();
     return tab;
+  }
+
+  /**
+   * Re-opens saved tabs in order. Only the previously active tab loads now; the rest load when
+   * first clicked (cheap startup, and background tabs don't start playing audio).
+   */
+  restore(saved: readonly SavedTab[]): void {
+    for (const s of saved) {
+      this.create(s.url, {
+        id: s.id,
+        activate: false,
+        deferLoad: true,
+        title: s.title,
+        favicon: s.favicon,
+      });
+    }
+    const active = saved.find((s) => s.isActive) ?? saved.at(-1);
+    if (active) this.activate(active.id);
+  }
+
+  /** The current tabs in a form the repository can save. */
+  toSaved(): SavedTab[] {
+    return this.order.map((id) => {
+      const { url, title, favicon } = this.tabs.get(id)!.state;
+      return { id, url, title, favicon, isActive: id === this.activeId };
+    });
+  }
+
+  /** Previous/next tab (⌃⇧Tab / ⌃Tab), wrapping around. */
+  cycle(direction: 1 | -1): void {
+    if (this.order.length === 0) return;
+    const index = this.activeId ? this.order.indexOf(this.activeId) : -1;
+    const next = this.order[(index + direction + this.order.length) % this.order.length];
+    if (next) this.activate(next);
+  }
+
+  /** ⌘1…⌘8 go to that tab; ⌘9 always goes to the last one (like Chrome). */
+  activateIndex(n: number): void {
+    const id = n === 9 ? this.order.at(-1) : this.order[n - 1];
+    if (id) this.activate(id);
   }
 
   activate(id: string): void {
@@ -93,6 +143,7 @@ export class TabManager {
     if (previous && previous !== next) previous.view.setVisible(false);
     this.activeId = id;
     this.frozen = false;
+    next.ensureLoaded(); // restored tabs load on first view
     this.place(next.view);
     next.view.setVisible(true);
     next.view.webContents.focus();

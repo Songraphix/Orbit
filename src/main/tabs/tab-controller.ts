@@ -30,39 +30,65 @@ const isInternalUrl = (url: string) => url.startsWith('orbit://');
  * One tab and its WebContentsView (PLAN.md section 4.7). Web tabs get no preload at all;
  * internal tabs (the new tab page) get the reduced internal preload and can't navigate.
  */
+export type TabOptions = {
+  /** Profile session (Phase 3); defaults to the default session. */
+  session?: Session;
+  /** Restored tabs: show saved title/favicon, but don't load the page until first activated. */
+  deferLoad?: boolean;
+  title?: string;
+  favicon?: string | null;
+};
+
 export class TabController {
   view: WebContentsView;
   private stateValue: TabState;
   private faviconRequest = 0;
+  private pendingLoad: boolean;
+  private readonly session?: Session;
 
   constructor(
     readonly id: string,
     url: string,
     private readonly env: TabEnv,
-    private readonly session?: Session,
+    options: TabOptions = {},
   ) {
     const kind = isInternalUrl(url) ? 'internal' : 'web';
+    this.session = options.session;
     this.stateValue = {
       id,
       url,
-      title: kind === 'internal' ? 'New Tab' : url,
-      favicon: null,
+      title: options.title || (kind === 'internal' ? 'New Tab' : url),
+      favicon: options.favicon ?? null,
       isLoading: false,
       canGoBack: false,
       canGoForward: false,
       kind,
     };
     this.view = this.createView(kind);
-    this.loadIntoView(url);
+    this.pendingLoad = options.deferLoad ?? false;
+    if (!this.pendingLoad) this.loadIntoView(url);
   }
 
   get state(): TabState {
     return this.stateValue;
   }
 
+  /** True while a restored tab hasn't loaded its page yet. */
+  get isPending(): boolean {
+    return this.pendingLoad;
+  }
+
+  /** Loads a deferred (restored) tab's page; called when the tab is first shown. */
+  ensureLoaded(): void {
+    if (!this.pendingLoad) return;
+    this.pendingLoad = false;
+    this.loadIntoView(this.stateValue.url);
+  }
+
   /** Navigates this tab. Switching between internal and web pages swaps the view entirely, so a
    *  website never inherits the internal page's privileged preload. */
   load(url: string): void {
+    this.pendingLoad = false;
     const kind = isInternalUrl(url) ? 'internal' : 'web';
     if (kind !== this.stateValue.kind) {
       const oldView = this.view;

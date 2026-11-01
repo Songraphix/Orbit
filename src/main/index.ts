@@ -83,6 +83,7 @@ void app.whenReady().then(() => {
   persistence = openPersistence(app.getPath('userData'));
   windows = new WindowManager({
     settings: persistence.settings,
+    tabsRepo: persistence.tabs,
     senders,
     broadcaster,
     preloadPath: join(import.meta.dirname, '../preload/shell.cjs'),
@@ -116,6 +117,8 @@ void app.whenReady().then(() => {
       const active = windowManager.focused()?.tabs.active;
       if (active) navigateTab(active, action);
     },
+    cycleTab: (direction) => windowManager.focused()?.tabs.cycle(direction),
+    goToTab: (n) => windowManager.focused()?.tabs.activateIndex(n),
     toggleTabDevTools: () => {
       const contents = windowManager.focused()?.tabs.active?.view.webContents;
       if (!contents) return;

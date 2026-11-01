@@ -4,12 +4,14 @@ import type { Database } from './db';
 import { migrate } from './migrate';
 import { migrations } from './migrations';
 import { SettingsRepository } from './repositories/settings';
+import { TabsRepository } from './repositories/tabs';
 
 export const DATABASE_FILE = 'orbit.db';
 
 export type Persistence = {
   db: Database;
   settings: SettingsRepository;
+  tabs: TabsRepository;
   close(): void;
 };
 
@@ -20,6 +22,7 @@ export function openPersistence(userDataDir: string): Persistence {
   return {
     db,
     settings: new SettingsRepository(db),
+    tabs: new TabsRepository(db),
     close: () => {
       if (db.isOpen) db.close();
     },
