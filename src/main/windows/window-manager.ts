@@ -47,6 +47,8 @@ export type WindowManagerDeps = {
   loadInternal: (view: WebContentsView, url: string) => void;
   /** Loads the overlay renderer into the overlay view. */
   loadOverlay: (view: WebContentsView) => void;
+  /** Runs an app command for a window (the sidebar's + menu). */
+  runCommand?: (controller: WindowController, id: string) => void;
 };
 
 /** One Orbit window and the services scoped to it. */
@@ -281,6 +283,7 @@ export class WindowManager {
         broadcaster.sendTo(contents, 'rename:start', { target, id: renameId, at: Date.now() }),
       toast: (message) => broadcaster.sendTo(contents, 'toast:show', { message, at: Date.now() }),
       openCommandBar: () => overlay.openCommandBar('new'),
+      command: (commandId) => this.deps.runCommand?.(controller, commandId),
     });
     const controller: WindowController = {
       win,

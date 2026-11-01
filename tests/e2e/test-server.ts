@@ -66,6 +66,11 @@ const ROUTES: Record<string, string> = {
      </script>`,
   ),
   '/three': page('Page Three'),
+  '/boost': page(
+    'Boost Me',
+    `<div id="banner" style="height:80px;background:#fc0">Ad banner</div>
+     <p class="story">The story</p>`,
+  ),
 };
 
 export type TestServer = { url: (path: string) => string; close: () => Promise<void> };

@@ -13,9 +13,11 @@ import {
   Puzzle,
   Share,
   Wand2,
+  Zap,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
+import type { BoostSummary } from '@shared/types/boosts';
 import type { ExtensionAction } from '@shared/types/extensions';
 import type { SiteAction, SiteControlsView, SiteSettingRow } from '@shared/types/site-controls';
 
@@ -72,7 +74,7 @@ export function SiteControls({ view }: { view: SiteControlsView }) {
           <Action label="Share" onClick={() => act('share')} testId="site-share">
             <Share size={16} />
           </Action>
-          <Action label="Boost (coming in Phase 8)" disabled testId="site-boost">
+          <Action label="New Boost for this site" onClick={() => act('boost')} testId="site-boost">
             <Wand2 size={16} />
           </Action>
           <Action
@@ -113,7 +115,23 @@ export function SiteControls({ view }: { view: SiteControlsView }) {
         </div>
 
         <Heading>Boosts</Heading>
-        <p className="px-1 pb-1 text-[12px] text-white/50">No Boosts for this site yet.</p>
+        {view.boosts.length === 0 && (
+          <p className="px-1 pb-1 text-[12px] text-white/50">No Boosts for this site yet.</p>
+        )}
+        {view.boosts.map((boost) => (
+          <BoostRow key={boost.id} boost={boost} />
+        ))}
+        <button
+          type="button"
+          onClick={() => act('zap')}
+          className="flex items-center gap-2.5 rounded-lg px-1 py-1.5 text-left hover:bg-white/10"
+          data-testid="site-zap"
+        >
+          <span className="grid size-7 shrink-0 place-items-center rounded-full bg-white/10">
+            <Zap size={14} />
+          </span>
+          <span className="font-semibold">Zap Elements…</span>
+        </button>
 
         <Heading>Settings</Heading>
         <div className="flex flex-col">
@@ -196,6 +214,44 @@ function ExtensionButton({ ext }: { ext: ExtensionAction }) {
         </span>
       )}
     </button>
+  );
+}
+
+function BoostRow({ boost }: { boost: BoostSummary }) {
+  return (
+    <div
+      className="flex items-center gap-2.5 rounded-lg px-1 py-1 hover:bg-white/10"
+      data-testid="site-boost-row"
+      data-enabled={boost.enabled}
+    >
+      <button
+        type="button"
+        onClick={() => void window.orbit.invoke('boosts:edit', { id: boost.id })}
+        className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+        title="Edit Boost"
+        data-testid="site-boost-edit"
+      >
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--accent,#5b5bd6)] text-white">
+          <Wand2 size={14} />
+        </span>
+        <span className="truncate font-semibold">{boost.name}</span>
+      </button>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={boost.enabled}
+        aria-label={`${boost.enabled ? 'Turn off' : 'Turn on'} ${boost.name}`}
+        onClick={() =>
+          void window.orbit.invoke('boosts:toggle', { id: boost.id, enabled: !boost.enabled })
+        }
+        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${boost.enabled ? 'bg-[var(--accent,#5b5bd6)]' : 'bg-white/20'}`}
+        data-testid="site-boost-toggle"
+      >
+        <span
+          className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-[left] ${boost.enabled ? 'left-[18px]' : 'left-0.5'}`}
+        />
+      </button>
+    </div>
   );
 }
 

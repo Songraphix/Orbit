@@ -4,6 +4,7 @@ import type { Database } from './db';
 import { migrate } from './migrate';
 import { migrations } from './migrations';
 import { ArchiveRepository } from './repositories/archive';
+import { BoostRepository } from './repositories/boosts';
 import { HistoryRepository } from './repositories/history';
 import { SettingsRepository } from './repositories/settings';
 import { SiteSettingsRepository } from './repositories/site-settings';
@@ -18,6 +19,7 @@ export type Persistence = {
   history: HistoryRepository;
   siteSettings: SiteSettingsRepository;
   archive: ArchiveRepository;
+  boosts: BoostRepository;
   close(): void;
 };
 
@@ -32,6 +34,7 @@ export function openPersistence(userDataDir: string): Persistence {
     history: new HistoryRepository(db),
     siteSettings: new SiteSettingsRepository(db),
     archive: new ArchiveRepository(db),
+    boosts: new BoostRepository(db),
     close: () => {
       if (db.isOpen) db.close();
     },

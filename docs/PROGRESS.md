@@ -13,6 +13,7 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - [ ] Two Google accounts in two spaces via space menu → Set Profile → New Profile
 - [ ] Look at the translucent sidebar / theme colours (can't be screenshotted from here)
 - [ ] Remaining Arc exports from PLAN.md "Do this first": passwords, Boost CSS/JS, Easels
+- [ ] Re-create your Boosts: on each site, site controls → Boost (wand), paste the CSS/JS from Arc; or use the colour / font / zap tools
 - [ ] Add your extensions: open each Web Store page in Orbit → site controls (sliders button) → Add to Orbit; then fill "Usage" / "Blocker?" in docs/reference/extensions.md
 
 ## Done
@@ -58,9 +59,11 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 - 2026-11-01 — Phase 7: area screenshot [F-12] — the camera action dims the page in the overlay; drag an area (or click for the whole page, Esc cancels) and it's copied to the clipboard at device resolution (pure `cropToPage`) — **Phase 7 complete** (saving captures to the Library comes with Phase 9; Boosts in the popover with Phase 8)
 
+- 2026-11-01 — Phase 8: Boosts [F-18] — `boosts` table (migration 007) and `BoostService`: every webContents Electron creates (tabs, Peek, Little Orbit, popups) gets matching Boosts' CSS on each navigation via `insertCSS`, removed and re-inserted live as Boosts change; Boost JS runs at dom-ready in an isolated world (never the page's own). Orbit's own surfaces are never boosted. Editor at `orbit://boost/<id>` (CodeMirror 6) opens in split view beside the site: name, website (normalised; matches subdomains), on/off, colours (hue swatches + hue / saturation / brightness sliders, Dark = invert with media re-inverted), font (list or any font name), zapped elements, CSS and JS with Reload Pages; the editor page may only read and change its own Boost. Zap: click elements to hide them until Esc (picker in the isolated world; selectors validated so they can't break out of a CSS rule). Site controls: Boost button creates one, Boosts for the site listed with on/off switches, "Zap Elements…". + menu → New Boost (and New Split) enabled; "New Boost" command. Pure `model.ts` (matching, CSS for colour / font / zap). **Phase 8 complete in code**; re-creating your own Boosts needs their CSS/JS from Arc (owner checklist). Library → Boosts comes with Phase 9
+
 ## In progress
 
-- Phase 8 (ahead of schedule): Boosts
+- Phase 9 (ahead of schedule): Library and Easels — not started
 
 ## Decisions made
 
@@ -70,6 +73,8 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - 2026-11-01 — Default profile keeps Electron's default session so existing logins carry over; other profiles get `persist:profile-<id>`
 - 2026-11-01 — Extensions: pinned to the newest releases older than two weeks; the store page's install preload is not used, so no page JavaScript gains an API (ADR-008). GPL-3.0 licence: fine while Orbit stays personal
 - 2026-11-01 — Peek v1 catches links that would open a new tab (target=_blank, window.open), not same-tab navigations: those include OAuth/SSO redirects that must stay in the pinned tab. Covers Gmail, Slack, etc.
+- 2026-11-01 — Boost JS runs in an isolated world (like Arc's Boosts, which are content scripts), so it shares the DOM but not the page's globals; CSS changes apply live, JS changes need Reload Pages
+- 2026-11-01 — CodeMirror 6 (`codemirror@6.0.2` + lang-css / lang-javascript); four transitive packages pinned via `overrides` to releases older than two weeks
 - 2026-11-01 — Split view v1 is two panes and not persisted; a split tree and restore come later (backlog)
 - 2026-11-01 — New tab page added at the owner's request (F-32): "+ New Tab" always opens it; ⌘T opens it until the Phase 2 command bar, then ⌘T → command bar
 

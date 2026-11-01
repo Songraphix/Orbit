@@ -6,6 +6,9 @@ import type { IpcRouter } from '../router';
 import type { SiteSettingsRepository } from '../../persistence/repositories/site-settings';
 import { siteSettingRows, storedValueFor } from '../../site-controls/model';
 import type { ExtensionHost } from '../../extensions/host';
+import type { BoostService } from '../../boosts/service';
+import { domainForPage } from '../../boosts/model';
+import { openBoostEditor, zapPage } from './boosts';
 import { webStoreIdFrom } from '../../extensions/model';
 import { cropToPage } from '../../site-controls/capture';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
@@ -13,6 +16,7 @@ import type { WindowController, WindowManager } from '../../windows/window-manag
 export type SiteControlsDeps = {
   siteSettings: SiteSettingsRepository;
   extensions: ExtensionHost;
+  boosts: BoostService;
   toast: (controller: WindowController, message: string) => void;
   /** ⌘0 for the active page. */
   resetZoom: (controller: WindowController) => void;
@@ -62,6 +66,7 @@ export function registerSiteControlsHandlers(
       settings: siteSettingRows(deps.siteSettings.all(site.origin), site.url),
       extensions: deps.extensions.actions(site.tab.view.webContents),
       storeExtension: storeExtension(site.url, site.tab.view.webContents.session),
+      boosts: deps.boosts.forSite(site.url),
       openedAt: Date.now(),
     };
   };
@@ -158,6 +163,19 @@ export function registerSiteControlsHandlers(
     if (view) controller.overlay.showSiteControls(view);
   });
 
+  router.handle('boosts:toggle', ({ id, enabled }, { sender }) => {
+    const controller = windowFor(sender.webContentsId);
+    deps.boosts.update(id, { enabled });
+    refresh(controller);
+  });
+
+  router.handle('boosts:edit', ({ id }, { sender }) => {
+    const controller = windowFor(sender.webContentsId);
+    if (!deps.boosts.get(id)) return;
+    controller.overlay.closeSiteControls();
+    openBoostEditor(controller, id);
+  });
+
   router.handle('sitecontrols:close', (_input, { sender }) => {
     windowFor(sender.webContentsId).overlay.closeSiteControls();
   });
@@ -203,6 +221,11 @@ export function registerSiteControlsHandlers(
       deps.toast(controller, 'Copied link');
     } else if (action === 'share') {
       new ShareMenu({ urls: [site.url] }).popup({ window: controller.win });
+    } else if (action === 'boost') {
+      openBoostEditor(controller, deps.boosts.create(domainForPage(site.url)).id);
+    } else if (action === 'zap') {
+      const boost = deps.boosts.boostForZapping(site.url, domainForPage(site.url));
+      await zapPage(deps.boosts, controller, site.tab, boost.id, deps.toast);
     } else if (action === 'screenshot') {
       // Drag an area over the page (the overlay draws it); a click takes the whole page.
       controller.overlay.startCapture(site.tab.view.getBounds());

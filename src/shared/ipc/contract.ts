@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { layoutSchema, rectSchema } from '../types/layout';
 import { siteActionSchema } from '../types/site-controls';
+import { boostIdSchema, boostPatchSchema, boostSchema } from '../types/boosts';
 import {
   commandBarModeSchema,
   commandItemSchema,
@@ -322,6 +323,47 @@ export const contract = {
     input: z.object({}).strict(),
     output: z.void(),
     surfaces: ['overlay'],
+  },
+  // Boosts (F-18). Site controls toggles and opens them; the editor page (orbit://boost/<id>)
+  // may only read and change its own Boost.
+  'boosts:toggle': {
+    input: z.object({ id: boostIdSchema, enabled: z.boolean() }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'boosts:edit': {
+    input: z.object({ id: boostIdSchema }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'boosts:get': {
+    input: z.object({ id: boostIdSchema }).strict(),
+    output: boostSchema.nullable(),
+    surfaces: ['internal'],
+  },
+  /** Saves an edit (applied live to matching pages); `error` explains a rejected domain. */
+  'boosts:update': {
+    input: z.object({ id: boostIdSchema, patch: boostPatchSchema }).strict(),
+    output: z.object({ boost: boostSchema.nullable(), error: z.string().nullable() }),
+    surfaces: ['internal'],
+  },
+  /** Asks to confirm, deletes the Boost and closes its editor. */
+  'boosts:delete': {
+    input: z.object({ id: boostIdSchema }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Zap mode on the matching page beside the editor. */
+  'boosts:zap': {
+    input: z.object({ id: boostIdSchema }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Reloads the pages a Boost applies to, so edited JS runs. */
+  'boosts:reloadPages': {
+    input: z.object({ id: boostIdSchema }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
   },
   /** Area screenshot finished: `rect` in window coordinates, or null for the whole page. */
   'capture:take': {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { boostSummarySchema } from './boosts';
 import { extensionActionSchema } from './extensions';
 import { rectSchema } from './layout';
 
@@ -24,9 +25,12 @@ export const siteControlsViewSchema = z.object({
   extensions: z.array(extensionActionSchema),
   /** On a Chrome Web Store page: that extension, and whether Orbit has it. */
   storeExtension: z.object({ id: z.string(), installed: z.boolean() }).nullable(),
+  /** Boosts for this site, on or off. */
+  boosts: z.array(boostSummarySchema),
   openedAt: z.number(),
 });
 export type SiteControlsView = z.output<typeof siteControlsViewSchema>;
 
-export const siteActionSchema = z.enum(['share', 'screenshot', 'copyUrl', 'more']);
+/** `boost` makes a new Boost for the site; `zap` starts hiding elements on it. */
+export const siteActionSchema = z.enum(['share', 'boost', 'zap', 'screenshot', 'copyUrl', 'more']);
 export type SiteAction = z.output<typeof siteActionSchema>;

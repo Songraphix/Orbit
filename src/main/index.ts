@@ -12,6 +12,10 @@ import { CommandBarService, copyActiveUrl } from './commandbar/service';
 import { registerAppHandlers } from './ipc/handlers/app';
 import { ExtensionHost } from './extensions/host';
 import { registerSiteControlsHandlers } from './ipc/handlers/site-controls';
+import { openBoostEditor, registerBoostHandlers } from './ipc/handlers/boosts';
+import { BoostService } from './boosts/service';
+import { domainForPage } from './boosts/model';
+import { boostIdSchema } from '@shared/types/boosts';
 import { registerCommandBarHandlers } from './ipc/handlers/command-bar';
 import { registerFindHandlers } from './ipc/handlers/find';
 import { registerInternalPageHandlers } from './ipc/handlers/internal-pages';
@@ -67,6 +71,7 @@ let sidebarStore: SidebarStore | null = null;
 let lifecycle: TabLifecycle | null = null;
 let downloadService: DownloadService | null = null;
 let arcImporter: ArcImporter | null = null;
+let boostService: BoostService | null = null;
 
 // A stray error in main must never show Electron's blocking error dialog (a browser that can't
 // quit is worse than one that logs). Logged for debugging instead.
@@ -107,10 +112,14 @@ app.on('will-finish-launching', () => {
   });
 });
 
-/** orbit://<page> → the internal renderer with `#/<page>`. Unknown pages show "not found". */
+/** orbit://<page> → the internal renderer with `#/<page>` (`#/boost/<id>` for a Boost's editor).
+ *  Unknown pages show "not found". */
 function loadInternal(view: WebContentsView, url: string): void {
-  const page = new URL(url).hostname;
-  const hash = `/${isInternalPage(page) ? page : 'not-found'}`;
+  const { hostname: page, pathname } = new URL(url);
+  const boostId = pathname.slice(1);
+  let hash = `/${isInternalPage(page) ? page : 'not-found'}`;
+  if (page === 'boost')
+    hash = boostIdSchema.safeParse(boostId).success ? `/boost/${boostId}` : '/not-found';
   if (devServer) void view.webContents.loadURL(`${devServer}/internal/index.html#${hash}`);
   else void view.webContents.loadFile(join(rendererDir, 'internal', 'index.html'), { hash });
 }
@@ -234,6 +243,11 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'settings':
       controller.tabs.create('orbit://settings');
       return;
+    case 'new-boost': {
+      const page = tabs.active?.state.kind === 'web' ? tabs.active.state.url : '';
+      if (boostService) openBoostEditor(controller, boostService.create(domainForPage(page)).id);
+      return;
+    }
   }
 }
 
@@ -280,6 +294,16 @@ void app.whenReady().then(() => {
   const store = new SidebarStore(persistence.sidebar);
   sidebarStore = store;
   arcImporter = new ArcImporter(store, persistence.history);
+  // Boosts (F-18) reach every page Electron creates — tabs, Peek, Little Orbit, popups — but
+  // never Orbit's own UI (which, in development, is served from localhost).
+  const devOrigin = devServer ? new URL(devServer).origin : null;
+  const boosts = new BoostService(
+    persistence.boosts,
+    (contents) =>
+      senders.has(contents.id) || (devOrigin !== null && contents.getURL().startsWith(devOrigin)),
+  );
+  boostService = boosts;
+  app.on('web-contents-created', (_event, contents) => boosts.attach(contents));
   /** One session per profile (F-17). The default profile keeps Electron's default session, so
    *  logins from before profiles existed carry over. */
   // Downloads go straight to ~/Downloads (tests use their own folder) and show on the shelf.
@@ -350,6 +374,7 @@ void app.whenReady().then(() => {
     loadRenderer,
     loadInternal,
     loadOverlay,
+    runCommand,
   });
   const windowManager = windows;
 
@@ -413,9 +438,11 @@ void app.whenReady().then(() => {
   registerSiteControlsHandlers(router, windowManager, {
     siteSettings: persistence.siteSettings,
     extensions: extensionHost,
+    boosts,
     toast,
     resetZoom: (controller) => zoom(controller, 'reset'),
   });
+  registerBoostHandlers(router, windowManager, { boosts, toast });
   router.handle('tabs:devtools', ({ tabId }, { sender }) => {
     const contents = windowManager.forSender(sender.webContentsId)?.tabs.get(tabId)
       ?.view.webContents;

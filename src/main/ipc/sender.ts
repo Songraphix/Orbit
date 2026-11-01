@@ -27,6 +27,11 @@ export class SenderRegistry {
     this.surfaces.delete(webContentsId);
   }
 
+  /** True for Orbit's own pages (shell, overlay, internal), whatever URL they show. */
+  has(webContentsId: number): boolean {
+    return this.surfaces.has(webContentsId);
+  }
+
   /** The surface that sent this message, or null if it isn't a trusted Orbit page. */
   surfaceOf(sender: SenderInfo): Surface | null {
     const surface = this.surfaces.get(sender.webContentsId);

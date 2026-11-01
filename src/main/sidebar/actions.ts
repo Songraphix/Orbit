@@ -39,6 +39,8 @@ export type SidebarUi = {
   startRename: (target: 'item' | 'space', id: string) => void;
   toast: (message: string) => void;
   openCommandBar: () => void;
+  /** Runs an app command by id (e.g. 'new-boost'). */
+  command: (id: string) => void;
 };
 
 /**
@@ -354,9 +356,13 @@ export class SidebarActions {
       { label: 'New Folder', click: () => this.newFolder('pinned') },
       { type: 'separator' },
       { label: 'New Easel', accelerator: 'Ctrl+Shift+E', enabled: false },
-      { label: 'New Boost', enabled: false },
+      { label: 'New Boost', click: () => this.ui.command('new-boost') },
       { type: 'separator' },
-      { label: 'New Split', accelerator: 'Ctrl+Shift+=', enabled: false },
+      {
+        label: 'New Split',
+        accelerator: 'Ctrl+Shift+=',
+        click: () => this.ui.command('split-view'),
+      },
       { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: () => this.ui.openCommandBar() },
     ]).popup();
   }
