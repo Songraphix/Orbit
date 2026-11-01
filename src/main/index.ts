@@ -733,7 +733,7 @@ void app.whenReady().then(() => {
   floatingNotes = floating;
   registerNotesHandlers(router, windowManager, { notes: notesRepo, floating });
   registerProfileHandlers(router, windowManager, { runCommand });
-  registerWorkHandlers(router, windowManager, persistence.work);
+  registerWorkHandlers(router, windowManager, persistence.work, persistence.notes);
   registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
   router.handle('tabs:copyUrl', (_input, { sender }) => {
@@ -754,6 +754,21 @@ void app.whenReady().then(() => {
       persistence.history,
       runCommand,
       process.env['ORBIT_DISABLE_SUGGESTIONS'] !== '1',
+      (query) => {
+        const { projects, tasks } = persistence!.work.all();
+        const names = new Map(projects.map((p) => [p.id, p.name]));
+        return {
+          projects,
+          tasks: tasks.map((t) => ({
+            id: t.id,
+            title: t.title,
+            projectId: t.projectId,
+            project: t.projectId ? (names.get(t.projectId) ?? null) : null,
+            done: t.status === 'done',
+          })),
+          notes: persistence!.notes.list(query),
+        };
+      },
     ),
   );
   router.assertComplete();

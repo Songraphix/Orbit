@@ -2,6 +2,7 @@ import { BrowserWindow, dialog } from 'electron';
 import type { NoteSurfaceKind } from '@shared/types/notes';
 import type { IpcRouter } from '../router';
 import type { FloatingNotes } from '../../notes/floating';
+import { notesHash } from '../../notes/model';
 import type { NotesRepository } from '../../persistence/repositories/notes';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
 
@@ -82,12 +83,19 @@ export function registerNotesHandlers(
   router.handle('notes:get', ({ id }, { sender }) => {
     surfaceOf(sender.webContentsId);
     const note = notes.get(id);
-    return note ? { id: note.id, doc: note.doc, updatedAt: note.updatedAt } : null;
+    return note
+      ? { id: note.id, doc: note.doc, updatedAt: note.updatedAt, projectId: note.projectId }
+      : null;
   });
 
-  router.handle('notes:create', (_input, { sender }) => {
+  router.handle('notes:create', ({ projectId }, { sender }) => {
     surfaceOf(sender.webContentsId);
-    return { id: notes.create() };
+    return { id: notes.create(Date.now(), projectId ?? null) };
+  });
+
+  router.handle('notes:setProject', ({ id, projectId }, { sender }) => {
+    if (surfaceOf(sender.webContentsId).kind === 'quick') throw new Error('Not from here');
+    notes.setProject(id, projectId);
   });
 
   router.handle('notes:save', ({ id, doc, text }, { sender }) => {
@@ -176,6 +184,12 @@ export function registerNotesHandlers(
     if (id || view || open === true) window.notes.open(id, view);
     else if (open === false) window.notes.close();
     else window.notes.toggle();
+  });
+
+  router.handle('notes:panelRoute', ({ route }, { sender }) => {
+    const window = windows.notesPanelFor(sender.webContentsId);
+    if (!window) throw new Error(`Sender ${sender.webContentsId} is not the panel`);
+    if (notesHash(route) !== '/not-found') window.notes.setRoute(route);
   });
 
   router.handle('notes:quick', ({ open }, { sender }) => {

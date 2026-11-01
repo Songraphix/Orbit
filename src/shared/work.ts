@@ -57,6 +57,10 @@ export const projectSchema = z.object({
   color: z.enum(colorIds),
   startDate: dateKeySchema.nullable(),
   dueDate: dateKeySchema.nullable(),
+  /** Its workspace: a Space whose tabs belong to the project (null = none). */
+  spaceId: z.string().nullable(),
+  /** When its page was last opened ("Continue where you left off"). */
+  lastOpenedAt: z.number().nullable(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
@@ -80,6 +84,12 @@ export type Task = z.output<typeof taskSchema>;
 export const workDataSchema = z.object({
   projects: z.array(projectSchema),
   tasks: z.array(taskSchema),
+  /** Spaces a project can use as its workspace. */
+  spaces: z.array(z.object({ id: z.string(), name: z.string(), icon: z.string() })),
+  /** Notes that belong to a project. */
+  notes: z.array(
+    z.object({ id: z.string(), title: z.string(), projectId: z.string(), updatedAt: z.number() }),
+  ),
 });
 export type WorkData = z.output<typeof workDataSchema>;
 
@@ -92,6 +102,9 @@ export const projectInputSchema = z
     color: z.enum(colorIds),
     startDate: dateKeySchema.nullable(),
     dueDate: dateKeySchema.nullable(),
+    spaceId: z.string().max(64).nullable(),
+    /** Make a new Space for the project and link it. */
+    newSpace: z.boolean().optional(),
   })
   .strict();
 export type ProjectInput = z.output<typeof projectInputSchema>;
@@ -209,4 +222,27 @@ export function dueLabel(
   if (days === 1) return { text: 'Tomorrow', overdue: false };
   if (days < 0 && !done) return { text: `Overdue · ${short}`, overdue: true };
   return { text: short, overdue: false };
+}
+
+/**
+ * "Continue where you left off": the open project looked at most recently, with its next open
+ * task (earliest due first). Null when nothing has been opened, or everything is done. Pure.
+ */
+export function continueWith(
+  projects: readonly Project[],
+  tasks: readonly Task[],
+): { project: Project; next: Task | null } | null {
+  const project = projects
+    .filter((p) => p.lastOpenedAt !== null && p.status !== 'done')
+    .sort((a, b) => (b.lastOpenedAt ?? 0) - (a.lastOpenedAt ?? 0))[0];
+  if (!project) return null;
+  const open = tasks.filter((t) => t.projectId === project.id && t.status !== 'done');
+  const next =
+    open.sort(
+      (a, b) =>
+        (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') ||
+        (a.status === 'doing' ? -1 : 0) - (b.status === 'doing' ? -1 : 0) ||
+        a.createdAt - b.createdAt,
+    )[0] ?? null;
+  return { project, next };
 }

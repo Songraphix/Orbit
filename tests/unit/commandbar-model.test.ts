@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  workResults,
   buildResults,
   matchesAll,
   parseSuggestions,
@@ -92,5 +93,80 @@ describe('helpers', () => {
   it('parseSuggestions reads Google’s format and ignores junk', () => {
     expect(parseSuggestions(['q', ['a', 'b', 3]])).toEqual(['a', 'b']);
     expect(parseSuggestions({})).toEqual([]);
+  });
+});
+
+describe('work results (roadmap P1.3)', () => {
+  const work = {
+    projects: [
+      { id: 'p1', name: 'SIRATEQ Brand Guide', description: 'Brand identity' },
+      { id: 'p2', name: 'Website', description: 'Portfolio' },
+    ],
+    tasks: [
+      {
+        id: 't1',
+        title: 'Logo variations',
+        projectId: 'p1',
+        project: 'SIRATEQ Brand Guide',
+        done: true,
+      },
+      {
+        id: 't2',
+        title: 'Brand voice',
+        projectId: 'p1',
+        project: 'SIRATEQ Brand Guide',
+        done: false,
+      },
+      { id: 't3', title: 'Call the bank', projectId: null, project: null, done: false },
+    ],
+    notes: [{ id: 'n1', title: 'Brand brief', preview: 'tone and colours' }],
+  };
+
+  it('finds projects, tasks (open first) and notes, two of each at most', () => {
+    const items = workResults('brand', work);
+    expect(items.map((i) => [i.kind, i.title])).toEqual([
+      ['project', 'SIRATEQ Brand Guide'],
+      ['task', 'Brand voice'],
+      ['task', 'Logo variations'],
+      ['note', 'Brand brief'],
+    ]);
+    expect(items[1]).toMatchObject({
+      targetId: 't2',
+      projectId: 'p1',
+      subtitle: 'Task · SIRATEQ Brand Guide',
+    });
+    expect(workResults('bank', work)[0]).toMatchObject({ kind: 'task', subtitle: 'Task' });
+    expect(workResults('bank', work)[0]).not.toHaveProperty('projectId');
+  });
+
+  it('puts them after open tabs and before history in the bar', () => {
+    const items = buildResults({
+      query: 'brand',
+      mode: 'new',
+      classified: null,
+      tabs: [
+        {
+          id: 'tab',
+          title: 'Brand site',
+          url: 'https://brand.example/',
+          favicon: null,
+          active: false,
+        },
+      ],
+      history: [
+        {
+          url: 'https://brand.example/old',
+          title: 'Old brand',
+          favicon: null,
+        },
+      ],
+      suggestions: [],
+      commands: [],
+      searchUrl: (q) => `https://s.example/?q=${q}`,
+      work,
+    });
+    const kinds = items.map((i) => i.kind);
+    expect(kinds.indexOf('tab')).toBeLessThan(kinds.indexOf('project'));
+    expect(kinds.indexOf('note')).toBeLessThan(kinds.indexOf('history'));
   });
 });

@@ -92,6 +92,7 @@ describe('NotesRepository', () => {
       doc: '{"type":"doc"}',
       text: 'Groceries\nmilk',
       updatedAt: 10,
+      projectId: null,
     });
     expect(r.title(b)).toBe('Ideas');
     r.delete(a);
@@ -104,6 +105,21 @@ describe('NotesRepository', () => {
     const id = r.create(5);
     expect(r.save(id, '', 'a', 5)).toBe(6);
     expect(r.save(id, '', 'ab', 5)).toBe(7);
+  });
+
+  it('links notes to projects, and unlinks them when the project goes', () => {
+    const r = repo();
+    const a = r.create(1, 'p1');
+    const b = r.create(2);
+    r.save(a, '', 'Brief\nfor p1', 3);
+    r.save(b, '', 'Loose', 4);
+    expect(r.get(a)?.projectId).toBe('p1');
+    expect(r.linked()).toEqual([{ id: a, title: 'Brief', projectId: 'p1', updatedAt: 3 }]);
+    r.setProject(b, 'p1');
+    expect(r.linked().map((n) => n.id)).toEqual([b, a]);
+    r.unlinkProject('p1');
+    expect(r.linked()).toEqual([]);
+    expect(r.get(a)).not.toBeNull(); // the notes themselves stay
   });
 
   it('removes blank notes, except ones still shown', () => {

@@ -783,7 +783,8 @@ export const contract = {
     surfaces: ['internal', 'overlay'],
   },
   'notes:create': {
-    input: z.object({}).strict(),
+    /** `projectId`: the new note belongs to that project. */
+    input: z.object({ projectId: z.string().max(64).optional() }).strict(),
     output: z.object({ id: noteIdSchema }),
     surfaces: ['internal', 'overlay'],
   },
@@ -925,6 +926,24 @@ export const contract = {
   'work:deleteTask': {
     input: z.object({ id: z.string().max(64) }).strict(),
     output: z.object({ deleted: z.boolean(), data: workDataSchema }),
+    surfaces: ['internal'],
+  },
+  /** A project's page was opened; `workspace` also switches to its Space. */
+  'work:openProject': {
+    input: z.object({ id: z.string().max(64), workspace: z.boolean() }).strict(),
+    output: workDataSchema,
+    surfaces: ['internal'],
+  },
+  /** The panel's page moved ('panel/projects/<id>'…), remembered for the next launch. */
+  'notes:panelRoute': {
+    input: z.object({ route: z.string().max(120) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Puts a note in a project, or none. */
+  'notes:setProject': {
+    input: z.object({ id: noteIdSchema, projectId: z.string().max(64).nullable() }).strict(),
+    output: z.void(),
     surfaces: ['internal'],
   },
   /** The Project Board widens the panel while it shows. */

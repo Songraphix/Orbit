@@ -19,6 +19,7 @@ import { MediaController } from '../media/controller';
 import { PeekController } from '../peek/controller';
 import { LibraryController } from '../library/controller';
 import { NotesPanelController } from '../notes/panel';
+import { notesHash } from '../notes/model';
 import { shouldPeek } from '../peek/policy';
 import { LayoutEngine } from './layout-engine';
 import { OverlayController } from './overlay';
@@ -365,12 +366,18 @@ export class WindowManager {
       win,
       getLayout: () => layout.current(),
       setOpen: (open, wide) => layout.setNotes(open, wide),
+      persist: (state) => settings.set('panel.state', state),
       internalPreload: this.deps.internalPreloadPath,
       loadInternal: this.deps.loadInternal,
       registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
       unregisterInternal: (webContentsId) => senders.remove(webContentsId),
     });
     const notesPanel = notes;
+    // The panel comes back where it was (roadmap P1.2: continue where you stopped).
+    const panelState = settings.get('panel.state');
+    if (panelState.open && notesHash(panelState.route) !== '/not-found') {
+      notesPanel.restore(panelState.route);
+    }
 
     const id = contents.id;
     const overlayId = overlay.view.webContents.id;

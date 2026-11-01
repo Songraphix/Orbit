@@ -19,7 +19,7 @@ import { noteTitle } from '@shared/note-text';
 import { relativeTime } from '@shared/time';
 import type { NoteAction, NoteEntry } from '@shared/types/notes';
 import { NoteEditor } from '../../notes/NoteEditor';
-import { showPanelView } from '../work/context';
+import { showPanelView, useWork } from '../work/context';
 import { BoardView } from '../work/BoardView';
 import { ProjectDetail, ProjectsView } from '../work/ProjectsView';
 import { QuickActions } from '../work/QuickActions';
@@ -131,6 +131,10 @@ export function NotesPanelPage() {
   useEffect(() => {
     if (a !== 'board') lastList.current = tab;
   }, [a, tab]);
+  // Main remembers where the panel is, so a restart comes back here.
+  useEffect(() => {
+    void invoke('notes:panelRoute', { route: hash.replace(/^#\/notes\//, '') });
+  }, [hash]);
   useEffect(() => {
     document.documentElement.style.background = 'transparent';
   }, []);
@@ -301,6 +305,37 @@ function NotesList() {
   );
 }
 
+/** Which project the note belongs to (roadmap P1.1): pick one, or none. */
+function NoteProject({ id }: { id: string }) {
+  const { data } = useWork();
+  const [projectId, setProjectId] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    void invoke('notes:get', { id }).then((note) => setProjectId(note?.projectId ?? null));
+  }, [id]);
+  if (projectId === undefined || !data || data.projects.length === 0) return null;
+  return (
+    <select
+      value={projectId ?? ''}
+      onChange={(e) => {
+        const next = e.target.value || null;
+        setProjectId(next);
+        void invoke('notes:setProject', { id, projectId: next });
+      }}
+      aria-label="Project"
+      title="Project"
+      className="mr-1 h-7 max-w-[120px] truncate rounded-[9px] bg-[var(--note-hover)] px-1.5 text-[12px] text-[var(--note-muted)] outline-none"
+      data-testid="note-project"
+    >
+      <option value="">No project</option>
+      {data.projects.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function PanelNote({ id }: { id: string }) {
   // Back to the list (a note left empty is deleted as the editor goes).
   const back = () => showInPanel(null);
@@ -320,6 +355,7 @@ function PanelNote({ id }: { id: string }) {
           Notes
         </button>
         <span className="flex-1" />
+        <NoteProject id={id} />
         <IconButton label="Open as Tab" onClick={() => void move('tab')} testId="note-to-tab">
           <AppWindow size={15} />
         </IconButton>

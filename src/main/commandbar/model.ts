@@ -24,7 +24,64 @@ export type ResultInput = {
   suggestions: readonly string[];
   commands: readonly CommandDef[];
   searchUrl: (query: string) => string;
+  /** Your work, searched too (roadmap P1.3): projects, tasks and notes. */
+  work?: WorkHits;
 };
+
+export type WorkHits = {
+  projects: readonly { id: string; name: string; description: string }[];
+  tasks: readonly {
+    id: string;
+    title: string;
+    projectId: string | null;
+    project: string | null;
+    done: boolean;
+  }[];
+  /** Already matched (notes search their whole text). */
+  notes: readonly { id: string; title: string; preview: string }[];
+};
+
+/** Projects, tasks and notes that match, as results (two of each at most). Pure. */
+export function workResults(query: string, work: WorkHits): CommandItem[] {
+  const items: CommandItem[] = [];
+  for (const p of work.projects
+    .filter((p) => matchesAll(query, p.name, p.description))
+    .slice(0, 2)) {
+    items.push({
+      id: `project:${p.id}`,
+      kind: 'project',
+      title: p.name,
+      subtitle: 'Project',
+      favicon: null,
+      targetId: p.id,
+    });
+  }
+  for (const t of work.tasks
+    .filter((t) => matchesAll(query, t.title, t.project ?? ''))
+    .sort((a, b) => Number(a.done) - Number(b.done))
+    .slice(0, 2)) {
+    items.push({
+      id: `task:${t.id}`,
+      kind: 'task',
+      title: t.title,
+      subtitle: t.project ? `Task · ${t.project}${t.done ? ' · done' : ''}` : 'Task',
+      favicon: null,
+      targetId: t.id,
+      ...(t.projectId ? { projectId: t.projectId } : {}),
+    });
+  }
+  for (const n of work.notes.slice(0, 2)) {
+    items.push({
+      id: `note:${n.id}`,
+      kind: 'note',
+      title: n.title,
+      subtitle: n.preview ? `Note · ${n.preview}` : 'Note',
+      favicon: null,
+      targetId: n.id,
+    });
+  }
+  return items;
+}
 
 const LIMITS = { tabs: 3, commands: 3, history: 5, suggestions: 3, total: 12 } as const;
 
@@ -99,7 +156,10 @@ export function buildResults(input: ResultInput): CommandItem[] {
     });
   }
 
-  // 3. Commands.
+  // 3. Your projects, tasks and notes.
+  if (input.work) items.push(...workResults(query, input.work));
+
+  // 4. Commands.
   for (const c of input.commands
     .filter((c) => matchesAll(query, c.title, ...c.keywords))
     .slice(0, LIMITS.commands)) {

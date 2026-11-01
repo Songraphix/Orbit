@@ -1,5 +1,16 @@
 import { Glass } from './Glass';
-import { ArrowRight, Clock, Globe, Layers, Search, Sparkles, TerminalSquare } from 'lucide-react';
+import {
+  ArrowRight,
+  Clock,
+  FolderClosed,
+  Globe,
+  Layers,
+  NotebookPen,
+  Search,
+  Sparkles,
+  SquareCheck,
+  TerminalSquare,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { CommandBarMode, CommandItem } from '@shared/types/command-bar';
@@ -161,6 +172,12 @@ function Glyph({ item }: { item: CommandItem }) {
       return <Layers {...props} />;
     case 'history':
       return <Clock {...props} />;
+    case 'project':
+      return <FolderClosed {...props} />;
+    case 'task':
+      return <SquareCheck {...props} />;
+    case 'note':
+      return <NotebookPen {...props} />;
     case 'command':
       return item.commandId === 'new-tab-page' ? (
         <Sparkles {...props} />

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  continueWith,
   dateKey,
   dueLabel,
   filterProjects,
@@ -38,6 +39,8 @@ const project = (id: string, status: Project['status']): Project => ({
   color: 'purple',
   startDate: null,
   dueDate: null,
+  spaceId: null,
+  lastOpenedAt: null,
   createdAt: 0,
   updatedAt: 0,
 });
@@ -84,6 +87,24 @@ describe('work model', () => {
     expect(taskCounts(tasks, today)).toEqual({ all: 5, today: 2, upcoming: 1, completed: 1 });
   });
 
+  it('continues with the open project looked at last, and its next task', () => {
+    const projects = [
+      { ...project('old', 'active'), lastOpenedAt: 1 },
+      { ...project('recent', 'active'), lastOpenedAt: 5 },
+      { ...project('finished', 'done'), lastOpenedAt: 9 },
+      project('never', 'active'),
+    ];
+    const tasks = [
+      task({ projectId: 'recent', id: 'later', dueDate: '2026-11-09' }),
+      task({ projectId: 'recent', id: 'soon', dueDate: '2026-11-02' }),
+      task({ projectId: 'recent', id: 'done', status: 'done', dueDate: '2026-11-01' }),
+    ];
+    const next = continueWith(projects, tasks);
+    expect(next?.project.id).toBe('recent');
+    expect(next?.next?.id).toBe('soon');
+    expect(continueWith([project('x', 'active')], [])).toBeNull();
+  });
+
   it('labels due dates and validates input', () => {
     expect(dueLabel('2026-11-01', '2026-11-01')).toEqual({ text: 'Today', overdue: false });
     expect(dueLabel('2026-11-02', '2026-11-01')).toEqual({ text: 'Tomorrow', overdue: false });
@@ -108,7 +129,13 @@ describe('WorkRepository', () => {
     migrate(db, migrations);
     return new WorkRepository(db);
   };
-  const base = { description: '', color: 'blue' as const, startDate: null, dueDate: null };
+  const base = {
+    description: '',
+    color: 'blue' as const,
+    startDate: null,
+    dueDate: null,
+    spaceId: null,
+  };
 
   it('creates, edits and re-statuses projects; tasks follow them', () => {
     const r = repo();
@@ -160,6 +187,14 @@ describe('WorkRepository', () => {
     r.deleteProject(b, true);
     expect(r.task(tb)?.projectId).toBeNull();
     expect(r.all().projects).toEqual([]);
+  });
+
+  it("remembers a project's workspace and when it was opened", () => {
+    const r = repo();
+    const id = r.saveProject({ ...base, name: 'A', status: 'active', spaceId: 'space-1' });
+    expect(r.project(id)).toMatchObject({ spaceId: 'space-1', lastOpenedAt: null });
+    r.markOpened(id, 42);
+    expect(r.project(id)?.lastOpenedAt).toBe(42);
   });
 
   it('offers the sample projects once, only into an empty list', () => {

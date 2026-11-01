@@ -1,8 +1,20 @@
-import { ArrowLeft, CalendarDays, CircleCheck, FolderOpen, ListChecks, Plus } from 'lucide-react';
-import { useState } from 'react';
+import {
+  AppWindow,
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  CircleCheck,
+  FolderOpen,
+  ListChecks,
+  NotebookPen,
+  Plus,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { relativeTime } from '@shared/time';
 import {
   PROJECT_STATUSES,
   PROJECT_STATUS_LABEL,
+  continueWith,
   dateKey,
   filterProjects,
   filterTasks,
@@ -62,6 +74,59 @@ function projectMenu(work: Work, project: Project, onDeleted?: () => void): Menu
   ];
 }
 
+/** Goes to a project's workspace (its Space, with its tabs as they were left). */
+function useOpenWorkspace() {
+  const work = useWork();
+  return async (project: Project) => {
+    const data = await work.run(invoke('work:openProject', { id: project.id, workspace: true }));
+    if (!data) return;
+    work.set(data);
+    const space = data.spaces.find((s) => s.id === project.spaceId);
+    if (space) work.flash(`Switched to ${space.name}`);
+  };
+}
+
+/** "Continue where you left off": the open project looked at last, and its next task. */
+function ContinueCard({ project, next }: { project: Project; next: { title: string } | null }) {
+  const openWorkspace = useOpenWorkspace();
+  return (
+    <div
+      className="mx-3 mt-3 rounded-[16px] bg-[var(--work-accent-soft)] p-3 ring-1 ring-[var(--work-accent)]/30"
+      data-testid="continue-card"
+    >
+      <div className="text-[11px] font-semibold tracking-wide text-[var(--work-accent)] uppercase">
+        Continue where you left off
+      </div>
+      <button
+        type="button"
+        onClick={() => showProject(project.id)}
+        className="mt-1.5 flex w-full items-center gap-3 text-left"
+        data-testid="continue-open"
+      >
+        <FolderIcon color={project.color} size={34} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[14px] font-semibold">{project.name}</span>
+          <span className="block truncate text-[12px] text-[var(--note-muted)]">
+            {next ? `Next: ${next.title}` : 'No open tasks'}
+          </span>
+        </span>
+        <ArrowRight size={16} className="text-[var(--note-muted)]" />
+      </button>
+      {project.spaceId && (
+        <button
+          type="button"
+          onClick={() => void openWorkspace(project)}
+          className="press mt-2.5 flex h-8 w-full items-center justify-center gap-1.5 rounded-[10px] bg-[var(--work-accent)] text-[12.5px] font-semibold text-white"
+          data-testid="continue-workspace"
+        >
+          <AppWindow size={14} />
+          Open Workspace
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** The Projects tab: filters with live counts and a card per project. */
 export function ProjectsView() {
   const work = useWork();
@@ -70,8 +135,10 @@ export function ProjectsView() {
   const { projects, tasks } = work.data;
   const counts = projectCounts(projects);
   const shown = filterProjects(projects, filter);
+  const resume = continueWith(projects, tasks);
   return (
     <section data-testid="projects-view">
+      {resume && <ContinueCard {...resume} />}
       <ViewHeader
         title="Projects"
         action={
@@ -206,6 +273,12 @@ const fmt = (key: string) => {
 /** One project: its overview, stats and its tasks (add, tick, edit, delete). */
 export function ProjectDetail({ id }: { id: string }) {
   const work = useWork();
+  const openWorkspace = useOpenWorkspace();
+  const { set } = work;
+  // Opening the page counts as working on it ("Continue where you left off").
+  useEffect(() => {
+    void invoke('work:openProject', { id, workspace: false }).then(set, () => undefined);
+  }, [id, set]);
   if (!work.data) return null;
   const project = work.data.projects.find((p) => p.id === id);
   if (!project) {
@@ -284,6 +357,11 @@ export function ProjectDetail({ id }: { id: string }) {
         <Stat label="Completed" value={progress.done} testId="stat-done" />
         <Stat label="Remaining" value={progress.remaining} testId="stat-remaining" />
       </div>
+      <Workspace
+        project={project}
+        spaces={work.data.spaces}
+        onOpen={() => void openWorkspace(project)}
+      />
       <div className="mt-5 mb-1 flex items-center justify-between">
         <h2 className="text-[14px] font-semibold">Tasks</h2>
         <PrimaryButton
@@ -313,6 +391,107 @@ export function ProjectDetail({ id }: { id: string }) {
           }}
         />
       )}
+      <ProjectNotes
+        projectId={project.id}
+        notes={work.data.notes.filter((n) => n.projectId === project.id)}
+      />
     </section>
+  );
+}
+
+/** Where the project's tabs live: its Space, one click away (or a way to give it one). */
+function Workspace(props: {
+  project: Project;
+  spaces: { id: string; name: string }[];
+  onOpen: () => void;
+}) {
+  const work = useWork();
+  const space = props.spaces.find((s) => s.id === props.project.spaceId);
+  return (
+    <div
+      className="mt-3 flex items-center gap-3 rounded-[12px] bg-[var(--work-card)] px-3 py-2.5 ring-1 ring-[var(--work-border)]"
+      data-testid="project-workspace"
+    >
+      <AppWindow size={16} className="shrink-0 text-[var(--note-muted)]" />
+      <span className="min-w-0 flex-1 text-[12.5px]">
+        {space ? (
+          <>
+            <span className="block text-[var(--note-muted)]">Workspace</span>
+            <span className="block truncate font-semibold">{space.name}</span>
+          </>
+        ) : (
+          <span className="text-[var(--note-muted)]">
+            No workspace — link a Space to keep this project&rsquo;s tabs together.
+          </span>
+        )}
+      </span>
+      {space ? (
+        <PrimaryButton small onClick={props.onOpen} testId="open-workspace">
+          Open Workspace
+        </PrimaryButton>
+      ) : (
+        <button
+          type="button"
+          onClick={() => work.editProject(props.project)}
+          className="press shrink-0 rounded-[9px] px-2 py-1 text-[12.5px] font-semibold text-[var(--work-accent)] hover:bg-[var(--work-accent-soft)]"
+          data-testid="link-workspace"
+        >
+          Link a Space
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** The project's notes: open one, or write a new one that belongs to it. */
+function ProjectNotes(props: {
+  projectId: string;
+  notes: { id: string; title: string; updatedAt: number }[];
+}) {
+  const work = useWork();
+  const [now] = useState(() => Date.now());
+  const create = async () => {
+    const result = await work.run(invoke('notes:create', { projectId: props.projectId }));
+    if (result) window.location.hash = `#/notes/panel/${result.id}`;
+  };
+  return (
+    <div className="mt-5 pb-4" data-testid="project-notes">
+      <div className="mb-1 flex items-center justify-between">
+        <h2 className="text-[14px] font-semibold">Notes</h2>
+        <button
+          type="button"
+          onClick={() => void create()}
+          className="press flex h-7 items-center gap-1 rounded-[9px] px-2 text-[12.5px] font-semibold text-[var(--work-accent)] hover:bg-[var(--work-accent-soft)]"
+          data-testid="project-new-note"
+        >
+          <Plus size={13} strokeWidth={2.4} />
+          New Note
+        </button>
+      </div>
+      {props.notes.length > 0 ? (
+        <ul className="-mx-2 flex flex-col">
+          {props.notes.map((n) => (
+            <li key={n.id}>
+              <button
+                type="button"
+                onClick={() => (window.location.hash = `#/notes/panel/${n.id}`)}
+                className="press flex w-full items-center gap-2.5 rounded-[11px] px-2 py-2 text-left hover:bg-[var(--note-hover)]"
+                data-testid="project-note"
+              >
+                <NotebookPen size={14} className="shrink-0 text-[var(--note-muted)]" />
+                <span className="min-w-0 flex-1 truncate text-[13.5px]">{n.title}</span>
+                <span className="shrink-0 text-[11.5px] text-[var(--note-muted)]">
+                  {relativeTime(n.updatedAt, now)}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="py-2 text-[12.5px] text-[var(--note-muted)]">
+          Research, briefs and ideas for this project go here.
+        </p>
+      )}
+    </div>
   );
 }

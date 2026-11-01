@@ -1,6 +1,7 @@
 import { WebContentsView } from 'electron';
 import type { BrowserWindow, WebContents } from 'electron';
 import type { Layout } from '@shared/types/layout';
+import { notesHash } from './model';
 
 export type NotesPanelDeps = {
   win: BrowserWindow;
@@ -11,6 +12,8 @@ export type NotesPanelDeps = {
   loadInternal: (target: { webContents: WebContents }, url: string) => void;
   registerInternal: (webContentsId: number) => void;
   unregisterInternal: (webContentsId: number) => void;
+  /** Remembers whether it's open and where, so a restart brings it back. */
+  persist?: (state: { open: boolean; route: string }) => void;
 };
 
 /**
@@ -25,6 +28,8 @@ export class NotesPanelController {
   private view: WebContentsView | null = null;
   private shown = false;
   private wide = false;
+  /** Where the panel's page is: 'panel', 'panel/projects/<id>'… (checked by notesHash). */
+  private route = 'panel';
 
   constructor(private readonly deps: NotesPanelDeps) {}
 
@@ -42,7 +47,8 @@ export class NotesPanelController {
     const view = this.view ?? this.createView();
     // `id` was checked to be a UUID; `tab` is one of PanelView.
     const sub = id ? `/${id}` : tab && tab !== 'notes' ? `/${tab}` : tab === 'notes' ? '' : null;
-    if (fresh) this.deps.loadInternal(view, `orbit://notes/panel${sub ?? ''}`);
+    if (sub !== null) this.route = `panel${sub}`;
+    if (fresh) this.deps.loadInternal(view, `orbit://notes/${this.route}`);
     else if (sub !== null) {
       // Switch inside the loaded page (no reload).
       void view.webContents
@@ -52,6 +58,7 @@ export class NotesPanelController {
     if (!this.shown) {
       this.shown = true;
       this.deps.setOpen(true, this.wide); // the layout tells the shell (its Notes button lights up)
+      this.save();
     }
     this.fit();
     view.setVisible(true);
@@ -64,6 +71,36 @@ export class NotesPanelController {
     this.wide = false;
     this.view?.setVisible(false);
     this.deps.setOpen(false, false);
+    this.save();
+  }
+
+  /** The page moved (a tab, a project, a note): remember it for the next launch. */
+  setRoute(route: string): void {
+    this.route = route;
+    this.save();
+  }
+
+  /** Opens on a route ('panel/projects/<id>', 'panel/tasks'…); refused unless notesHash knows
+   *  it. */
+  openAt(route: string): void {
+    if (notesHash(route) === '/not-found') return;
+    this.route = route;
+    if (this.view) {
+      void this.view.webContents
+        .executeJavaScript(`location.hash = ${JSON.stringify(`#/notes/${route}`)}`)
+        .catch(() => undefined);
+    }
+    this.open();
+  }
+
+  /** At launch: back where it was. `route` was checked by notesHash. */
+  restore(route: string): void {
+    this.route = route;
+    this.open();
+  }
+
+  private save(): void {
+    this.deps.persist?.({ open: this.shown, route: this.route });
   }
 
   /** The Project Board needs room: the panel widens while it shows. */

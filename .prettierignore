@@ -7,3 +7,6 @@ playwright-report/
 package-lock.json
 # The plan is hand-authored; keep its formatting as written.
 docs/PLAN.md
+
+# The owner's product roadmap, kept exactly as written (its pandoc tables would be reflowed).
+orbit_product_roadmap.md

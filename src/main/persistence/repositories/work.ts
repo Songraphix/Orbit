@@ -22,6 +22,8 @@ type ProjectRow = {
   color: string;
   start_date: string | null;
   due_date: string | null;
+  space_id: string | null;
+  last_opened_at: number | null;
   created_at: number;
   updated_at: number;
 };
@@ -56,6 +58,8 @@ const toProject = (r: ProjectRow): Project => ({
   ),
   startDate: date(r.start_date),
   dueDate: date(r.due_date),
+  spaceId: r.space_id,
+  lastOpenedAt: r.last_opened_at,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
 });
@@ -80,7 +84,7 @@ export class WorkError extends Error {
 export class WorkRepository {
   constructor(private readonly db: Database) {}
 
-  all(): WorkData {
+  all(): Pick<WorkData, 'projects' | 'tasks'> {
     const projects = (
       this.db
         .prepare('SELECT * FROM projects WHERE profile_id = ? ORDER BY created_at, id')
@@ -105,12 +109,13 @@ export class WorkRepository {
       input.color,
       input.startDate,
       input.dueDate,
+      input.spaceId,
     ];
     if (input.id) {
       const result = this.db
         .prepare(
           `UPDATE projects SET name = ?, description = ?, status = ?, color = ?, start_date = ?,
-             due_date = ?, updated_at = ? WHERE profile_id = ? AND id = ?`,
+             due_date = ?, space_id = ?, updated_at = ? WHERE profile_id = ? AND id = ?`,
         )
         .run(...fields, now, PROFILE, input.id);
       if (Number(result.changes) === 0) throw new WorkError('That project no longer exists');
@@ -120,10 +125,17 @@ export class WorkRepository {
     this.db
       .prepare(
         `INSERT INTO projects (id, profile_id, name, description, status, color, start_date,
-           due_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           due_date, space_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(id, PROFILE, ...fields, now, now);
     return id;
+  }
+
+  /** Its page was opened (for "Continue where you left off"). */
+  markOpened(id: string, now = Date.now()): void {
+    this.db
+      .prepare('UPDATE projects SET last_opened_at = ? WHERE profile_id = ? AND id = ?')
+      .run(now, PROFILE, id);
   }
 
   setProjectStatus(id: string, status: ProjectStatus, now = Date.now()): void {
@@ -294,6 +306,7 @@ export class WorkRepository {
             color: sample.color,
             startDate: null,
             dueDate: null,
+            spaceId: null,
           },
           now + p,
         );

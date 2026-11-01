@@ -5,7 +5,17 @@ import { siteControlsViewSchema } from './site-controls';
 /** One row in the command bar (F-21). Main builds and ranks these; the overlay just draws them. */
 export const commandItemSchema = z.object({
   id: z.string(),
-  kind: z.enum(['navigate', 'search', 'tab', 'history', 'suggestion', 'command']),
+  kind: z.enum([
+    'navigate',
+    'search',
+    'tab',
+    'history',
+    'suggestion',
+    'command',
+    'project',
+    'task',
+    'note',
+  ]),
   title: z.string(),
   subtitle: z.string(),
   favicon: z.string().nullable(),
@@ -15,6 +25,10 @@ export const commandItemSchema = z.object({
   tabId: z.string().optional(),
   /** command */
   commandId: z.string().optional(),
+  /** project / task / note: what to open in the productivity panel */
+  targetId: z.string().optional(),
+  /** task: its project (opens there), if any */
+  projectId: z.string().optional(),
 });
 export type CommandItem = z.output<typeof commandItemSchema>;
 

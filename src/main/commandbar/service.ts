@@ -4,7 +4,7 @@ import { classifyInput, searchUrl } from '../omnibox/classify';
 import type { HistoryRepository } from '../persistence/repositories/history';
 import type { WindowController } from '../windows/window-manager';
 import { buildResults, parseSuggestions, sameUrl } from './model';
-import type { CommandDef } from './model';
+import type { CommandDef, WorkHits } from './model';
 
 /** Commands the bar can run (F-21). Each also has a menu shortcut, shown as the subtitle. */
 export const COMMANDS: readonly CommandDef[] = [
@@ -86,6 +86,8 @@ export class CommandBarService {
     private readonly runCommand: CommandRunner,
     /** Tests and offline use turn off network suggestions. */
     private readonly suggestionsEnabled = true,
+    /** Projects, tasks and notes matching a query (roadmap P1.3). */
+    private readonly work?: (query: string) => WorkHits,
   ) {}
 
   async query(controller: WindowController, query: string): Promise<CommandItem[]> {
@@ -111,6 +113,7 @@ export class CommandBarService {
       suggestions,
       commands: COMMANDS,
       searchUrl,
+      ...(trimmed && this.work ? { work: this.work(trimmed) } : {}),
     });
   }
 
@@ -125,6 +128,20 @@ export class CommandBarService {
     }
     if (item.kind === 'command' && item.commandId) {
       this.runCommand(controller, item.commandId);
+      return;
+    }
+    // Your work opens in the productivity panel: a project's page (a task's project, or Tasks),
+    // or the note.
+    if (item.kind === 'project' && item.targetId) {
+      controller.notes.openAt(`panel/projects/${item.targetId}`);
+      return;
+    }
+    if (item.kind === 'task' && item.targetId) {
+      controller.notes.openAt(item.projectId ? `panel/projects/${item.projectId}` : 'panel/tasks');
+      return;
+    }
+    if (item.kind === 'note' && item.targetId) {
+      controller.notes.open(item.targetId);
       return;
     }
     if (!item.url) return;

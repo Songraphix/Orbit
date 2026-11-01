@@ -10,6 +10,8 @@ export const noteSchema = z.object({
   /** '' for a brand-new note. */
   doc: z.string().max(NOTE_LIMITS.doc),
   updatedAt: z.number(),
+  /** The project it belongs to, or null. */
+  projectId: z.string().nullable(),
 });
 export type Note = z.output<typeof noteSchema>;
 

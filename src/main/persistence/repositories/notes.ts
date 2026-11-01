@@ -5,7 +5,13 @@ import { isBlankNote, matchesQuery, notePreview, noteTitle } from '../../notes/m
 
 const PROFILE = 'default';
 
-type Row = { id: string; doc_json: string; text: string; updated_at: number };
+type Row = {
+  id: string;
+  doc_json: string;
+  text: string;
+  updated_at: number;
+  project_id: string | null;
+};
 
 /** Notes (F-33), stored in SQLite. */
 export class NotesRepository {
@@ -29,13 +35,56 @@ export class NotesRepository {
       }));
   }
 
-  get(id: string): { id: string; doc: string; text: string; updatedAt: number } | null {
+  get(
+    id: string,
+  ): { id: string; doc: string; text: string; updatedAt: number; projectId: string | null } | null {
     const row = this.db
-      .prepare('SELECT id, doc_json, text, updated_at FROM notes WHERE profile_id = ? AND id = ?')
+      .prepare(
+        `SELECT id, doc_json, text, updated_at, project_id FROM notes
+         WHERE profile_id = ? AND id = ?`,
+      )
       .get(PROFILE, id) as Row | undefined;
     return row
-      ? { id: row.id, doc: row.doc_json, text: row.text, updatedAt: row.updated_at }
+      ? {
+          id: row.id,
+          doc: row.doc_json,
+          text: row.text,
+          updatedAt: row.updated_at,
+          projectId: row.project_id,
+        }
       : null;
+  }
+
+  /** Notes that belong to a project (blank ones aside), newest first. */
+  linked(): { id: string; title: string; projectId: string; updatedAt: number }[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, text, updated_at, project_id FROM notes
+         WHERE profile_id = ? AND project_id IS NOT NULL ORDER BY updated_at DESC`,
+      )
+      .all(PROFILE) as Omit<Row, 'doc_json'>[];
+    return rows
+      .filter((r) => !isBlankNote(r.text))
+      .map((r) => ({
+        id: r.id,
+        title: noteTitle(r.text),
+        projectId: r.project_id!,
+        updatedAt: r.updated_at,
+      }));
+  }
+
+  /** Puts a note in a project (or none). */
+  setProject(id: string, projectId: string | null): void {
+    this.db
+      .prepare('UPDATE notes SET project_id = ? WHERE profile_id = ? AND id = ?')
+      .run(projectId, PROFILE, id);
+  }
+
+  /** A project was deleted: its notes stay, in no project. */
+  unlinkProject(projectId: string): void {
+    this.db
+      .prepare('UPDATE notes SET project_id = NULL WHERE profile_id = ? AND project_id = ?')
+      .run(PROFILE, projectId);
   }
 
   title(id: string): string | null {
@@ -43,11 +92,14 @@ export class NotesRepository {
     return note ? noteTitle(note.text) : null;
   }
 
-  create(now = Date.now()): string {
+  create(now = Date.now(), projectId: string | null = null): string {
     const id = randomUUID();
     this.db
-      .prepare('INSERT INTO notes (id, profile_id, created_at, updated_at) VALUES (?, ?, ?, ?)')
-      .run(id, PROFILE, now, now);
+      .prepare(
+        `INSERT INTO notes (id, profile_id, created_at, updated_at, project_id)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(id, PROFILE, now, now, projectId);
     return id;
   }
 

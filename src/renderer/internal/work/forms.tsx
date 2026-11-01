@@ -17,6 +17,7 @@ import { useWork } from './context';
 import type { TaskDraft } from './context';
 
 const invoke = window.orbit.invoke;
+const NEW_SPACE = '__new__';
 
 /** A form sliding up over the panel; Esc or a click on the dim area cancels. */
 function Sheet(props: { title: string; onClose: () => void; children: ReactNode; testId: string }) {
@@ -137,13 +138,15 @@ function Actions(props: {
 
 /** New or edit a project: name (required), description, status, colour, dates. */
 export function ProjectForm({ project, onClose }: { project?: Project; onClose: () => void }) {
-  const { set, run, flash } = useWork();
+  const { data, set, run, flash } = useWork();
   const [name, setName] = useState(project?.name ?? '');
   const [description, setDescription] = useState(project?.description ?? '');
   const [status, setStatus] = useState<ProjectStatus>(project?.status ?? 'active');
   const [color, setColor] = useState<ProjectColor>(project?.color ?? 'purple');
   const [startDate, setStartDate] = useState(project?.startDate ?? '');
   const [dueDate, setDueDate] = useState(project?.dueDate ?? '');
+  /** '' = no workspace, NEW_SPACE = make one, else a Space's id. */
+  const [space, setSpace] = useState(project?.spaceId ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -158,6 +161,8 @@ export function ProjectForm({ project, onClose }: { project?: Project; onClose: 
       color,
       startDate: startDate || null,
       dueDate: dueDate || null,
+      spaceId: space && space !== NEW_SPACE ? space : null,
+      ...(space === NEW_SPACE ? { newSpace: true } : {}),
     };
     const problem = projectProblem(input);
     if (problem) {
@@ -229,6 +234,25 @@ export function ProjectForm({ project, onClose }: { project?: Project; onClose: 
               />
             ))}
           </div>
+        </Field>
+        <Field label="Workspace">
+          <select
+            value={space}
+            onChange={(e) => setSpace(e.target.value)}
+            className={INPUT}
+            data-testid="project-space"
+          >
+            <option value="">No workspace</option>
+            {data?.spaces.map((s) => (
+              <option key={s.id} value={s.id}>
+                Space: {s.name}
+              </option>
+            ))}
+            <option value={NEW_SPACE}>+ New Space for this project</option>
+          </select>
+          <span className="mt-1 block text-[11.5px] text-[var(--note-muted)]">
+            The Space keeps the project&rsquo;s tabs. Open Workspace takes you back to them.
+          </span>
         </Field>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Start date">

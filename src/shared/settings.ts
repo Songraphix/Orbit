@@ -49,6 +49,8 @@ export const settingsSchema = {
   'notes.floating': z
     .array(z.object({ id: z.string(), bounds: rectSchema, onTop: z.boolean() }))
     .max(50),
+  /** The productivity panel: open or not, and where (`panel/projects/<id>`…), for a restart. */
+  'panel.state': z.object({ open: z.boolean(), route: z.string().max(120) }),
   /** Search engine URL with %s for the query. */
   'search.engine': z.enum(['google', 'duckduckgo', 'bing', 'kagi', 'ecosia']),
 } as const;
@@ -72,6 +74,7 @@ export const settingsDefaults: Settings = {
   'peek.scope': 'all',
   'little.globalShortcut': true,
   'notes.floating': [],
+  'panel.state': { open: false, route: 'panel' },
 };
 
 /** Query URL templates for `search.engine`. */
