@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { layoutSchema } from '../types/layout';
 import { commandBarModeSchema, commandItemSchema, overlayStateSchema } from '../types/command-bar';
+import { findStateSchema } from '../types/find';
 import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
 import { tabsSnapshotSchema } from '../types/tabs';
 
@@ -108,6 +109,21 @@ export const contract = {
     output: z.void(),
     surfaces: ['overlay'],
   },
+  // Find in page (⌘F). The find bar is drawn in the shell's toolbar strip.
+  'find:get': {
+    input: z.object({}).strict(),
+    output: findStateSchema,
+  },
+  'find:search': {
+    input: z
+      .object({ query: z.string().max(1000), direction: z.enum(['next', 'previous']).optional() })
+      .strict(),
+    output: z.void(),
+  },
+  'find:close': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
   'overlay:get': {
     input: z.object({}).strict(),
     output: overlayStateSchema,
@@ -151,6 +167,10 @@ export const events = {
   'state:tabs': tabsSnapshotSchema,
   /** Sent to a window's overlay when floating UI opens or closes. */
   'state:overlay': overlayStateSchema,
+  /** Sent to a window's shell when find-in-page changes. */
+  'state:find': findStateSchema,
+  /** A short confirmation in the toolbar ("Copied link"). */
+  'toast:show': z.object({ message: z.string().max(200), at: z.number() }),
 } as const satisfies Record<string, z.ZodType>;
 
 export type Contract = typeof contract;

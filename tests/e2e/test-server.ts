@@ -17,6 +17,7 @@ const ROUTES: Record<string, string> = {
     '<a id="popup" href="/two" target="_blank">open two</a> <a id="next" href="/three">three</a>',
   ),
   '/two': page('Page Two'),
+  '/words': page('Words', '<p>orbit one, orbit two, orbit three. Arc.</p>'),
   // Mimics a video player's fullscreen button.
   '/video': page(
     'Video',

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { Layout, Rect } from '@shared/types/layout';
+import type { FindState } from '@shared/types/find';
 import type { TabsSnapshot } from '@shared/types/tabs';
 import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
@@ -10,10 +11,11 @@ const toStyle = (r: Rect) => ({ left: r.x, top: r.y, width: r.width, height: r.h
 export function ShellApp() {
   const layout = useMainState('state:layout');
   const tabs = useMainState('state:tabs');
+  const find = useMainState('state:find');
 
   return (
     <div className="relative h-full overflow-hidden" style={{ background: 'var(--sidebar-bg)' }}>
-      {layout && <Chrome layout={layout} tabs={tabs} />}
+      {layout && <Chrome layout={layout} tabs={tabs} find={find} />}
     </div>
   );
 }
@@ -40,7 +42,15 @@ function useResizeSnapshot() {
   return { snapshot, onResizeStart, onResizeEnd };
 }
 
-function Chrome({ layout, tabs }: { layout: Layout; tabs: TabsSnapshot | null }) {
+function Chrome({
+  layout,
+  tabs,
+  find,
+}: {
+  layout: Layout;
+  tabs: TabsSnapshot | null;
+  find: FindState | null;
+}) {
   const activeTab = tabs?.tabs.find((t) => t.id === tabs.activeTabId) ?? null;
   const hasActiveTab = activeTab !== null;
   const { snapshot, onResizeStart, onResizeEnd } = useResizeSnapshot();
@@ -68,6 +78,7 @@ function Chrome({ layout, tabs }: { layout: Layout; tabs: TabsSnapshot | null })
             tab={activeTab}
             height={layout.toolbar.height}
             sidebarVisible={layout.sidebar.visible}
+            find={find}
           />
         )}
         {snapshot && (

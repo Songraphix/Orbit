@@ -25,10 +25,11 @@ Target end: 2026-11-23 · Branch: `phase-2/command-bar` (Phase 1 merged to `main
 - 2026-11-01 — Phase 1 steps 10–11: menu — Tabs menu (⌃Tab / ⌃⇧Tab, ⌘1…⌘8, ⌘9 = last); session restore — migration 002 `tabs`, `TabsRepository`, tabs saved 500 ms after changes and on close; restored tabs keep title/favicon and only the active one loads (others load on first click); fixes: sidebar drag ignores Chromium's synthetic no-button hover move; exiting HTML fullscreen during the macOS enter animation is deferred until it finishes
 - 2026-11-01 — Phase 2: history [F-21] — migration 003 (history + FTS5 + triggers, favicons by host, site_settings), `HistoryRepository` (visits, titles, frecency-ranked prefix search, top sites, bulk import for the Arc importer); tabs record visits/titles/favicons
 - 2026-11-01 — Phase 2: overlay layer + command bar [F-21, F-22] — `OverlayController` (transparent top-most view, hidden when idle, focus returns to the page); command bar with results ranked in main (`buildResults`, pure): address / search first, switch-to-open-tab instead of duplicating, commands, history, Google suggestions (disabled in tests); ⌘T opens it (owner's choice), ⌘L / clicking the address edits the current URL; ⇧⌘C / ⇧⌥⌘C copy URL / Markdown link; ⇧⌘T reopens closed tabs (in memory, 25)
+- 2026-11-01 — Phase 2: find, zoom, print, toasts [F-31] — find bar in the toolbar strip (⌘F, Enter/⌘G next, ⇧Enter/⇧⌘G previous, match count, Esc), `FindController` (unit-tested); zoom ⌘+/⌘−/⌘0 remembered per site in `site_settings` and re-applied on navigation; ⌘P print; toolbar toasts ("Copied link", "Zoom 120%") — **Phase 2 task list complete**
 
 ## In progress
 
-- Phase 2: find bar, zoom per host, print, copy-URL toast
+- Phase 3: spaces, favorites, pinned tabs, folders, themes, profiles, Arc importer
 
 ## Decisions made
 

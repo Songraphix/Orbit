@@ -24,6 +24,10 @@ export type TabEnv = {
   onHtmlFullscreen(enter: boolean): void;
   /** Browsing history sink (visits, titles, favicons). */
   history: HistorySink;
+  /** Saved zoom level for a page's site (applied on every navigation). */
+  zoomFor(url: string): number;
+  /** Find-in-page results from Chromium. */
+  onFoundInPage(result: { requestId: number; activeMatchOrdinal: number; matches: number }): void;
 };
 
 export type HistorySink = {
@@ -195,7 +199,9 @@ export class TabController {
       const url = contents.getURL();
       this.update({ url, favicon: null, ...this.navState() });
       this.env.history.recordVisit(url, contents.getTitle());
+      contents.setZoomLevel(this.env.zoomFor(url)); // per-site zoom survives restarts
     });
+    contents.on('found-in-page', (_e, result) => this.env.onFoundInPage(result));
     contents.on('did-navigate-in-page', (_e, _url, isMainFrame) => {
       if (isMainFrame) this.update({ url: contents.getURL(), ...this.navState() });
     });

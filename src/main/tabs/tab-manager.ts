@@ -15,13 +15,20 @@ const CLOSED_TAB_MEMORY = 25;
 
 export type TabManagerDeps = Pick<
   TabEnv,
-  'internalPreload' | 'loadInternal' | 'registerInternal' | 'unregisterInternal' | 'history'
+  | 'internalPreload'
+  | 'loadInternal'
+  | 'registerInternal'
+  | 'unregisterInternal'
+  | 'history'
+  | 'zoomFor'
 > & {
   win: BrowserWindow;
   getLayout: () => Layout;
   onChange: (snapshot: TabsSnapshot) => void;
   /** The active tab's page entered/left HTML fullscreen. */
   onHtmlFullscreen: (enter: boolean) => void;
+  /** Find-in-page results from the active tab. */
+  onFoundInPage: TabEnv['onFoundInPage'];
 };
 
 /**
@@ -82,6 +89,10 @@ export class TabManager {
         registerInternal: this.deps.registerInternal,
         unregisterInternal: this.deps.unregisterInternal,
         history: this.deps.history,
+        zoomFor: this.deps.zoomFor,
+        onFoundInPage: (result) => {
+          if (this.activeId === id) this.deps.onFoundInPage(result);
+        },
         openInNewTab: (link, activate) => this.create(link, { activate }),
         onChange: () => this.scheduleNotify(),
         onViewReplaced: (oldView, newView) => this.replaceView(id, oldView, newView),

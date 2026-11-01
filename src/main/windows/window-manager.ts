@@ -8,6 +8,7 @@ import type { SettingsRepository } from '../persistence/repositories/settings';
 import type { TabsRepository } from '../persistence/repositories/tabs';
 import type { TabController } from '../tabs/tab-controller';
 import type { HistorySink } from '../tabs/tab-controller';
+import { FindController } from '../tabs/find';
 import { TabManager } from '../tabs/tab-manager';
 import { LayoutEngine } from './layout-engine';
 import { OverlayController } from './overlay';
@@ -25,6 +26,7 @@ export type WindowManagerDeps = {
   settings: SettingsRepository;
   tabsRepo: TabsRepository;
   history: HistorySink;
+  zoomFor: (url: string) => number;
   senders: SenderRegistry;
   broadcaster: Broadcaster;
   preloadPath: string;
@@ -42,6 +44,7 @@ export type WindowController = {
   layout: LayoutEngine;
   tabs: TabManager;
   overlay: OverlayController;
+  find: FindController;
 };
 
 /** Creates and restores Orbit's windows (PLAN.md section 4.3). */
@@ -114,6 +117,11 @@ export class WindowManager {
 
     const contents = win.webContents;
     let tabs: TabManager | null = null;
+    let lastActiveTabId: string | null = null;
+    const find = new FindController(
+      () => tabs?.active?.view.webContents ?? null,
+      (state) => broadcaster.sendTo(contents, 'state:find', state),
+    );
     const layout = new LayoutEngine(win, settings, (next) => {
       tabs?.applyLayout(); // web views move in the same tick the shell is told
       broadcaster.sendTo(contents, 'state:layout', next);
@@ -126,9 +134,16 @@ export class WindowManager {
       registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
       unregisterInternal: (webContentsId) => senders.remove(webContentsId),
       history: this.deps.history,
+      zoomFor: this.deps.zoomFor,
+      onFoundInPage: (result) => find.onResult(result),
       onChange: (snapshot) => {
         broadcaster.sendTo(contents, 'state:tabs', snapshot);
         scheduleTabSave();
+        // Find belongs to the page it searched; switching tabs closes it.
+        if (snapshot.activeTabId !== lastActiveTabId) {
+          lastActiveTabId = snapshot.activeTabId;
+          find.close();
+        }
       },
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
     });
@@ -198,7 +213,7 @@ export class WindowManager {
 
     const id = contents.id;
     const overlayId = overlay.view.webContents.id;
-    const controller: WindowController = { win, layout, tabs: tabManager, overlay };
+    const controller: WindowController = { win, layout, tabs: tabManager, overlay, find };
     this.controllers.set(id, controller);
     this.controllers.set(overlayId, controller);
     senders.add(id, 'shell');

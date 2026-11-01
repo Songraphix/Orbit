@@ -9,6 +9,7 @@ import { Broadcaster } from './ipc/broadcaster';
 import { CommandBarService, copyActiveUrl } from './commandbar/service';
 import { registerAppHandlers } from './ipc/handlers/app';
 import { registerCommandBarHandlers } from './ipc/handlers/command-bar';
+import { registerFindHandlers } from './ipc/handlers/find';
 import { registerLayoutHandlers } from './ipc/handlers/layout';
 import { registerNewTabHandlers } from './ipc/handlers/newtab';
 import { navigateTab, registerTabHandlers } from './ipc/handlers/tabs';
@@ -17,6 +18,7 @@ import { installAppMenu } from './menus/app-menu';
 import { IpcRouter } from './ipc/router';
 import { SenderRegistry } from './ipc/sender';
 import { openPersistence } from './persistence';
+import { clampZoom } from './persistence/repositories/site-settings';
 import type { Persistence } from './persistence';
 import { WindowManager } from './windows/window-manager';
 import type { WindowController } from './windows/window-manager';
@@ -66,6 +68,23 @@ function loadOverlay(view: WebContentsView): void {
   else void view.webContents.loadFile(join(rendererDir, 'overlay', 'index.html'));
 }
 
+/** A short confirmation shown in the toolbar (⇧⌘C "Copied link", zoom level…). */
+function toast(controller: WindowController, message: string): void {
+  broadcaster.sendTo(controller.win.webContents, 'toast:show', { message, at: Date.now() });
+}
+
+/** ⌘+ / ⌘− / ⌘0 on the active page; remembered per site. */
+function zoom(controller: WindowController, action: 'in' | 'out' | 'reset'): void {
+  const tab = controller.tabs.active;
+  if (!tab || tab.state.kind !== 'web' || !persistence) return;
+  const contents = tab.view.webContents;
+  const current = contents.getZoomLevel();
+  const level = clampZoom(action === 'reset' ? 0 : current + (action === 'in' ? 0.5 : -0.5));
+  contents.setZoomLevel(level);
+  persistence.siteSettings.setZoom(tab.state.url, level);
+  toast(controller, `Zoom ${Math.round(Math.pow(1.2, level) * 100)}%`);
+}
+
 /** Runs a command by id for a window (command bar items and menu items share these). */
 function runCommand(controller: WindowController, commandId: string): void {
   const { tabs, layout } = controller;
@@ -77,7 +96,7 @@ function runCommand(controller: WindowController, commandId: string): void {
       layout.toggleSidebar();
       return;
     case 'copy-url':
-      copyActiveUrl(controller);
+      if (copyActiveUrl(controller)) toast(controller, 'Copied link');
       return;
     case 'reload':
       if (tabs.active) navigateTab(tabs.active, 'reload');
@@ -118,6 +137,7 @@ void app.whenReady().then(() => {
     settings: persistence.settings,
     tabsRepo: persistence.tabs,
     history: persistence.history,
+    zoomFor: (url) => persistence?.siteSettings.zoomFor(url) ?? 0,
     senders,
     broadcaster,
     preloadPath: join(import.meta.dirname, '../preload/shell.cjs'),
@@ -138,6 +158,7 @@ void app.whenReady().then(() => {
     windowManager,
     new WallpaperService(app.getPath('userData'), persistence.settings),
   );
+  registerFindHandlers(router, windowManager);
   registerCommandBarHandlers(
     router,
     windowManager,
@@ -162,8 +183,23 @@ void app.whenReady().then(() => {
     },
     copyUrlAsMarkdown: () => {
       const controller = windowManager.focused();
-      if (controller) copyActiveUrl(controller, true);
+      if (controller && copyActiveUrl(controller, true)) toast(controller, 'Copied as Markdown');
     },
+    find: (action) => {
+      const controller = windowManager.focused();
+      if (!controller) return;
+      if (action === 'open') {
+        controller.find.open();
+        controller.win.webContents.focus(); // the find field lives in the shell's toolbar
+      } else {
+        controller.find.step(action);
+      }
+    },
+    zoom: (action) => {
+      const controller = windowManager.focused();
+      if (controller) zoom(controller, action);
+    },
+    print: () => windowManager.focused()?.tabs.active?.view.webContents.print(),
     navigate: (action) => {
       const active = windowManager.focused()?.tabs.active;
       if (active) navigateTab(active, action);

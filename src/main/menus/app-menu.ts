@@ -12,6 +12,11 @@ export type AppMenuActions = {
   /** Runs a shared command by id (close-tab, reopen-tab, copy-url…). */
   command: (id: string) => void;
   copyUrlAsMarkdown: () => void;
+  /** ⌘F opens find; ⌘G / ⇧⌘G step through matches. */
+  find: (action: 'open' | 'next' | 'previous') => void;
+  /** ⌘+ / ⌘− / ⌘0. */
+  zoom: (action: 'in' | 'out' | 'reset') => void;
+  print: () => void;
   /** Acts on the focused window's active tab. */
   navigate: (action: NavigateAction) => void;
   /** Opens DevTools for the active tab's page (⌥⌘I). */
@@ -48,6 +53,8 @@ export function installAppMenu(actions: AppMenuActions): void {
           click: () => actions.openCommandBar('edit'),
         },
         { type: 'separator' },
+        { id: 'print', label: 'Print…', accelerator: 'CmdOrCtrl+P', click: actions.print },
+        { type: 'separator' },
         // ⌘W closes the tab, never the window (the default role would close the window).
         {
           id: 'close-tab',
@@ -74,6 +81,25 @@ export function installAppMenu(actions: AppMenuActions): void {
         { role: 'paste' },
         { role: 'pasteAndMatchStyle' },
         { role: 'selectAll' },
+        { type: 'separator' },
+        {
+          id: 'find',
+          label: 'Find…',
+          accelerator: 'CmdOrCtrl+F',
+          click: () => actions.find('open'),
+        },
+        {
+          id: 'find-next',
+          label: 'Find Next',
+          accelerator: 'CmdOrCtrl+G',
+          click: () => actions.find('next'),
+        },
+        {
+          id: 'find-previous',
+          label: 'Find Previous',
+          accelerator: 'Shift+CmdOrCtrl+G',
+          click: () => actions.find('previous'),
+        },
         { type: 'separator' },
         {
           id: 'copy-url',
@@ -110,6 +136,32 @@ export function installAppMenu(actions: AppMenuActions): void {
           label: 'Force Reload Page',
           accelerator: 'Shift+CmdOrCtrl+R',
           click: () => actions.navigate('hardReload'),
+        },
+        { type: 'separator' },
+        {
+          id: 'zoom-in',
+          label: 'Zoom In',
+          accelerator: 'CmdOrCtrl+Plus',
+          click: () => actions.zoom('in'),
+        },
+        // ⌘= is what the + key types without Shift.
+        {
+          label: 'Zoom In',
+          accelerator: 'CmdOrCtrl+=',
+          visible: false,
+          click: () => actions.zoom('in'),
+        },
+        {
+          id: 'zoom-out',
+          label: 'Zoom Out',
+          accelerator: 'CmdOrCtrl+-',
+          click: () => actions.zoom('out'),
+        },
+        {
+          id: 'zoom-reset',
+          label: 'Actual Size',
+          accelerator: 'CmdOrCtrl+0',
+          click: () => actions.zoom('reset'),
         },
         { type: 'separator' },
         { role: 'togglefullscreen' },

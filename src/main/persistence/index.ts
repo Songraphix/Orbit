@@ -5,6 +5,7 @@ import { migrate } from './migrate';
 import { migrations } from './migrations';
 import { HistoryRepository } from './repositories/history';
 import { SettingsRepository } from './repositories/settings';
+import { SiteSettingsRepository } from './repositories/site-settings';
 import { TabsRepository } from './repositories/tabs';
 
 export const DATABASE_FILE = 'orbit.db';
@@ -14,6 +15,7 @@ export type Persistence = {
   settings: SettingsRepository;
   tabs: TabsRepository;
   history: HistoryRepository;
+  siteSettings: SiteSettingsRepository;
   close(): void;
 };
 
@@ -26,6 +28,7 @@ export function openPersistence(userDataDir: string): Persistence {
     settings: new SettingsRepository(db),
     tabs: new TabsRepository(db),
     history: new HistoryRepository(db),
+    siteSettings: new SiteSettingsRepository(db),
     close: () => {
       if (db.isOpen) db.close();
     },

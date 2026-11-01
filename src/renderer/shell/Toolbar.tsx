@@ -1,7 +1,24 @@
-import { ArrowLeft, ArrowRight, Lock, PanelLeft, RotateCw, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Lock, PanelLeft, RotateCw, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { formatAddress } from '@shared/format-address';
+import type { FindState } from '@shared/types/find';
 import type { TabState } from '@shared/types/tabs';
+import { FindBar } from './FindBar';
+
+const TOAST_MS = 1600;
+
+/** Short confirmations from main ("Copied link", "Zoom 120%"), shown in place of the address. */
+function useToast(): string | null {
+  const [toast, setToast] = useState<{ message: string; at: number } | null>(null);
+  useEffect(() => window.orbit.on('toast:show', setToast), []);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [toast]);
+  return toast?.message ?? null;
+}
 
 type NavAction = 'back' | 'forward' | 'reload' | 'stop';
 
@@ -14,11 +31,14 @@ export function Toolbar({
   tab,
   height,
   sidebarVisible,
+  find,
 }: {
   tab: TabState | null;
   height: number;
   sidebarVisible: boolean;
+  find: FindState | null;
 }) {
+  const toast = useToast();
   const navigate = (action: NavAction) => {
     if (tab) void window.orbit.invoke('tabs:navigate', { tabId: tab.id, action });
   };
@@ -64,24 +84,39 @@ export function Toolbar({
         {tab?.isLoading ? <X size={15} /> : <RotateCw size={14} />}
       </ToolbarButton>
 
-      {address && (
-        // Clicking the address edits it in the command bar (⌘L), like Arc.
-        <button
-          type="button"
-          className="no-drag absolute inset-x-28 mx-auto flex w-fit max-w-[calc(100%-14rem)] min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-1 text-[13px] hover:bg-black/5"
-          title={tab?.url}
-          onClick={() => void window.orbit.invoke('commandbar:open', { mode: 'edit' })}
-          data-testid="toolbar-address"
+      {find?.open ? (
+        <FindBar state={find} />
+      ) : toast ? (
+        <div
+          className="absolute inset-x-28 flex items-center justify-center gap-1.5 text-[13px] font-medium text-neutral-700"
+          role="status"
+          data-testid="toolbar-toast"
         >
-          {address.domain && address.secure && (
-            <Lock size={11} className="shrink-0 text-neutral-400" aria-label="Secure" />
-          )}
-          {address.domain && (
-            <span className="shrink-0 font-medium text-neutral-800">{address.domain}</span>
-          )}
-          {address.domain && address.title && <span className="shrink-0 text-neutral-300">/</span>}
-          {address.title && <span className="truncate text-neutral-500">{address.title}</span>}
-        </button>
+          <Check size={13} className="text-[var(--accent)]" />
+          {toast}
+        </div>
+      ) : (
+        address && (
+          // Clicking the address edits it in the command bar (⌘L), like Arc.
+          <button
+            type="button"
+            className="no-drag absolute inset-x-28 mx-auto flex w-fit max-w-[calc(100%-14rem)] min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-1 text-[13px] hover:bg-black/5"
+            title={tab?.url}
+            onClick={() => void window.orbit.invoke('commandbar:open', { mode: 'edit' })}
+            data-testid="toolbar-address"
+          >
+            {address.domain && address.secure && (
+              <Lock size={11} className="shrink-0 text-neutral-400" aria-label="Secure" />
+            )}
+            {address.domain && (
+              <span className="shrink-0 font-medium text-neutral-800">{address.domain}</span>
+            )}
+            {address.domain && address.title && (
+              <span className="shrink-0 text-neutral-300">/</span>
+            )}
+            {address.title && <span className="truncate text-neutral-500">{address.title}</span>}
+          </button>
+        )
       )}
 
       {tab?.isLoading && (
