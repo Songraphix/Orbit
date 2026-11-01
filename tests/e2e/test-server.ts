@@ -77,8 +77,39 @@ export type TestServer = { url: (path: string) => string; close: () => Promise<v
 
 /** Serves a few static pages on 127.0.0.1 so tests never depend on the internet. */
 export async function startTestServer(): Promise<TestServer> {
+  // /feed.xml grows by one post each time /feed/publish is requested (Live Folder tests).
+  let posts = 2;
+  const feed = () =>
+    `<?xml version="1.0"?><rss version="2.0"><channel><title>Test Feed</title>${Array.from(
+      { length: posts },
+      (_, i) =>
+        `<item><title>Post ${i + 1}</title><link>/post/${i + 1}</link><guid>post-${i + 1}</guid>` +
+        `<pubDate>${new Date(Date.UTC(2026, 9, 1 + i)).toUTCString()}</pubDate></item>`,
+    ).join('')}</channel></rss>`;
   const server = createServer((req, res) => {
     const path = (req.url ?? '/').split('?')[0]!;
+    if (path === '/feed.xml') {
+      res.writeHead(200, { 'content-type': 'application/rss+xml' }).end(feed());
+      return;
+    }
+    if (path === '/feed/publish') {
+      posts++;
+      res.writeHead(204).end();
+      return;
+    }
+    if (path === '/blog') {
+      // A site that advertises its feed (the user types the site, Orbit finds the feed).
+      res
+        .writeHead(200, { 'content-type': 'text/html' })
+        .end(
+          '<html><head><title>Blog</title><link rel="alternate" type="application/rss+xml" href="/feed.xml"></head><body>Blog</body></html>',
+        );
+      return;
+    }
+    if (path.startsWith('/post/')) {
+      res.writeHead(200, { 'content-type': 'text/html' }).end(page(`Post ${path.slice(6)}`));
+      return;
+    }
     if (path === '/auth') {
       // HTTP Basic auth: user "orbit", password "s3cret".
       const expected = `Basic ${Buffer.from('orbit:s3cret').toString('base64')}`;

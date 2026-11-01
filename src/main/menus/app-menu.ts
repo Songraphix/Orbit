@@ -242,6 +242,27 @@ export function installAppMenu(actions: AppMenuActions): void {
       submenu: [
         { id: 'new-space', label: 'New Space', click: actions.newSpace },
         { id: 'new-folder', label: 'New Folder', click: actions.newFolder },
+        {
+          label: 'Add Live Folder',
+          submenu: [
+            { id: 'live-rss', label: 'RSS Feed…', click: () => actions.command('live-rss') },
+            {
+              id: 'live-pulls',
+              label: 'GitHub Pull Requests…',
+              click: () => actions.command('live-pulls'),
+            },
+            {
+              id: 'live-issues',
+              label: 'GitHub Issues…',
+              click: () => actions.command('live-issues'),
+            },
+          ],
+        },
+        {
+          id: 'live-refresh',
+          label: 'Refresh Live Folders',
+          click: () => actions.command('live-refresh'),
+        },
         { type: 'separator' },
         {
           id: 'next-space',

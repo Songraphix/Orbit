@@ -25,6 +25,18 @@ export const COMMANDS: readonly CommandDef[] = [
   { id: 'exit-split', title: 'Exit Split View', keywords: ['side by side', 'pane', 'unsplit'] },
   { id: 'swap-split', title: 'Swap Split Panes', keywords: ['side by side', 'pane'] },
   {
+    id: 'live-rss',
+    title: 'Add RSS Live Folder…',
+    keywords: ['feed', 'blog', 'news', 'subscribe'],
+  },
+  {
+    id: 'live-pulls',
+    title: 'Add GitHub Pull Requests Live Folder…',
+    keywords: ['github', 'pr', 'review'],
+  },
+  { id: 'live-issues', title: 'Add GitHub Issues Live Folder…', keywords: ['github', 'bugs'] },
+  { id: 'live-refresh', title: 'Refresh Live Folders', keywords: ['feed', 'update'] },
+  {
     id: 'library',
     title: 'Library',
     keywords: ['media', 'downloads', 'easels', 'spaces', 'boosts'],

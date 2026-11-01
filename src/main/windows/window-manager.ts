@@ -51,6 +51,12 @@ export type WindowManagerDeps = {
   loadOverlay: (view: WebContentsView) => void;
   /** Runs an app command for a window (the sidebar's + menu). */
   runCommand?: (controller: WindowController, id: string) => void;
+  /** Live Folders (F-28), for the space and folder menus. */
+  liveFolders?: {
+    add: (controller: WindowController, kind: 'rss' | 'pulls' | 'issues', spaceId: string) => void;
+    refresh: (folderId: string | null) => void;
+    markAllRead: (folderId: string) => void;
+  };
 };
 
 /** One Orbit window and the services scoped to it. */
@@ -337,6 +343,11 @@ export class WindowManager {
       toast: (message) => broadcaster.sendTo(contents, 'toast:show', { message, at: Date.now() }),
       openCommandBar: () => overlay.openCommandBar('new'),
       command: (commandId) => this.deps.runCommand?.(controller, commandId),
+      liveFolders: this.deps.liveFolders && {
+        add: (kind, spaceId) => this.deps.liveFolders?.add(controller, kind, spaceId),
+        refresh: (folderId) => this.deps.liveFolders?.refresh(folderId),
+        markAllRead: (folderId) => this.deps.liveFolders?.markAllRead(folderId),
+      },
     });
     const controller: WindowController = {
       win,

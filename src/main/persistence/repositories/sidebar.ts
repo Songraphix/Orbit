@@ -1,3 +1,5 @@
+import { itemDataSchema } from '@shared/types/live-folders';
+import type { ItemData } from '@shared/types/live-folders';
 import { generateKeyBetween } from 'fractional-indexing';
 import {
   DEFAULT_PROFILE_ID,
@@ -38,7 +40,18 @@ type ItemRow = {
   collapsed: number;
   last_active_at: number | null;
   created_at: number;
+  data_json: string | null;
 };
+
+function parseData(json: string | null): ItemData | null {
+  if (!json) return null;
+  try {
+    const parsed = itemDataSchema.safeParse(JSON.parse(json));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
 
 const toItem = (r: ItemRow): SidebarItem => ({
   id: r.id,
@@ -56,6 +69,7 @@ const toItem = (r: ItemRow): SidebarItem => ({
   collapsed: r.collapsed === 1,
   lastActiveAt: r.last_active_at,
   createdAt: r.created_at,
+  data: parseData(r.data_json),
 });
 
 function parseTheme(json: string): SpaceTheme {
@@ -224,13 +238,13 @@ export class SidebarRepository {
     transaction(this.db, () => {
       const upsert = this.db.prepare(
         `INSERT INTO sidebar_items (id, profile_id, space_id, parent_id, section, kind, sort_key, title,
-           title_override, url, home_url, favicon, collapsed, last_active_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           title_override, url, home_url, favicon, collapsed, last_active_at, created_at, data_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET profile_id = excluded.profile_id, space_id = excluded.space_id,
            parent_id = excluded.parent_id, section = excluded.section, sort_key = excluded.sort_key,
            title = excluded.title, title_override = excluded.title_override, url = excluded.url,
            home_url = excluded.home_url, favicon = excluded.favicon, collapsed = excluded.collapsed,
-           last_active_at = excluded.last_active_at`,
+           last_active_at = excluded.last_active_at, data_json = excluded.data_json`,
       );
       // Parents first, so foreign keys hold when a folder and its children arrive together.
       const ordered = [...changed].sort(
@@ -254,6 +268,7 @@ export class SidebarRepository {
           i.collapsed ? 1 : 0,
           i.lastActiveAt,
           i.createdAt,
+          i.data ? JSON.stringify(i.data) : null,
         );
       }
       const del = this.db.prepare('DELETE FROM sidebar_items WHERE id = ?');

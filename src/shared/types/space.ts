@@ -48,6 +48,11 @@ export const sidebarRowSchema = z.object({
   isLoading: z.boolean(),
   /** A pinned tab or favorite that navigated away from its home URL. */
   awayFromHome: z.boolean(),
+  /** A Live Folder (F-28), and its last refresh error. */
+  liveFolder: z.boolean(),
+  liveError: z.string().nullable(),
+  /** A Live Folder item that hasn't been opened yet (a dot). */
+  unread: z.boolean(),
 });
 export type SidebarRow = z.output<typeof sidebarRowSchema>;
 

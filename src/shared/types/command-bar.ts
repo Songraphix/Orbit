@@ -31,6 +31,15 @@ export const promptSchema = z.discriminatedUnion('kind', [
     action: z.string(),
   }),
   z.object({ id: z.number(), kind: z.literal('login'), host: z.string(), realm: z.string() }),
+  /** A line of text for Orbit itself (e.g. a Live Folder's feed address). */
+  z.object({
+    id: z.number(),
+    kind: z.literal('input'),
+    title: z.string(),
+    message: z.string(),
+    placeholder: z.string(),
+    confirm: z.string(),
+  }),
 ]);
 export type Prompt = z.output<typeof promptSchema>;
 
@@ -41,6 +50,8 @@ export const promptAnswerSchema = z.object({
   remember: z.boolean().optional(),
   username: z.string().max(1000).optional(),
   password: z.string().max(1000).optional(),
+  /** input: what was typed. */
+  value: z.string().max(2000).optional(),
 });
 export type PromptAnswer = z.output<typeof promptAnswerSchema>;
 

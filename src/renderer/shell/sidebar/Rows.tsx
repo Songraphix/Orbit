@@ -4,6 +4,7 @@ import {
   Folder,
   Globe,
   PenTool,
+  Rss,
   Sparkles,
   Wand2,
   X,
@@ -161,6 +162,14 @@ export function TabRow({
             {row.title}
           </span>
         )}
+        {row.unread && (
+          // A Live Folder item nobody has opened yet (F-28).
+          <span
+            className="size-2 shrink-0 rounded-full bg-[var(--accent)]"
+            aria-label="New"
+            data-testid="unread-dot"
+          />
+        )}
         {row.awayFromHome && (
           <button
             type="button"
@@ -220,12 +229,22 @@ export function FolderRow({
           window.dispatchEvent(new CustomEvent('orbit:rename', { detail: row.id }));
         }}
         data-testid="folder-row"
+        data-live-folder={row.liveFolder}
+        title={row.liveError ? `Couldn’t refresh: ${row.liveError}` : undefined}
       >
         <ChevronRight
           size={14}
           className={`shrink-0 opacity-60 transition-transform ${row.collapsed ? '' : 'rotate-90'}`}
         />
-        <Folder size={14} className="shrink-0 opacity-70" />
+        {row.liveFolder ? (
+          <Rss
+            size={14}
+            className={`shrink-0 ${row.liveError ? 'text-amber-400' : 'opacity-70'}`}
+            aria-label={row.liveError ? `Live Folder: ${row.liveError}` : 'Live Folder'}
+          />
+        ) : (
+          <Folder size={14} className="shrink-0 opacity-70" />
+        )}
         {renaming ? (
           <RenameInput
             initial={row.title}

@@ -1,4 +1,4 @@
-import { KeyRound, ShieldQuestion } from 'lucide-react';
+import { KeyRound, Rss, ShieldQuestion } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { Prompt } from '@shared/types/command-bar';
 
@@ -8,6 +8,7 @@ const answer = (input: {
   remember?: boolean;
   username?: string;
   password?: string;
+  value?: string;
 }) => void window.orbit.invoke('overlay:answer', input);
 
 const hostOf = (origin: string) => origin.replace(/^https?:\/\//, '');
@@ -28,8 +29,10 @@ export function PromptView({ prompt }: { prompt: Prompt }) {
       >
         {prompt.kind === 'permission' ? (
           <PermissionPrompt prompt={prompt} />
-        ) : (
+        ) : prompt.kind === 'login' ? (
           <LoginPrompt prompt={prompt} />
+        ) : (
+          <InputPrompt prompt={prompt} />
         )}
       </div>
     </div>
@@ -125,6 +128,55 @@ function LoginPrompt({ prompt }: { prompt: Extract<Prompt, { kind: 'login' }> })
           data-testid="login-submit"
         >
           Sign In
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** A line of text for Orbit itself (a Live Folder's feed address, a repository…). */
+function InputPrompt({ prompt }: { prompt: Extract<Prompt, { kind: 'input' }> }) {
+  const [value, setValue] = useState('');
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (value.trim()) answer({ id: prompt.id, allow: true, value: value.trim() });
+      }}
+      onKeyDown={(e) => e.key === 'Escape' && answer({ id: prompt.id, allow: false })}
+    >
+      <div className="flex gap-3">
+        <Rss size={20} className="mt-0.5 shrink-0 text-[var(--accent)]" />
+        <p>
+          <strong className="font-semibold">{prompt.title}</strong>
+          <span className="block text-xs text-neutral-500">{prompt.message}</span>
+        </p>
+      </div>
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={prompt.placeholder}
+        spellCheck={false}
+        className="mt-3 w-full rounded-lg border border-black/10 px-2.5 py-1.5 outline-none focus:border-[var(--accent)]"
+        data-testid="prompt-input"
+      />
+      <div className="mt-3 flex justify-end gap-2">
+        <button
+          type="button"
+          className="rounded-lg px-3 py-1.5 hover:bg-black/5"
+          onClick={() => answer({ id: prompt.id, allow: false })}
+          data-testid="prompt-cancel"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!value.trim()}
+          className="rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-white hover:brightness-110 disabled:opacity-50"
+          data-testid="prompt-confirm"
+        >
+          {prompt.confirm}
         </button>
       </div>
     </form>

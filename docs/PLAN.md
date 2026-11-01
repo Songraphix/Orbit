@@ -1050,7 +1050,7 @@ Apr 26 ─ May 16  Phase 11 Polish, performance, packaging, signing, updates →
 
 - [ ] AIService with key stored via `safeStorage`; Settings field for the key.
 - [ ] Tidy with zod-validated JSON output and undo.
-- [ ] Live Folders: RSS/Atom first, then GitHub.
+- [x] Live Folders: RSS/Atom first, then GitHub.
 - [ ] Optional: AI tab renaming; "summarise this page" command in the command bar.
 
 ### 8.15 Phase 11 — Polish, performance, packaging (Apr 26 – May 16)

@@ -159,6 +159,9 @@ export class TabManager {
           live: tab !== undefined,
           isLoading: tab?.state.isLoading ?? false,
           awayFromHome: item.homeUrl !== null && url !== null && !sameUrl(url, item.homeUrl),
+          liveFolder: Boolean(item.data?.live),
+          liveError: item.data?.live?.error ?? null,
+          unread: Boolean(item.data?.feed?.unread),
         };
       });
     return {
@@ -203,6 +206,10 @@ export class TabManager {
     const item = this.deps.store.item(id);
     if (!item || item.kind !== 'tab') return;
     this.deps.onActivate?.();
+    // A Live Folder item's dot goes once it's opened.
+    const feed = item.data?.feed;
+    if (feed?.unread)
+      this.deps.store.setData(id, { ...item.data, feed: { ...feed, unread: false } });
     if (item.spaceId && item.spaceId !== this.spaceId) this.setSpace(item.spaceId, false);
 
     const next = this.ensureLive(item);

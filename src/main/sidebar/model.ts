@@ -1,3 +1,4 @@
+import type { ItemData } from '@shared/types/live-folders';
 import { generateKeyBetween } from 'fractional-indexing';
 
 /**
@@ -29,6 +30,8 @@ export type SidebarItem = {
   collapsed: boolean;
   lastActiveAt: number | null;
   createdAt: number;
+  /** Live Folder source, feed-item state, Tidy flag (absent for ordinary items). */
+  data?: ItemData | null;
 };
 
 /** Where an item goes: a section of a space (or the favorites of a profile), inside an optional
@@ -194,7 +197,14 @@ export function updateItem(
   patch: Partial<
     Pick<
       SidebarItem,
-      'title' | 'titleOverride' | 'url' | 'favicon' | 'collapsed' | 'lastActiveAt' | 'homeUrl'
+      | 'title'
+      | 'titleOverride'
+      | 'url'
+      | 'favicon'
+      | 'collapsed'
+      | 'lastActiveAt'
+      | 'homeUrl'
+      | 'data'
     >
   >,
 ): SidebarItem[] {

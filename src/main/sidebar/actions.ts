@@ -41,6 +41,12 @@ export type SidebarUi = {
   openCommandBar: () => void;
   /** Runs an app command by id (e.g. 'new-boost'). */
   command: (id: string) => void;
+  /** Live Folders (F-28): add one to a space, refresh, mark read. */
+  liveFolders?: {
+    add: (kind: 'rss' | 'pulls' | 'issues', spaceId: string) => void;
+    refresh: (folderId: string | null) => void;
+    markAllRead: (folderId: string) => void;
+  };
 };
 
 /**
@@ -207,6 +213,25 @@ export class SidebarActions {
         { type: 'separator' },
         { label: 'Delete Folder (Keep Tabs)', click: () => this.deleteFolder(item.id) },
       );
+      const live = item.data?.live;
+      if (live && this.ui.liveFolders) {
+        const controls = this.ui.liveFolders;
+        template.unshift(
+          { label: 'Refresh Live Folder', click: () => controls.refresh(item.id) },
+          { label: 'Mark All as Read', click: () => controls.markAllRead(item.id) },
+          ...(live.error
+            ? [{ label: `Last refresh failed: ${live.error}`, enabled: false }]
+            : live.refreshedAt
+              ? [
+                  {
+                    label: `Updated ${new Date(live.refreshedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`,
+                    enabled: false,
+                  },
+                ]
+              : []),
+          { type: 'separator' },
+        );
+      }
     } else {
       if (item.section === 'today') {
         template.push({
@@ -329,8 +354,17 @@ export class SidebarActions {
       { label: 'New Folder', click: () => this.newFolder('pinned') },
       {
         label: 'Live Folders',
-        enabled: false,
-        submenu: [{ label: 'Coming in Phase 10', enabled: false }],
+        enabled: this.ui.liveFolders !== undefined,
+        submenu: [
+          { label: 'Add RSS Feed…', click: () => this.ui.liveFolders?.add('rss', spaceId) },
+          {
+            label: 'Add GitHub Pull Requests…',
+            click: () => this.ui.liveFolders?.add('pulls', spaceId),
+          },
+          { label: 'Add GitHub Issues…', click: () => this.ui.liveFolders?.add('issues', spaceId) },
+          { type: 'separator' },
+          { label: 'Refresh All', click: () => this.ui.liveFolders?.refresh(null) },
+        ],
       },
       { type: 'separator' },
       { label: 'Share Space…', enabled: false },

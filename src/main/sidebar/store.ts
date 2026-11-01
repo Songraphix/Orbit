@@ -1,3 +1,4 @@
+import type { ItemData } from '@shared/types/live-folders';
 import { randomUUID } from 'node:crypto';
 import { generateKeyBetween } from 'fractional-indexing';
 import { DEFAULT_THEME } from '@shared/types/space';
@@ -146,6 +147,11 @@ export class SidebarStore {
 
   setCollapsed(id: string, collapsed: boolean): void {
     this.commit(updateItem(this.items, id, { collapsed }));
+  }
+
+  /** Live Folder / feed / Tidy data on an item (null clears it). */
+  setData(id: string, data: ItemData | null): void {
+    this.commit(updateItem(this.items, id, { data }));
   }
 
   setHome(id: string, homeUrl: string | null): void {

@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, session } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, net, session } from 'electron';
 import type { Session } from 'electron';
 import type { WebContentsView } from 'electron';
 import { APP_NAME, isInternalPage } from '@shared/constants';
@@ -22,6 +22,9 @@ import { newEasel, registerEaselHandlers } from './ipc/handlers/easels';
 import { CaptureRequests } from './easels/capture-requests';
 import { registerLibraryHandlers } from './ipc/handlers/library';
 import { MediaLibrary } from './library/media';
+import { LiveFolderService } from './live-folders/service';
+import { feedInputUrl, githubRepo } from './live-folders/model';
+import type { LiveSource } from '@shared/types/live-folders';
 import { registerCommandBarHandlers } from './ipc/handlers/command-bar';
 import { registerFindHandlers } from './ipc/handlers/find';
 import { registerInternalPageHandlers } from './ipc/handlers/internal-pages';
@@ -78,6 +81,7 @@ let lifecycle: TabLifecycle | null = null;
 let downloadService: DownloadService | null = null;
 let arcImporter: ArcImporter | null = null;
 let boostService: BoostService | null = null;
+let liveFolders: LiveFolderService | null = null;
 
 // A stray error in main must never show Electron's blocking error dialog (a browser that can't
 // quit is worse than one that logs). Logged for debugging instead.
@@ -211,6 +215,58 @@ async function importFromArc(controller: WindowController): Promise<void> {
   );
 }
 
+const LIVE_PROMPTS = {
+  rss: {
+    title: 'Add an RSS Feed',
+    message: 'A feed address, or a site that has one. New posts appear in a folder.',
+    placeholder: 'example.com/blog',
+  },
+  pulls: {
+    title: 'Add GitHub Pull Requests',
+    message: 'Open pull requests of a repository, kept up to date in a folder.',
+    placeholder: 'owner/repository',
+  },
+  issues: {
+    title: 'Add GitHub Issues',
+    message: 'Open issues of a repository, kept up to date in a folder.',
+    placeholder: 'owner/repository',
+  },
+} as const;
+
+/** Space menu → Live Folders › Add… (F-28): ask for the source, check it, add the folder. */
+async function addLiveFolder(
+  controller: WindowController,
+  kind: 'rss' | 'pulls' | 'issues',
+  spaceId: string,
+): Promise<void> {
+  const space = sidebarStore?.space(spaceId);
+  if (!liveFolders || !space) return;
+  const answer = await controller.overlay.ask({
+    kind: 'input',
+    ...LIVE_PROMPTS[kind],
+    confirm: 'Add',
+  });
+  if (!answer.allow || !answer.value) return;
+  let source: LiveSource | null;
+  if (kind === 'rss') {
+    const url = feedInputUrl(answer.value);
+    source = url ? { type: 'rss', url } : null;
+  } else {
+    const repo = githubRepo(answer.value);
+    source = repo ? { type: 'github', repo, what: kind } : null;
+  }
+  if (!source) {
+    toast(controller, kind === 'rss' ? 'That isn’t a web address' : 'Use owner/repository');
+    return;
+  }
+  try {
+    const folder = await liveFolders.create(source, space);
+    toast(controller, `Added ${folder.title}`);
+  } catch (error) {
+    toast(controller, `Couldn’t add it: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 /** Runs a command by id for a window (command bar items and menu items share these). */
 function runCommand(controller: WindowController, commandId: string): void {
   const { tabs, layout } = controller;
@@ -257,6 +313,18 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'new-easel':
       if (persistence) newEasel(persistence.easels, controller);
       return;
+    case 'live-rss':
+    case 'live-pulls':
+    case 'live-issues':
+      void addLiveFolder(
+        controller,
+        commandId === 'live-rss' ? 'rss' : commandId === 'live-pulls' ? 'pulls' : 'issues',
+        tabs.space.id,
+      );
+      return;
+    case 'live-refresh':
+      void liveFolders?.refreshAll().then(() => toast(controller, 'Live Folders refreshed'));
+      return;
     case 'library':
       controller.library.open('media');
       return;
@@ -301,6 +369,7 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   lifecycle?.stop();
+  liveFolders?.stop();
   sidebarStore?.close();
   persistence?.close();
   persistence = null;
@@ -320,6 +389,14 @@ void app.whenReady().then(() => {
       senders.has(contents.id) || (devOrigin !== null && contents.getURL().startsWith(devOrigin)),
   );
   boostService = boosts;
+  // Live Folders (F-28): fetched by main (never by a page), in the default session.
+  const live = new LiveFolderService({
+    store,
+    fetch: (url, init) => net.fetch(url, init),
+    isOpen: (itemId) => windows?.all().some((c) => c.tabs.get(itemId) !== undefined) ?? false,
+  });
+  liveFolders = live;
+  live.start();
   app.on('web-contents-created', (_event, contents) => boosts.attach(contents));
   /** One session per profile (F-17). The default profile keeps Electron's default session, so
    *  logins from before profiles existed carry over. */
@@ -394,6 +471,11 @@ void app.whenReady().then(() => {
     loadInternal,
     loadOverlay,
     runCommand,
+    liveFolders: {
+      add: (controller, kind, spaceId) => void addLiveFolder(controller, kind, spaceId),
+      refresh: (folderId) => void (folderId ? live.refresh(folderId) : live.refreshAll()),
+      markAllRead: (folderId) => live.markAllRead(folderId),
+    },
   });
   const windowManager = windows;
 
