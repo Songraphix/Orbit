@@ -113,6 +113,15 @@ function Chrome({
 
   return (
     <>
+      {!layout.sidebar.visible && !layout.fullscreen && (
+        // The hidden sidebar's edge: resting the pointer here slides it out (F-01).
+        <div
+          className="absolute inset-y-0 left-0 z-10"
+          style={{ width: layout.card.x }}
+          onPointerEnter={() => void window.orbit.invoke('sidebar:peek', { open: true })}
+          data-testid="sidebar-edge"
+        />
+      )}
       {layout.sidebar.visible && (
         <Sidebar
           width={layout.sidebar.width}

@@ -5,6 +5,7 @@ import { PeekFrame } from './PeekFrame';
 import { SiteControls } from './SiteControls';
 import { CaptureLayer } from './CaptureLayer';
 import { PromptView } from './PromptView';
+import { FloatingSidebar } from './FloatingSidebar';
 
 /**
  * Transparent top-most layer for floating UI (ADR-006). Main shows this view only while
@@ -17,6 +18,7 @@ export function OverlayApp() {
     peek: null,
     siteControls: null,
     capture: null,
+    sidebarPeek: null,
   });
 
   useEffect(() => {
@@ -36,8 +38,14 @@ export function OverlayApp() {
   ) : state.siteControls ? (
     <SiteControls view={state.siteControls} />
   ) : null;
+  // Anything else opening takes over the overlay: the slid-out sidebar goes back in.
+  const busy = top !== null || state.peek !== null;
+  useEffect(() => {
+    if (busy && state.sidebarPeek) void window.orbit.invoke('sidebar:peek', { open: false });
+  }, [busy, state.sidebarPeek]);
   return (
     <>
+      {state.sidebarPeek && !busy && <FloatingSidebar width={state.sidebarPeek.width} />}
       {state.peek && <PeekFrame peek={state.peek} interactive={top === null} />}
       {top}
     </>

@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { PanelLeft, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent, PointerEvent } from 'react';
 import type { DownloadView } from '@shared/types/downloads';
@@ -24,6 +24,8 @@ type Props = {
   media: MediaState;
   /** Library mode (F-11): the sidebar lists the Library's sections instead of tabs. */
   librarySection: LibrarySection | null;
+  /** Drawn by the overlay as the hidden sidebar slid out over the page (no resize edge). */
+  floating?: boolean;
   /** Called when an edge drag starts/ends, so the shell can stand in for the live web view. */
   onResizeStart: () => void;
   onResizeEnd: () => void;
@@ -93,6 +95,7 @@ export function Sidebar({
   downloads,
   media,
   librarySection,
+  floating = false,
   onResizeStart,
   onResizeEnd,
 }: Props) {
@@ -109,10 +112,22 @@ export function Sidebar({
       data-testid="sidebar"
     >
       <div
-        className="drag-region shrink-0"
+        className="drag-region relative shrink-0"
         style={{ height: TITLE_STRIP_HEIGHT }}
         data-testid="title-strip"
-      />
+      >
+        {/* Beside the traffic lights, like Arc: hide the sidebar (⌘S), or pin it back. */}
+        <button
+          type="button"
+          aria-label={floating ? 'Keep Sidebar Open' : 'Hide Sidebar'}
+          title={floating ? 'Keep Sidebar Open (⌘S)' : 'Hide Sidebar (⌘S)'}
+          onClick={() => void window.orbit.invoke('sidebar:toggle', {})}
+          className="no-drag absolute top-[11px] left-[78px] grid size-6 place-items-center rounded-md text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+          data-testid="sidebar-toggle"
+        >
+          <PanelLeft size={15} />
+        </button>
+      </div>
       {librarySection && <LibraryNav section={librarySection} />}
       {!librarySection && sidebar && space && (
         <DndContext.Provider value={dnd}>
@@ -175,7 +190,7 @@ export function Sidebar({
       {!librarySection && sidebar && (
         <BottomBar spaces={sidebar.spaces} activeSpaceId={sidebar.activeSpaceId} />
       )}
-      <ResizeHandle onStart={onResizeStart} onEnd={onResizeEnd} />
+      {!floating && <ResizeHandle onStart={onResizeStart} onEnd={onResizeEnd} />}
     </aside>
   );
 }

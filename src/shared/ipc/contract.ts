@@ -68,6 +68,11 @@ export const contract = {
     input: z.object({}).strict(),
     output: z.void(),
   },
+  /** The pointer reached the hidden sidebar's edge (open) or left the slid-out sidebar. */
+  'sidebar:peek': {
+    input: z.object({ open: z.boolean() }).strict(),
+    output: z.void(),
+  },
   'sidebar:setWidth': {
     input: z.object({ width: z.number().finite() }).strict(),
     output: z.void(),

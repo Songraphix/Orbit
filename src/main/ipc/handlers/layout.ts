@@ -16,6 +16,10 @@ export function registerLayoutHandlers(router: IpcRouter, windows: WindowManager
     windowFor(sender.webContentsId).layout.toggleSidebar();
   });
 
+  router.handle('sidebar:peek', ({ open }, { sender }) => {
+    windowFor(sender.webContentsId).setSidebarPeek(open);
+  });
+
   router.handle('sidebar:setWidth', ({ width }, { sender }) => {
     windowFor(sender.webContentsId).layout.setSidebarWidth(width);
   });

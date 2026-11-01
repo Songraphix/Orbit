@@ -3,6 +3,7 @@ import type { WebContentsView } from 'electron';
 import { APP_NAME } from '@shared/constants';
 import type { RendererEntry } from '@shared/constants';
 import type { Broadcaster } from '../ipc/broadcaster';
+import type { EventPayload } from '@shared/ipc/contract';
 import type { SenderRegistry } from '../ipc/sender';
 import type { ArchiveRepository } from '../persistence/repositories/archive';
 import type { SettingsRepository } from '../persistence/repositories/settings';
@@ -62,6 +63,8 @@ export type WindowController = {
   media: MediaController;
   peek: PeekController;
   library: LibraryController;
+  /** Slides the hidden sidebar out over the page, or back in. */
+  setSidebarPeek: (open: boolean) => void;
   store: SidebarStore;
   sidebar: SidebarActions;
 };
@@ -149,6 +152,14 @@ export class WindowManager {
     let tabs: TabManager | null = null;
     let peek: PeekController | null = null;
     let library: LibraryController | null = null;
+    let overlayRef: OverlayController | null = null;
+    /** The shell's sidebar state also goes to the overlay, which draws the slid-out sidebar. */
+    const toOverlay = <E extends 'state:sidebar' | 'state:media' | 'state:library'>(
+      event: E,
+      payload: EventPayload<E>,
+    ) => {
+      if (overlayRef) broadcaster.sendTo(overlayRef.view.webContents, event, payload);
+    };
     let lastActiveTabId: string | null = null;
     const find = new FindController(
       () => tabs?.active?.view.webContents ?? null,
@@ -158,6 +169,8 @@ export class WindowManager {
       tabs?.applyLayout(); // web views move in the same tick the shell is told
       peek?.fit();
       library?.fit();
+      // Pinning the sidebar (or a page going fullscreen) ends the slide-out.
+      if (next.sidebar.visible || next.fullscreen) closeSidebarPeek();
       broadcaster.sendTo(contents, 'state:layout', next);
     });
     tabs = new TabManager({
@@ -197,6 +210,7 @@ export class WindowManager {
       onChange: (snapshot, sidebar) => {
         broadcaster.sendTo(contents, 'state:tabs', snapshot);
         broadcaster.sendTo(contents, 'state:sidebar', sidebar);
+        toOverlay('state:sidebar', sidebar);
         // Find belongs to the page it searched; switching tabs closes it.
         if (snapshot.activeTabId !== lastActiveTabId) {
           lastActiveTabId = snapshot.activeTabId;
@@ -225,9 +239,10 @@ export class WindowManager {
       },
     });
     const tabManager = tabs;
-    const media = new MediaController(tabManager, (state) =>
-      broadcaster.sendTo(contents, 'state:media', state),
-    );
+    const media = new MediaController(tabManager, (state) => {
+      broadcaster.sendTo(contents, 'state:media', state);
+      toOverlay('state:media', state);
+    });
 
     // HTML fullscreen (section 4.6): Electron doesn't do this for us. The page takes the whole
     // window, and the window goes fullscreen unless it already was (then we leave it as is).
@@ -277,6 +292,19 @@ export class WindowManager {
       send: (target, state) => broadcaster.sendTo(target, 'state:overlay', state),
       refocus: () => tabManager.active?.view.webContents.focus(),
     });
+    overlayRef = overlay;
+    /** The hidden sidebar slides out over the page while the pointer is on it (F-01). */
+    function setSidebarPeek(open: boolean): void {
+      const current = layout.current();
+      if (open && (current.sidebar.visible || current.fullscreen)) return;
+      overlay.setSidebarPeek(open ? current.sidebar.width : null);
+      // The traffic lights come out with it, like Arc.
+      win.setWindowButtonVisibility(open || current.sidebar.visible);
+    }
+    function closeSidebarPeek(): void {
+      if (overlayRef?.sidebarPeekOpen) setSidebarPeek(false);
+    }
+    broadcaster.add(overlay.view.webContents); // downloads, for the slid-out sidebar's shelf
 
     peek = new PeekController({
       win,
@@ -296,6 +324,7 @@ export class WindowManager {
       onChange: (section) => {
         peek?.close();
         broadcaster.sendTo(contents, 'state:library', { section });
+        toOverlay('state:library', { section });
       },
     });
     const libraryController = library;
@@ -318,6 +347,7 @@ export class WindowManager {
       media,
       peek: peekController,
       library: libraryController,
+      setSidebarPeek,
       store: this.deps.store,
       sidebar,
     };

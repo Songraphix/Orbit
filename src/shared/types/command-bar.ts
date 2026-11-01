@@ -59,6 +59,8 @@ export type PeekView = z.output<typeof peekViewSchema>;
 
 export const overlayStateSchema = z.object({
   peek: peekViewSchema.nullable(),
+  /** The hidden sidebar, slid out over the page while the pointer is on it (F-01). */
+  sidebarPeek: z.object({ width: z.number() }).nullable(),
   siteControls: siteControlsViewSchema.nullable(),
   /** Area screenshot: the page's area in window coordinates, while the user drags. */
   capture: z.object({ area: rectSchema, openedAt: z.number() }).nullable(),

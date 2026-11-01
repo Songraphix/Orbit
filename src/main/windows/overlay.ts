@@ -38,6 +38,7 @@ export class OverlayController {
   private peek: PeekView | null = null;
   private siteControls: SiteControlsView | null = null;
   private capture: OverlayState['capture'] = null;
+  private sidebarPeek: OverlayState['sidebarPeek'] = null;
 
   constructor(private readonly deps: OverlayDeps) {
     this.view = new WebContentsView({
@@ -69,6 +70,7 @@ export class OverlayController {
       peek: this.peek,
       siteControls: this.siteControls,
       capture: this.capture,
+      sidebarPeek: this.sidebarPeek,
     };
   }
 
@@ -78,8 +80,43 @@ export class OverlayController {
       this.prompts.length > 0 ||
       this.peek !== null ||
       this.siteControls !== null ||
+      this.capture !== null ||
+      this.sidebarPeek !== null
+    );
+  }
+
+  /** Only the slid-out sidebar is showing: the overlay covers just that strip, so the rest of
+   *  the page keeps taking clicks. */
+  private get onlySidebar(): boolean {
+    return this.sidebarPeek !== null && !this.othersOpen;
+  }
+
+  private get othersOpen(): boolean {
+    return (
+      this.commandBar !== null ||
+      this.prompts.length > 0 ||
+      this.peek !== null ||
+      this.siteControls !== null ||
       this.capture !== null
     );
+  }
+
+  get sidebarPeekOpen(): boolean {
+    return this.sidebarPeek !== null;
+  }
+
+  /** Slides the hidden sidebar out (`width`) or back in (null). Keyboard focus stays put. */
+  setSidebarPeek(width: number | null): void {
+    if (width === (this.sidebarPeek?.width ?? null)) return;
+    this.sidebarPeek = width === null ? null : { width };
+    if (width === null) {
+      if (this.othersOpen) this.fit();
+      else this.view.setVisible(false);
+    } else {
+      this.fit();
+      this.view.setVisible(true);
+    }
+    this.send();
   }
 
   /** Area screenshot: the overlay lets the user drag a rectangle over `area`. */
@@ -163,7 +200,9 @@ export class OverlayController {
   fit(): void {
     if (this.deps.win.isDestroyed()) return;
     const [width = 0, height = 0] = this.deps.win.getContentSize();
-    this.view.setBounds({ x: 0, y: 0, width, height });
+    // Room for the sidebar's shadow when it's the only thing showing.
+    const strip = this.onlySidebar ? Math.min(width, this.sidebarPeek!.width + 24) : width;
+    this.view.setBounds({ x: 0, y: 0, width: strip, height });
   }
 
   destroy(): void {
@@ -184,6 +223,8 @@ export class OverlayController {
     if (!this.isOpen) {
       this.view.setVisible(false);
       this.deps.refocus();
+    } else {
+      this.fit(); // e.g. back to just the slid-out sidebar
     }
     this.send();
   }

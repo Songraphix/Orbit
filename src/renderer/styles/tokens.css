@@ -44,6 +44,13 @@ body {
 }
 
 /* Overlay backdrops (Peek) fade in. */
+@keyframes orbit-slide-in {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+
 @keyframes orbit-fade-in {
   from {
     opacity: 0;
