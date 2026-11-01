@@ -32,6 +32,8 @@ export type TabEnv = {
   onMedia?(event: 'playing' | 'paused'): void;
   /** Find-in-page results from Chromium. */
   onFoundInPage(result: { requestId: number; activeMatchOrdinal: number; matches: number }): void;
+  /** The page took keyboard focus (e.g. clicked in split view). */
+  onFocus?(): void;
 };
 
 export type HistorySink = {
@@ -184,6 +186,7 @@ export class TabController {
     });
     view.setBackgroundColor('#ffffff');
     const contents = view.webContents;
+    contents.on('focus', () => this.env.onFocus?.());
 
     if (kind === 'internal') {
       const id = contents.id;

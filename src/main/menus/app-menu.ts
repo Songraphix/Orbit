@@ -277,6 +277,15 @@ export function installAppMenu(actions: AppMenuActions): void {
         },
         { type: 'separator' },
         {
+          id: 'split-view',
+          label: 'New Split View',
+          accelerator: 'Ctrl+Shift+=',
+          click: () => actions.command('split-view'),
+        },
+        { id: 'exit-split', label: 'Exit Split View', click: () => actions.command('exit-split') },
+        { id: 'swap-split', label: 'Swap Split Panes', click: () => actions.command('swap-split') },
+        { type: 'separator' },
+        {
           id: 'next-tab',
           label: 'Next Tab',
           accelerator: 'Ctrl+Tab',

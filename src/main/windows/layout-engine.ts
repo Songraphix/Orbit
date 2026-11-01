@@ -21,6 +21,7 @@ export class LayoutEngine {
   private sidebarWidth: number;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private fullscreen = false;
+  private splitRatio: number | null = null;
   private layout: Layout;
 
   constructor(
@@ -71,6 +72,13 @@ export class LayoutEngine {
     this.update();
   }
 
+  /** Split view started/resized (ratio) or ended (null). Not persisted. */
+  setSplitRatio(ratio: number | null): void {
+    if (ratio === this.splitRatio) return;
+    this.splitRatio = ratio;
+    this.update();
+  }
+
   /** Call when the window's size changes. */
   update(): void {
     this.layout = this.compute();
@@ -92,6 +100,7 @@ export class LayoutEngine {
       sidebarVisible: this.sidebarVisible,
       sidebarWidth: this.sidebarWidth,
       htmlFullscreen: this.fullscreen,
+      splitRatio: this.splitRatio,
     });
   }
 }

@@ -29,6 +29,27 @@ export function registerLayoutHandlers(router: IpcRouter, windows: WindowManager
     snapshot: windowFor(sender.webContentsId).tabs.freeze(),
   }));
 
+  router.handle('split:create', ({ tabId }, { sender }) => {
+    const { tabs } = windowFor(sender.webContentsId);
+    if (tabId) tabs.splitWith(tabId);
+    else tabs.splitWithNew();
+  });
+  router.handle('split:exit', (_input, { sender }) =>
+    windowFor(sender.webContentsId).tabs.exitSplit(),
+  );
+  router.handle('split:swap', (_input, { sender }) =>
+    windowFor(sender.webContentsId).tabs.swapSplit(),
+  );
+  router.handle('split:setRatio', ({ ratio }, { sender }) =>
+    windowFor(sender.webContentsId).tabs.setSplitRatio(ratio),
+  );
+  router.handle('split:beginResize', (_input, { sender }) => {
+    windowFor(sender.webContentsId).tabs.freeze();
+  });
+  router.handle('split:endResize', (_input, { sender }) => {
+    windowFor(sender.webContentsId).tabs.unfreeze();
+  });
+
   router.handle('sidebar:endResize', (_input, { sender }) => {
     const { tabs, layout } = windowFor(sender.webContentsId);
     layout.flush(); // save the final width now rather than after the debounce

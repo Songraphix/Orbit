@@ -13,6 +13,8 @@ import type { Space } from '../persistence/repositories/sidebar';
 import type { Section, SidebarItem } from '../sidebar/model';
 import type { SidebarStore } from '../sidebar/store';
 import { nextActiveAfterClose } from './model';
+import { inSplit, makeSplit, partnerOf, splitAfterActivate, swapped, withRatio } from './split';
+import type { Split } from './split';
 import { TabController } from './tab-controller';
 import type { TabEnv } from './tab-controller';
 
@@ -45,6 +47,8 @@ export type TabManagerDeps = Pick<
   onUnresponsive?: (tabId: string) => void;
   /** A tab's media started or stopped. */
   onMedia?: (tabId: string, event: 'playing' | 'paused') => void;
+  /** Split view started, resized or ended (null): the layout needs the new ratio. */
+  onSplitChange?: (ratio: number | null) => void;
 };
 
 const isInternal = (url: string | null) => (url ?? '').startsWith('orbit://');
@@ -58,6 +62,8 @@ export class TabManager {
   private readonly live = new Map<string, TabController>();
   private spaceId: string;
   private activeId: string | null = null;
+  /** Split view (F-13): two tabs side by side; `activeId` is the focused pane. */
+  private split: Split | null = null;
   private notifyScheduled = false;
   private frozen = false;
   private prepared: { tabId: string; at: number; dataUrl: string } | null = null;
@@ -90,6 +96,11 @@ export class TabManager {
     return this.activeId;
   }
 
+  /** The active tab, or either split pane. */
+  isOnScreen(id: string): boolean {
+    return this.shownIds().includes(id);
+  }
+
   get(id: string): TabController | undefined {
     return this.live.get(id);
   }
@@ -109,6 +120,7 @@ export class TabManager {
     return {
       tabs: this.deps.store.tabsInOrder(this.space).map((item) => this.tabState(item)),
       activeTabId: this.activeId,
+      split: this.split ? { tabIds: [...this.split.ids], ratio: this.split.ratio } : null,
     };
   }
 
@@ -177,12 +189,15 @@ export class TabManager {
     if (item.spaceId && item.spaceId !== this.spaceId) this.setSpace(item.spaceId, false);
 
     const next = this.ensureLive(item);
-    const previous = this.active;
-    if (previous && previous !== next) previous.view.setVisible(false);
+    const before = this.shownIds();
+    const split = splitAfterActivate(this.split, id);
+    const splitEnded = split !== this.split;
+    this.split = split;
     this.activeId = id;
     this.frozen = false;
-    this.place(next.view);
-    next.view.setVisible(!next.state.crashed);
+    this.hideUnshown(before);
+    if (splitEnded) this.deps.onSplitChange?.(null);
+    this.place();
     next.view.webContents.focus();
     this.deps.store.updateSpace(this.spaceId, { lastActiveItemId: id });
     this.deps.store.updateLive(id, { lastActiveAt: Date.now() });
@@ -197,8 +212,10 @@ export class TabManager {
     const item = this.deps.store.item(id);
     if (!item) return;
     const order = this.deps.store.tabsInOrder(this.space).map((i) => i.id);
-    const wasActive = this.activeId === id; // read before unload() clears it
-    const nextId = wasActive ? nextActiveAfterClose(order, id, id) : this.activeId;
+    // Closing a split pane leaves its partner on screen, full width.
+    const partner = partnerOf(this.split, id);
+    const wasActive = this.activeId === id || partner !== null; // read before unload() clears it
+    const nextId = partner ?? (wasActive ? nextActiveAfterClose(order, id, id) : this.activeId);
 
     this.unload(id);
     if (item.section === 'today') {
@@ -230,10 +247,80 @@ export class TabManager {
   unload(id: string): void {
     const tab = this.live.get(id);
     if (!tab) return;
+    const partner = partnerOf(this.split, id);
+    if (partner) {
+      this.split = null;
+      if (this.activeId === id) this.activeId = partner;
+      this.deps.onSplitChange?.(null);
+    }
     this.detach(tab.view);
     tab.destroy();
     this.live.delete(id);
     if (this.activeId === id) this.activeId = null;
+    this.scheduleNotify();
+  }
+
+  // ── Split view (F-13) ──────────────────────────────────────────────────────
+
+  get splitIds(): readonly string[] | null {
+    return this.split?.ids ?? null;
+  }
+
+  /** Shows `otherId` beside the active tab (it takes focus). Tabs from other spaces can't join. */
+  splitWith(otherId: string): void {
+    const item = this.deps.store.item(otherId);
+    if (!item || item.kind !== 'tab') return;
+    if (item.spaceId && item.spaceId !== this.spaceId) return;
+    const leftId = this.activeId;
+    const split = leftId ? makeSplit(leftId, otherId) : null;
+    if (!split) {
+      this.activate(otherId);
+      return;
+    }
+    const other = this.ensureLive(item);
+    const before = this.shownIds();
+    this.split = split;
+    this.activeId = otherId;
+    this.frozen = false;
+    this.hideUnshown(before);
+    this.deps.onSplitChange?.(split.ratio);
+    this.place();
+    other.view.webContents.focus();
+    this.deps.store.updateSpace(this.spaceId, { lastActiveItemId: otherId });
+    this.deps.store.updateLive(otherId, { lastActiveAt: Date.now() });
+    this.scheduleNotify();
+  }
+
+  /** Splits the active tab with a new tab (the new tab page by default). */
+  splitWithNew(url: string = NEW_TAB_URL): TabController {
+    const tab = this.create(url, { activate: false });
+    this.splitWith(tab.id);
+    return tab;
+  }
+
+  /** Back to one page: the focused pane stays. */
+  exitSplit(): void {
+    if (!this.split) return;
+    const before = this.shownIds();
+    this.split = null;
+    this.hideUnshown(before);
+    this.deps.onSplitChange?.(null);
+    this.place();
+    this.scheduleNotify();
+  }
+
+  setSplitRatio(ratio: number): void {
+    if (!this.split) return;
+    this.split = withRatio(this.split, ratio);
+    this.deps.onSplitChange?.(this.split.ratio);
+    this.scheduleNotify();
+  }
+
+  swapSplit(): void {
+    if (!this.split) return;
+    this.split = swapped(this.split);
+    this.deps.onSplitChange?.(this.split.ratio);
+    this.place();
     this.scheduleNotify();
   }
 
@@ -282,7 +369,7 @@ export class TabManager {
           section: i.section,
           lastActiveAt: i.lastActiveAt,
           live: tab !== undefined,
-          isActive: i.id === this.activeId,
+          isActive: i.id === this.activeId || inSplit(this.split, i.id),
           isAudible: tab
             ? !tab.view.webContents.isDestroyed() && tab.view.webContents.isCurrentlyAudible()
             : false,
@@ -342,7 +429,8 @@ export class TabManager {
     const active = this.active;
     if (!active || this.frozen) return null;
     this.frozen = true;
-    active.view.setVisible(false);
+    for (const id of this.shownIds()) this.live.get(id)?.view.setVisible(false);
+    if (this.split) return null; // two panes: the shell shows plain cards while dragging
     const prepared = this.prepared;
     this.prepared = null;
     const fresh =
@@ -353,17 +441,12 @@ export class TabManager {
   unfreeze(): void {
     if (!this.frozen) return;
     this.frozen = false;
-    const active = this.active;
-    if (active) {
-      this.place(active.view);
-      active.view.setVisible(true);
-    }
+    this.place();
   }
 
   /** Re-applies bounds after a layout change (sidebar toggle, resize…). */
   applyLayout(): void {
-    const active = this.active;
-    if (active) this.place(active.view);
+    this.place();
   }
 
   /** Closes every live page; call when the window closes so web contents don't leak. */
@@ -375,13 +458,18 @@ export class TabManager {
     for (const tab of this.live.values()) tab.destroy();
     this.live.clear();
     this.activeId = null;
+    this.split = null;
   }
 
   // ── Internals ──────────────────────────────────────────────────────────────
 
   private setSpace(spaceId: string, showRemembered: boolean): void {
-    this.active?.view.setVisible(false);
+    for (const id of this.shownIds()) this.live.get(id)?.view.setVisible(false);
     this.activeId = null;
+    if (this.split) {
+      this.split = null;
+      this.deps.onSplitChange?.(null);
+    }
     this.spaceId = spaceId;
     this.deps.onSpaceChange(spaceId);
     if (showRemembered) {
@@ -413,9 +501,9 @@ export class TabManager {
         onMedia: (event) => this.deps.onMedia?.(id, event),
         onChange: () => {
           if (this.disposed) return;
-          const { url, title, favicon, crashed } = tab.state;
+          const { url, title, favicon } = tab.state;
           // A crashed page is hidden so the shell's Reload card shows through.
-          if (this.activeId === id && !this.frozen) tab.view.setVisible(!crashed);
+          if (this.shownIds().includes(id)) this.place();
           this.deps.store.updateLive(id, { url, title, favicon });
           this.scheduleNotify();
         },
@@ -423,6 +511,13 @@ export class TabManager {
         // Only the visible tab may take over the window; leaving is always honoured.
         onHtmlFullscreen: (enter) => {
           if (!enter || this.activeId === id) this.deps.onHtmlFullscreen(enter);
+        },
+        // Clicking into the other split pane focuses it.
+        onFocus: () => {
+          if (this.disposed || this.activeId === id || !inSplit(this.split, id)) return;
+          this.activeId = id;
+          this.deps.store.updateSpace(this.spaceId, { lastActiveItemId: id });
+          this.scheduleNotify();
         },
       },
       {
@@ -456,10 +551,35 @@ export class TabManager {
     };
   }
 
-  private place(view: WebContentsView): void {
+  /** The tabs on screen: both split panes, or just the active tab. */
+  private shownIds(): string[] {
+    if (this.split) return [...this.split.ids];
+    return this.activeId ? [this.activeId] : [];
+  }
+
+  /** Hides views that were on screen (`before`) and no longer are. */
+  private hideUnshown(before: string[]): void {
+    const shown = this.shownIds();
+    for (const id of before) if (!shown.includes(id)) this.live.get(id)?.view.setVisible(false);
+  }
+
+  /** Puts every on-screen view where the layout says (split panes, or the one web view). */
+  private place(): void {
     const layout = this.deps.getLayout();
-    view.setBounds(layout.webView);
-    view.setBorderRadius(layout.radius);
+    const panes = this.split && layout.panes.length === 2 ? layout.panes : null;
+    this.shownIds().forEach((id, i) => {
+      const tab = this.live.get(id);
+      if (!tab) return;
+      // HTML fullscreen in split view: only the focused pane gets the window.
+      const bounds = panes ? panes[i]!.webView : id === this.activeId ? layout.webView : null;
+      if (!bounds) {
+        tab.view.setVisible(false);
+        return;
+      }
+      tab.view.setBounds(bounds);
+      tab.view.setBorderRadius(layout.radius);
+      tab.view.setVisible(!this.frozen && !tab.state.crashed);
+    });
   }
 
   private attach(view: WebContentsView): void {
@@ -475,11 +595,8 @@ export class TabManager {
   private replaceView(id: string, oldView: WebContentsView, newView: WebContentsView): void {
     this.detach(oldView);
     this.attach(newView);
-    if (this.activeId === id) {
-      this.place(newView);
-      newView.setVisible(true);
-      newView.webContents.focus();
-    }
+    if (this.shownIds().includes(id)) this.place();
+    if (this.activeId === id) newView.webContents.focus();
   }
 
   /** Coalesces bursts of events into one snapshot per tick. */

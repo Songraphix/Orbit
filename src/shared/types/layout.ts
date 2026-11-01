@@ -18,6 +18,10 @@ export const layoutSchema = z.object({
   card: rectSchema,
   toolbar: rectSchema,
   webView: rectSchema,
+  /** Every page on screen: one, or two in split view (the first is also card/toolbar/webView). */
+  panes: z.array(z.object({ card: rectSchema, toolbar: rectSchema, webView: rectSchema })),
+  /** The draggable gap between split panes. */
+  divider: rectSchema.nullable(),
   /** Corner radius of the card and web view. */
   radius: z.number(),
   /** A page is in HTML fullscreen: the shell draws nothing over it. */

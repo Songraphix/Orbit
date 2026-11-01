@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { themeToVars } from '@shared/theme';
 import { DEFAULT_THEME } from '@shared/types/space';
 import type { SidebarSnapshot } from '@shared/types/space';
@@ -7,7 +7,7 @@ import type { Layout, Rect } from '@shared/types/layout';
 import type { DownloadView } from '@shared/types/downloads';
 import type { FindState } from '@shared/types/find';
 import type { MediaState } from '@shared/types/media';
-import type { TabsSnapshot } from '@shared/types/tabs';
+import type { TabState, TabsSnapshot } from '@shared/types/tabs';
 import { LittleBar } from './LittleBar';
 import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
@@ -99,9 +99,12 @@ function Chrome({
   media: MediaState;
 }) {
   const activeTab = tabs?.tabs.find((t) => t.id === tabs.activeTabId) ?? null;
-  const hasActiveTab = activeTab !== null;
   const { snapshot, onResizeStart, onResizeEnd } = useResizeSnapshot();
-  const webViewTop = layout.webView.y - layout.card.y;
+  // Split view (F-13): one card per pane, left to right. HTML fullscreen shows only the focused one.
+  const split = tabs?.split && layout.panes.length === 2 ? tabs.split : null;
+  const paneTabs = split
+    ? split.tabIds.map((id) => tabs?.tabs.find((t) => t.id === id) ?? null)
+    : [activeTab];
 
   return (
     <>
@@ -115,55 +118,158 @@ function Chrome({
           onResizeEnd={onResizeEnd}
         />
       )}
-      {/* Content card: toolbar on top; the active tab's web view is a native view that main
-          places exactly over the area below it. */}
-      <div
-        className="absolute overflow-hidden bg-white shadow-sm"
-        style={{ ...toStyle(layout.card), borderRadius: layout.radius }}
-        data-testid="content-card"
-      >
-        {!layout.fullscreen && (
-          <Toolbar
-            tab={activeTab}
-            height={layout.toolbar.height}
-            sidebarVisible={layout.sidebar.visible}
+      {paneTabs.map((tab, i) => {
+        const pane = layout.panes[i];
+        if (!pane) return null;
+        return (
+          <ContentCard
+            key={split ? (tab?.id ?? i) : 'single'}
+            pane={pane}
+            radius={layout.radius}
+            tab={tab}
+            showToolbar={!layout.fullscreen}
+            sidebarVisible={layout.sidebar.visible || i > 0}
             find={find}
+            focused={!split || tab?.id === tabs?.activeTabId}
+            inSplit={split !== null}
+            snapshot={split ? null : snapshot}
           />
-        )}
-        {snapshot && (
-          <img
-            src={snapshot}
-            alt=""
-            className="pointer-events-none absolute left-0 w-full object-cover object-left-top"
-            style={{ top: webViewTop, height: layout.webView.height }}
-            data-testid="resize-snapshot"
-          />
-        )}
-        {activeTab?.crashed && (
-          <div
-            className="flex h-full flex-col items-center justify-center gap-3 pb-9 text-sm text-neutral-500"
-            data-testid="crashed"
-          >
-            <span className="text-3xl">☁︎</span>
-            This page crashed.
-            <button
-              type="button"
-              className="rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-white hover:brightness-110"
-              onClick={() =>
-                void window.orbit.invoke('tabs:navigate', { tabId: activeTab.id, action: 'reload' })
-              }
-              data-testid="crashed-reload"
-            >
-              Reload
-            </button>
-          </div>
-        )}
-        {!hasActiveTab && (
-          <div className="flex h-full items-center justify-center pb-9 text-sm text-neutral-400">
-            No tab open — press ⌘T
-          </div>
-        )}
-      </div>
+        );
+      })}
+      {split && layout.divider && (
+        <SplitDivider rect={layout.divider} left={layout.panes[0]!} right={layout.panes[1]!} />
+      )}
     </>
+  );
+}
+
+type Pane = Layout['panes'][number];
+
+/**
+ * A content card: toolbar on top; the tab's web view is a native view that main places exactly
+ * over the area below it. In split view each pane is a card, and the focused one is outlined.
+ */
+function ContentCard(props: {
+  pane: Pane;
+  radius: number;
+  tab: TabState | null;
+  showToolbar: boolean;
+  sidebarVisible: boolean;
+  find: FindState | null;
+  focused: boolean;
+  inSplit: boolean;
+  snapshot: string | null;
+}) {
+  const { pane, tab, inSplit, focused } = props;
+  const webViewTop = pane.webView.y - pane.card.y;
+  return (
+    <div
+      className="absolute overflow-hidden bg-white shadow-sm transition-shadow"
+      style={{
+        ...toStyle(pane.card),
+        borderRadius: props.radius,
+        boxShadow: inSplit && focused ? '0 0 0 2px var(--accent)' : undefined,
+      }}
+      // Clicking the other pane's toolbar focuses that pane first.
+      onMouseDownCapture={() => {
+        if (inSplit && !focused && tab)
+          void window.orbit.invoke('tabs:activate', { tabId: tab.id });
+      }}
+      data-testid="content-card"
+      data-focused={focused}
+      data-tab-id={tab?.id}
+    >
+      {props.showToolbar && (
+        <Toolbar
+          tab={tab}
+          height={pane.toolbar.height}
+          sidebarVisible={props.sidebarVisible}
+          find={props.find}
+          focused={focused}
+          inSplit={inSplit}
+        />
+      )}
+      {props.snapshot && (
+        <img
+          src={props.snapshot}
+          alt=""
+          className="pointer-events-none absolute left-0 w-full object-cover object-left-top"
+          style={{ top: webViewTop, height: pane.webView.height }}
+          data-testid="resize-snapshot"
+        />
+      )}
+      {tab?.crashed && (
+        <div
+          className="flex h-full flex-col items-center justify-center gap-3 pb-9 text-sm text-neutral-500"
+          data-testid="crashed"
+        >
+          <span className="text-3xl">☁︎</span>
+          This page crashed.
+          <button
+            type="button"
+            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-white hover:brightness-110"
+            onClick={() =>
+              void window.orbit.invoke('tabs:navigate', { tabId: tab.id, action: 'reload' })
+            }
+            data-testid="crashed-reload"
+          >
+            Reload
+          </button>
+        </div>
+      )}
+      {!tab && (
+        <div className="flex h-full items-center justify-center pb-9 text-sm text-neutral-400">
+          No tab open — press ⌘T
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The gap between split panes. Dragging it resizes them; main hides both pages meanwhile
+ * (native views would swallow the pointer). Double-click evens them out.
+ */
+function SplitDivider({ rect, left, right }: { rect: Rect; left: Pane; right: Pane }) {
+  const [dragging, setDragging] = useState(false);
+
+  const onPointerDown = (event: ReactPointerEvent) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    setDragging(true);
+    void window.orbit.invoke('split:beginResize', {});
+    const x0 = left.card.x;
+    const usable = left.card.width + right.card.width;
+    const gap = right.card.x - (left.card.x + left.card.width);
+    const onMove = (ev: PointerEvent) => {
+      // Chromium sends a synthetic move after the view hides; ignore moves without the button.
+      if ((ev.buttons & 1) === 0) return;
+      void window.orbit.invoke('split:setRatio', { ratio: (ev.clientX - gap / 2 - x0) / usable });
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      setDragging(false);
+      void window.orbit.invoke('split:endResize', {});
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  };
+
+  return (
+    <div
+      className="absolute flex cursor-col-resize items-center justify-center"
+      style={toStyle(rect)}
+      onPointerDown={onPointerDown}
+      onDoubleClick={() => void window.orbit.invoke('split:setRatio', { ratio: 0.5 })}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize split view"
+      data-testid="split-divider"
+    >
+      <div
+        className={`h-10 w-1 rounded-full transition-colors ${dragging ? 'bg-[var(--accent)]' : 'bg-[var(--sidebar-fg)] opacity-20'}`}
+      />
+    </div>
   );
 }

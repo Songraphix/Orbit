@@ -183,6 +183,7 @@ export class WindowManager {
         media?.refresh(); // the mini player shows only while its tab is off screen
       },
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
+      onSplitChange: (ratio) => layout.setSplitRatio(ratio),
     });
     const tabManager = tabs;
     const media = new MediaController(tabManager, (state) =>

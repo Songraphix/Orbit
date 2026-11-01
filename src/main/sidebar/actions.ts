@@ -223,6 +223,18 @@ export class SidebarActions {
         label: item.section === 'favorite' ? 'Remove from Favorites' : 'Add to Favorites',
         click: () => this.toggleFavorite(item.id),
       });
+      if (item.spaceId === null || item.spaceId === this.tabs.activeSpaceId) {
+        const splitIds = this.tabs.splitIds;
+        template.push(
+          splitIds?.includes(item.id)
+            ? { label: 'Exit Split View', click: () => this.tabs.exitSplit() }
+            : {
+                label: 'Open in Split View',
+                enabled: this.tabs.activeItemId !== null && this.tabs.activeItemId !== item.id,
+                click: () => this.tabs.splitWith(item.id),
+              },
+        );
+      }
       if (item.homeUrl && item.url && item.url !== item.homeUrl) {
         template.push({ label: 'Go Back to Pinned URL', click: () => this.tabs.goHome(item.id) });
       }

@@ -75,6 +75,33 @@ export const contract = {
     input: z.object({}).strict(),
     output: z.void(),
   },
+  /** Split view (F-13): the active tab beside `tabId`, or beside a new tab page. */
+  'split:create': {
+    input: z.object({ tabId: tabId.optional() }).strict(),
+    output: z.void(),
+  },
+  'split:exit': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
+  'split:swap': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
+  /** The left pane's share of the width while the divider is dragged (clamped to 0.2–0.8). */
+  'split:setRatio': {
+    input: z.object({ ratio: z.number().finite() }).strict(),
+    output: z.void(),
+  },
+  /** Divider drag: both pages are hidden meanwhile, as native views swallow pointer events. */
+  'split:beginResize': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
+  'split:endResize': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
   'tabs:get': {
     input: z.object({}).strict(),
     output: tabsSnapshotSchema,

@@ -62,6 +62,27 @@ describe('computeLayout', () => {
   });
 });
 
+describe('split view layout', () => {
+  it('splits the card into two panes with an 8 px divider', () => {
+    const layout = computeLayout({ ...base, splitRatio: 0.5 });
+    expect(layout.panes).toHaveLength(2);
+    const [left, right] = layout.panes;
+    // card 1012 wide: 1004 usable, 502 each, divider in between.
+    expect(left!.card).toEqual({ x: 260, y: 8, width: 502, height: 804 });
+    expect(layout.divider).toEqual({ x: 762, y: 8, width: 8, height: 804 });
+    expect(right!.card).toEqual({ x: 770, y: 8, width: 502, height: 804 });
+    expect(right!.webView.y).toBe(44);
+    expect(layout.webView).toEqual(left!.webView); // first pane doubles as the main one
+  });
+
+  it('clamps the ratio and ignores it when not split', () => {
+    const narrow = computeLayout({ ...base, splitRatio: 0.01 });
+    expect(narrow.panes[0]!.card.width).toBe(Math.round(1004 * 0.2));
+    expect(computeLayout({ ...base, splitRatio: null }).panes).toHaveLength(1);
+    expect(computeLayout(base).divider).toBeNull();
+  });
+});
+
 describe('clampSidebarWidth', () => {
   it('rounds and clamps, and falls back to the default for nonsense', () => {
     expect(clampSidebarWidth(250.6)).toBe(251);

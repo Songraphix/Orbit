@@ -21,6 +21,8 @@ export type TabState = z.output<typeof tabStateSchema>;
 export const tabsSnapshotSchema = z.object({
   tabs: z.array(tabStateSchema),
   activeTabId: z.string().nullable(),
+  /** Split view (F-13): left and right pane tabs, and the left pane's share of the width. */
+  split: z.object({ tabIds: z.tuple([z.string(), z.string()]), ratio: z.number() }).nullable(),
 });
 export type TabsSnapshot = z.output<typeof tabsSnapshotSchema>;
 

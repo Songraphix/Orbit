@@ -1,4 +1,14 @@
-import { ArrowLeft, ArrowRight, Check, Lock, PanelLeft, RotateCw, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  ArrowRight,
+  Check,
+  Lock,
+  Maximize2,
+  PanelLeft,
+  RotateCw,
+  X,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { formatAddress } from '@shared/format-address';
@@ -32,13 +42,21 @@ export function Toolbar({
   height,
   sidebarVisible,
   find,
+  focused = true,
+  inSplit = false,
 }: {
   tab: TabState | null;
   height: number;
+  /** Hidden sidebar → this toolbar shows the "Show sidebar" button (left pane only). */
   sidebarVisible: boolean;
   find: FindState | null;
+  /** Split view: only the focused pane shows find and toasts. */
+  focused?: boolean;
+  /** Split view: show the swap and "show alone" buttons. */
+  inSplit?: boolean;
 }) {
-  const toast = useToast();
+  const toastMessage = useToast();
+  const toast = focused ? toastMessage : null;
   const navigate = (action: NavAction) => {
     if (tab) void window.orbit.invoke('tabs:navigate', { tabId: tab.id, action });
   };
@@ -84,7 +102,7 @@ export function Toolbar({
         {tab?.isLoading ? <X size={15} /> : <RotateCw size={14} />}
       </ToolbarButton>
 
-      {find?.open ? (
+      {focused && find?.open ? (
         <FindBar state={find} />
       ) : toast ? (
         <div
@@ -117,6 +135,25 @@ export function Toolbar({
             {address.title && <span className="truncate text-neutral-500">{address.title}</span>}
           </button>
         )
+      )}
+
+      {inSplit && (
+        <div className="ml-auto flex items-center gap-0.5">
+          <ToolbarButton
+            label="Swap Panes"
+            onClick={() => void window.orbit.invoke('split:swap', {})}
+            testId="split-swap"
+          >
+            <ArrowLeftRight size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            label="Show This Page Alone"
+            onClick={() => void window.orbit.invoke('split:exit', {})}
+            testId="split-exit"
+          >
+            <Maximize2 size={13} />
+          </ToolbarButton>
+        </div>
       )}
 
       {tab?.isLoading && (

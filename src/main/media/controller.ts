@@ -65,7 +65,7 @@ export class MediaController {
 
   current(): MediaState {
     const tab = this.tabId ? this.tabs.get(this.tabId) : undefined;
-    if (!tab || this.tabs.activeItemId === this.tabId) return null;
+    if (!tab || this.tabs.isOnScreen(tab.id)) return null;
     const contents = tab.view.webContents;
     return {
       tabId: tab.id,

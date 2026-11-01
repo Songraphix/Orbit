@@ -45,9 +45,12 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - 2026-11-01 — Phase 4: archive and tab lifecycle [F-03, F-20, F-25, F-31] — migration 005 `archive` + FTS; closing/clearing Today tabs archives them (reason recorded); ⇧⌘T and Archive → Archived Tabs (orbit://archive: search, grouped by day, restore) read from it; `TabLifecycle` auto-archives idle Today tabs (default 12 h; every 5 min and on wake) and sleeps pages (idle 30 min / max 8 awake; never the active or an audible tab) via pure `tabsToArchive` / `tabsToSleep`; crashed pages show a Reload card, frozen pages offer Wait / Reload; daily `VACUUM INTO` backup keeping 7; Settings page (⌘,) — **Phase 4 complete → M1 feature-complete**; unsigned arm64 DMG builds and the packaged app passes a smoke test
 - 2026-11-01 — Phase 5: downloads and media [F-09, F-10] — `DownloadService` on every profile session (straight to ~/Downloads, never overwrites, progress, thumbnails/file icons, migration 006); shelf above the bottom bar (Img 7: open, ⌘-click reveal, drag out, dismiss/cancel); `MediaController` + sidebar mini player (Img 1) for the background tab that's playing: play/pause, mute, Picture-in-Picture, jump to tab, stop — **Phase 5 complete** except previous/next track and automatic PiP (backlog)
 
+- 2026-11-01 — Phase 6: Little Orbit + default browser [F-24, F-31] — links from other apps (`open-url`, queued until ready) open in a small floating window (520×720, vibrancy) with an "Open in Orbit" bar that moves the page into the main window; only http(s) accepted; Settings → "Make Orbit the default browser" (the packaged app registers http/https)
+- 2026-11-01 — Phase 6: split view [F-13] — two tabs side by side, each with its own toolbar (Img 6); `computeLayout` returns panes + divider (8 px gap, ratio clamped 0.2–0.8); pure `split.ts`; Tabs → New Split View ⌃⇧= (with a new tab page), sidebar right-click → Open in Split View, swap and "show this page alone" buttons; clicking a pane (toolbar or page) focuses it and outlines it; dragging the divider resizes (pages hidden meanwhile), double-click evens it out; activating any other tab, closing a pane or switching space leaves the split; HTML fullscreen gives the focused pane the window. Not persisted across relaunches yet (backlog)
+
 ## In progress
 
-- Phase 6 (ahead of schedule): split view, Peek, Little Orbit, default browser
+- Phase 6 (ahead of schedule): Peek next (split view, Little Orbit, default browser done)
 
 ## Decisions made
 
@@ -76,6 +79,7 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 ## Backlog (ideas outside the current phase)
 
+- Remember split views across relaunches; split more than two panes; drag a sidebar tab onto a page edge to split (F-13)
 - Hover the left edge to reveal the hidden sidebar as a floating panel (F-01) — needs the overlay view, so it lands in Phase 2
 - New tab page shortcut tiles (F-32): most-visited once history exists (Phase 2), favorites after the Arc import (Phase 3)
 - Full theme colour picker (colour wheel, intensity/grain sliders) — presets via the space menu for now (F-16)

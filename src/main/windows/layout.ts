@@ -1,5 +1,5 @@
 import { SIDEBAR_WIDTH } from '@shared/types/layout';
-import type { Layout } from '@shared/types/layout';
+import type { Layout, Rect } from '@shared/types/layout';
 
 /** Arc-like defaults (PLAN.md section 4.6). */
 export const LAYOUT_DEFAULTS = {
@@ -15,7 +15,25 @@ export type LayoutInput = {
   sidebarWidth: number;
   /** A page is in HTML fullscreen (e.g. YouTube's fullscreen button): it gets the whole window. */
   htmlFullscreen?: boolean;
+  /** Split view (F-13): the left pane's share of the width (0.2–0.8), or null for one page. */
+  splitRatio?: number | null;
 };
+
+export function clampRatio(ratio: number): number {
+  return Number.isFinite(ratio) ? Math.min(0.8, Math.max(0.2, ratio)) : 0.5;
+}
+
+/** A card (toolbar + web view) occupying `card`. */
+function paneIn(card: Rect, toolbarHeight: number) {
+  const toolbar = { ...card, height: Math.min(toolbarHeight, card.height) };
+  const webView = {
+    x: card.x,
+    y: card.y + toolbar.height,
+    width: card.width,
+    height: Math.max(0, card.height - toolbar.height),
+  };
+  return { card, toolbar, webView };
+}
 
 export function clampSidebarWidth(width: number): number {
   if (!Number.isFinite(width)) return SIDEBAR_WIDTH.default;
@@ -40,11 +58,12 @@ export function computeLayout(input: LayoutInput): Layout {
       width: Math.max(0, input.windowWidth),
       height: Math.max(0, input.windowHeight),
     };
+    const pane = { card: full, toolbar: { ...full, height: 0 }, webView: full };
     return {
       sidebar: { visible: false, width: sidebarWidth },
-      card: full,
-      toolbar: { ...full, height: 0 },
-      webView: full,
+      ...pane,
+      panes: [pane],
+      divider: null,
       radius: 0,
       fullscreen: true,
     };
@@ -58,19 +77,31 @@ export function computeLayout(input: LayoutInput): Layout {
     width: Math.max(0, input.windowWidth - left - inset),
     height: Math.max(0, input.windowHeight - inset * 2),
   };
-  const toolbar = { ...card, height: Math.min(toolbarHeight, card.height) };
-  const webView = {
-    x: card.x,
-    y: card.y + toolbar.height,
-    width: card.width,
-    height: Math.max(0, card.height - toolbar.height),
-  };
+  // Split view: two cards side by side with a gap (the divider) between them.
+  const panes =
+    input.splitRatio == null
+      ? [paneIn(card, toolbarHeight)]
+      : (() => {
+          const usable = Math.max(0, card.width - inset);
+          const leftWidth = Math.round(usable * clampRatio(input.splitRatio));
+          return [
+            paneIn({ ...card, width: leftWidth }, toolbarHeight),
+            paneIn(
+              { ...card, x: card.x + leftWidth + inset, width: usable - leftWidth },
+              toolbarHeight,
+            ),
+          ];
+        })();
+  const divider =
+    panes.length === 2
+      ? { x: panes[0]!.card.x + panes[0]!.card.width, y: card.y, width: inset, height: card.height }
+      : null;
 
   return {
     sidebar: { visible: input.sidebarVisible, width: sidebarWidth },
-    card,
-    toolbar,
-    webView,
+    ...panes[0]!,
+    panes,
+    divider,
     radius,
     fullscreen: false,
   };

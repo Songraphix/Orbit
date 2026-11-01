@@ -203,6 +203,15 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'new-space':
       controller.sidebar.newSpace();
       return;
+    case 'split-view':
+      tabs.splitWithNew();
+      return;
+    case 'exit-split':
+      tabs.exitSplit();
+      return;
+    case 'swap-split':
+      tabs.swapSplit();
+      return;
     case 'archived-tabs':
       controller.tabs.create('orbit://archive');
       return;

@@ -16,6 +16,14 @@ export const COMMANDS: readonly CommandDef[] = [
   { id: 'reopen-tab', title: 'Reopen Closed Tab', keywords: ['undo', 'restore'], shortcut: '⇧⌘T' },
   { id: 'import-arc', title: 'Import from Arc…', keywords: ['arc', 'migrate', 'bookmarks'] },
   { id: 'new-space', title: 'New Space', keywords: ['workspace'] },
+  {
+    id: 'split-view',
+    title: 'New Split View',
+    keywords: ['side by side', 'pane'],
+    shortcut: '⌃⇧=',
+  },
+  { id: 'exit-split', title: 'Exit Split View', keywords: ['side by side', 'pane', 'unsplit'] },
+  { id: 'swap-split', title: 'Swap Split Panes', keywords: ['side by side', 'pane'] },
   { id: 'archived-tabs', title: 'Archived Tabs', keywords: ['archive', 'closed', 'history'] },
   { id: 'settings', title: 'Settings', keywords: ['preferences', 'options'], shortcut: '⌘,' },
 ];
