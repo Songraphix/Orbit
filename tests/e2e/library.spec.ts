@@ -152,11 +152,25 @@ test('Library → Spaces: reorder and rename; Boosts section', async () => {
 });
 
 test('hovering the Library button lists recent downloads; clicking it opens the Library', async () => {
-  const { win } = orbit;
+  const { app, win } = orbit;
   await invoke(win, 'tabs:create', { url: server.url('/report.txt') });
   await expect(win.getByTestId('download-item')).toHaveCount(1);
   await expect(win.getByTestId('download-item')).toHaveAttribute('data-state', 'completed');
 
+  // Let the download's flight land first (the overlay takes the pointer while it shows).
+  await expect
+    .poll(() =>
+      app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .flatMap((w) => w.contentView.children)
+          .some(
+            (v) =>
+              v.getVisible() &&
+              (v as Electron.WebContentsView).webContents?.getURL().includes('/overlay/'),
+          ),
+      ),
+    )
+    .toBe(false);
   await win.getByTestId('library-button').hover();
   const recent = win.getByTestId('recent-file');
   await expect(recent).toHaveCount(1);

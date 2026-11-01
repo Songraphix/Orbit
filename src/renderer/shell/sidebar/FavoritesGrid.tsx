@@ -84,6 +84,10 @@ export function FavoritesGrid({
 }) {
   if (rows.length === 0) return null;
   const columns = Math.min(4, Math.max(2, Math.floor((width - 16) / 68)));
+  // px-2.5 padding (20) and gap-2 (8) between columns. Narrow sidebars get square tiles, like
+  // Arc's; wider ones settle at a calm 52–64 px height.
+  const tile = (width - 20 - 8 * (columns - 1)) / columns;
+  const height = Math.round(Math.max(52, Math.min(tile, 64)));
   return (
     <ul
       className="grid gap-2 px-2.5 pb-3"
@@ -91,21 +95,29 @@ export function FavoritesGrid({
       data-testid="favorites"
     >
       {rows.map((row) => (
-        <FavoriteTile key={row.id} row={row} active={row.id === activeId} />
+        <FavoriteTile key={row.id} row={row} active={row.id === activeId} height={height} />
       ))}
     </ul>
   );
 }
 
-function FavoriteTile({ row, active }: { row: SidebarRow; active: boolean }) {
+function FavoriteTile({
+  row,
+  active,
+  height,
+}: {
+  row: SidebarRow;
+  active: boolean;
+  height: number;
+}) {
   const rgb = useFaviconColor(active ? row.favicon : null);
-  const tint: CSSProperties | undefined =
+  const tint: CSSProperties =
     active && rgb
       ? {
           background: `rgb(${rgb.join(' ')} / 0.3)`,
           boxShadow: `inset 0 0 0 1.5px rgb(${rgb.join(' ')} / 0.85), var(--row-shadow)`,
         }
-      : undefined;
+      : {};
   return (
     <li>
       <button
@@ -113,12 +125,12 @@ function FavoriteTile({ row, active }: { row: SidebarRow; active: boolean }) {
         title={row.title}
         aria-label={row.title}
         aria-current={active ? 'page' : undefined}
-        className={`press relative grid h-[52px] w-full place-items-center rounded-[16px] ${
+        className={`press relative grid w-full place-items-center rounded-[16px] ${
           active
             ? 'bg-[var(--row-active)] shadow-[var(--row-shadow)]'
             : 'bg-[var(--tile-bg)] hover:bg-[var(--row-active)]'
         }`}
-        style={tint}
+        style={{ ...tint, height }}
         onClick={() => void invoke('tabs:activate', { tabId: row.id })}
         onContextMenu={(e) => {
           e.preventDefault();

@@ -194,6 +194,11 @@ export const contract = {
     input: z.object({ itemId: tabId }).strict(),
     output: z.void(),
   },
+  /** Right-click on the sidebar's empty space: a native menu built in main. */
+  'sidebar:backgroundMenu': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
   'sidebar:spaceMenu': {
     input: z.object({ spaceId: tabId }).strict(),
     output: z.void(),

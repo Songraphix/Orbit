@@ -96,6 +96,8 @@ let downloadService: DownloadService | null = null;
 let arcImporter: ArcImporter | null = null;
 let boostService: BoostService | null = null;
 let liveFolders: LiveFolderService | null = null;
+/** Tidy for a window's space, with its toast (the space header, the sidebar's menu). */
+let runTidy: ((controller: WindowController) => Promise<void>) | null = null;
 
 // A stray error in main must never show Electron's blocking error dialog (a browser that can't
 // quit is worse than one that logs). Logged for debugging instead.
@@ -341,6 +343,9 @@ function runCommand(controller: WindowController, commandId: string): void {
       return;
     case 'manage-spaces':
       controller.library.open('spaces');
+      return;
+    case 'tidy':
+      void runTidy?.(controller);
       return;
     case 'library':
       controller.library.open('media');
@@ -627,9 +632,7 @@ void app.whenReady().then(() => {
       },
     },
   });
-  router.handle('sidebar:tidy', async (_input, { sender }) => {
-    const controller = windowManager.forSender(sender.webContentsId);
-    if (!controller) return;
+  runTidy = async (controller) => {
     try {
       const made = await tidy.tidy(controller.tabs.space);
       toast(
@@ -639,6 +642,10 @@ void app.whenReady().then(() => {
     } catch (error) {
       toast(controller, error instanceof Error ? error.message : String(error));
     }
+  };
+  router.handle('sidebar:tidy', async (_input, { sender }) => {
+    const controller = windowManager.forSender(sender.webContentsId);
+    if (controller) await runTidy?.(controller);
   });
   router.handle('sidebar:untidy', (_input, { sender }) => {
     const controller = windowManager.forSender(sender.webContentsId);

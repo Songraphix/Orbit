@@ -131,6 +131,14 @@ export function Sidebar({
     <aside
       className="absolute inset-y-0 left-0 flex flex-col"
       style={{ width, color: 'var(--sidebar-fg)' }}
+      // Right-click on empty space (rows, tiles and the space header have their own menus, and
+      // text fields keep the text menu): Arc's sidebar menu.
+      onContextMenu={(e) => {
+        if (e.defaultPrevented || librarySection) return;
+        if ((e.target as HTMLElement).closest('input, textarea')) return;
+        e.preventDefault();
+        void window.orbit.invoke('sidebar:backgroundMenu', {});
+      }}
       data-testid="sidebar"
     >
       <div

@@ -59,11 +59,18 @@ test('the + button opens Arc’s create popover: New Tab ready, keys move, Esc c
 
   // Up three times from New Tab (past Split and Boost) is New Easel.
   await win.getByTestId('create-button').click();
+  await expect(menu).toBeVisible(); // keys only count once it's open
+  await expect(bar.locator('[data-testid="create-item"][data-action="tab"]')).toHaveClass(
+    /bg-white/,
+  );
   await bar.keyboard.press('ArrowUp');
   await bar.keyboard.press('ArrowUp');
   await bar.keyboard.press('ArrowUp');
   await bar.keyboard.press('Enter');
-  await expect.poll(() => app.windows().some((p) => p.url().includes('#/easel/'))).toBe(true);
+  // The first Easel after a build can take a few seconds to appear.
+  await expect
+    .poll(() => app.windows().some((p) => p.url().includes('#/easel/')), { timeout: 15_000 })
+    .toBe(true);
 });
 
 test('pushing the sidebar edge to the window edge hides it', async () => {
@@ -72,8 +79,10 @@ test('pushing the sidebar edge to the window edge hides it', async () => {
   const y = handle.y + 200;
   await win.mouse.move(handle.x + handle.width / 2, y);
   await win.mouse.down();
-  await win.mouse.move(180, y, { steps: 4 });
-  await expect.poll(async () => (await box(win, 'sidebar')).width).toBe(200); // held at the minimum
+  await win.mouse.move(130, y, { steps: 4 });
+  await expect.poll(async () => (await box(win, 'sidebar')).width).toBe(150); // held at the minimum
+  // At the minimum, favorites are two square tiles; the address pill still fits.
+  await expect(win.getByTestId('address-pill')).toBeVisible();
   await win.mouse.move(60, y, { steps: 4 });
   await win.mouse.up();
   await expect(win.getByTestId('sidebar')).toHaveCount(0);
@@ -117,4 +126,51 @@ test('the sidebar’s address pill: the site, and its link icon copies the addre
   await win.getByTestId('address-copy').click();
   await expect(win.getByTestId('toolbar-toast')).toContainText('Copied link');
   expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(url);
+});
+
+/** Records the native menus main builds (labels only) instead of showing them. */
+const recordMenus = (app: ElectronApplication) =>
+  app.evaluate(({ Menu }) => {
+    const g = globalThis as unknown as { menus: string[][] };
+    g.menus = [];
+    Menu.buildFromTemplate = ((template: { label?: string; type?: string }[]) => {
+      g.menus.push(template.map((i) => i.label ?? (i.type === 'separator' ? '—' : '')));
+      return { popup: () => undefined };
+    }) as never;
+  });
+const lastMenu = (app: ElectronApplication) =>
+  app.evaluate(() => {
+    const g = globalThis as unknown as { menus: string[][] };
+    return g.menus.at(-1) ?? null;
+  });
+
+test('right-clicking the sidebar’s empty space shows Arc’s sidebar menu', async () => {
+  const { app, win } = orbit;
+  await invoke(win, 'tabs:create', { url: server.url('/one') });
+  await recordMenus(app);
+  await app.evaluate(({ clipboard }) => clipboard.writeText('example.com'));
+
+  await win.getByTestId('today-end').click({ button: 'right' });
+  await expect
+    .poll(() => lastMenu(app))
+    .toEqual([
+      'New Tab',
+      'New Folder',
+      'New Split View',
+      'New Easel',
+      '—',
+      'Paste and Go to “example.com”',
+      '—',
+      'Tidy Today',
+      'Clear Today',
+      '—',
+      'Space “Personal”',
+      'Library',
+      '—',
+      'Hide Sidebar',
+    ]);
+
+  // A tab row keeps its own menu.
+  await win.locator('[data-testid="tab-row"]', { hasText: 'Page One' }).click({ button: 'right' });
+  await expect.poll(async () => (await lastMenu(app))?.[0]).toBe('Pin Tab');
 });

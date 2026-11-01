@@ -83,6 +83,7 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 - 2026-11-01 — Settings rebuilt with a sidebar (General, Profiles, Shortcuts, AI, Privacy, About). **Profiles** [F-17]: add, rename, delete (only unused, non-default; its cookies, storage and favorites go too), and choose each space's profile; moving a space keeps Orbit's own pages open. Shortcuts lists the keys; About shows versions and opens the profile folder
 
 - 2026-11-01 — Owner feedback (Arc/Comet): downloads fly — a blue badge jumps out of the page, arcs over and docks into the sidebar's shelf (overlay, CSS motion path, skipped under Reduce Motion); the shelf card matches Arc's (progress ring, "176.8/320.7 MB · 14s" from a smoothed speed, rounded close); a tab opened only to download closes itself. Arc's address pill at the top of the sidebar: the site, a link icon that copies the address, click to edit. Rounder, calmer look: card radius 14, rows 12, tiles 16, popovers 20–24; gentler spring and macOS-like timings; quieter tints on dark themes
+- 2026-11-01 — Owner feedback: the sidebar narrows to 150 px (was 200), where favorites become two square tiles like Arc's; dragging below 110 px still hides it. Right-clicking empty sidebar space opens a menu: New Tab, Folder, Split View, Easel; Paste and Go; Tidy Today (with an AI key) and Clear Today; the space's own menu; Library; Hide Sidebar. The download flight is shorter (0.9 s), so the page is clickable again sooner
 
 ## In progress
 

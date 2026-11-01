@@ -55,7 +55,7 @@ function paneIn(card: Rect, toolbarHeight: number) {
 }
 
 /** Dragging the sidebar's edge narrower than this hides it (Arc's push-to-collapse). */
-export const SIDEBAR_COLLAPSE_AT = 120;
+export const SIDEBAR_COLLAPSE_AT = 110;
 
 /** What an edge drag to `width` does: hide the sidebar, or resize it (clamped). Pure. */
 export function sidebarDrag(

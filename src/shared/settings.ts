@@ -1,3 +1,4 @@
+import { SIDEBAR_WIDTH } from './types/layout';
 import { z } from 'zod';
 import { wallpaperChoiceSchema } from './types/newtab';
 
@@ -18,7 +19,7 @@ export const settingsSchema = {
       .nullable(),
     isMaximized: z.boolean(),
   }),
-  'sidebar.width': z.number().int().min(200).max(400),
+  'sidebar.width': z.number().int().min(SIDEBAR_WIDTH.min).max(SIDEBAR_WIDTH.max),
   'sidebar.visible': z.boolean(),
   'newtab.wallpaper': wallpaperChoiceSchema,
   /** The space the main window shows. */

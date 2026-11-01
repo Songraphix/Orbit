@@ -30,7 +30,7 @@ export function DownloadFlight({ flight }: { flight: Flight }) {
         { offsetDistance: '100%', transform: 'scale(0.62)', opacity: 1, offset: 0.92 },
         { offsetDistance: '100%', transform: 'scale(0.4)', opacity: 0 },
       ],
-      { duration: 1050, easing: 'cubic-bezier(0.45, 0, 0.2, 1)', fill: 'forwards' },
+      { duration: 880, easing: 'cubic-bezier(0.45, 0, 0.2, 1)', fill: 'forwards' },
     );
     return () => animation.cancel();
   }, [flight]);

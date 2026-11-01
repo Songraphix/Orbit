@@ -35,7 +35,7 @@ describe('computeLayout', () => {
   });
 
   it('clamps the sidebar width into its allowed range', () => {
-    expect(computeLayout({ ...base, sidebarWidth: 50 }).sidebar.width).toBe(200);
+    expect(computeLayout({ ...base, sidebarWidth: 50 }).sidebar.width).toBe(150);
     expect(computeLayout({ ...base, sidebarWidth: 900 }).card.x).toBe(400);
   });
 
@@ -108,7 +108,7 @@ describe('Peek frame', () => {
 describe('clampSidebarWidth', () => {
   it('rounds and clamps, and falls back to the default for nonsense', () => {
     expect(clampSidebarWidth(250.6)).toBe(251);
-    expect(clampSidebarWidth(199)).toBe(200);
+    expect(clampSidebarWidth(149)).toBe(150);
     expect(clampSidebarWidth(401)).toBe(400);
     expect(clampSidebarWidth(Number.NaN)).toBe(260);
   });
@@ -157,8 +157,8 @@ describe('Library mode layout', () => {
 describe('sidebar edge drag', () => {
   it('resizes within limits, and hides when pushed to the edge', () => {
     expect(sidebarDrag(300)).toEqual({ collapse: false, width: 300 });
-    expect(sidebarDrag(150)).toEqual({ collapse: false, width: 200 }); // held at the minimum
-    expect(sidebarDrag(119)).toEqual({ collapse: true });
+    expect(sidebarDrag(130)).toEqual({ collapse: false, width: 150 }); // held at the minimum
+    expect(sidebarDrag(109)).toEqual({ collapse: true });
     expect(sidebarDrag(Number.NaN)).toEqual({ collapse: false, width: 260 });
   });
 });

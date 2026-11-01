@@ -133,7 +133,7 @@ export class OverlayController {
         this.view.setVisible(false);
         this.send();
       }
-    }, 1150);
+    }, 950); // the overlay takes clicks while it shows, so the flight is kept short
   }
 
   /** The sidebar's + popover (Img 2); the button toggles it. */

@@ -3,6 +3,7 @@ import type { MenuItemConstructorOptions } from 'electron';
 import type { Space } from '../persistence/repositories/sidebar';
 import type { TabManager } from '../tabs/tab-manager';
 import { childrenAt } from './model';
+import { classifyInput } from '../omnibox/classify';
 import type { Position, Section } from './model';
 import type { SidebarStore } from './store';
 
@@ -305,8 +306,59 @@ export class SidebarActions {
 
   /** The space context menu, matching Arc's (Img 5). */
   spaceMenu(spaceId: string): void {
+    const template = this.spaceMenuTemplate(spaceId);
+    if (template.length > 0) Menu.buildFromTemplate(template).popup();
+  }
+
+  /**
+   * Right-click on the sidebar's empty space (like Arc): make things, paste an address, tidy up,
+   * the space's own options, and the sidebar itself.
+   */
+  async backgroundMenu(): Promise<void> {
+    const space = this.space;
+    const today = this.store.rows('today', space).filter((r) => r.item.kind === 'tab').length;
+    const pasted = (await clipboard.readText()).trim();
+    const go = pasted && !/\s/.test(pasted) ? classifyInput(pasted) : null;
+    const template: MenuItemConstructorOptions[] = [
+      { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: () => this.ui.openCommandBar() },
+      { label: 'New Folder', click: () => this.newFolder('pinned') },
+      {
+        label: 'New Split View',
+        accelerator: 'Ctrl+Shift+=',
+        click: () => this.ui.command('split-view'),
+      },
+      {
+        label: 'New Easel',
+        accelerator: 'Ctrl+Shift+E',
+        click: () => this.ui.command('new-easel'),
+      },
+      { type: 'separator' },
+      {
+        label: go
+          ? `Paste and Go to “${pasted.length > 40 ? `${pasted.slice(0, 40)}…` : pasted}”`
+          : 'Paste and Go',
+        enabled: go !== null,
+        click: () => go && this.tabs.create(go.url),
+      },
+      { type: 'separator' },
+      { label: 'Tidy Today', enabled: today >= 2, click: () => this.ui.command('tidy') },
+      { label: 'Clear Today', enabled: today > 0, click: () => this.clearToday() },
+      { type: 'separator' },
+      { label: `Space “${space.name}”`, submenu: this.spaceMenuTemplate(space.id) },
+      { label: 'Library', click: () => this.ui.command('library') },
+      { type: 'separator' },
+      {
+        label: 'Hide Sidebar',
+        accelerator: 'CmdOrCtrl+S',
+        click: () => this.ui.command('toggle-sidebar'),
+      },
+    ];
+    Menu.buildFromTemplate(template).popup();
+  }
+
+  private spaceMenuTemplate(spaceId: string): MenuItemConstructorOptions[] {
     const space = this.store.space(spaceId);
-    if (!space) return;
+    if (!space) return [];
     const others = this.store.spaces.filter((s) => s.id !== spaceId);
     const template: MenuItemConstructorOptions[] = [
       {
@@ -385,7 +437,7 @@ export class SidebarActions {
       { label: 'Manage Spaces…', click: () => this.ui.command('manage-spaces') },
       { label: 'Delete Space', enabled: others.length > 0, click: () => this.deleteSpace(spaceId) },
     ];
-    Menu.buildFromTemplate(template).popup();
+    return template;
   }
 
   /** A space's pinned web links, in sidebar order (Share Space…). */

@@ -38,6 +38,10 @@ export function registerSidebarHandlers(router: IpcRouter, windows: WindowManage
     windowFor(sender.webContentsId).sidebar.itemMenu(itemId);
   });
 
+  router.handle('sidebar:backgroundMenu', async (_i, { sender }) => {
+    await windowFor(sender.webContentsId).sidebar.backgroundMenu();
+  });
+
   router.handle('sidebar:spaceMenu', ({ spaceId }, { sender }) => {
     windowFor(sender.webContentsId).sidebar.spaceMenu(spaceId);
   });
