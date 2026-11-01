@@ -240,6 +240,7 @@ export class WindowManager {
           toUrl: url,
           activate,
           enabled: settings.get('peek.enabled'),
+          scope: settings.get('peek.scope'),
           siteSetting: fromUrl ? this.deps.siteSetting(fromUrl, 'peek') : null,
           devMode: fromUrl ? this.deps.siteSetting(fromUrl, 'devMode') === 'on' : false,
         });

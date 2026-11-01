@@ -148,8 +148,8 @@ export function SettingsPage() {
 
             <Group title="Peek">
               <Row
-                label="Preview links from pinned tabs"
-                hint="Links from pinned tabs and favorites to other sites open in a floating preview."
+                label="Preview links to other sites"
+                hint="A link that would open a new tab on another site (an ad, a search result) opens in a floating preview over the page."
               >
                 <input
                   type="checkbox"
@@ -158,6 +158,18 @@ export function SettingsPage() {
                   className="size-4 accent-[var(--accent,#5b5bd6)]"
                   data-testid="setting-peek"
                 />
+              </Row>
+              <Row label="Preview links from" hint="Arc only previews links from pinned tabs.">
+                <select
+                  value={settings.peekScope}
+                  disabled={!settings.peek}
+                  onChange={(e) => update({ peekScope: e.target.value as 'all' | 'pinned' })}
+                  className="rounded-lg border border-neutral-200 px-2 py-1 text-sm disabled:opacity-40"
+                  data-testid="setting-peek-scope"
+                >
+                  <option value="all">Any tab</option>
+                  <option value="pinned">Pinned tabs and favorites</option>
+                </select>
               </Row>
             </Group>
 

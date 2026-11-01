@@ -81,6 +81,7 @@ export function registerInternalPageHandlers(
     sleepAfterMinutes: deps.settings.get('tabs.sleepAfterMinutes'),
     searchEngine: deps.settings.get('search.engine'),
     peek: deps.settings.get('peek.enabled'),
+    peekScope: deps.settings.get('peek.scope'),
     littleShortcut: deps.settings.get('little.globalShortcut'),
   });
 
@@ -101,6 +102,7 @@ export function registerInternalPageHandlers(
       setSearchEngine(SEARCH_ENGINES[patch.searchEngine].url);
     }
     if (patch.peek !== undefined) deps.settings.set('peek.enabled', patch.peek);
+    if (patch.peekScope) deps.settings.set('peek.scope', patch.peekScope);
     if (patch.littleShortcut !== undefined) {
       deps.settings.set('little.globalShortcut', patch.littleShortcut);
       deps.applyLittleShortcut(patch.littleShortcut);

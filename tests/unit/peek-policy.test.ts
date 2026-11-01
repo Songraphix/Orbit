@@ -8,6 +8,7 @@ const base: PeekRequest = {
   toUrl: 'https://github.com/notifications',
   activate: true,
   enabled: true,
+  scope: 'pinned',
   siteSetting: null,
 };
 
@@ -41,6 +42,15 @@ describe('shouldPeek', () => {
     expect(shouldPeek({ ...base, siteSetting: 'off' })).toBe(false);
     expect(shouldPeek({ ...base, devMode: true })).toBe(false);
     expect(shouldPeek({ ...base, siteSetting: 'on' })).toBe(true);
+  });
+
+  it('with scope "all", peeks any tab\'s links to other sites (an ad on YouTube)', () => {
+    const all = { ...base, scope: 'all' as const, fromUrl: 'https://www.youtube.com/watch?v=1' };
+    expect(shouldPeek({ ...all, section: 'today', toUrl: 'https://ad.example.com/' })).toBe(true);
+    expect(shouldPeek({ ...all, section: 'today', toUrl: 'https://youtu.be/x' })).toBe(true);
+    expect(shouldPeek({ ...all, section: 'today', toUrl: 'https://m.youtube.com/' })).toBe(false);
+    expect(shouldPeek({ ...all, section: 'today', activate: false })).toBe(false);
+    expect(shouldPeek({ ...all, section: null })).toBe(false);
   });
 
   it('never peeks non-web targets', () => {

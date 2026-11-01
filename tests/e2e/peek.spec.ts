@@ -77,7 +77,7 @@ test('links from a pinned tab to another site open in Peek; Open as Tab keeps th
   }
 });
 
-test('Peek closes from the backdrop; links from Today tabs skip it', async () => {
+test('Peek closes from the backdrop; links from Today tabs open in Peek too', async () => {
   const orbit = await launchOrbit();
   try {
     const { app, win } = orbit;
@@ -95,7 +95,7 @@ test('Peek closes from the backdrop; links from Today tabs skip it', async () =>
     await expect(bar.getByTestId('peek')).toHaveCount(0);
     await expect.poll(() => pageCount(app, 'localhost')).toBe(0);
 
-    // A Today tab's link opens a normal tab.
+    // A Today tab's link to another site (an ad on YouTube, say) peeks too, by default.
     await invoke(win, 'tabs:create', { url: server.url('/peek') });
     await expect(today).toHaveText(['Peek Source', 'New Tab']);
     await app.evaluate(({ webContents }) => {
@@ -103,8 +103,8 @@ test('Peek closes from the backdrop; links from Today tabs skip it', async () =>
       // The Today copy is the newest page.
       return pages.at(-1)!.executeJavaScript('document.getElementById("out").click()', true);
     });
-    await expect(today).toHaveText(['Page Two', 'Peek Source', 'New Tab']);
-    await expect(bar.getByTestId('peek')).toHaveCount(0);
+    await expect(bar.getByTestId('peek')).toBeVisible();
+    await expect(today).toHaveText(['Peek Source', 'New Tab']); // no new tab
   } finally {
     await orbit.close();
   }

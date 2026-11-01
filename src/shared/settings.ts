@@ -36,6 +36,8 @@ export const settingsSchema = {
     .max(24 * 60),
   /** Links from pinned tabs and favorites to other sites open in a Peek preview (F-23). */
   'peek.enabled': z.boolean(),
+  /** Whose links Peek: any tab's, or only pinned tabs' and favorites' (Arc's default). */
+  'peek.scope': z.enum(['all', 'pinned']),
   /** ⌥⌘N opens an empty Little Orbit from any app (F-24). */
   'little.globalShortcut': z.boolean(),
   /** Search engine URL with %s for the query. */
@@ -56,6 +58,7 @@ export const settingsDefaults: Settings = {
   'tabs.sleepAfterMinutes': 30,
   'search.engine': 'google',
   'peek.enabled': true,
+  'peek.scope': 'all',
   'little.globalShortcut': true,
 };
 
@@ -75,6 +78,7 @@ export const userSettingsSchema = z.object({
   sleepAfterMinutes: settingsSchema['tabs.sleepAfterMinutes'],
   searchEngine: settingsSchema['search.engine'],
   peek: settingsSchema['peek.enabled'],
+  peekScope: settingsSchema['peek.scope'],
   littleShortcut: settingsSchema['little.globalShortcut'],
 });
 export type UserSettings = z.output<typeof userSettingsSchema>;
