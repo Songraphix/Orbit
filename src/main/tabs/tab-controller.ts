@@ -22,6 +22,14 @@ export type TabEnv = {
   onViewReplaced(oldView: WebContentsView, newView: WebContentsView): void;
   /** The page entered or left HTML fullscreen (e.g. YouTube's fullscreen button). */
   onHtmlFullscreen(enter: boolean): void;
+  /** Browsing history sink (visits, titles, favicons). */
+  history: HistorySink;
+};
+
+export type HistorySink = {
+  recordVisit(url: string, title: string): void;
+  updateTitle(url: string, title: string): void;
+  setFavicon(url: string, dataUrl: string): void;
 };
 
 const isInternalUrl = (url: string) => url.startsWith('orbit://');
@@ -183,17 +191,24 @@ export class TabController {
 
     contents.on('did-start-loading', () => this.update({ isLoading: true }));
     contents.on('did-stop-loading', () => this.update({ isLoading: false, ...this.navState() }));
-    contents.on('did-navigate', () =>
-      this.update({ url: contents.getURL(), favicon: null, ...this.navState() }),
-    );
+    contents.on('did-navigate', () => {
+      const url = contents.getURL();
+      this.update({ url, favicon: null, ...this.navState() });
+      this.env.history.recordVisit(url, contents.getTitle());
+    });
     contents.on('did-navigate-in-page', (_e, _url, isMainFrame) => {
       if (isMainFrame) this.update({ url: contents.getURL(), ...this.navState() });
     });
-    contents.on('page-title-updated', (_e, title) => this.update({ title }));
+    contents.on('page-title-updated', (_e, title) => {
+      this.update({ title });
+      this.env.history.updateTitle(contents.getURL(), title);
+    });
     contents.on('page-favicon-updated', (_e, favicons) => {
       const request = ++this.faviconRequest;
       void fetchFaviconDataUrl(contents.session, favicons).then((favicon) => {
-        if (request === this.faviconRequest && !contents.isDestroyed()) this.update({ favicon });
+        if (request !== this.faviconRequest || contents.isDestroyed()) return;
+        this.update({ favicon });
+        if (favicon) this.env.history.setFavicon(contents.getURL(), favicon);
       });
     });
     return view;

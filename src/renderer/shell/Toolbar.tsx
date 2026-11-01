@@ -65,9 +65,12 @@ export function Toolbar({
       </ToolbarButton>
 
       {address && (
-        <div
-          className="pointer-events-none absolute inset-x-28 flex min-w-0 items-center justify-center gap-1.5 text-[13px]"
+        // Clicking the address edits it in the command bar (⌘L), like Arc.
+        <button
+          type="button"
+          className="no-drag absolute inset-x-28 mx-auto flex w-fit max-w-[calc(100%-14rem)] min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-1 text-[13px] hover:bg-black/5"
           title={tab?.url}
+          onClick={() => void window.orbit.invoke('commandbar:open', { mode: 'edit' })}
           data-testid="toolbar-address"
         >
           {address.domain && address.secure && (
@@ -78,7 +81,7 @@ export function Toolbar({
           )}
           {address.domain && address.title && <span className="shrink-0 text-neutral-300">/</span>}
           {address.title && <span className="truncate text-neutral-500">{address.title}</span>}
-        </div>
+        </button>
       )}
 
       {tab?.isLoading && (

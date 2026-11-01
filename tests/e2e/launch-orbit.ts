@@ -35,7 +35,12 @@ export async function launchOrbit(options: { userData?: string } = {}): Promise<
   const { ELECTRON_RUN_AS_NODE: _, ...env } = process.env;
   const app = await electron.launch({
     args: ['.'],
-    env: { ...(env as Record<string, string>), ORBIT_USER_DATA_DIR: userData },
+    env: {
+      ...(env as Record<string, string>),
+      ORBIT_USER_DATA_DIR: userData,
+      // Command bar results stay deterministic (no live Google suggestions).
+      ORBIT_DISABLE_SUGGESTIONS: '1',
+    },
   });
   const win = await shellPage(app);
   return {

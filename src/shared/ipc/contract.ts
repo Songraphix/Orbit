@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { layoutSchema } from '../types/layout';
+import { commandBarModeSchema, commandItemSchema, overlayStateSchema } from '../types/command-bar';
 import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
 import { tabsSnapshotSchema } from '../types/tabs';
 
@@ -92,6 +93,32 @@ export const contract = {
     output: z.void(),
   },
 
+  // Command bar (F-21). The shell opens it; the overlay (where it renders) queries and executes.
+  'commandbar:open': {
+    input: z.object({ mode: commandBarModeSchema }).strict(),
+    output: z.void(),
+  },
+  'commandbar:query': {
+    input: z.object({ query: z.string().max(2048) }).strict(),
+    output: z.object({ items: z.array(commandItemSchema) }),
+    surfaces: ['overlay'],
+  },
+  'commandbar:execute': {
+    input: z.object({ item: commandItemSchema }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'overlay:get': {
+    input: z.object({}).strict(),
+    output: overlayStateSchema,
+    surfaces: ['overlay'],
+  },
+  'overlay:close': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+
   // New tab page (orbit://newtab). Only internal pages may call these.
   'newtab:get': {
     input: z.object({}).strict(),
@@ -122,6 +149,8 @@ export const events = {
   'state:layout': layoutSchema,
   /** Sent to a window's shell whenever its tabs change. */
   'state:tabs': tabsSnapshotSchema,
+  /** Sent to a window's overlay when floating UI opens or closes. */
+  'state:overlay': overlayStateSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type Contract = typeof contract;

@@ -1,8 +1,8 @@
 # Progress log
 
-## Current phase: Phase 1 — Window, sidebar shell and tabs
+## Current phase: Phase 2 — Overlay layer and command bar
 
-Target end: 2026-11-16 · Branch: `phase-1/foundations`
+Target end: 2026-11-23 · Branch: `phase-2/command-bar` (Phase 1 merged to `main` at d58b3fa)
 
 ## Done
 
@@ -23,13 +23,16 @@ Target end: 2026-11-16 · Branch: `phase-1/foundations`
 - 2026-11-01 — Phase 1 step 8: web page right-click menu [F-31] — pure `buildContextMenu()` (links, images, selection + Google search, editable fields with spelling suggestions / Add to Dictionary / undo-redo-cut-copy-paste, page Back/Forward/Reload, Inspect Element); native menu wiring in `context-menu.ts`
 - 2026-11-01 — Phase 1 step 9: HTML fullscreen [F-31] — page fullscreen (e.g. YouTube) puts the window in macOS fullscreen and gives the view the whole window with no chrome or corners; leaving (Esc, or the green button) restores the layout; window fullscreen is only undone if Orbit entered it
 - 2026-11-01 — Phase 1 steps 10–11: menu — Tabs menu (⌃Tab / ⌃⇧Tab, ⌘1…⌘8, ⌘9 = last); session restore — migration 002 `tabs`, `TabsRepository`, tabs saved 500 ms after changes and on close; restored tabs keep title/favicon and only the active one loads (others load on first click); fixes: sidebar drag ignores Chromium's synthetic no-button hover move; exiting HTML fullscreen during the macOS enter animation is deferred until it finishes
+- 2026-11-01 — Phase 2: history [F-21] — migration 003 (history + FTS5 + triggers, favicons by host, site_settings), `HistoryRepository` (visits, titles, frecency-ranked prefix search, top sites, bulk import for the Arc importer); tabs record visits/titles/favicons
+- 2026-11-01 — Phase 2: overlay layer + command bar [F-21, F-22] — `OverlayController` (transparent top-most view, hidden when idle, focus returns to the page); command bar with results ranked in main (`buildResults`, pure): address / search first, switch-to-open-tab instead of duplicating, commands, history, Google suggestions (disabled in tests); ⌘T opens it (owner's choice), ⌘L / clicking the address edits the current URL; ⇧⌘C / ⇧⌥⌘C copy URL / Markdown link; ⇧⌘T reopens closed tabs (in memory, 25)
 
 ## In progress
 
-- Phase 1 exit check, then Phase 2 (overlay layer + command bar)
+- Phase 2: find bar, zoom per host, print, copy-URL toast
 
 ## Decisions made
 
+- 2026-11-01 — Command bar list built in-house rather than with cmdk: results are ranked in main, so cmdk's own fuzzy filter would fight it, and it pulls in several Radix packages
 - 2026-11-01 — New tab page added at the owner's request (F-32): "+ New Tab" always opens it; ⌘T opens it until the Phase 2 command bar, then ⌘T → command bar
 
 - Pinned versions: Electron 45.2.1 (Chromium 156, Node 24.22), electron-vite 6.0.0, Vite 8.3.5, React 19.3.1, TypeScript 6.0.3, Tailwind 4.3.3, Vitest 5.0.5, Playwright 1.64.1, electron-builder 26.18.0

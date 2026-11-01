@@ -3,6 +3,7 @@ import { openDatabase } from './db';
 import type { Database } from './db';
 import { migrate } from './migrate';
 import { migrations } from './migrations';
+import { HistoryRepository } from './repositories/history';
 import { SettingsRepository } from './repositories/settings';
 import { TabsRepository } from './repositories/tabs';
 
@@ -12,6 +13,7 @@ export type Persistence = {
   db: Database;
   settings: SettingsRepository;
   tabs: TabsRepository;
+  history: HistoryRepository;
   close(): void;
 };
 
@@ -23,6 +25,7 @@ export function openPersistence(userDataDir: string): Persistence {
     db,
     settings: new SettingsRepository(db),
     tabs: new TabsRepository(db),
+    history: new HistoryRepository(db),
     close: () => {
       if (db.isOpen) db.close();
     },

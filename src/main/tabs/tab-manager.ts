@@ -10,10 +10,12 @@ import type { TabEnv, TabOptions } from './tab-controller';
 
 /** A pre-drag snapshot older than this is stale (the page may have changed). */
 const SNAPSHOT_MAX_AGE_MS = 10_000;
+/** How many closed tabs ⇧⌘T can bring back. */
+const CLOSED_TAB_MEMORY = 25;
 
 export type TabManagerDeps = Pick<
   TabEnv,
-  'internalPreload' | 'loadInternal' | 'registerInternal' | 'unregisterInternal'
+  'internalPreload' | 'loadInternal' | 'registerInternal' | 'unregisterInternal' | 'history'
 > & {
   win: BrowserWindow;
   getLayout: () => Layout;
@@ -34,6 +36,8 @@ export class TabManager {
   private notifyScheduled = false;
   private frozen = false;
   private prepared: { tabId: string; at: number; dataUrl: string } | null = null;
+  private readonly closed: { url: string; title: string; favicon: string | null; index: number }[] =
+    [];
 
   constructor(private readonly deps: TabManagerDeps) {}
 
@@ -77,6 +81,7 @@ export class TabManager {
         loadInternal: this.deps.loadInternal,
         registerInternal: this.deps.registerInternal,
         unregisterInternal: this.deps.unregisterInternal,
+        history: this.deps.history,
         openInNewTab: (link, activate) => this.create(link, { activate }),
         onChange: () => this.scheduleNotify(),
         onViewReplaced: (oldView, newView) => this.replaceView(id, oldView, newView),
@@ -122,6 +127,22 @@ export class TabManager {
     });
   }
 
+  /** ⇧⌘T: reopens the most recently closed tab where it was. */
+  reopenClosed(): TabController | null {
+    const last = this.closed.pop();
+    if (!last) return null;
+    const tab = this.create(last.url, {
+      activate: false,
+      title: last.title,
+      favicon: last.favicon,
+    });
+    // Put it back at its old position rather than after the active tab.
+    this.order = this.order.filter((t) => t !== tab.id);
+    this.order.splice(Math.min(last.index, this.order.length), 0, tab.id);
+    this.activate(tab.id);
+    return tab;
+  }
+
   /** Previous/next tab (⌃⇧Tab / ⌃Tab), wrapping around. */
   cycle(direction: 1 | -1): void {
     if (this.order.length === 0) return;
@@ -154,6 +175,10 @@ export class TabManager {
     const tab = this.tabs.get(id);
     if (!tab) return;
     const nextId = nextActiveAfterClose(this.order, id, this.activeId);
+    // Remember it for ⇧⌘T (in memory; Phase 4 backs this with the archive).
+    const { url, title, favicon } = tab.state;
+    this.closed.push({ url, title, favicon, index: this.order.indexOf(id) });
+    if (this.closed.length > CLOSED_TAB_MEMORY) this.closed.shift();
     this.detach(tab.view);
     tab.destroy();
     this.tabs.delete(id);

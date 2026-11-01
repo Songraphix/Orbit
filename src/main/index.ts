@@ -6,7 +6,9 @@ import { APP_NAME, isInternalPage } from '@shared/constants';
 import type { RendererEntry } from '@shared/constants';
 import { chromeUserAgent } from './app/user-agent';
 import { Broadcaster } from './ipc/broadcaster';
+import { CommandBarService, copyActiveUrl } from './commandbar/service';
 import { registerAppHandlers } from './ipc/handlers/app';
+import { registerCommandBarHandlers } from './ipc/handlers/command-bar';
 import { registerLayoutHandlers } from './ipc/handlers/layout';
 import { registerNewTabHandlers } from './ipc/handlers/newtab';
 import { navigateTab, registerTabHandlers } from './ipc/handlers/tabs';
@@ -17,6 +19,7 @@ import { SenderRegistry } from './ipc/sender';
 import { openPersistence } from './persistence';
 import type { Persistence } from './persistence';
 import { WindowManager } from './windows/window-manager';
+import type { WindowController } from './windows/window-manager';
 
 app.setName(APP_NAME);
 
@@ -58,6 +61,36 @@ function loadInternal(view: WebContentsView, url: string): void {
   else void view.webContents.loadFile(join(rendererDir, 'internal', 'index.html'), { hash });
 }
 
+function loadOverlay(view: WebContentsView): void {
+  if (devServer) void view.webContents.loadURL(`${devServer}/overlay/index.html`);
+  else void view.webContents.loadFile(join(rendererDir, 'overlay', 'index.html'));
+}
+
+/** Runs a command by id for a window (command bar items and menu items share these). */
+function runCommand(controller: WindowController, commandId: string): void {
+  const { tabs, layout } = controller;
+  switch (commandId) {
+    case 'new-tab-page':
+      tabs.create();
+      return;
+    case 'toggle-sidebar':
+      layout.toggleSidebar();
+      return;
+    case 'copy-url':
+      copyActiveUrl(controller);
+      return;
+    case 'reload':
+      if (tabs.active) navigateTab(tabs.active, 'reload');
+      return;
+    case 'close-tab':
+      if (tabs.active) tabs.close(tabs.active.id);
+      return;
+    case 'reopen-tab':
+      tabs.reopenClosed();
+      return;
+  }
+}
+
 app.on('second-instance', () => {
   const [win] = BrowserWindow.getAllWindows();
   if (win) {
@@ -84,12 +117,14 @@ void app.whenReady().then(() => {
   windows = new WindowManager({
     settings: persistence.settings,
     tabsRepo: persistence.tabs,
+    history: persistence.history,
     senders,
     broadcaster,
     preloadPath: join(import.meta.dirname, '../preload/shell.cjs'),
     internalPreloadPath: join(import.meta.dirname, '../preload/internal.cjs'),
     loadRenderer,
     loadInternal,
+    loadOverlay,
   });
   const windowManager = windows;
 
@@ -103,15 +138,31 @@ void app.whenReady().then(() => {
     windowManager,
     new WallpaperService(app.getPath('userData'), persistence.settings),
   );
+  registerCommandBarHandlers(
+    router,
+    windowManager,
+    new CommandBarService(
+      persistence.history,
+      runCommand,
+      process.env['ORBIT_DISABLE_SUGGESTIONS'] !== '1',
+    ),
+  );
   router.assertComplete();
 
   installAppMenu({
     toggleSidebar: () => windowManager.focused()?.layout.toggleSidebar(),
-    newTab: () => windowManager.focused()?.tabs.create(),
-    closeTab: () => {
-      const tabs = windowManager.focused()?.tabs;
-      const active = tabs?.active;
-      if (tabs && active) tabs.close(active.id);
+    openCommandBar: (mode) => {
+      const controller = windowManager.focused();
+      if (controller) windowManager.openCommandBar(controller, mode);
+    },
+    newTabPage: () => windowManager.focused()?.tabs.create(),
+    command: (id) => {
+      const controller = windowManager.focused();
+      if (controller) runCommand(controller, id);
+    },
+    copyUrlAsMarkdown: () => {
+      const controller = windowManager.focused();
+      if (controller) copyActiveUrl(controller, true);
     },
     navigate: (action) => {
       const active = windowManager.focused()?.tabs.active;

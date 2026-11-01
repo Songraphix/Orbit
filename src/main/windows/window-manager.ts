@@ -7,8 +7,10 @@ import type { SenderRegistry } from '../ipc/sender';
 import type { SettingsRepository } from '../persistence/repositories/settings';
 import type { TabsRepository } from '../persistence/repositories/tabs';
 import type { TabController } from '../tabs/tab-controller';
+import type { HistorySink } from '../tabs/tab-controller';
 import { TabManager } from '../tabs/tab-manager';
 import { LayoutEngine } from './layout-engine';
+import { OverlayController } from './overlay';
 import { MIN_SIZE, resolveWindowBounds } from './window-state';
 
 /** Where the macOS traffic lights sit, inside the sidebar's top-left corner (F-01). */
@@ -22,6 +24,7 @@ const TAB_SAVE_DELAY_MS = 500;
 export type WindowManagerDeps = {
   settings: SettingsRepository;
   tabsRepo: TabsRepository;
+  history: HistorySink;
   senders: SenderRegistry;
   broadcaster: Broadcaster;
   preloadPath: string;
@@ -29,6 +32,8 @@ export type WindowManagerDeps = {
   loadRenderer: (win: BrowserWindow, entry: RendererEntry) => void;
   /** Loads an internal orbit:// page (e.g. orbit://newtab) into a tab's view. */
   loadInternal: (view: WebContentsView, url: string) => void;
+  /** Loads the overlay renderer into the overlay view. */
+  loadOverlay: (view: WebContentsView) => void;
 };
 
 /** One Orbit window and the services scoped to it. */
@@ -36,6 +41,7 @@ export type WindowController = {
   win: BrowserWindow;
   layout: LayoutEngine;
   tabs: TabManager;
+  overlay: OverlayController;
 };
 
 /** Creates and restores Orbit's windows (PLAN.md section 4.3). */
@@ -57,6 +63,13 @@ export class WindowManager {
       if (tab) return { window, tab };
     }
     return null;
+  }
+
+  /** Opens the command bar: "new" (⌘T) starts empty, "edit" (⌘L) starts with the current URL. */
+  openCommandBar(controller: WindowController, mode: 'new' | 'edit'): void {
+    const active = controller.tabs.active?.state;
+    const initial = mode === 'edit' && active?.kind === 'web' ? active.url : '';
+    controller.overlay.openCommandBar(mode, initial);
   }
 
   /** The focused window (for menu commands), falling back to any window. */
@@ -112,6 +125,7 @@ export class WindowManager {
       loadInternal: this.deps.loadInternal,
       registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
       unregisterInternal: (webContentsId) => senders.remove(webContentsId),
+      history: this.deps.history,
       onChange: (snapshot) => {
         broadcaster.sendTo(contents, 'state:tabs', snapshot);
         scheduleTabSave();
@@ -171,21 +185,42 @@ export class WindowManager {
         .catch(() => undefined);
     });
 
+    // Floating UI (command bar…) above the pages. Its sender maps to this window too.
+    const overlay = new OverlayController({
+      win,
+      preloadPath,
+      load: this.deps.loadOverlay,
+      register: (webContentsId) => senders.add(webContentsId, 'overlay'),
+      unregister: (webContentsId) => senders.remove(webContentsId),
+      send: (target, state) => broadcaster.sendTo(target, 'state:overlay', state),
+      refocus: () => tabManager.active?.view.webContents.focus(),
+    });
+
     const id = contents.id;
-    this.controllers.set(id, { win, layout, tabs: tabManager });
+    const overlayId = overlay.view.webContents.id;
+    const controller: WindowController = { win, layout, tabs: tabManager, overlay };
+    this.controllers.set(id, controller);
+    this.controllers.set(overlayId, controller);
     senders.add(id, 'shell');
     broadcaster.add(contents);
     contents.once('destroyed', () => {
       this.controllers.delete(id);
+      this.controllers.delete(overlayId);
       senders.remove(id);
       broadcaster.remove(contents);
     });
-    win.on('resize', () => layout.update());
+    win.on('resize', () => {
+      layout.update();
+      if (overlay.isOpen) overlay.fit();
+    });
     win.on('close', () => {
       layout.flush();
       saveTabs();
     });
-    win.on('closed', () => tabManager.destroyAll());
+    win.on('closed', () => {
+      tabManager.destroyAll();
+      overlay.destroy();
+    });
 
     // Reopen last session's tabs, or start with a new tab page.
     const savedTabs = this.deps.tabsRepo.load();

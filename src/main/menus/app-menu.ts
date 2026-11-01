@@ -5,8 +5,13 @@ export type NavigateAction = 'back' | 'forward' | 'reload' | 'hardReload' | 'sto
 
 export type AppMenuActions = {
   toggleSidebar: () => void;
-  newTab: () => void;
-  closeTab: () => void;
+  /** ⌘T: command bar ("new"); ⌘L: command bar with the current URL ("edit"). */
+  openCommandBar: (mode: 'new' | 'edit') => void;
+  /** The wallpaper new tab page (also the sidebar's "+ New Tab" row). */
+  newTabPage: () => void;
+  /** Runs a shared command by id (close-tab, reopen-tab, copy-url…). */
+  command: (id: string) => void;
+  copyUrlAsMarkdown: () => void;
   /** Acts on the focused window's active tab. */
   navigate: (action: NavigateAction) => void;
   /** Opens DevTools for the active tab's page (⌥⌘I). */
@@ -27,20 +32,63 @@ export function installAppMenu(actions: AppMenuActions): void {
     {
       label: 'File',
       submenu: [
-        // ⌘T opens the new tab page; it moves to the command bar in Phase 2 (the sidebar's
-        // "+ New Tab" row keeps opening the page).
-        { id: 'new-tab', label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: actions.newTab },
+        // ⌘T opens the command bar (owner's choice, F-32); the new tab page has its own item
+        // and the sidebar's "+ New Tab" row.
+        {
+          id: 'new-tab',
+          label: 'New Tab…',
+          accelerator: 'CmdOrCtrl+T',
+          click: () => actions.openCommandBar('new'),
+        },
+        { id: 'new-tab-page', label: 'New Tab Page', click: actions.newTabPage },
+        {
+          id: 'open-location',
+          label: 'Open Location…',
+          accelerator: 'CmdOrCtrl+L',
+          click: () => actions.openCommandBar('edit'),
+        },
         { type: 'separator' },
         // ⌘W closes the tab, never the window (the default role would close the window).
         {
           id: 'close-tab',
           label: 'Close Tab',
           accelerator: 'CmdOrCtrl+W',
-          click: actions.closeTab,
+          click: () => actions.command('close-tab'),
+        },
+        {
+          id: 'reopen-tab',
+          label: 'Reopen Closed Tab',
+          accelerator: 'Shift+CmdOrCtrl+T',
+          click: () => actions.command('reopen-tab'),
         },
       ],
     },
-    { role: 'editMenu' },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'pasteAndMatchStyle' },
+        { role: 'selectAll' },
+        { type: 'separator' },
+        {
+          id: 'copy-url',
+          label: 'Copy URL',
+          accelerator: 'Shift+CmdOrCtrl+C',
+          click: () => actions.command('copy-url'),
+        },
+        {
+          id: 'copy-url-markdown',
+          label: 'Copy URL as Markdown',
+          accelerator: 'Shift+Alt+CmdOrCtrl+C',
+          click: actions.copyUrlAsMarkdown,
+        },
+      ],
+    },
     {
       label: 'View',
       submenu: [
