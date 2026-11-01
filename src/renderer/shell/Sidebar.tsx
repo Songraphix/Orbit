@@ -48,20 +48,30 @@ function ResizeHandle({ onStart, onEnd }: { onStart: () => void; onEnd: () => vo
     }
   };
 
+  // Document-level listeners rather than pointer capture: hiding the native web view at drag start
+  // shifts focus between views, which can cancel pointer capture mid-drag.
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
+    if (e.button !== 0) return;
+    e.preventDefault();
     onStart();
-  };
-  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-    pending.current = e.clientX; // the sidebar starts at x = 0, so the pointer x is the width
-    frame.current ??= requestAnimationFrame(send); // at most one update per frame
-  };
-  // Pointer capture ends on release or if the OS cancels the drag; both finish the resize.
-  const onLostPointerCapture = () => {
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
-    send();
-    onEnd();
+
+    const move = (ev: globalThis.PointerEvent) => {
+      pending.current = ev.clientX; // the sidebar starts at x = 0, so pointer x is the width
+      frame.current ??= requestAnimationFrame(send); // at most one update per frame
+    };
+    const finish = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', finish);
+      document.removeEventListener('pointercancel', finish);
+      window.removeEventListener('blur', finish);
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+      send();
+      onEnd();
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', finish);
+    document.addEventListener('pointercancel', finish);
+    window.addEventListener('blur', finish); // e.g. ⌘-Tab away mid-drag
   };
 
   return (
@@ -70,8 +80,6 @@ function ResizeHandle({ onStart, onEnd }: { onStart: () => void; onEnd: () => vo
       // Hovering the edge snapshots the page, so a drag can swap it in without delay.
       onPointerEnter={() => void window.orbit.invoke('sidebar:prepareResize', {})}
       onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onLostPointerCapture={onLostPointerCapture}
       data-testid="sidebar-resize-handle"
     />
   );

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import type { Layout, Rect } from '@shared/types/layout';
 import type { TabsSnapshot } from '@shared/types/tabs';
 import { Sidebar } from './Sidebar';
+import { Toolbar } from './Toolbar';
 import { useMainState } from './use-main-state';
 
 const toStyle = (r: Rect) => ({ left: r.x, top: r.y, width: r.width, height: r.height });
@@ -40,7 +41,8 @@ function useResizeSnapshot() {
 }
 
 function Chrome({ layout, tabs }: { layout: Layout; tabs: TabsSnapshot | null }) {
-  const hasActiveTab = Boolean(tabs?.activeTabId);
+  const activeTab = tabs?.tabs.find((t) => t.id === tabs.activeTabId) ?? null;
+  const hasActiveTab = activeTab !== null;
   const { snapshot, onResizeStart, onResizeEnd } = useResizeSnapshot();
   const webViewTop = layout.webView.y - layout.card.y;
 
@@ -54,14 +56,18 @@ function Chrome({ layout, tabs }: { layout: Layout; tabs: TabsSnapshot | null })
           onResizeEnd={onResizeEnd}
         />
       )}
-      {/* Content card: toolbar strip (step 6) on top; the active tab's web view is a native
-          view that main places exactly over the area below it. */}
+      {/* Content card: toolbar on top; the active tab's web view is a native view that main
+          places exactly over the area below it. */}
       <div
         className="absolute overflow-hidden bg-white shadow-sm"
         style={{ ...toStyle(layout.card), borderRadius: layout.radius }}
         data-testid="content-card"
       >
-        <div className="drag-region" style={{ height: layout.toolbar.height }} />
+        <Toolbar
+          tab={activeTab}
+          height={layout.toolbar.height}
+          sidebarVisible={layout.sidebar.visible}
+        />
         {snapshot && (
           <img
             src={snapshot}

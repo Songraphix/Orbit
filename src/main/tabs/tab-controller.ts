@@ -89,6 +89,32 @@ export class TabController {
     this.loadIntoView(url);
   }
 
+  goBack(): void {
+    const history = this.view.webContents.navigationHistory;
+    if (this.stateValue.kind === 'web' && history.canGoBack()) history.goBack();
+  }
+
+  goForward(): void {
+    const history = this.view.webContents.navigationHistory;
+    if (this.stateValue.kind === 'web' && history.canGoForward()) history.goForward();
+  }
+
+  /** Reloads (or stops, if loading). `hard` bypasses the cache (⇧⌘R). */
+  reload(hard = false): void {
+    const contents = this.view.webContents;
+    if (this.stateValue.kind === 'internal') {
+      this.env.loadInternal(this.view, this.stateValue.url);
+    } else if (hard) {
+      contents.reloadIgnoringCache();
+    } else {
+      contents.reload();
+    }
+  }
+
+  stop(): void {
+    this.view.webContents.stop();
+  }
+
   destroy(): void {
     this.destroyView(this.view);
   }

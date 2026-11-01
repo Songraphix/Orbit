@@ -1,4 +1,5 @@
 import type { IpcRouter } from '../router';
+import type { TabController } from '../../tabs/tab-controller';
 import { classifyInput } from '../../omnibox/classify';
 import type { WindowManager } from '../../windows/window-manager';
 
@@ -25,4 +26,28 @@ export function registerTabHandlers(router: IpcRouter, windows: WindowManager): 
   router.handle('tabs:close', ({ tabId }, { sender }) => {
     tabsFor(sender.webContentsId).close(tabId);
   });
+
+  router.handle('tabs:navigate', ({ tabId, action }, { sender }) => {
+    const tab = tabsFor(sender.webContentsId).get(tabId);
+    if (tab) navigateTab(tab, action);
+  });
+}
+
+/** Shared by the toolbar (IPC) and the menu bar (⌘[, ⌘], ⌘R, ⇧⌘R). */
+export function navigateTab(
+  tab: TabController,
+  action: 'back' | 'forward' | 'reload' | 'hardReload' | 'stop',
+): void {
+  switch (action) {
+    case 'back':
+      return tab.goBack();
+    case 'forward':
+      return tab.goForward();
+    case 'reload':
+      return tab.reload();
+    case 'hardReload':
+      return tab.reload(true);
+    case 'stop':
+      return tab.stop();
+  }
 }

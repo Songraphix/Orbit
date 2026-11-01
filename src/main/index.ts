@@ -8,7 +8,7 @@ import { Broadcaster } from './ipc/broadcaster';
 import { registerAppHandlers } from './ipc/handlers/app';
 import { registerLayoutHandlers } from './ipc/handlers/layout';
 import { registerNewTabHandlers } from './ipc/handlers/newtab';
-import { registerTabHandlers } from './ipc/handlers/tabs';
+import { navigateTab, registerTabHandlers } from './ipc/handlers/tabs';
 import { WallpaperService } from './newtab/wallpaper-service';
 import { installAppMenu } from './menus/app-menu';
 import { IpcRouter } from './ipc/router';
@@ -107,6 +107,16 @@ void app.whenReady().then(() => {
       const tabs = windowManager.focused()?.tabs;
       const active = tabs?.active;
       if (tabs && active) tabs.close(active.id);
+    },
+    navigate: (action) => {
+      const active = windowManager.focused()?.tabs.active;
+      if (active) navigateTab(active, action);
+    },
+    toggleTabDevTools: () => {
+      const contents = windowManager.focused()?.tabs.active?.view.webContents;
+      if (!contents) return;
+      if (contents.isDevToolsOpened()) contents.closeDevTools();
+      else contents.openDevTools({ mode: 'detach' });
     },
   });
   windowManager.createMainWindow();

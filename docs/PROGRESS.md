@@ -18,10 +18,11 @@ Target end: 2026-11-16 · Branch: `phase-1/foundations`
 
 - 2026-11-01 — Phase 1 step 5a: tabs [F-04, F-31] — `TabController` (one WebContentsView per tab; web tabs have no preload and may only navigate to http(s); `target=_blank` → new tab; favicons as data: URLs), `TabManager` per window, `state:tabs`; IPC surface roles (shell / overlay / internal); `classifyInput()` (tldts) for URL vs search; sidebar tab list with "+ New Tab", close, middle-click; File → New Tab ⌘T / Close Tab ⌘W; sidebar resize swaps the live page for a snapshot so the drag isn't swallowed by the web view
 - 2026-11-01 — Phase 1 step 5b: new tab page [F-32] — `orbit://newtab` with 8 built-in gradient wallpapers, your own image (validated, downscaled, stored in the profile), clock + greeting, focused search box; `newtab:*` channels limited to internal pages
+- 2026-11-01 — Phase 1 step 6: toolbar v1 [F-14] — back / forward / reload-or-stop, centred `domain / title` with lock for https, indeterminate loading bar, sidebar button when the sidebar is hidden; menu: Reload ⌘R, Force Reload ⇧⌘R, Back ⌘[, Forward ⌘], page DevTools ⌥⌘I; sidebar drag now uses document listeners (pointer capture was cancelled when the live view hid)
 
 ## In progress
 
-- Phase 1 step 6: toolbar v1 (back / forward / reload, `domain / title`, loading indicator) — awaiting review of step 5
+- Phase 1 step 7: clean Chrome user agent + real popup windows for OAuth
 
 ## Decisions made
 

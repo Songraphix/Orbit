@@ -18,6 +18,9 @@ playwright-report/
 # macOS
 .DS_Store
 
+# Local Claude Code settings (machine-specific permissions)
+.claude/settings.local.json
+
 # Never commit personal Arc data (the backup lives in ~/ArcBackup, outside the repo)
 ArcBackup/
 **/Storable*.json

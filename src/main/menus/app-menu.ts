@@ -1,10 +1,16 @@
 import { app, Menu } from 'electron';
 import type { MenuItemConstructorOptions } from 'electron';
 
+export type NavigateAction = 'back' | 'forward' | 'reload' | 'hardReload' | 'stop';
+
 export type AppMenuActions = {
   toggleSidebar: () => void;
   newTab: () => void;
   closeTab: () => void;
+  /** Acts on the focused window's active tab. */
+  navigate: (action: NavigateAction) => void;
+  /** Opens DevTools for the active tab's page (⌥⌘I). */
+  toggleTabDevTools: () => void;
 };
 
 /**
@@ -41,13 +47,55 @@ export function installAppMenu(actions: AppMenuActions): void {
           click: actions.toggleSidebar,
         },
         { type: 'separator' },
+        {
+          id: 'reload',
+          label: 'Reload Page',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => actions.navigate('reload'),
+        },
+        {
+          id: 'hard-reload',
+          label: 'Force Reload Page',
+          accelerator: 'Shift+CmdOrCtrl+R',
+          click: () => actions.navigate('hardReload'),
+        },
+        { type: 'separator' },
         { role: 'togglefullscreen' },
-        ...(app.isPackaged
-          ? []
-          : ([
-              { type: 'separator' },
-              { label: 'Developer', submenu: [{ role: 'toggleDevTools' }] },
-            ] satisfies MenuItemConstructorOptions[])),
+        { type: 'separator' },
+        {
+          label: 'Developer',
+          submenu: [
+            {
+              id: 'tab-devtools',
+              label: 'Developer Tools',
+              accelerator: 'Alt+CmdOrCtrl+I',
+              click: actions.toggleTabDevTools,
+            },
+            // Orbit's own UI, for debugging Orbit itself; development builds only.
+            ...(app.isPackaged
+              ? []
+              : ([
+                  { label: 'Orbit Shell DevTools', role: 'toggleDevTools', accelerator: '' },
+                ] satisfies MenuItemConstructorOptions[])),
+          ],
+        },
+      ],
+    },
+    {
+      label: 'History',
+      submenu: [
+        {
+          id: 'back',
+          label: 'Back',
+          accelerator: 'CmdOrCtrl+[',
+          click: () => actions.navigate('back'),
+        },
+        {
+          id: 'forward',
+          label: 'Forward',
+          accelerator: 'CmdOrCtrl+]',
+          click: () => actions.navigate('forward'),
+        },
       ],
     },
     { role: 'windowMenu' },

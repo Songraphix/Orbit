@@ -29,6 +29,16 @@ body {
   user-select: none;
 }
 
+/* Indeterminate loading bar under the toolbar (F-14). */
+@keyframes orbit-loading {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
 /* The window has no title bar: these mark where it can be dragged (F-01). */
 .drag-region {
   -webkit-app-region: drag;

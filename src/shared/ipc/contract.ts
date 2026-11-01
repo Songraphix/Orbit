@@ -81,6 +81,16 @@ export const contract = {
     input: z.object({ tabId }).strict(),
     output: z.void(),
   },
+  /** Toolbar navigation for one tab (F-14). `reload` stops instead while the page is loading. */
+  'tabs:navigate': {
+    input: z
+      .object({
+        tabId,
+        action: z.enum(['back', 'forward', 'reload', 'hardReload', 'stop']),
+      })
+      .strict(),
+    output: z.void(),
+  },
 
   // New tab page (orbit://newtab). Only internal pages may call these.
   'newtab:get': {

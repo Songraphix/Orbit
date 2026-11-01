@@ -12,7 +12,10 @@ const page = (title: string, body = '') =>
   `<body><h1>${title}</h1>${body}</body></html>`;
 
 const ROUTES: Record<string, string> = {
-  '/one': page('Page One', '<a id="popup" href="/two" target="_blank">open two</a>'),
+  '/one': page(
+    'Page One',
+    '<a id="popup" href="/two" target="_blank">open two</a> <a id="next" href="/three">three</a>',
+  ),
   '/two': page('Page Two'),
   '/three': page('Page Three'),
 };
