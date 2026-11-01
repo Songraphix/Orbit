@@ -127,14 +127,15 @@ export class DownloadService {
         id: d.id,
         filename: d.filename,
         finishedAt: d.finishedAt ?? d.startedAt,
-        thumbnail: await this.previewFor(d.path),
+        thumbnail: await this.preview(d.path),
       })),
     );
   }
 
   private readonly previews = new Map<string, string | null>();
 
-  private async previewFor(path: string): Promise<string | null> {
+  /** A small preview: the image itself, or the file's Finder icon. Cached per path. */
+  async preview(path: string): Promise<string | null> {
     if (this.previews.has(path)) return this.previews.get(path) ?? null;
     let preview: string | null = null;
     try {
@@ -173,7 +174,7 @@ export class DownloadService {
   async startDrag(id: string, from: WebContents): Promise<void> {
     const d = this.find(id); // this session's, or an earlier one's (recent files)
     if (!d || d.state !== 'completed' || !existsSync(d.path)) return;
-    const thumbnail = this.items.get(id)?.thumbnail ?? (await this.previewFor(d.path));
+    const thumbnail = this.items.get(id)?.thumbnail ?? (await this.preview(d.path));
     const icon: NativeImage = thumbnail
       ? nativeImage.createFromDataURL(thumbnail)
       : await app.getFileIcon(d.path, { size: 'normal' });

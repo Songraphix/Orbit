@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { dayLabel, groupByDay } from '@shared/time';
 import {
   captureFileName,
+  fileKindLabel,
   isSafeFileName,
   mediaKind,
   reorderTarget,
@@ -36,5 +38,29 @@ describe('Library model', () => {
     expect(reorderTarget(ids, 'a', -1)).toBeNull();
     expect(reorderTarget(ids, 'c', 1)).toBeNull();
     expect(reorderTarget(ids, 'x', 1)).toBeNull();
+  });
+
+  it('labels downloads like Arc (Image, PDF, Video, …)', () => {
+    expect(fileKindLabel('a.png')).toBe('Image');
+    expect(fileKindLabel('clip.mov')).toBe('Video');
+    expect(fileKindLabel('brand guide.pdf')).toBe('PDF');
+    expect(fileKindLabel('Juno.dmg')).toBe('Disk Image');
+    expect(fileKindLabel('song.mp3')).toBe('Audio');
+    expect(fileKindLabel('notes.docx')).toBe('Document');
+    expect(fileKindLabel('data.parquet')).toBe('PARQUET');
+    expect(fileKindLabel('README')).toBe('File');
+  });
+
+  it('groups lists under Today, Yesterday and dates', () => {
+    const now = new Date(2026, 10, 1, 15, 0).getTime();
+    const hour = 3_600_000;
+    expect(dayLabel(now - hour, now)).toBe('Today');
+    expect(dayLabel(now - 24 * hour, now)).toBe('Yesterday');
+    expect(dayLabel(now - 72 * hour, now)).not.toMatch(/Today|Yesterday/);
+    const groups = groupByDay([now - hour, now - 2 * hour, now - 24 * hour], (t) => t, now);
+    expect(groups.map(([label, items]) => [label, items.length])).toEqual([
+      ['Today', 2],
+      ['Yesterday', 1],
+    ]);
   });
 });

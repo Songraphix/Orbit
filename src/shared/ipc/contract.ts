@@ -8,6 +8,7 @@ import {
   downloadEntrySchema,
   librarySectionSchema,
   libraryStateSchema,
+  appearanceSchema,
   mediaIdSchema,
   mediaItemSchema,
   spaceEntrySchema,
@@ -472,11 +473,28 @@ export const contract = {
     input: z
       .object({
         spaceId: tabId,
-        action: z.enum(['open', 'up', 'down', 'rename', 'delete']),
+        action: z.enum(['open', 'up', 'down', 'rename', 'delete', 'menu']),
         name: z.string().min(1).max(60).optional(),
       })
       .strict(),
     output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** A new space (shown in Library → Spaces), or a space's tab opened from there. */
+  'library:newSpace': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'library:openItem': {
+    input: z.object({ itemId: tabId }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** The space theme as CSS variables, for the Library and Easels. */
+  'appearance:get': {
+    input: z.object({}).strict(),
+    output: appearanceSchema,
     surfaces: ['internal'],
   },
   'library:boosts': {
@@ -549,9 +567,17 @@ export const contract = {
           favicon: z.string().nullable(),
           reason: z.enum(['auto', 'closed', 'cleared']),
           archivedAt: z.number(),
+          spaceId: z.string().nullable(),
         }),
       ),
+      /** Spaces the entries came from (Arc's "Where was the tab?" filter). */
+      spaces: z.array(z.object({ id: z.string(), name: z.string(), icon: z.string() })),
     }),
+    surfaces: ['internal'],
+  },
+  'archive:delete': {
+    input: z.object({ id: z.string().min(1).max(64) }).strict(),
+    output: z.void(),
     surfaces: ['internal'],
   },
   'archive:restore': {

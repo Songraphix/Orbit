@@ -31,6 +31,24 @@ export function isSafeFileName(name: string): boolean {
   );
 }
 
+/** Arc's second line in Library → Downloads: "Image", "PDF", "Video"… */
+export function fileKindLabel(filename: string, mime = ''): string {
+  const kind = mediaKind(filename, mime);
+  if (kind === 'image') return 'Image';
+  if (kind === 'video') return 'Video';
+  const ext = /\.([a-z0-9]{1,8})$/i.exec(filename)?.[1]?.toLowerCase() ?? '';
+  if (ext === 'pdf' || mime === 'application/pdf') return 'PDF';
+  if (mime.startsWith('audio/') || ['mp3', 'm4a', 'wav', 'aac', 'flac'].includes(ext))
+    return 'Audio';
+  if (['zip', 'rar', '7z', 'gz', 'tar', 'tgz'].includes(ext)) return 'Archive';
+  if (ext === 'dmg') return 'Disk Image';
+  if (ext === 'pkg') return 'Installer';
+  if (['doc', 'docx', 'pages', 'txt', 'rtf', 'md'].includes(ext)) return 'Document';
+  if (['xls', 'xlsx', 'csv', 'numbers'].includes(ext)) return 'Spreadsheet';
+  if (['ppt', 'pptx', 'key'].includes(ext)) return 'Presentation';
+  return ext ? ext.toUpperCase() : 'File';
+}
+
 /** Moves the item at `index` one place up (-1) or down (+1); returns the id to insert before. */
 export function reorderTarget(
   ids: readonly string[],

@@ -40,18 +40,41 @@ export const downloadEntrySchema = z.object({
   startedAt: z.number(),
   /** False once the file was moved or deleted. */
   exists: z.boolean(),
+  /** "Image", "PDF", "Video"… (Arc's second line). */
+  kind: z.string(),
+  thumbnail: z.string().nullable(),
 });
 export type DownloadEntry = z.output<typeof downloadEntrySchema>;
 
-/** One space in Library → Spaces. */
+/** A tab or folder as Library → Spaces lists it. */
+export const spaceItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  favicon: z.string().nullable(),
+  folder: z.boolean(),
+  depth: z.number(),
+});
+
+/** One space in Library → Spaces: a column of its pinned and Today tabs (Arc). */
 export const spaceEntrySchema = z.object({
   id: z.string(),
   name: z.string(),
   icon: z.string(),
   profileName: z.string(),
   tabs: z.number(),
+  active: z.boolean(),
+  pinned: z.array(spaceItemSchema),
+  today: z.array(spaceItemSchema),
 });
 export type SpaceEntry = z.output<typeof spaceEntrySchema>;
+
+/** How an internal page should look: the window's space theme as CSS variables (Arc's Library
+ *  and Easels follow the space's colours). */
+export const appearanceSchema = z.object({
+  mode: z.enum(['light', 'dark']),
+  vars: z.record(z.string(), z.string()),
+});
+export type Appearance = z.output<typeof appearanceSchema>;
 
 /** One Boost in Library → Boosts. */
 export const boostEntrySchema = z.object({

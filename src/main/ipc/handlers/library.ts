@@ -4,7 +4,9 @@ import type { IpcRouter } from '../router';
 import type { BoostService } from '../../boosts/service';
 import type { DownloadService } from '../../downloads/service';
 import type { MediaLibrary } from '../../library/media';
-import { reorderTarget } from '../../library/model';
+import { fileKindLabel, reorderTarget } from '../../library/model';
+import { themeToVars } from '@shared/theme';
+import type { SidebarItem } from '../../sidebar/model';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
 import { boostEditorUrl } from './boosts';
 
@@ -53,18 +55,27 @@ export function registerLibraryHandlers(
     deps.media.open(id, action);
   });
 
-  router.handle('library:downloads', ({ query }, { sender }) => {
+  router.handle('library:downloads', async ({ query }, { sender }) => {
     libraryOwner(sender.webContentsId);
+    const rows = deps.downloads.history(query);
     return {
-      items: deps.downloads.history(query).map((d) => ({
-        id: d.id,
-        filename: d.filename,
-        url: d.url,
-        state: d.state,
-        totalBytes: d.totalBytes,
-        startedAt: d.startedAt,
-        exists: d.path !== '' && existsSync(d.path),
-      })),
+      items: await Promise.all(
+        rows.map(async (d, i) => {
+          const exists = d.path !== '' && existsSync(d.path);
+          return {
+            id: d.id,
+            filename: d.filename,
+            url: d.url,
+            state: d.state,
+            totalBytes: d.totalBytes,
+            startedAt: d.startedAt,
+            exists,
+            kind: fileKindLabel(d.filename, d.mime),
+            // Previews for the first screenfuls; older rows show a generic icon.
+            thumbnail: exists && i < 80 ? await deps.downloads.preview(d.path) : null,
+          };
+        }),
+      ),
     };
   });
   router.handle('library:downloadAct', ({ id, action }, { sender }) => {
@@ -76,6 +87,14 @@ export function registerLibraryHandlers(
   router.handle('library:spaces', (_input, { sender }) => {
     const { store } = libraryOwner(sender.webContentsId);
     const items = store.all();
+    const row = ({ item, depth }: { item: SidebarItem; depth: number }) => ({
+      id: item.id,
+      title: item.titleOverride || item.title || item.url || 'Untitled',
+      favicon: item.favicon,
+      folder: item.kind === 'folder',
+      depth,
+    });
+    const activeId = libraryOwner(sender.webContentsId).tabs.space.id;
     return {
       spaces: store.spaces.map((space) => ({
         id: space.id,
@@ -83,6 +102,9 @@ export function registerLibraryHandlers(
         icon: space.icon,
         profileName: store.profiles.find((p) => p.id === space.profileId)?.name ?? 'Default',
         tabs: items.filter((i) => i.spaceId === space.id && i.kind === 'tab').length,
+        active: space.id === activeId,
+        pinned: store.rows('pinned', space).slice(0, 40).map(row),
+        today: store.rows('today', space).slice(0, 40).map(row),
       })),
     };
   });
@@ -94,6 +116,8 @@ export function registerLibraryHandlers(
     if (action === 'open') {
       controller.library.close();
       controller.tabs.switchSpace(spaceId);
+    } else if (action === 'menu') {
+      controller.sidebar.spaceMenu(spaceId); // the space's own native menu (Img 5)
     } else if (action === 'rename') {
       if (name?.trim()) store.updateSpace(spaceId, { name: name.trim() });
     } else if (action === 'up' || action === 'down') {
@@ -115,6 +139,26 @@ export function registerLibraryHandlers(
       });
       if (response === 0) controller.sidebar.deleteSpace(spaceId);
     }
+  });
+
+  router.handle('library:newSpace', (_input, { sender }) => {
+    libraryOwner(sender.webContentsId).sidebar.newSpace();
+  });
+
+  router.handle('library:openItem', ({ itemId }, { sender }) => {
+    const controller = libraryOwner(sender.webContentsId);
+    if (controller.store.item(itemId)?.kind === 'tab') controller.tabs.activate(itemId); // leaves the Library
+  });
+
+  /** The Library page, or a tab's internal page (Easels): its window's space theme. */
+  router.handle('appearance:get', (_input, { sender }) => {
+    const controller =
+      windows.libraryFor(sender.webContentsId) ??
+      windows.tabForContents(sender.webContentsId)?.window;
+    if (!controller) throw new Error(`Sender ${sender.webContentsId} has no window`);
+    const theme = controller.tabs.space.theme;
+    // Same reading as the sidebar's: only an explicitly light theme is light.
+    return { mode: theme.mode === 'light' ? 'light' : 'dark', vars: themeToVars(theme) };
   });
 
   router.handle('library:boosts', (_input, { sender }) => {

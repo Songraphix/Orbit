@@ -35,8 +35,9 @@ export function InternalApp() {
 
   useEffect(() => {
     document.title = TITLES[page] ?? 'Not Found';
-    // Internal pages other than the new tab page use the normal light page background.
-    if (page !== 'newtab') document.documentElement.style.background = '#fff';
+    // Internal pages use the normal light page background, except the new tab page (wallpaper)
+    // and the Library (transparent, over the space's colours).
+    if (page !== 'newtab' && page !== 'library') document.documentElement.style.background = '#fff';
   }, [page]);
 
   if (page === 'newtab') return <NewTabPage />;

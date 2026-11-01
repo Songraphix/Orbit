@@ -88,7 +88,8 @@ export class LibraryController {
         preload: this.deps.internalPreload,
       },
     });
-    view.setBackgroundColor('#ffffff');
+    // Transparent: the Library sits on the space's colours, which the shell draws behind it.
+    view.setBackgroundColor('#00000000');
     const contents = view.webContents;
     const id = contents.id;
     this.deps.registerInternal(id);

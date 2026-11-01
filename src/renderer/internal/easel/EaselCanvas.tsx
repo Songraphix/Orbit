@@ -40,7 +40,13 @@ function initialDataFor(scene: string): ExcalidrawInitialDataState {
 }
 
 /** The Easel's canvas: Excalidraw, saved as you draw, with a title and "Capture" in the corner. */
-export default function EaselCanvas({ easel }: { easel: EaselData }) {
+export default function EaselCanvas({
+  easel,
+  theme,
+}: {
+  easel: EaselData;
+  theme: 'light' | 'dark';
+}) {
   const api = useRef<ExcalidrawImperativeAPI | null>(null);
   const [title, setTitle] = useState(easel.title);
   const [capturing, setCapturing] = useState(false);
@@ -116,6 +122,7 @@ export default function EaselCanvas({ easel }: { easel: EaselData }) {
     <Excalidraw
       excalidrawAPI={(instance) => (api.current = instance)}
       initialData={initialData}
+      theme={theme}
       onChange={onChange}
       UIOptions={{ canvasActions: { loadScene: false, saveToActiveFile: false } }}
       renderTopRightUI={() => (
@@ -126,7 +133,11 @@ export default function EaselCanvas({ easel }: { easel: EaselData }) {
             onBlur={(e) => saveTitle(e.currentTarget.value)}
             onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
             aria-label="Easel title"
-            className="w-44 rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm font-semibold text-neutral-800 outline-none focus:border-[#5b5bd6]"
+            className={`w-44 rounded-lg border px-2 py-1.5 text-sm font-semibold outline-none focus:border-[#5b5bd6] ${
+              theme === 'dark'
+                ? 'border-white/15 bg-[#232329] text-white'
+                : 'border-neutral-200 bg-white text-neutral-800'
+            }`}
             data-testid="easel-title"
           />
           <button

@@ -67,6 +67,8 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 
 - 2026-11-01 — Owner feedback: auto-hide sidebar [F-01] — a sidebar button beside the traffic lights hides it (⌘S still works); with the sidebar hidden, resting the pointer on the window's left edge slides it out over the page (drawn by the overlay, which is sized to just that strip so the page keeps its clicks; the traffic lights come out with it) and leaving slides it back. Its button pins it open again
 
+- 2026-11-01 — Owner feedback: Arc-style Library [F-11, F-19] — hovering the Library button lists the latest files downloaded through Orbit (previews, "11 hours ago"; open, ⌘-click reveal, drag out). The Library now sits straight on the space's colours (transparent view, no white card) using the space theme (`appearance:get`), with Arc's layout: search fields per section; Downloads grouped by day with previews and file kinds ("Image", "PDF"); Spaces as columns listing each space's pinned and Today tabs (click to open, rename, move, its native menu, + New Space); Archived Tabs filter by how the tab closed and by space, and delete. Easels follow the space's light/dark mode
+
 ## In progress
 
 - Phase 10 (ahead of schedule): Tidy and Live Folders — not started

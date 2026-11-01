@@ -34,17 +34,30 @@ export function registerInternalPageHandlers(
   };
 
   router.handle('archive:list', ({ query }, { sender }) => {
-    ownerOf(sender.webContentsId, 'archive');
-    return {
-      entries: deps.archive.list(query).map(({ id, title, url, favicon, reason, archivedAt }) => ({
+    const { window } = ownerOf(sender.webContentsId, 'archive');
+    const entries = deps.archive
+      .list(query)
+      .map(({ id, title, url, favicon, reason, archivedAt, spaceId }) => ({
         id,
         title,
         url,
         favicon,
         reason,
         archivedAt,
-      })),
+        spaceId,
+      }));
+    const from = new Set(entries.map((e) => e.spaceId));
+    return {
+      entries,
+      spaces: window.store.spaces
+        .filter((s) => from.has(s.id))
+        .map(({ id, name, icon }) => ({ id, name, icon })),
     };
+  });
+
+  router.handle('archive:delete', ({ id }, { sender }) => {
+    ownerOf(sender.webContentsId, 'archive');
+    deps.archive.remove(id);
   });
 
   router.handle('archive:restore', ({ id }, { sender }) => {

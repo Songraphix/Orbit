@@ -158,3 +158,53 @@ test('hovering the Library button lists recent downloads; clicking it opens the 
   await expect(win.getByTestId('library-nav')).toBeVisible();
   await expect(win.getByTestId('recent-files')).toHaveCount(0);
 });
+
+test('Library looks like Arc: space columns with their tabs; archived tabs filter and delete', async () => {
+  const { app, win } = orbit;
+  await invoke(win, 'tabs:create', { url: server.url('/one') });
+  await invoke(win, 'tabs:create', { url: server.url('/two') });
+  await expect(win.getByTestId('toolbar-address')).toContainText('Page Two');
+  await clickMenu(app, 'close-tab'); // Page Two → Archived Tabs (closed by hand)
+
+  // The page is transparent over the space's colours; no white card behind it.
+  await win.getByTestId('library-button').click();
+  await expect(win.getByTestId('content-card')).toHaveCount(0);
+  const library = await libraryPage(app);
+  const background = await library.evaluate(
+    () =>
+      (
+        globalThis as unknown as { getComputedStyle(e: unknown): { backgroundColor: string } }
+      ).getComputedStyle(
+        (globalThis as unknown as { document: { documentElement: unknown } }).document
+          .documentElement,
+      ).backgroundColor,
+  );
+  expect(background).toBe('rgba(0, 0, 0, 0)');
+
+  // Spaces: a column per space listing its tabs; clicking one opens it and leaves the Library.
+  await win.locator('[data-testid="library-section"][data-section="spaces"]').click();
+  const column = library.getByTestId('space-entry').first();
+  await expect(column).toContainText('Page One');
+  await column.getByRole('button', { name: 'Page One' }).click();
+  await expect(win.getByTestId('library-nav')).toHaveCount(0);
+  await expect(win.getByTestId('toolbar-address')).toContainText('Page One');
+
+  // Archived Tabs: filter by how the tab closed; delete an entry.
+  await win.getByTestId('library-button').click();
+  await win.locator('[data-testid="library-section"][data-section="archive"]').click();
+  // Leaving the Library closed its page; this is a new one.
+  await expect
+    .poll(() => app.windows().filter((p) => p.url().includes('#/library/')).length)
+    .toBe(1);
+  const archive = await libraryPage(app);
+  const entries = archive.getByTestId('archive-entry');
+  await expect(entries).toHaveCount(1);
+  await archive.getByTestId('archive-filter').click();
+  await archive.getByTestId('filter-auto').click();
+  await expect(entries).toHaveCount(0);
+  await archive.getByTestId('filter-manual').click();
+  await expect(entries).toHaveCount(1);
+  await entries.hover();
+  await entries.getByTestId('archive-delete').click();
+  await expect(entries).toHaveCount(0);
+});
