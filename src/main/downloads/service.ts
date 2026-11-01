@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
 import { app, nativeImage, shell } from 'electron';
 import type { DownloadItem, NativeImage, Session, WebContents } from 'electron';
-import type { DownloadView, DownloadsSnapshot } from '@shared/types/downloads';
+import type { DownloadView, DownloadsSnapshot, RecentDownload } from '@shared/types/downloads';
 import type { Database } from '../persistence/db';
 import { onShelf, uniquePath } from './model';
 
@@ -117,6 +117,38 @@ export class DownloadService {
     });
   }
 
+  /** The latest finished downloads still on disk, with previews (the Library button's hover). */
+  async recent(limit = 6): Promise<RecentDownload[]> {
+    const rows = this.history('', 60)
+      .filter((d) => d.state === 'completed' && d.path && existsSync(d.path))
+      .slice(0, limit);
+    return Promise.all(
+      rows.map(async (d) => ({
+        id: d.id,
+        filename: d.filename,
+        finishedAt: d.finishedAt ?? d.startedAt,
+        thumbnail: await this.previewFor(d.path),
+      })),
+    );
+  }
+
+  private readonly previews = new Map<string, string | null>();
+
+  private async previewFor(path: string): Promise<string | null> {
+    if (this.previews.has(path)) return this.previews.get(path) ?? null;
+    let preview: string | null = null;
+    try {
+      const image = IMAGE.test(path)
+        ? await nativeImage.createThumbnailFromPath(path, { width: 64, height: 64 })
+        : await app.getFileIcon(path, { size: 'normal' });
+      preview = image.isEmpty() ? null : image.toDataURL();
+    } catch {
+      // A generic file icon is shown instead.
+    }
+    this.previews.set(path, preview);
+    return preview;
+  }
+
   private find(id: string): { path: string; state: DownloadRecord['state'] } | null {
     const live = this.items.get(id);
     if (live) return live;
@@ -139,10 +171,11 @@ export class DownloadService {
 
   /** Drag a finished file out of the shelf into Finder, Mail, Slack… */
   async startDrag(id: string, from: WebContents): Promise<void> {
-    const d = this.items.get(id);
+    const d = this.find(id); // this session's, or an earlier one's (recent files)
     if (!d || d.state !== 'completed' || !existsSync(d.path)) return;
-    const icon: NativeImage = d.thumbnail
-      ? nativeImage.createFromDataURL(d.thumbnail)
+    const thumbnail = this.items.get(id)?.thumbnail ?? (await this.previewFor(d.path));
+    const icon: NativeImage = thumbnail
+      ? nativeImage.createFromDataURL(thumbnail)
       : await app.getFileIcon(d.path, { size: 'normal' });
     from.startDrag({ file: d.path, icon });
   }

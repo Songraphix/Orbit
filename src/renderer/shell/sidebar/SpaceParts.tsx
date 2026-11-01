@@ -1,6 +1,8 @@
 import { ArrowDownToLine, Library, Plus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { SpaceView } from '@shared/types/space';
 import { RenameInput } from './Rows';
+import { RecentFiles } from './RecentFiles';
 import { SpaceIcon } from './SpaceIcon';
 
 const invoke = window.orbit.invoke;
@@ -75,13 +77,42 @@ export function BottomBar({
   spaces: SpaceView[];
   activeSpaceId: string;
 }) {
+  // Hovering the Library button shows recent files (after a short pause, like a tooltip).
+  const [recent, setRecent] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+  const showRecent = () => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setRecent(true), 250);
+  };
+  const hideRecent = () => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setRecent(false), 200);
+  };
+  useEffect(() => () => window.clearTimeout(timer.current), []);
   return (
-    <div className="no-drag flex h-11 shrink-0 items-center gap-1 px-2" data-testid="bottom-bar">
+    <div
+      className="no-drag relative flex h-11 shrink-0 items-center gap-1 px-2"
+      data-testid="bottom-bar"
+    >
+      {recent && (
+        <div
+          className="absolute inset-x-2 bottom-full"
+          onPointerEnter={showRecent}
+          onPointerLeave={hideRecent}
+        >
+          <RecentFiles />
+        </div>
+      )}
       <button
+        onPointerEnter={showRecent}
+        onPointerLeave={hideRecent}
         type="button"
         aria-label="Library"
-        title="Library"
-        onClick={() => void invoke('library:open', { section: 'media' })}
+        onClick={() => {
+          setRecent(false);
+          window.clearTimeout(timer.current);
+          void invoke('library:open', { section: 'media' });
+        }}
         className="grid size-8 place-items-center rounded-lg text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
         data-testid="library-button"
       >

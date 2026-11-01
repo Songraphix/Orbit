@@ -18,7 +18,7 @@ import {
   overlayStateSchema,
   promptAnswerSchema,
 } from '../types/command-bar';
-import { downloadsSnapshotSchema } from '../types/downloads';
+import { downloadsSnapshotSchema, recentDownloadSchema } from '../types/downloads';
 import { findStateSchema } from '../types/find';
 import { mediaStateSchema } from '../types/media';
 import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
@@ -220,6 +220,11 @@ export const contract = {
   'downloads:get': {
     input: z.object({}).strict(),
     output: downloadsSnapshotSchema,
+  },
+  /** The latest finished downloads still on disk (hovering the Library button). */
+  'downloads:recent': {
+    input: z.object({}).strict(),
+    output: z.object({ items: z.array(recentDownloadSchema) }),
   },
   'downloads:act': {
     input: z

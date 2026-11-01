@@ -138,3 +138,23 @@ test('Library → Spaces: reorder and rename; Boosts section', async () => {
   await win.getByTestId('library-back').click();
   await expect(win.getByTestId('space-button').first()).toHaveAttribute('aria-label', 'Studio');
 });
+
+test('hovering the Library button lists recent downloads; clicking it opens the Library', async () => {
+  const { win } = orbit;
+  await invoke(win, 'tabs:create', { url: server.url('/report.txt') });
+  await expect(win.getByTestId('download-item')).toHaveCount(1);
+  await expect(win.getByTestId('download-item')).toHaveAttribute('data-state', 'completed');
+
+  await win.getByTestId('library-button').hover();
+  const recent = win.getByTestId('recent-file');
+  await expect(recent).toHaveCount(1);
+  await expect(recent).toContainText('report.txt');
+  await expect(recent).toContainText('just now');
+
+  // Moving away hides it; clicking the button opens the Library.
+  await win.mouse.move(600, 300);
+  await expect(win.getByTestId('recent-files')).toHaveCount(0);
+  await win.getByTestId('library-button').click();
+  await expect(win.getByTestId('library-nav')).toBeVisible();
+  await expect(win.getByTestId('recent-files')).toHaveCount(0);
+});

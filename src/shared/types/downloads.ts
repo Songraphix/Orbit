@@ -14,5 +14,14 @@ export const downloadViewSchema = z.object({
 });
 export type DownloadView = z.output<typeof downloadViewSchema>;
 
+/** A finished download in the Library button's hover list (Arc's recent files). */
+export const recentDownloadSchema = z.object({
+  id: z.string(),
+  filename: z.string(),
+  finishedAt: z.number(),
+  thumbnail: z.string().nullable(),
+});
+export type RecentDownload = z.output<typeof recentDownloadSchema>;
+
 export const downloadsSnapshotSchema = z.object({ items: z.array(downloadViewSchema) });
 export type DownloadsSnapshot = z.output<typeof downloadsSnapshotSchema>;

@@ -436,6 +436,9 @@ void app.whenReady().then(() => {
     return { isDefault: app.isDefaultProtocolClient('https') };
   });
   router.handle('downloads:get', () => downloadService?.snapshot() ?? { items: [] });
+  router.handle('downloads:recent', async () => ({
+    items: (await downloadService?.recent()) ?? [],
+  }));
   router.handle('downloads:act', async ({ id, action }, { sender }) => {
     const service = downloadService;
     if (!service) return;
