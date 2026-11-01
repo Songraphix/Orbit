@@ -145,6 +145,7 @@ test('profiles keep logins apart: a cookie set in one space’s profile is invis
     const { app, win } = orbit;
     const address = win.getByTestId('toolbar-address');
     await invoke(win, 'tabs:create', { url: server.url('/cookie?set=personal') });
+    await expect(address).toContainText('cookie:'); // the response (and its cookie) arrived
     await invoke(win, 'tabs:create', { url: server.url('/cookie') });
     await expect(address).toContainText('cookie:who=personal');
 
