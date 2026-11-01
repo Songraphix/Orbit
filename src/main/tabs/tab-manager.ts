@@ -13,7 +13,7 @@ import type { Space } from '../persistence/repositories/sidebar';
 import type { Section, SidebarItem } from '../sidebar/model';
 import type { SidebarStore } from '../sidebar/store';
 import { nextActiveAfterClose } from './model';
-import { inSplit, makeSplit, partnerOf, splitAfterActivate, swapped, withRatio } from './split';
+import { inSplit, makeSplit, partnerOf, splitOnActivate, swapped, withRatio } from './split';
 import type { Split } from './split';
 import { TabController } from './tab-controller';
 import type { TabEnv } from './tab-controller';
@@ -63,6 +63,10 @@ export type TabManagerDeps = Pick<
   peek?: (fromTabId: string, url: string, activate: boolean) => boolean;
   /** Split view started, resized or ended (null): the layout needs the new ratio. */
   onSplitChange?: (ratio: number | null) => void;
+  /** Each Space's saved split (roadmap P2.4), from the last session… */
+  initialSplits?: Record<string, { ids: [string, string]; ratio: number }>;
+  /** …and kept as it changes. */
+  onSplitsChange?: (splits: Record<string, { ids: [string, string]; ratio: number }>) => void;
   /** Tidy's state for a space (F-29). */
   tidyState?: (spaceId: string) => { available: boolean; running: boolean; canUndo: boolean };
 };
@@ -89,10 +93,14 @@ export class TabManager {
   /** Set once the window closes; late page events (pages unloading) are then ignored. */
   private disposed = false;
 
+  /** Each Space's split, kept while you're on another tab (roadmap P2.4, saved layouts). */
+  private readonly parked: Map<string, Split>;
+
   constructor(private readonly deps: TabManagerDeps) {
     this.spaceId = deps.store.space(deps.initialSpaceId)
       ? deps.initialSpaceId
       : deps.store.spaces[0]!.id;
+    this.parked = new Map(Object.entries(deps.initialSplits ?? {}));
     this.unsubscribe = deps.store.onChange(() => this.scheduleNotify());
   }
 
@@ -161,6 +169,8 @@ export class TabManager {
           live: tab !== undefined,
           isLoading: tab?.state.isLoading ?? false,
           awayFromHome: item.homeUrl !== null && url !== null && !sameUrl(url, item.homeUrl),
+          // Half of this Space's split, open or parked (roadmap P2.4).
+          split: this.parked.get(space.id)?.ids.includes(item.id) ?? false,
           liveFolder: Boolean(item.data?.live),
           liveError: item.data?.live?.error ?? null,
           unread: Boolean(item.data?.feed?.unread),
@@ -220,13 +230,21 @@ export class TabManager {
 
     const next = this.ensureLive(item);
     const before = this.shownIds();
-    const split = splitAfterActivate(this.split, id);
-    const splitEnded = split !== this.split;
+    // Another tab parks the split; one of a parked split's tabs brings it back (P2.4).
+    const { split, parked } = splitOnActivate(this.split, this.parkedHere(), id);
+    const changed = split !== this.split;
     this.split = split;
+    this.setParked(parked);
+    if (split) {
+      for (const paneId of split.ids) {
+        const pane = paneId === id ? undefined : this.deps.store.item(paneId);
+        if (pane) this.ensureLive(pane);
+      }
+    }
     this.activeId = id;
     this.frozen = false;
     this.hideUnshown(before);
-    if (splitEnded) this.deps.onSplitChange?.(null);
+    if (changed) this.deps.onSplitChange?.(split ? split.ratio : null);
     this.place();
     next.view.webContents.focus();
     this.announce(next, true);
@@ -242,6 +260,11 @@ export class TabManager {
   close(id: string, reason: ArchiveReason = 'closed'): void {
     const item = this.deps.store.item(id);
     if (!item) return;
+    // A closed tab can't come back as half of a split.
+    for (const [space, saved] of this.parked) {
+      if (saved.ids.includes(id)) this.parked.delete(space);
+    }
+    this.saveSplits();
     const order = this.deps.store.tabsInOrder(this.space).map((i) => i.id);
     // Closing a split pane leaves its partner on screen, full width.
     const partner = partnerOf(this.split, id);
@@ -357,6 +380,7 @@ export class TabManager {
     const other = this.ensureLive(item);
     const before = this.shownIds();
     this.split = split;
+    this.setParked(split);
     this.activeId = otherId;
     this.frozen = false;
     this.hideUnshown(before);
@@ -380,6 +404,7 @@ export class TabManager {
     if (!this.split) return;
     const before = this.shownIds();
     this.split = null;
+    this.setParked(null); // asked for: the Space forgets it
     this.hideUnshown(before);
     this.deps.onSplitChange?.(null);
     this.place();
@@ -388,7 +413,10 @@ export class TabManager {
 
   setSplitRatio(ratio: number): void {
     if (!this.split) return;
-    this.split = withRatio(this.split, ratio);
+    const next = withRatio(this.split, ratio);
+    if (next.ratio === this.split.ratio) return;
+    this.split = next;
+    this.setParked(this.split);
     this.deps.onSplitChange?.(this.split.ratio);
     this.scheduleNotify();
   }
@@ -396,6 +424,7 @@ export class TabManager {
   swapSplit(): void {
     if (!this.split) return;
     this.split = swapped(this.split);
+    this.setParked(this.split);
     this.deps.onSplitChange?.(this.split.ratio);
     this.place();
     this.scheduleNotify();
@@ -541,10 +570,44 @@ export class TabManager {
 
   // ── Internals ──────────────────────────────────────────────────────────────
 
+  /** This Space's saved split, if both its tabs are still here (roadmap P2.4). */
+  private parkedHere(): Split | null {
+    const saved = this.parked.get(this.spaceId) ?? null;
+    if (!saved) return null;
+    const here = saved.ids.every((paneId) => {
+      const pane = this.deps.store.item(paneId);
+      return pane?.kind === 'tab' && (pane.spaceId === null || pane.spaceId === this.spaceId);
+    });
+    if (here) return saved;
+    this.parked.delete(this.spaceId);
+    this.saveSplits();
+    return null;
+  }
+
+  private setParked(split: Split | null): void {
+    const before = this.parked.get(this.spaceId) ?? null;
+    if (before === split) return;
+    if (split) this.parked.set(this.spaceId, split);
+    else this.parked.delete(this.spaceId);
+    this.saveSplits();
+  }
+
+  private saveSplits(): void {
+    this.deps.onSplitsChange?.(
+      Object.fromEntries(
+        [...this.parked].map(([space, s]) => [
+          space,
+          { ids: [s.ids[0], s.ids[1]], ratio: s.ratio },
+        ]),
+      ),
+    );
+  }
+
   private setSpace(spaceId: string, showRemembered: boolean): void {
     for (const id of this.shownIds()) this.live.get(id)?.view.setVisible(false);
     this.activeId = null;
     if (this.split) {
+      this.setParked(this.split); // the Space keeps its split for when you're back (P2.4)
       this.split = null;
       this.deps.onSplitChange?.(null);
     }

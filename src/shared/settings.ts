@@ -30,6 +30,11 @@ export const settingsSchema = {
   'window.activeSpace': z.string().nullable(),
   /** Today tabs not opened for this long are archived (F-20). */
   'archive.after': z.enum(['12h', '24h', '7d', '30d', 'never']),
+  /** Each Space's split view, kept across restarts (roadmap P2.4). */
+  'tabs.splits': z.record(
+    z.string(),
+    z.object({ ids: z.tuple([z.string(), z.string()]), ratio: z.number().min(0.2).max(0.8) }),
+  ),
   /** Where tabs go: the sidebar (Arc) or a strip across the top (owner request). */
   'tabs.layout': z.enum(['sidebar', 'top']),
   /** Live pages beyond this many are put to sleep, least recently used first (F-25). */
@@ -72,6 +77,7 @@ export const settingsDefaults: Settings = {
   'window.activeSpace': null,
   'archive.after': '12h',
   'tabs.layout': 'sidebar',
+  'tabs.splits': {},
   'tabs.maxLive': 8,
   'tabs.sleepAfterMinutes': 30,
   'search.engine': 'google',

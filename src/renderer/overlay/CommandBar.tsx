@@ -53,8 +53,9 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
     return () => clearTimeout(timer);
   }, [query]);
 
-  const run = (item: CommandItem | undefined) => {
-    if (item) void window.orbit.invoke('commandbar:execute', { item });
+  /** ⌥ opens a tab or an address beside the current page, in split view (roadmap P2.4). */
+  const run = (item: CommandItem | undefined, split = false) => {
+    if (item) void window.orbit.invoke('commandbar:execute', { item, split });
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -69,14 +70,15 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
       setSelected((i) => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
+      const split = e.altKey;
       if (itemsQuery === query) {
-        run(items[selected]);
+        run(items[selected], split);
       } else {
         // Typed faster than results arrived: act on exactly what's typed (its top result).
         requestSeq.current++;
         void window.orbit
           .invoke('commandbar:query', { query })
-          .then(({ items: fresh }) => run(fresh[0]));
+          .then(({ items: fresh }) => run(fresh[0], split));
       }
     }
   };
@@ -131,7 +133,7 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
                 onMouseMove={() => setSelected(i)}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  run(item);
+                  run(item, e.altKey);
                 }}
                 data-testid="command-item"
                 data-kind={item.kind}

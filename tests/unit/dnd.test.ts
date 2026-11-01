@@ -20,6 +20,7 @@ const row = (
   live: false,
   isLoading: false,
   awayFromHome: false,
+  split: false,
   liveFolder: false,
   liveError: null,
   unread: false,

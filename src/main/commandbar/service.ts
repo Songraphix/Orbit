@@ -161,13 +161,20 @@ export class CommandBarService {
     });
   }
 
-  execute(controller: WindowController, item: CommandItem): void {
+  /** `split` (⌥⏎, roadmap P2.4): a tab or an address opens beside the current page. */
+  execute(controller: WindowController, item: CommandItem, split = false): void {
     const mode = controller.overlay.mode ?? 'new';
     controller.overlay.close();
     const { tabs } = controller;
 
     if (item.kind === 'tab' && item.tabId) {
-      tabs.activate(item.tabId);
+      const target = controller.store.item(item.tabId);
+      const here = target && (target.spaceId === null || target.spaceId === tabs.space.id);
+      if (split && here && tabs.activeItemId && tabs.activeItemId !== item.tabId) {
+        tabs.splitWith(item.tabId);
+      } else {
+        tabs.activate(item.tabId);
+      }
       return;
     }
     if (item.kind === 'command' && item.commandId) {
@@ -205,6 +212,10 @@ export class CommandBarService {
       return;
     }
 
+    if (split && tabs.activeItemId) {
+      tabs.splitWithNew(item.url);
+      return;
+    }
     if (mode === 'edit' && tabs.active) {
       tabs.active.load(item.url);
       return;

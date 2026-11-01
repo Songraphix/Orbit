@@ -49,6 +49,8 @@ export const sidebarRowSchema = z.object({
   isLoading: z.boolean(),
   /** A pinned tab or favorite that navigated away from its home URL. */
   awayFromHome: z.boolean(),
+  /** Half of the Space's split view, showing or kept for later (roadmap P2.4). */
+  split: z.boolean(),
   /** A Live Folder (F-28), and its last refresh error. */
   liveFolder: z.boolean(),
   liveError: z.string().nullable(),

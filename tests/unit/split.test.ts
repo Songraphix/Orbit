@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  splitOnActivate,
   inSplit,
   makeSplit,
   partnerOf,
@@ -35,5 +36,16 @@ describe('split view model', () => {
     expect(withRatio(split, 0.95).ratio).toBe(0.8);
     expect(withRatio(split, Number.NaN).ratio).toBe(0.5);
     expect(swapped(withRatio(split, 0.3))).toEqual({ ids: ['b', 'a'], ratio: 0.7 });
+  });
+});
+
+describe('saved split layouts (roadmap P2.4)', () => {
+  const split = { ids: ['a', 'b'] as const, ratio: 0.4 };
+  it('moves focus inside the split, parks it for any other tab, and brings it back', () => {
+    expect(splitOnActivate(split, null, 'b')).toEqual({ split, parked: split });
+    expect(splitOnActivate(split, null, 'c')).toEqual({ split: null, parked: split });
+    expect(splitOnActivate(null, split, 'a')).toEqual({ split, parked: split });
+    expect(splitOnActivate(null, split, 'c')).toEqual({ split: null, parked: split });
+    expect(splitOnActivate(null, null, 'c')).toEqual({ split: null, parked: null });
   });
 });

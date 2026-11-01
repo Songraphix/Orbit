@@ -170,6 +170,13 @@ export class WindowManager {
 
     const contents = win.webContents;
     let tabs: TabManager | null = null;
+    let splitsTimer: ReturnType<typeof setTimeout> | undefined;
+    let pendingSplits: Record<string, { ids: [string, string]; ratio: number }> | null = null;
+    const flushSplits = () => {
+      clearTimeout(splitsTimer);
+      if (pendingSplits) settings.set('tabs.splits', pendingSplits);
+      pendingSplits = null;
+    };
     let peek: PeekController | null = null;
     let library: LibraryController | null = null;
     let notes: NotesPanelController | null = null;
@@ -244,6 +251,13 @@ export class WindowManager {
       },
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
       onSplitChange: (ratio) => layout.setSplitRatio(ratio),
+      // Saved split layouts (roadmap P2.4): written once a drag settles (or the window closes).
+      initialSplits: settings.get('tabs.splits'),
+      onSplitsChange: (splits) => {
+        pendingSplits = splits;
+        clearTimeout(splitsTimer);
+        splitsTimer = setTimeout(flushSplits, 300);
+      },
       tidyState: this.deps.tidyState,
       siteSetting: this.deps.siteSetting,
       extensions: this.deps.extensions,
@@ -427,6 +441,7 @@ export class WindowManager {
     });
     win.on('close', () => {
       layout.flush();
+      flushSplits();
       this.deps.store.flushLive(); // the sidebar store saves structure at once; live details now
     });
     win.on('closed', () => {

@@ -327,7 +327,8 @@ export const contract = {
     surfaces: ['overlay'],
   },
   'commandbar:execute': {
-    input: z.object({ item: commandItemSchema }).strict(),
+    /** `split`: ⌥⏎ — beside the current page, in split view (roadmap P2.4). */
+    input: z.object({ item: commandItemSchema, split: z.boolean().optional() }).strict(),
     output: z.void(),
     surfaces: ['overlay'],
   },

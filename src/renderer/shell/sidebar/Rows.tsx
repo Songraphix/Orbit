@@ -1,5 +1,6 @@
 import {
   ChevronRight,
+  Columns2,
   CornerUpLeft,
   Folder,
   Globe,
@@ -166,6 +167,15 @@ export function TabRow({
           >
             {row.title}
           </span>
+        )}
+        {row.split && (
+          // Half of this Space's split view (roadmap P2.4): opening it brings the pair back.
+          <Columns2
+            size={12}
+            className="shrink-0 opacity-45"
+            aria-label="In split view"
+            data-testid="row-split"
+          />
         )}
         {row.unread && (
           // A Live Folder item nobody has opened yet (F-28).

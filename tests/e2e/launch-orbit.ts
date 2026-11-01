@@ -51,7 +51,8 @@ export async function launchOrbit(
   });
   const win = await shellPage(app);
   // Wait until the shell has rendered (and subscribed to main's events), like a real user would.
-  await win.getByTestId('toolbar').waitFor({ timeout: 15_000 });
+  // (Two toolbars when Orbit comes back in split view.)
+  await win.getByTestId('toolbar').first().waitFor({ timeout: 15_000 });
   return {
     app,
     win,
