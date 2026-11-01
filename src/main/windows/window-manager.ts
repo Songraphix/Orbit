@@ -14,6 +14,8 @@ import { FindController } from '../tabs/find';
 import { SidebarActions } from '../sidebar/actions';
 import { TabManager } from '../tabs/tab-manager';
 import { MediaController } from '../media/controller';
+import { PeekController } from '../peek/controller';
+import { shouldPeek } from '../peek/policy';
 import { LayoutEngine } from './layout-engine';
 import { OverlayController } from './overlay';
 import { MIN_SIZE, resolveWindowBounds } from './window-state';
@@ -31,6 +33,8 @@ export type WindowManagerDeps = {
   sessionFor: (profileId: string) => Session | undefined;
   history: HistorySink;
   zoomFor: (url: string) => number;
+  /** A site's own setting (e.g. 'peek' → 'off'), by page URL. */
+  siteSetting: (url: string, key: string) => string | null;
   senders: SenderRegistry;
   broadcaster: Broadcaster;
   preloadPath: string;
@@ -50,6 +54,7 @@ export type WindowController = {
   overlay: OverlayController;
   find: FindController;
   media: MediaController;
+  peek: PeekController;
   store: SidebarStore;
   sidebar: SidebarActions;
 };
@@ -84,6 +89,7 @@ export class WindowManager {
   openCommandBar(controller: WindowController, mode: 'new' | 'edit'): void {
     const active = controller.tabs.active?.state;
     const initial = mode === 'edit' && active?.kind === 'web' ? active.url : '';
+    controller.peek.close(); // the bar would sit under the Peek page
     controller.overlay.openCommandBar(mode, initial);
   }
 
@@ -129,6 +135,7 @@ export class WindowManager {
 
     const contents = win.webContents;
     let tabs: TabManager | null = null;
+    let peek: PeekController | null = null;
     let lastActiveTabId: string | null = null;
     const find = new FindController(
       () => tabs?.active?.view.webContents ?? null,
@@ -136,6 +143,7 @@ export class WindowManager {
     );
     const layout = new LayoutEngine(win, settings, (next) => {
       tabs?.applyLayout(); // web views move in the same tick the shell is told
+      peek?.fit();
       broadcaster.sendTo(contents, 'state:layout', next);
     });
     tabs = new TabManager({
@@ -184,6 +192,19 @@ export class WindowManager {
       },
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
       onSplitChange: (ratio) => layout.setSplitRatio(ratio),
+      peek: (fromTabId, url, activate) => {
+        const fromUrl = tabs?.get(fromTabId)?.state.url ?? null;
+        const open = shouldPeek({
+          section: this.deps.store.item(fromTabId)?.section ?? null,
+          fromUrl,
+          toUrl: url,
+          activate,
+          enabled: settings.get('peek.enabled'),
+          siteSetting: fromUrl ? this.deps.siteSetting(fromUrl, 'peek') : null,
+        });
+        if (open) peek?.open(fromTabId, url);
+        return open && peek !== null;
+      },
     });
     const tabManager = tabs;
     const media = new MediaController(tabManager, (state) =>
@@ -239,6 +260,14 @@ export class WindowManager {
       refocus: () => tabManager.active?.view.webContents.focus(),
     });
 
+    peek = new PeekController({
+      win,
+      tabs: tabManager,
+      overlay,
+      getLayout: () => layout.current(),
+    });
+    const peekController = peek;
+
     const id = contents.id;
     const overlayId = overlay.view.webContents.id;
     const sidebar = new SidebarActions(this.deps.store, tabManager, {
@@ -254,6 +283,7 @@ export class WindowManager {
       overlay,
       find,
       media,
+      peek: peekController,
       store: this.deps.store,
       sidebar,
     };
@@ -276,6 +306,7 @@ export class WindowManager {
       this.deps.store.flushLive(); // the sidebar store saves structure at once; live details now
     });
     win.on('closed', () => {
+      peekController.close();
       tabManager.destroyAll();
       overlay.destroy();
     });

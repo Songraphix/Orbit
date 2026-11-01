@@ -296,6 +296,13 @@ void app.whenReady().then(() => {
     sessionFor,
     history: persistence.history,
     zoomFor: (url) => persistence?.siteSettings.zoomFor(url) ?? 0,
+    siteSetting: (url, key) => {
+      try {
+        return persistence?.siteSettings.get(new URL(url).origin, key) ?? null;
+      } catch {
+        return null;
+      }
+    },
     senders,
     broadcaster,
     preloadPath: join(import.meta.dirname, '../preload/shell.cjs'),

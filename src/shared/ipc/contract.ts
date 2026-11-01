@@ -274,6 +274,17 @@ export const contract = {
     input: z.object({}).strict(),
     output: z.void(),
   },
+  /** Peek (F-23): close the preview, or open its page as a tab without reloading. */
+  'peek:close': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'peek:promote': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
   'overlay:get': {
     input: z.object({}).strict(),
     output: overlayStateSchema,

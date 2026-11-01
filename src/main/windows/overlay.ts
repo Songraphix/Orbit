@@ -1,6 +1,12 @@
 import { WebContentsView } from 'electron';
 import type { BrowserWindow } from 'electron';
-import type { CommandBarMode, OverlayState, Prompt, PromptAnswer } from '@shared/types/command-bar';
+import type {
+  CommandBarMode,
+  OverlayState,
+  PeekView,
+  Prompt,
+  PromptAnswer,
+} from '@shared/types/command-bar';
 
 export type OverlayDeps = {
   win: BrowserWindow;
@@ -27,6 +33,7 @@ export class OverlayController {
   private commandBar: OverlayState['commandBar'] = null;
   private readonly prompts: PendingPrompt[] = [];
   private nextPromptId = 1;
+  private peek: PeekView | null = null;
 
   constructor(private readonly deps: OverlayDeps) {
     this.view = new WebContentsView({
@@ -52,11 +59,30 @@ export class OverlayController {
   }
 
   get current(): OverlayState {
-    return { commandBar: this.commandBar, prompt: this.prompts[0]?.prompt ?? null };
+    return {
+      commandBar: this.commandBar,
+      prompt: this.prompts[0]?.prompt ?? null,
+      peek: this.peek,
+    };
   }
 
   get isOpen(): boolean {
-    return this.commandBar !== null || this.prompts.length > 0;
+    return this.commandBar !== null || this.prompts.length > 0 || this.peek !== null;
+  }
+
+  /** Shows/updates the Peek frame (null hides it). Focus stays with the Peek page. */
+  setPeek(peek: PeekView | null): void {
+    const opening = peek !== null && this.peek === null;
+    this.peek = peek;
+    if (!peek) {
+      this.sync();
+      return;
+    }
+    if (opening) {
+      this.fit();
+      this.view.setVisible(true);
+    }
+    this.send();
   }
 
   get mode(): CommandBarMode | null {

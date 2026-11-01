@@ -48,9 +48,11 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - 2026-11-01 — Phase 6: Little Orbit + default browser [F-24, F-31] — links from other apps (`open-url`, queued until ready) open in a small floating window (520×720, vibrancy) with an "Open in Orbit" bar that moves the page into the main window; only http(s) accepted; Settings → "Make Orbit the default browser" (the packaged app registers http/https)
 - 2026-11-01 — Phase 6: split view [F-13] — two tabs side by side, each with its own toolbar (Img 6); `computeLayout` returns panes + divider (8 px gap, ratio clamped 0.2–0.8); pure `split.ts`; Tabs → New Split View ⌃⇧= (with a new tab page), sidebar right-click → Open in Split View, swap and "show this page alone" buttons; clicking a pane (toolbar or page) focuses it and outlines it; dragging the divider resizes (pages hidden meanwhile), double-click evens it out; activating any other tab, closing a pane or switching space leaves the split; HTML fullscreen gives the focused pane the window. Not persisted across relaunches yet (backlog)
 
+- 2026-11-01 — Phase 6: Peek [F-23] — links from pinned tabs and favorites that open a new tab on another site (registrable domain, pure `shouldPeek`) open in a floating preview: page above the overlay, frame/header/backdrop drawn by the overlay (`computePeek`); Open as Tab adopts the same webContents into Today (no reload, verified by e2e), Esc / backdrop / × close; Settings → Peek toggle, per-site `peek = off` in site_settings (UI with site controls, Phase 7)
+
 ## In progress
 
-- Phase 6 (ahead of schedule): Peek next (split view, Little Orbit, default browser done)
+- Phase 6 (ahead of schedule): wrap-up — ⌥⌘N empty Little Orbit, then Phase 7
 
 ## Decisions made
 
@@ -58,6 +60,8 @@ Target: 2026-12-21 · Phases 0–4 merged to `main` · Unsigned DMG: `release/0.
 - 2026-11-01 — Command bar list built in-house rather than with cmdk: results are ranked in main, so cmdk's own fuzzy filter would fight it, and it pulls in several Radix packages
 - 2026-11-01 — New tabs open at the top of Today (Arc behaviour)
 - 2026-11-01 — Default profile keeps Electron's default session so existing logins carry over; other profiles get `persist:profile-<id>`
+- 2026-11-01 — Peek v1 catches links that would open a new tab (target=_blank, window.open), not same-tab navigations: those include OAuth/SSO redirects that must stay in the pinned tab. Covers Gmail, Slack, etc.
+- 2026-11-01 — Split view v1 is two panes and not persisted; a split tree and restore come later (backlog)
 - 2026-11-01 — New tab page added at the owner's request (F-32): "+ New Tab" always opens it; ⌘T opens it until the Phase 2 command bar, then ⌘T → command bar
 
 - Pinned versions: Electron 45.2.1 (Chromium 156, Node 24.22), electron-vite 6.0.0, Vite 8.3.5, React 19.3.1, TypeScript 6.0.3, Tailwind 4.3.3, Vitest 5.0.5, Playwright 1.64.1, electron-builder 26.18.0

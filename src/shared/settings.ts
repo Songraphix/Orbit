@@ -33,6 +33,8 @@ export const settingsSchema = {
     .int()
     .min(0)
     .max(24 * 60),
+  /** Links from pinned tabs and favorites to other sites open in a Peek preview (F-23). */
+  'peek.enabled': z.boolean(),
   /** Search engine URL with %s for the query. */
   'search.engine': z.enum(['google', 'duckduckgo', 'bing', 'kagi', 'ecosia']),
 } as const;
@@ -50,6 +52,7 @@ export const settingsDefaults: Settings = {
   'tabs.maxLive': 8,
   'tabs.sleepAfterMinutes': 30,
   'search.engine': 'google',
+  'peek.enabled': true,
 };
 
 /** Query URL templates for `search.engine`. */
@@ -67,5 +70,6 @@ export const userSettingsSchema = z.object({
   maxLive: settingsSchema['tabs.maxLive'],
   sleepAfterMinutes: settingsSchema['tabs.sleepAfterMinutes'],
   searchEngine: settingsSchema['search.engine'],
+  peek: settingsSchema['peek.enabled'],
 });
 export type UserSettings = z.output<typeof userSettingsSchema>;

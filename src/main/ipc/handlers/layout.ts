@@ -50,6 +50,11 @@ export function registerLayoutHandlers(router: IpcRouter, windows: WindowManager
     windowFor(sender.webContentsId).tabs.unfreeze();
   });
 
+  router.handle('peek:close', (_input, { sender }) => windowFor(sender.webContentsId).peek.close());
+  router.handle('peek:promote', (_input, { sender }) =>
+    windowFor(sender.webContentsId).peek.promote(),
+  );
+
   router.handle('sidebar:endResize', (_input, { sender }) => {
     const { tabs, layout } = windowFor(sender.webContentsId);
     layout.flush(); // save the final width now rather than after the debounce

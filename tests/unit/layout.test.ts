@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { clampSidebarWidth, computeLayout } from '../../src/main/windows/layout';
+import {
+  clampSidebarWidth,
+  computeLayout,
+  computePeek,
+  contentArea,
+} from '../../src/main/windows/layout';
 
 const base = { windowWidth: 1280, windowHeight: 820, sidebarVisible: true, sidebarWidth: 260 };
 
@@ -80,6 +85,22 @@ describe('split view layout', () => {
     expect(narrow.panes[0]!.card.width).toBe(Math.round(1004 * 0.2));
     expect(computeLayout({ ...base, splitRatio: null }).panes).toHaveLength(1);
     expect(computeLayout(base).divider).toBeNull();
+  });
+});
+
+describe('Peek frame', () => {
+  it('floats centred over the content area, header on top of the page', () => {
+    const area = contentArea(computeLayout(base));
+    expect(area).toEqual({ x: 260, y: 8, width: 1012, height: 804 });
+    const peek = computePeek(area);
+    expect(peek.frame).toEqual({ x: 308, y: 36, width: 916, height: 748 });
+    expect(peek.webView).toEqual({ x: 308, y: 76, width: 916, height: 708 });
+  });
+
+  it('spans both split panes and caps its width on wide windows', () => {
+    const area = contentArea(computeLayout({ ...base, windowWidth: 2560, splitRatio: 0.5 }));
+    expect(area.width).toBe(2560 - 260 - 8);
+    expect(computePeek(area).frame.width).toBe(1100);
   });
 });
 

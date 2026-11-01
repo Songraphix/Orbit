@@ -1,0 +1,48 @@
+import { describe, expect, it } from 'vitest';
+import { shouldPeek, siteOf } from '../../src/main/peek/policy';
+import type { PeekRequest } from '../../src/main/peek/policy';
+
+const base: PeekRequest = {
+  section: 'pinned',
+  fromUrl: 'https://mail.google.com/mail/u/0/',
+  toUrl: 'https://github.com/notifications',
+  activate: true,
+  enabled: true,
+  siteSetting: null,
+};
+
+describe('siteOf', () => {
+  it('uses the registrable domain, or the host for IPs and localhost', () => {
+    expect(siteOf('https://mail.google.com/x')).toBe('google.com');
+    expect(siteOf('https://news.bbc.co.uk/')).toBe('bbc.co.uk');
+    expect(siteOf('http://127.0.0.1:8080/')).toBe('127.0.0.1');
+    expect(siteOf('http://localhost:3000/')).toBe('localhost');
+    expect(siteOf('mailto:a@b.c')).toBeNull();
+    expect(siteOf('not a url')).toBeNull();
+    expect(siteOf(null)).toBeNull();
+  });
+});
+
+describe('shouldPeek', () => {
+  it('peeks links from pinned tabs and favorites to other sites', () => {
+    expect(shouldPeek(base)).toBe(true);
+    expect(shouldPeek({ ...base, section: 'favorite' })).toBe(true);
+  });
+
+  it('leaves Today tabs, same-site links and background links alone', () => {
+    expect(shouldPeek({ ...base, section: 'today' })).toBe(false);
+    expect(shouldPeek({ ...base, section: null })).toBe(false);
+    expect(shouldPeek({ ...base, toUrl: 'https://accounts.google.com/' })).toBe(false);
+    expect(shouldPeek({ ...base, activate: false })).toBe(false);
+  });
+
+  it('can be turned off globally or for the source site', () => {
+    expect(shouldPeek({ ...base, enabled: false })).toBe(false);
+    expect(shouldPeek({ ...base, siteSetting: 'off' })).toBe(false);
+    expect(shouldPeek({ ...base, siteSetting: 'on' })).toBe(true);
+  });
+
+  it('never peeks non-web targets', () => {
+    expect(shouldPeek({ ...base, toUrl: 'file:///etc/passwd' })).toBe(false);
+  });
+});

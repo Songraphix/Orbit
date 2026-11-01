@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { rectSchema } from './layout';
 
 /** One row in the command bar (F-21). Main builds and ranks these; the overlay just draws them. */
 export const commandItemSchema = z.object({
@@ -43,7 +44,20 @@ export const promptAnswerSchema = z.object({
 export type PromptAnswer = z.output<typeof promptAnswerSchema>;
 
 /** What the overlay should show. More floating UI joins this in later phases. */
+/** The Peek preview (F-23): the overlay draws the frame and header; main places the page. */
+export const peekViewSchema = z.object({
+  url: z.string(),
+  title: z.string(),
+  favicon: z.string().nullable(),
+  isLoading: z.boolean(),
+  frame: rectSchema,
+  headerHeight: z.number(),
+  radius: z.number(),
+});
+export type PeekView = z.output<typeof peekViewSchema>;
+
 export const overlayStateSchema = z.object({
+  peek: peekViewSchema.nullable(),
   /** The question currently being asked (others wait their turn). */
   prompt: promptSchema.nullable(),
   commandBar: z

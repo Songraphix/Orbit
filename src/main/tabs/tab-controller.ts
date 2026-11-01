@@ -67,7 +67,7 @@ export class TabController {
   constructor(
     readonly id: string,
     url: string,
-    private readonly env: TabEnv,
+    private env: TabEnv,
     options: TabOptions = {},
   ) {
     const kind = isInternalUrl(url) ? 'internal' : 'web';
@@ -90,6 +90,11 @@ export class TabController {
 
   get state(): TabState {
     return this.stateValue;
+  }
+
+  /** Hands the tab to a new owner (a Peek page promoted to a tab keeps its page). */
+  setEnv(env: TabEnv): void {
+    this.env = env;
   }
 
   /** True while a restored tab hasn't loaded its page yet. */

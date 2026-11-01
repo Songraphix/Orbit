@@ -17,6 +17,15 @@ const ROUTES: Record<string, string> = {
     '<a id="popup" href="/two" target="_blank">open two</a> <a id="next" href="/three">three</a>',
   ),
   '/two': page('Page Two'),
+  // A link to another site (localhost ≠ 127.0.0.1) that opens a new tab: Peek from pinned tabs.
+  '/peek': page(
+    'Peek Source',
+    `<a id="out" target="_blank">elsewhere</a>
+     <script>
+       document.getElementById('out').href =
+         location.href.replace('127.0.0.1', 'localhost').replace('/peek', '/two');
+     </script>`,
+  ),
   '/notify': page(
     'Notify',
     `<button id="ask" onclick="Notification.requestPermission().then((p) => { document.title = 'perm:' + p; })">Ask</button>`,

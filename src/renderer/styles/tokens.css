@@ -43,6 +43,13 @@ body {
   }
 }
 
+/* Overlay backdrops (Peek) fade in. */
+@keyframes orbit-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* The window has no title bar: these mark where it can be dragged (F-01). */
 .drag-region {
   -webkit-app-region: drag;

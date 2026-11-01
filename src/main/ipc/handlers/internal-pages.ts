@@ -45,6 +45,7 @@ export function registerInternalPageHandlers(
     maxLive: deps.settings.get('tabs.maxLive'),
     sleepAfterMinutes: deps.settings.get('tabs.sleepAfterMinutes'),
     searchEngine: deps.settings.get('search.engine'),
+    peek: deps.settings.get('peek.enabled'),
   });
 
   router.handle('settings:get', (_input, { sender }) => {
@@ -63,6 +64,7 @@ export function registerInternalPageHandlers(
       deps.settings.set('search.engine', patch.searchEngine);
       setSearchEngine(SEARCH_ENGINES[patch.searchEngine].url);
     }
+    if (patch.peek !== undefined) deps.settings.set('peek.enabled', patch.peek);
     return current();
   });
 

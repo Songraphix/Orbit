@@ -17,6 +17,7 @@ import { inSplit, makeSplit, partnerOf, splitAfterActivate, swapped, withRatio }
 import type { Split } from './split';
 import { TabController } from './tab-controller';
 import type { TabEnv } from './tab-controller';
+import { randomUUID } from 'node:crypto';
 
 /** A pre-drag snapshot older than this is stale (the page may have changed). */
 const SNAPSHOT_MAX_AGE_MS = 10_000;
@@ -47,6 +48,8 @@ export type TabManagerDeps = Pick<
   onUnresponsive?: (tabId: string) => void;
   /** A tab's media started or stopped. */
   onMedia?: (tabId: string, event: 'playing' | 'paused') => void;
+  /** Offered every link that wants a new tab; returns true if Peek took it (F-23). */
+  peek?: (fromTabId: string, url: string, activate: boolean) => boolean;
   /** Split view started, resized or ended (null): the layout needs the new ratio. */
   onSplitChange?: (ratio: number | null) => void;
 };
@@ -258,6 +261,52 @@ export class TabManager {
     this.live.delete(id);
     if (this.activeId === id) this.activeId = null;
     this.scheduleNotify();
+  }
+
+  // ── Peek (F-23) ────────────────────────────────────────────────────────────
+
+  /** A page outside the sidebar (the Peek preview), in the session of the tab it came from. */
+  createDetached(url: string, fromTabId: string, onChange: () => void): TabController {
+    const from = this.deps.store.item(fromTabId);
+    const id = randomUUID();
+    const tab = new TabController(
+      id,
+      url,
+      {
+        ...this.envFor(id),
+        // Links inside the preview open as ordinary tabs.
+        openInNewTab: (link, activate) => this.create(link, { activate }),
+        onChange,
+        onViewReplaced: () => undefined,
+        onHtmlFullscreen: () => undefined,
+        onFoundInPage: () => undefined,
+        onFocus: undefined,
+        onMedia: undefined,
+        onUnresponsive: undefined,
+      },
+      { session: this.deps.sessionFor(from?.profileId ?? this.space.profileId) },
+    );
+    return tab;
+  }
+
+  /** "Open as Tab": the detached page joins Today at the top, without reloading. */
+  adopt(tab: TabController): void {
+    const space = this.space;
+    const { url, title, favicon } = tab.state;
+    this.deps.store.insert(
+      { id: tab.id, kind: 'tab', title, url, favicon },
+      {
+        section: 'today',
+        profileId: space.profileId,
+        spaceId: space.id,
+        parentId: null,
+        beforeId: 'first',
+      },
+    );
+    tab.setEnv(this.envFor(tab.id));
+    this.live.set(tab.id, tab);
+    this.attach(tab.view);
+    this.activate(tab.id);
   }
 
   // ── Split view (F-13) ──────────────────────────────────────────────────────
@@ -482,53 +531,59 @@ export class TabManager {
   private ensureLive(item: SidebarItem): TabController {
     const existing = this.live.get(item.id);
     if (existing) return existing;
-    const id = item.id;
-    const tab = new TabController(
-      id,
-      item.url ?? NEW_TAB_URL,
-      {
-        internalPreload: this.deps.internalPreload,
-        loadInternal: this.deps.loadInternal,
-        registerInternal: this.deps.registerInternal,
-        unregisterInternal: this.deps.unregisterInternal,
-        history: this.deps.history,
-        zoomFor: this.deps.zoomFor,
-        onFoundInPage: (result) => {
-          if (this.activeId === id) this.deps.onFoundInPage(result);
-        },
-        openInNewTab: (link, activate) => this.create(link, { activate }),
-        onUnresponsive: () => this.deps.onUnresponsive?.(id),
-        onMedia: (event) => this.deps.onMedia?.(id, event),
-        onChange: () => {
-          if (this.disposed) return;
-          const { url, title, favicon } = tab.state;
-          // A crashed page is hidden so the shell's Reload card shows through.
-          if (this.shownIds().includes(id)) this.place();
-          this.deps.store.updateLive(id, { url, title, favicon });
-          this.scheduleNotify();
-        },
-        onViewReplaced: (oldView, newView) => this.replaceView(id, oldView, newView),
-        // Only the visible tab may take over the window; leaving is always honoured.
-        onHtmlFullscreen: (enter) => {
-          if (!enter || this.activeId === id) this.deps.onHtmlFullscreen(enter);
-        },
-        // Clicking into the other split pane focuses it.
-        onFocus: () => {
-          if (this.disposed || this.activeId === id || !inSplit(this.split, id)) return;
-          this.activeId = id;
-          this.deps.store.updateSpace(this.spaceId, { lastActiveItemId: id });
-          this.scheduleNotify();
-        },
-      },
-      {
-        title: item.titleOverride || item.title,
-        favicon: item.favicon,
-        session: this.deps.sessionFor(item.profileId),
-      },
-    );
-    this.live.set(id, tab);
+    const tab = new TabController(item.id, item.url ?? NEW_TAB_URL, this.envFor(item.id), {
+      title: item.titleOverride || item.title,
+      favicon: item.favicon,
+      session: this.deps.sessionFor(item.profileId),
+    });
+    this.live.set(item.id, tab);
     this.attach(tab.view);
     return tab;
+  }
+
+  /** How a tab in this window reports back (looked up by id, so a tab can be handed over). */
+  private envFor(id: string): TabEnv {
+    return {
+      internalPreload: this.deps.internalPreload,
+      loadInternal: this.deps.loadInternal,
+      registerInternal: this.deps.registerInternal,
+      unregisterInternal: this.deps.unregisterInternal,
+      history: this.deps.history,
+      zoomFor: this.deps.zoomFor,
+      onFoundInPage: (result) => {
+        if (this.activeId === id) this.deps.onFoundInPage(result);
+      },
+      openInNewTab: (link, activate) => this.openLink(id, link, activate),
+      onUnresponsive: () => this.deps.onUnresponsive?.(id),
+      onMedia: (event) => this.deps.onMedia?.(id, event),
+      onChange: () => {
+        const tab = this.live.get(id);
+        if (this.disposed || !tab) return;
+        const { url, title, favicon } = tab.state;
+        // A crashed page is hidden so the shell's Reload card shows through.
+        if (this.shownIds().includes(id)) this.place();
+        this.deps.store.updateLive(id, { url, title, favicon });
+        this.scheduleNotify();
+      },
+      onViewReplaced: (oldView, newView) => this.replaceView(id, oldView, newView),
+      // Only the visible tab may take over the window; leaving is always honoured.
+      onHtmlFullscreen: (enter) => {
+        if (!enter || this.activeId === id) this.deps.onHtmlFullscreen(enter);
+      },
+      // Clicking into the other split pane focuses it.
+      onFocus: () => {
+        if (this.disposed || this.activeId === id || !inSplit(this.split, id)) return;
+        this.activeId = id;
+        this.deps.store.updateSpace(this.spaceId, { lastActiveItemId: id });
+        this.scheduleNotify();
+      },
+    };
+  }
+
+  /** A link that wants a new tab: Peek (pinned/favorite → another site), else a Today tab. */
+  private openLink(fromId: string, url: string, activate: boolean): void {
+    if (this.deps.peek?.(fromId, url, activate)) return;
+    this.create(url, { activate });
   }
 
   private tabState(item: SidebarItem): TabState {

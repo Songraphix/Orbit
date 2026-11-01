@@ -117,6 +117,21 @@ export function SettingsPage() {
         </Row>
       </Group>
 
+      <Group title="Peek">
+        <Row
+          label="Preview links from pinned tabs"
+          hint="Links from pinned tabs and favorites to other sites open in a floating preview."
+        >
+          <input
+            type="checkbox"
+            checked={settings.peek}
+            onChange={(e) => update({ peek: e.target.checked })}
+            className="size-4 accent-[var(--accent,#5b5bd6)]"
+            data-testid="setting-peek"
+          />
+        </Row>
+      </Group>
+
       <Group title="Default browser">
         <DefaultBrowserRow />
       </Group>

@@ -106,3 +106,32 @@ export function computeLayout(input: LayoutInput): Layout {
     fullscreen: false,
   };
 }
+
+/** The Peek preview (F-23): a rounded frame floating over the content area. */
+export const PEEK = { margin: 48, maxWidth: 1100, top: 28, headerHeight: 40, radius: 12 } as const;
+
+/** The whole content area: the card, or both split panes together. Pure. */
+export function contentArea(layout: Layout): Rect {
+  const first = layout.panes[0]?.card ?? layout.card;
+  const last = layout.panes.at(-1)?.card ?? layout.card;
+  return { ...first, width: last.x + last.width - first.x };
+}
+
+/** Where the Peek frame, its header (drawn by the overlay) and its page go. Pure. */
+export function computePeek(area: Rect): { frame: Rect; header: Rect; webView: Rect } {
+  const width = Math.max(0, Math.min(PEEK.maxWidth, area.width - PEEK.margin * 2));
+  const frame = {
+    x: area.x + Math.round((area.width - width) / 2),
+    y: area.y + PEEK.top,
+    width,
+    height: Math.max(0, area.height - PEEK.top * 2),
+  };
+  const header = { ...frame, height: Math.min(PEEK.headerHeight, frame.height) };
+  const webView = {
+    x: frame.x,
+    y: frame.y + header.height,
+    width,
+    height: Math.max(0, frame.height - header.height),
+  };
+  return { frame, header, webView };
+}

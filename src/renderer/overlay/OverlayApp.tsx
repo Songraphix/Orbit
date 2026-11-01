@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { OverlayState } from '@shared/types/command-bar';
 import { CommandBar } from './CommandBar';
+import { PeekFrame } from './PeekFrame';
 import { PromptView } from './PromptView';
 
 /**
@@ -8,7 +9,11 @@ import { PromptView } from './PromptView';
  * something is open, sized to the whole window.
  */
 export function OverlayApp() {
-  const [state, setState] = useState<OverlayState>({ commandBar: null, prompt: null });
+  const [state, setState] = useState<OverlayState>({
+    commandBar: null,
+    prompt: null,
+    peek: null,
+  });
 
   useEffect(() => {
     const unsubscribe = window.orbit.on('state:overlay', setState);
@@ -17,7 +22,16 @@ export function OverlayApp() {
   }, []);
 
   // A site's question takes precedence; the command bar comes back once it's answered.
-  if (state.prompt) return <PromptView key={state.prompt.id} prompt={state.prompt} />;
-  if (!state.commandBar) return null;
-  return <CommandBar key={state.commandBar.openedAt} {...state.commandBar} />;
+  // Peek's frame stays underneath either.
+  const top = state.prompt ? (
+    <PromptView key={state.prompt.id} prompt={state.prompt} />
+  ) : state.commandBar ? (
+    <CommandBar key={state.commandBar.openedAt} {...state.commandBar} />
+  ) : null;
+  return (
+    <>
+      {state.peek && <PeekFrame peek={state.peek} interactive={top === null} />}
+      {top}
+    </>
+  );
 }
