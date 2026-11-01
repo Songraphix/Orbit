@@ -228,7 +228,6 @@ export class WindowManager {
       },
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
       onSplitChange: (ratio) => layout.setSplitRatio(ratio),
-      onActivate: () => library?.close(),
       tidyState: this.deps.tidyState,
       siteSetting: this.deps.siteSetting,
       extensions: this.deps.extensions,
@@ -324,8 +323,8 @@ export class WindowManager {
     const peekController = peek;
     library = new LibraryController({
       win,
-      tabs: tabManager,
       getLayout: () => layout.current(),
+      setPanel: (panel) => layout.setLibrary(panel),
       internalPreload: this.deps.internalPreloadPath,
       loadInternal: this.deps.loadInternal,
       registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),

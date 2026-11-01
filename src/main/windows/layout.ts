@@ -1,5 +1,5 @@
-import { SIDEBAR_WIDTH } from '@shared/types/layout';
-import type { Layout, Rect } from '@shared/types/layout';
+import { LIBRARY_WIDTH, SIDEBAR_WIDTH } from '@shared/types/layout';
+import type { Layout, LibraryPanel, Rect } from '@shared/types/layout';
 
 /** Arc-like defaults (PLAN.md section 4.6). */
 export const LAYOUT_DEFAULTS = {
@@ -17,7 +17,26 @@ export type LayoutInput = {
   htmlFullscreen?: boolean;
   /** Split view (F-13): the left pane's share of the width (0.2–0.8), or null for one page. */
   splitRatio?: number | null;
+  /** Library mode (F-11): its panel's size, or null. */
+  library?: LibraryPanel | null;
 };
+
+/** Where Library mode's sections column and panel go, and where the page starts. Pure. */
+export function libraryColumns(
+  kind: LibraryPanel,
+  windowWidth: number,
+  windowHeight: number,
+  inset: number,
+): { nav: Rect; panel: Rect; pageLeft: number } {
+  const { nav, panel, pageMin } = LIBRARY_WIDTH;
+  // Wide (Spaces' columns) takes what the page can spare, keeping a strip of the page in view.
+  const width = kind === 'wide' ? Math.max(panel, windowWidth - nav - inset - pageMin) : panel;
+  return {
+    nav: { x: 0, y: 0, width: nav, height: Math.max(0, windowHeight) },
+    panel: { x: nav, y: inset, width, height: Math.max(0, windowHeight - inset * 2) },
+    pageLeft: nav + width + inset,
+  };
+}
 
 export function clampRatio(ratio: number): number {
   return Number.isFinite(ratio) ? Math.min(0.8, Math.max(0.2, ratio)) : 0.5;
@@ -66,10 +85,14 @@ export function computeLayout(input: LayoutInput): Layout {
       divider: null,
       radius: 0,
       fullscreen: true,
+      library: null,
     };
   }
 
-  const left = input.sidebarVisible ? sidebarWidth : inset;
+  const library = input.library
+    ? libraryColumns(input.library, input.windowWidth, input.windowHeight, inset)
+    : null;
+  const left = library ? library.pageLeft : input.sidebarVisible ? sidebarWidth : inset;
 
   const card = {
     x: left,
@@ -98,12 +121,16 @@ export function computeLayout(input: LayoutInput): Layout {
       : null;
 
   return {
-    sidebar: { visible: input.sidebarVisible, width: sidebarWidth },
+    // In Library mode the sidebar is the sections column.
+    sidebar: library
+      ? { visible: true, width: library.nav.width }
+      : { visible: input.sidebarVisible, width: sidebarWidth },
     ...panes[0]!,
     panes,
     divider,
     radius,
     fullscreen: false,
+    library: library && { nav: library.nav, panel: library.panel },
   };
 }
 

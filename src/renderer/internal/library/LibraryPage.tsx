@@ -40,7 +40,7 @@ export function LibraryPage({ section }: { section: LibrarySection }) {
   if (!mode) return null;
   return (
     <main
-      className="min-h-screen px-6 pt-4 pb-10 text-[var(--sidebar-fg)]"
+      className="min-h-screen px-2 pt-1 pb-10 text-[var(--sidebar-fg)]"
       data-testid="library-page"
     >
       {section === 'media' && <MediaSection />}
@@ -136,7 +136,7 @@ function MediaSection() {
       {data && data.items.length === 0 && (
         <Empty>Images and videos you download, and screenshots you take, show up here.</Empty>
       )}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(124px,1fr))] gap-2.5">
         {items?.map((item) => (
           <MediaTile key={item.id} item={item} />
         ))}

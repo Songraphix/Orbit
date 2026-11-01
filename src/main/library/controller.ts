@@ -1,14 +1,13 @@
 import { WebContentsView } from 'electron';
 import type { BrowserWindow } from 'electron';
-import type { Layout } from '@shared/types/layout';
+import type { Layout, LibraryPanel } from '@shared/types/layout';
 import type { LibrarySection } from '@shared/types/library';
-import type { TabManager } from '../tabs/tab-manager';
-import { contentArea } from '../windows/layout';
 
 export type LibraryDeps = {
   win: BrowserWindow;
-  tabs: TabManager;
   getLayout: () => Layout;
+  /** Makes room for the panel (the page moves right), or gives it back (null). */
+  setPanel: (panel: LibraryPanel | null) => void;
   internalPreload: string;
   loadInternal: (view: WebContentsView, url: string) => void;
   registerInternal: (webContentsId: number) => void;
@@ -17,9 +16,9 @@ export type LibraryDeps = {
 };
 
 /**
- * Library mode (F-11, Img 4): the sidebar shows the Library's sections and the content area
- * shows orbit://library/<section> in its own internal view, in place of the pages (which stay
- * loaded, just hidden). Library pages never become tabs.
+ * Library mode (F-11, Img 4, like Arc): the sidebar becomes the Library's sections and a panel
+ * beside it shows orbit://library/<section> in its own internal view; the page moves right and
+ * stays usable. Library pages never become tabs.
  */
 export class LibraryController {
   private view: WebContentsView | null = null;
@@ -41,7 +40,8 @@ export class LibraryController {
     const view = this.view ?? this.createView();
     const changed = section !== this.current;
     this.current = section;
-    this.deps.tabs.setHidden(true);
+    // Spaces shows a column per space, so its panel is wide; the rest are a narrow list.
+    this.deps.setPanel(section === 'spaces' ? 'wide' : 'narrow');
     if (fresh) {
       this.deps.loadInternal(view, `orbit://library/${section}`);
     } else if (changed) {
@@ -62,7 +62,7 @@ export class LibraryController {
     if (this.current === null) return;
     this.current = null;
     this.destroyView(); // reopening is quick, and a closed Library holds no memory
-    this.deps.tabs.setHidden(false);
+    this.deps.setPanel(null);
     this.deps.onChange(null);
   }
 
@@ -70,7 +70,8 @@ export class LibraryController {
   fit(): void {
     if (!this.view || this.current === null) return;
     const layout = this.deps.getLayout();
-    this.view.setBounds(contentArea(layout));
+    if (!layout.library) return;
+    this.view.setBounds(layout.library.panel);
     this.view.setBorderRadius(layout.radius);
   }
 

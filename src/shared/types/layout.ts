@@ -26,7 +26,14 @@ export const layoutSchema = z.object({
   radius: z.number(),
   /** A page is in HTML fullscreen: the shell draws nothing over it. */
   fullscreen: z.boolean(),
+  /** Library mode (F-11, like Arc): the sections column and the panel beside it; the page moves
+   *  over to make room. */
+  library: z.object({ nav: rectSchema, panel: rectSchema }).nullable(),
 });
 export type Layout = z.output<typeof layoutSchema>;
 
 export const SIDEBAR_WIDTH = { min: 200, max: 400, default: 260 } as const;
+
+/** Library mode's columns: Arc's narrow sections column, then a panel (wide for Spaces). */
+export const LIBRARY_WIDTH = { nav: 104, panel: 300, pageMin: 360 } as const;
+export type LibraryPanel = 'narrow' | 'wide';

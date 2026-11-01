@@ -1,4 +1,4 @@
-import type { Layout } from '@shared/types/layout';
+import type { Layout, LibraryPanel } from '@shared/types/layout';
 import type { SettingsRepository } from '../persistence/repositories/settings';
 import { clampSidebarWidth, computeLayout } from './layout';
 
@@ -22,6 +22,7 @@ export class LayoutEngine {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private fullscreen = false;
   private splitRatio: number | null = null;
+  private library: LibraryPanel | null = null;
   private layout: Layout;
 
   constructor(
@@ -48,7 +49,7 @@ export class LayoutEngine {
     this.sidebarVisible = visible;
     this.settings.set('sidebar.visible', visible);
     // Arc hides the traffic lights with the sidebar so they never float over the page.
-    this.win.setWindowButtonVisibility(visible);
+    this.win.setWindowButtonVisibility(visible || this.library !== null);
     this.update();
   }
 
@@ -69,6 +70,15 @@ export class LayoutEngine {
   setHtmlFullscreen(on: boolean): void {
     if (on === this.fullscreen) return;
     this.fullscreen = on;
+    this.update();
+  }
+
+  /** Library mode opened (its panel's size) or closed (null). Not persisted. */
+  setLibrary(panel: LibraryPanel | null): void {
+    if (panel === this.library) return;
+    this.library = panel;
+    // The sections column shows even when the sidebar is hidden, traffic lights included.
+    this.win.setWindowButtonVisibility(this.sidebarVisible || panel !== null);
     this.update();
   }
 
@@ -101,6 +111,7 @@ export class LayoutEngine {
       sidebarWidth: this.sidebarWidth,
       htmlFullscreen: this.fullscreen,
       splitRatio: this.splitRatio,
+      library: this.library,
     });
   }
 }

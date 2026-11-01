@@ -133,27 +133,25 @@ function Chrome({
           onResizeEnd={onResizeEnd}
         />
       )}
-      {/* In Library mode the Library page sits straight on the space's colours (like Arc). */}
-      {!librarySection &&
-        paneTabs.map((tab, i) => {
-          const pane = layout.panes[i];
-          if (!pane) return null;
-          return (
-            <ContentCard
-              key={split ? (tab?.id ?? i) : 'single'}
-              pane={pane}
-              radius={layout.radius}
-              tab={tab}
-              showToolbar={!layout.fullscreen}
-              sidebarVisible={layout.sidebar.visible || i > 0}
-              find={find}
-              focused={!split || tab?.id === tabs?.activeTabId}
-              inSplit={split !== null}
-              snapshot={split ? null : snapshot}
-            />
-          );
-        })}
-      {!librarySection && split && layout.divider && (
+      {paneTabs.map((tab, i) => {
+        const pane = layout.panes[i];
+        if (!pane) return null;
+        return (
+          <ContentCard
+            key={split ? (tab?.id ?? i) : 'single'}
+            pane={pane}
+            radius={layout.radius}
+            tab={tab}
+            showToolbar={!layout.fullscreen}
+            sidebarVisible={layout.sidebar.visible || i > 0}
+            find={find}
+            focused={!split || tab?.id === tabs?.activeTabId}
+            inSplit={split !== null}
+            snapshot={split ? null : snapshot}
+          />
+        );
+      })}
+      {split && layout.divider && (
         <SplitDivider rect={layout.divider} left={layout.panes[0]!} right={layout.panes[1]!} />
       )}
     </>

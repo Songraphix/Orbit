@@ -112,3 +112,43 @@ describe('clampSidebarWidth', () => {
     expect(clampSidebarWidth(Number.NaN)).toBe(260);
   });
 });
+
+describe('Library mode layout', () => {
+  it('puts the sections column and a narrow panel before the page', () => {
+    const layout = computeLayout({
+      windowWidth: 1400,
+      windowHeight: 900,
+      sidebarVisible: false,
+      sidebarWidth: 260,
+      library: 'narrow',
+    });
+    expect(layout.sidebar).toEqual({ visible: true, width: 104 });
+    expect(layout.library).toEqual({
+      nav: { x: 0, y: 0, width: 104, height: 900 },
+      panel: { x: 104, y: 8, width: 300, height: 884 },
+    });
+    expect(layout.card.x).toBe(412);
+    expect(layout.card.width).toBe(1400 - 412 - 8);
+  });
+
+  it('a wide panel (Spaces) leaves a strip of the page in view', () => {
+    const layout = computeLayout({
+      windowWidth: 1400,
+      windowHeight: 900,
+      sidebarVisible: true,
+      sidebarWidth: 260,
+      library: 'wide',
+    });
+    expect(layout.library!.panel.width).toBe(1400 - 104 - 8 - 360);
+    expect(layout.card.width).toBe(360 - 8);
+    // A small window still gets the full narrow panel.
+    const small = computeLayout({
+      windowWidth: 700,
+      windowHeight: 500,
+      sidebarVisible: true,
+      sidebarWidth: 260,
+      library: 'wide',
+    });
+    expect(small.library!.panel.width).toBe(300);
+  });
+});

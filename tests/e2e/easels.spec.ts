@@ -119,7 +119,7 @@ test('Easels: ⌃⇧E, draw, rename, capture from a page, reopen from the Librar
   await expect(entry).toContainText('Ideas');
   await expect(entry.locator('img')).toHaveAttribute('src', /^data:image\/jpeg/);
   await entry.locator('button').first().click();
-  await expect(win.getByTestId('library-nav')).toHaveCount(0);
+  await expect(win.getByTestId('library-nav')).toBeVisible(); // the Easel opens beside the Library
   const reopened = await pageWith(app, '#/easel/');
   await expect(reopened.locator('.excalidraw')).toBeVisible({ timeout: 15_000 });
   await expect(reopened.getByTestId('easel-title')).toHaveValue('Ideas');

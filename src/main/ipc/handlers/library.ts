@@ -147,7 +147,9 @@ export function registerLibraryHandlers(
 
   router.handle('library:openItem', ({ itemId }, { sender }) => {
     const controller = libraryOwner(sender.webContentsId);
-    if (controller.store.item(itemId)?.kind === 'tab') controller.tabs.activate(itemId); // leaves the Library
+    if (controller.store.item(itemId)?.kind !== 'tab') return;
+    controller.library.close(); // back to the tabs, like picking a tab in Arc's Spaces view
+    controller.tabs.activate(itemId);
   });
 
   /** The Library page, or a tab's internal page (Easels): its window's space theme. */
@@ -176,7 +178,7 @@ export function registerLibraryHandlers(
     if (action === 'on' || action === 'off') {
       deps.boosts.update(id, { enabled: action === 'on' });
     } else if (action === 'edit') {
-      controller.tabs.create(boostEditorUrl(id)); // leaves the Library
+      controller.tabs.create(boostEditorUrl(id)); // opens beside the Library
     } else {
       const { response } = await dialog.showMessageBox(controller.win, {
         type: 'warning',

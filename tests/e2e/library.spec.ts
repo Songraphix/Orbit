@@ -67,11 +67,19 @@ test('Library: sections in the sidebar, media from screenshots, downloads, back 
   await expect(win.getByTestId('download-item')).toHaveCount(1);
   await win.locator('[data-testid="tab-row"]', { hasText: 'Page One' }).click();
 
-  // The Library button swaps the sidebar to the sections (Img 4) and covers the page.
+  // The Library button swaps the sidebar to the sections (Img 4) with a panel beside it; the
+  // page moves over and stays on screen (Arc).
   await win.getByTestId('library-button').click();
   await expect(win.getByTestId('library-section')).toHaveCount(6);
   await expect(win.getByTestId('tab-list')).toHaveCount(0);
-  await expect.poll(() => pageVisible(app, url)).toBe(false);
+  await expect.poll(() => pageVisible(app, url)).toBe(true);
+  const panelRight = await app.evaluate(({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows().find((w) => w.contentView.children.length > 1)!;
+    const views = win.contentView.children.filter((v) => v.getVisible()).map((v) => v.getBounds());
+    return views.map((b) => b.x).sort((a, b) => a - b);
+  });
+  expect(panelRight[0]).toBe(104); // the panel starts after the sections column
+  expect(panelRight[1]).toBeGreaterThan(400); // the page, pushed right
   const library = await libraryPage(app);
   const media = library.getByTestId('media-item');
   await expect(media).toHaveCount(1);
@@ -95,12 +103,12 @@ test('Library: sections in the sidebar, media from screenshots, downloads, back 
   await expect(win.getByTestId('tab-list')).toBeVisible();
   await expect.poll(() => pageVisible(app, url)).toBe(true);
 
-  // Opening a tab from anywhere also leaves the Library.
+  // A tab opened while the Library is open shows beside it; the Library stays.
   await win.getByTestId('library-button').click();
   await expect(win.getByTestId('library-nav')).toBeVisible();
   await invoke(win, 'tabs:create', { url: server.url('/two') });
-  await expect(win.getByTestId('library-nav')).toHaveCount(0);
   await expect.poll(() => pageVisible(app, server.url('/two'))).toBe(true);
+  await expect(win.getByTestId('library-nav')).toBeVisible();
 });
 
 test('Library → Spaces: reorder and rename; Boosts section', async () => {
@@ -166,9 +174,9 @@ test('Library looks like Arc: space columns with their tabs; archived tabs filte
   await expect(win.getByTestId('toolbar-address')).toContainText('Page Two');
   await clickMenu(app, 'close-tab'); // Page Two → Archived Tabs (closed by hand)
 
-  // The page is transparent over the space's colours; no white card behind it.
+  // The panel is transparent over the space's colours; the page keeps its card beside it.
   await win.getByTestId('library-button').click();
-  await expect(win.getByTestId('content-card')).toHaveCount(0);
+  await expect(win.getByTestId('content-card')).toHaveCount(1);
   const library = await libraryPage(app);
   const background = await library.evaluate(
     () =>

@@ -104,7 +104,7 @@ export function registerEaselHandlers(
     const easel = easels.get(id ?? '');
     if (!easel) return;
     if (action === 'open') {
-      controller.tabs.create(easelUrl(easel.id)); // leaves the Library
+      controller.tabs.create(easelUrl(easel.id)); // opens beside the Library
       return;
     }
     const { response } = await dialog.showMessageBox(controller.win, {

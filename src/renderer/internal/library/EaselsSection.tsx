@@ -42,7 +42,7 @@ export function EaselsSection() {
           No Easels yet. Press ⌃⇧E to start one: draw, write notes and capture web pages.
         </Empty>
       )}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(124px,1fr))] gap-3">
         {shown?.map((easel) => (
           <figure key={easel.id} className="group" data-testid="easel-entry">
             <button
