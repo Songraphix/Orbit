@@ -13,6 +13,8 @@ export type LayoutInput = {
   windowHeight: number;
   sidebarVisible: boolean;
   sidebarWidth: number;
+  /** A page is in HTML fullscreen (e.g. YouTube's fullscreen button): it gets the whole window. */
+  htmlFullscreen?: boolean;
 };
 
 export function clampSidebarWidth(width: number): number {
@@ -29,6 +31,25 @@ export function clampSidebarWidth(width: number): number {
 export function computeLayout(input: LayoutInput): Layout {
   const { inset, radius, toolbarHeight } = LAYOUT_DEFAULTS;
   const sidebarWidth = clampSidebarWidth(input.sidebarWidth);
+
+  if (input.htmlFullscreen) {
+    // Section 4.6: the page fills the window edge to edge — no sidebar, toolbar or corners.
+    const full = {
+      x: 0,
+      y: 0,
+      width: Math.max(0, input.windowWidth),
+      height: Math.max(0, input.windowHeight),
+    };
+    return {
+      sidebar: { visible: false, width: sidebarWidth },
+      card: full,
+      toolbar: { ...full, height: 0 },
+      webView: full,
+      radius: 0,
+      fullscreen: true,
+    };
+  }
+
   const left = input.sidebarVisible ? sidebarWidth : inset;
 
   const card = {
@@ -51,5 +72,6 @@ export function computeLayout(input: LayoutInput): Layout {
     toolbar,
     webView,
     radius,
+    fullscreen: false,
   };
 }

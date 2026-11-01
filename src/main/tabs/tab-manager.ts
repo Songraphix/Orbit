@@ -17,6 +17,8 @@ export type TabManagerDeps = Pick<
   win: BrowserWindow;
   getLayout: () => Layout;
   onChange: (snapshot: TabsSnapshot) => void;
+  /** The active tab's page entered/left HTML fullscreen. */
+  onHtmlFullscreen: (enter: boolean) => void;
 };
 
 /**
@@ -70,6 +72,10 @@ export class TabManager {
       openInNewTab: (link, activate) => this.create(link, { activate }),
       onChange: () => this.scheduleNotify(),
       onViewReplaced: (oldView, newView) => this.replaceView(id, oldView, newView),
+      // Only the visible tab may take over the window; leaving is always honoured.
+      onHtmlFullscreen: (enter) => {
+        if (!enter || this.activeId === id) this.deps.onHtmlFullscreen(enter);
+      },
     });
     this.tabs.set(id, tab);
     this.order = insertAfter(this.order, id, this.activeId ?? undefined);

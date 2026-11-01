@@ -20,6 +20,7 @@ export class LayoutEngine {
   private sidebarVisible: boolean;
   private sidebarWidth: number;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private fullscreen = false;
   private layout: Layout;
 
   constructor(
@@ -59,6 +60,17 @@ export class LayoutEngine {
     this.update();
   }
 
+  get htmlFullscreen(): boolean {
+    return this.fullscreen;
+  }
+
+  /** A page entered/left HTML fullscreen (not persisted). */
+  setHtmlFullscreen(on: boolean): void {
+    if (on === this.fullscreen) return;
+    this.fullscreen = on;
+    this.update();
+  }
+
   /** Call when the window's size changes. */
   update(): void {
     this.layout = this.compute();
@@ -79,6 +91,7 @@ export class LayoutEngine {
       windowHeight,
       sidebarVisible: this.sidebarVisible,
       sidebarWidth: this.sidebarWidth,
+      htmlFullscreen: this.fullscreen,
     });
   }
 }

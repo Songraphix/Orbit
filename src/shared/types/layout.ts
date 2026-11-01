@@ -20,6 +20,8 @@ export const layoutSchema = z.object({
   webView: rectSchema,
   /** Corner radius of the card and web view. */
   radius: z.number(),
+  /** A page is in HTML fullscreen: the shell draws nothing over it. */
+  fullscreen: z.boolean(),
 });
 export type Layout = z.output<typeof layoutSchema>;
 

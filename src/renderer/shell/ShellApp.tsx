@@ -63,11 +63,13 @@ function Chrome({ layout, tabs }: { layout: Layout; tabs: TabsSnapshot | null })
         style={{ ...toStyle(layout.card), borderRadius: layout.radius }}
         data-testid="content-card"
       >
-        <Toolbar
-          tab={activeTab}
-          height={layout.toolbar.height}
-          sidebarVisible={layout.sidebar.visible}
-        />
+        {!layout.fullscreen && (
+          <Toolbar
+            tab={activeTab}
+            height={layout.toolbar.height}
+            sidebarVisible={layout.sidebar.visible}
+          />
+        )}
         {snapshot && (
           <img
             src={snapshot}

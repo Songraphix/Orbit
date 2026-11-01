@@ -20,6 +20,8 @@ export type TabEnv = {
   onChange(): void;
   /** Called when the tab swaps its view (e.g. new tab page → website). */
   onViewReplaced(oldView: WebContentsView, newView: WebContentsView): void;
+  /** The page entered or left HTML fullscreen (e.g. YouTube's fullscreen button). */
+  onHtmlFullscreen(enter: boolean): void;
 };
 
 const isInternalUrl = (url: string) => url.startsWith('orbit://');
@@ -150,6 +152,8 @@ export class TabController {
     // Scheme rules, links → tabs, real popups (sign-in) → sandboxed popup windows.
     guardWebContents(contents, (url, activate) => this.env.openInNewTab(url, activate));
     attachContextMenu(contents, (url, activate) => this.env.openInNewTab(url, activate));
+    contents.on('enter-html-full-screen', () => this.env.onHtmlFullscreen(true));
+    contents.on('leave-html-full-screen', () => this.env.onHtmlFullscreen(false));
 
     contents.on('did-start-loading', () => this.update({ isLoading: true }));
     contents.on('did-stop-loading', () => this.update({ isLoading: false, ...this.navState() }));

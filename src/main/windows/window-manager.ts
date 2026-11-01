@@ -109,8 +109,33 @@ export class WindowManager {
       registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
       unregisterInternal: (webContentsId) => senders.remove(webContentsId),
       onChange: (snapshot) => broadcaster.sendTo(contents, 'state:tabs', snapshot),
+      onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
     });
     const tabManager = tabs;
+
+    // HTML fullscreen (section 4.6): Electron doesn't do this for us. The page takes the whole
+    // window, and the window goes fullscreen unless it already was (then we leave it as is).
+    let enteredWindowFullscreen = false;
+    const setHtmlFullscreen = (enter: boolean) => {
+      if (enter === layout.htmlFullscreen) return;
+      layout.setHtmlFullscreen(enter);
+      if (enter && !win.isFullScreen()) {
+        enteredWindowFullscreen = true;
+        win.setFullScreen(true);
+      } else if (!enter && enteredWindowFullscreen) {
+        enteredWindowFullscreen = false;
+        win.setFullScreen(false);
+      }
+    };
+    // Leaving window fullscreen (green button, ⌃⌘F) also ends the page's fullscreen.
+    win.on('leave-full-screen', () => {
+      if (!layout.htmlFullscreen) return;
+      enteredWindowFullscreen = false;
+      layout.setHtmlFullscreen(false);
+      void tabManager.active?.view.webContents
+        .executeJavaScript('document.fullscreenElement && document.exitFullscreen()', true)
+        .catch(() => undefined);
+    });
 
     const id = contents.id;
     this.controllers.set(id, { win, layout, tabs: tabManager });

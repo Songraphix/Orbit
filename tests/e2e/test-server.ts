@@ -17,6 +17,12 @@ const ROUTES: Record<string, string> = {
     '<a id="popup" href="/two" target="_blank">open two</a> <a id="next" href="/three">three</a>',
   ),
   '/two': page('Page Two'),
+  // Mimics a video player's fullscreen button.
+  '/video': page(
+    'Video',
+    `<div id="player" style="width:320px;height:180px;background:#000"></div>
+     <button id="fs" onclick="document.getElementById('player').requestFullscreen()">Fullscreen</button>`,
+  ),
   // Mimics "Sign in with Google": a sized popup that reports back through window.opener.
   '/opener': page(
     'Opener',

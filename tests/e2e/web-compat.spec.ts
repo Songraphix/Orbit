@@ -39,6 +39,42 @@ test('pages see a plain Chrome user agent, not Electron', async () => {
   expect(ua).not.toMatch(/Electron|Orbit/);
 });
 
+test('HTML fullscreen fills the window, and leaving restores the layout', async () => {
+  const { app, win } = orbit;
+  await openTab(win, server.url('/video'));
+  await expect(win.getByTestId('toolbar-address')).toContainText('Video');
+  const page = app.windows().find((p) => p.url().includes('/video'))!;
+
+  const state = () =>
+    app.evaluate(({ BrowserWindow }) => {
+      const w = BrowserWindow.getAllWindows()[0]!;
+      const [width, height] = w.getContentSize();
+      const visible = w.contentView.children
+        .filter((v) => v.getVisible())
+        .map((v) => v.getBounds());
+      return { fullScreen: w.isFullScreen(), view: visible[0], width, height };
+    });
+
+  await page.locator('#fs').click();
+  await expect.poll(async () => (await state()).fullScreen, { timeout: 10_000 }).toBe(true);
+  await expect
+    .poll(async () => {
+      const s = await state();
+      return s.view?.x === 0 && s.view?.y === 0 && s.view?.width === s.width;
+    })
+    .toBe(true);
+  await expect(win.getByTestId('toolbar')).toHaveCount(0);
+
+  // Like pressing Esc in a video. Don't await the promise: it settles only after the resize.
+  await page.evaluate(() => {
+    type Doc = { exitFullscreen(): Promise<void> };
+    void (globalThis as unknown as { document: Doc }).document.exitFullscreen();
+  });
+  await expect.poll(async () => (await state()).fullScreen, { timeout: 10_000 }).toBe(false);
+  await expect(win.getByTestId('toolbar')).toBeVisible();
+  await expect.poll(async () => (await state()).view?.y).toBe(44); // 8 inset + 36 toolbar
+});
+
 test('web tabs have a right-click menu attached', async () => {
   const { app, win } = orbit;
   await openTab(win, server.url('/one'));

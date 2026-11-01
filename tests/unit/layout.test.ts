@@ -44,6 +44,22 @@ describe('computeLayout', () => {
       expect(rect.height).toBeGreaterThanOrEqual(0);
     }
   });
+
+  it('gives an HTML-fullscreen page the whole window with no chrome', () => {
+    const layout = computeLayout({
+      ...base,
+      windowWidth: 1920,
+      windowHeight: 1080,
+      htmlFullscreen: true,
+    });
+    expect(layout.webView).toEqual({ x: 0, y: 0, width: 1920, height: 1080 });
+    expect(layout.toolbar.height).toBe(0);
+    expect(layout.radius).toBe(0);
+    expect(layout.sidebar.visible).toBe(false);
+    expect(layout.fullscreen).toBe(true);
+    // The remembered sidebar width survives fullscreen.
+    expect(layout.sidebar.width).toBe(260);
+  });
 });
 
 describe('clampSidebarWidth', () => {
