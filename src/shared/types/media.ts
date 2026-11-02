@@ -9,6 +9,9 @@ export const mediaStateSchema = z
     playing: z.boolean(),
     muted: z.boolean(),
     hasVideo: z.boolean(),
+    /** The site offers previous / next track (its media session), like a music player. */
+    canPrevious: z.boolean().default(false),
+    canNext: z.boolean().default(false),
   })
   .nullable();
 export type MediaState = z.output<typeof mediaStateSchema>;

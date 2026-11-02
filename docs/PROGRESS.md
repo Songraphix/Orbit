@@ -157,6 +157,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — Owner request: **video pop-out, Arc-style** (replaces Chromium's square picture-in-picture window). Switch away from a tab playing a video (with sound) and it **pops out on its own** into a small **rounded**, shadowed window that floats above other apps (and over fullscreen Spaces), sized to the video, in the bottom-right corner. Its buttons show while the pointer is over it (or it's paused): **Close** (the video pauses and goes home), **Minimize (−)**, **Back to Video** (the tab, in front), and play/pause in the middle; drag anywhere else to move it; it remembers where you put it this session. It's the tab's own page (nothing reloads): main lends the page to the window and lifts the video into the page's top layer (the popover API — the site sees no fullscreen change); clicking the tab brings it home. The mini player's picture-in-picture button uses it too, and hides while the video is out. **Settings → General → Video** turns the automatic pop-out off. Muted feed previews don't pop out
 
+- 2026-11-02 — Owner request: **the video pop-out's − docks it in the sidebar**, like a music player: the window shrinks and fades into the sidebar's foot, the video goes home still playing, and the **mini player** takes over — now laid out like Arc's (title, Pop Out Video, ×; then **previous, play/pause, next, mute**). Previous / next press the site's own media session controls (a small shim records the handlers a site sets; dimmed when it offers none — sites that set them before the page finishes loading aren't caught). The mini player's pop-out button floats the video again
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0
@@ -205,7 +207,6 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 - New tab page shortcut tiles (F-32): most-visited once history exists (Phase 2), favorites after the Arc import (Phase 3)
 - Full theme colour picker (colour wheel, intensity/grain sliders) — presets via the space menu for now (F-16)
 - Swipe between spaces with two fingers (F-26, below the cut line)
-- Mini player: previous/next track (needs a page-world mediaSession bridge) and automatic Picture-in-Picture when switching away (needs the per-site setting from Phase 7)
 - Speaker icon on tab rows that are playing audio
 - Select several tabs in the sidebar (⌘-click, ⇧-click) and move, pin, archive or close them together (roadmap P4.5 follow-up)
 - Open new tab pages don't update live when the wallpaper changes elsewhere (they pick it up next time they open)

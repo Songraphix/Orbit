@@ -408,6 +408,14 @@ export class WindowManager {
       unregisterInternal: (webContentsId) => senders.remove(webContentsId),
       send: (target, view) => broadcaster.sendTo(target, 'popout:update', view),
       onChange: () => media.refresh(),
+      // The mini player's place: the foot of the sidebar.
+      dockTarget: () => {
+        if (win.isDestroyed() || win.isMinimized() || !win.isVisible()) return null;
+        const b = win.getContentBounds();
+        const { sidebar } = layout.current();
+        const width = sidebar.visible ? Math.max(120, sidebar.width - 16) : 200;
+        return { x: b.x + 8, y: b.y + b.height - 118, width, height: 76 };
+      },
     });
     popout = videoPopout;
 

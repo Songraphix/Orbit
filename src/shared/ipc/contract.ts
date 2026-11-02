@@ -303,7 +303,11 @@ export const contract = {
     output: mediaStateSchema,
   },
   'media:control': {
-    input: z.object({ action: z.enum(['toggle', 'mute', 'pip', 'focus', 'close']) }).strict(),
+    input: z
+      .object({
+        action: z.enum(['toggle', 'mute', 'pip', 'focus', 'close', 'previous', 'next']),
+      })
+      .strict(),
     output: z.void(),
   },
   /** The video pop-out's buttons: minimize, back to the video's tab, close, play/pause. */

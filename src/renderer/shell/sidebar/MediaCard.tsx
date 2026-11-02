@@ -1,13 +1,23 @@
-import { Pause, PictureInPicture2, Play, Volume2, VolumeX, X } from 'lucide-react';
+import {
+  Pause,
+  PictureInPicture2,
+  Play,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+  X,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { MediaState } from '@shared/types/media';
 
-const control = (action: 'toggle' | 'mute' | 'pip' | 'focus' | 'close') =>
+const control = (action: 'toggle' | 'mute' | 'pip' | 'focus' | 'close' | 'previous' | 'next') =>
   void window.orbit.invoke('media:control', { action });
 
 /**
- * The sidebar mini player (F-09, Img 1): what's playing in a tab you're not looking at. Title
- * jumps to the tab; play/pause, mute and Picture-in-Picture act on the page; × stops it.
+ * The sidebar mini player (F-09, Img 1): what's playing in a tab you're not looking at — music,
+ * or a video docked here from its pop-out. Title jumps to the tab; the pop-out button floats a
+ * video again; × stops it. Below: previous, play/pause, next (when the site offers them) and mute.
  */
 export function MediaCard({ media }: { media: NonNullable<MediaState> }) {
   return (
@@ -28,7 +38,7 @@ export function MediaCard({ media }: { media: NonNullable<MediaState> }) {
           {media.title}
         </button>
         {media.hasVideo && (
-          <MediaButton label="Picture in Picture" onClick={() => control('pip')}>
+          <MediaButton label="Pop Out Video" onClick={() => control('pip')} testId="media-popout">
             <PictureInPicture2 size={14} />
           </MediaButton>
         )}
@@ -36,7 +46,15 @@ export function MediaCard({ media }: { media: NonNullable<MediaState> }) {
           <X size={14} />
         </MediaButton>
       </div>
-      <div className="mt-1.5 flex items-center justify-center gap-3">
+      <div className="mt-1.5 flex items-center justify-between px-1">
+        <MediaButton
+          label="Previous"
+          onClick={() => control('previous')}
+          disabled={!media.canPrevious}
+          testId="media-previous"
+        >
+          <SkipBack size={15} fill="currentColor" />
+        </MediaButton>
         <MediaButton
           label={media.playing ? 'Pause' : 'Play'}
           onClick={() => control('toggle')}
@@ -48,6 +66,14 @@ export function MediaCard({ media }: { media: NonNullable<MediaState> }) {
           ) : (
             <Play size={16} fill="currentColor" />
           )}
+        </MediaButton>
+        <MediaButton
+          label="Next"
+          onClick={() => control('next')}
+          disabled={!media.canNext}
+          testId="media-next"
+        >
+          <SkipForward size={15} fill="currentColor" />
         </MediaButton>
         <MediaButton
           label={media.muted ? 'Unmute' : 'Mute'}
@@ -67,6 +93,7 @@ function MediaButton(props: {
   children: ReactNode;
   testId?: string;
   big?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
@@ -74,7 +101,8 @@ function MediaButton(props: {
       aria-label={props.label}
       title={props.label}
       onClick={props.onClick}
-      className={`grid place-items-center rounded-lg opacity-80 hover:bg-[var(--hover)] hover:opacity-100 ${
+      disabled={props.disabled}
+      className={`grid place-items-center rounded-lg opacity-80 hover:bg-[var(--hover)] hover:opacity-100 disabled:pointer-events-none disabled:opacity-30 ${
         props.big ? 'size-8' : 'size-6'
       }`}
       data-testid={props.testId}

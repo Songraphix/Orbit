@@ -24,6 +24,8 @@ export type VideoPopoutDeps = {
   send: (contents: WebContents, view: PopoutView) => void;
   /** Popped out or back: the sidebar's mini player follows. */
   onChange: () => void;
+  /** Where the sidebar's mini player sits, on screen (− shrinks the pop-out into it). */
+  dockTarget: () => Rect | null;
 };
 
 type Open = {
@@ -49,6 +51,8 @@ export class VideoPopout {
   private playing = true;
   /** Where the owner last put it (this session). */
   private lastBounds: Rect | null = null;
+  /** Shrinking into the sidebar: its passing sizes aren't where the owner put it. */
+  private docking = false;
 
   constructor(private readonly deps: VideoPopoutDeps) {}
 
@@ -113,7 +117,7 @@ export class VideoPopout {
   act(action: PopoutAction): void {
     const open = this.open;
     if (!open) return;
-    if (action === 'minimize') open.win.minimize();
+    if (action === 'minimize') this.dock();
     else if (action === 'close') this.close();
     else if (action === 'back') {
       const { main } = this.deps;
@@ -128,6 +132,43 @@ export class VideoPopout {
         .then((playing: boolean) => this.setPlaying(playing))
         .catch(() => undefined);
     }
+  }
+
+  /**
+   * − : the video docks in the sidebar like a music player — the pop-out shrinks into the mini
+   * player's place and fades, and the page goes home still playing (the mini player takes over;
+   * its picture-in-picture button pops it out again).
+   */
+  private dock(): void {
+    const open = this.open;
+    if (!open || open.win.isDestroyed()) return;
+    const target = this.deps.dockTarget();
+    const quiet = process.env['ORBIT_QUIET'] === '1';
+    const steps = quiet || !target ? 1 : 14;
+    const from = open.win.getBounds();
+    this.docking = true;
+    open.win.setAspectRatio(0);
+    open.win.setMinimumSize(1, 1);
+    let step = 0;
+    const tick = () => {
+      if (this.open !== open || open.win.isDestroyed()) return;
+      step++;
+      const t = step / steps;
+      const e = t * t; // ease-in: it gathers speed into the sidebar
+      if (target) {
+        const mix = (a: number, b: number) => Math.round(a + (b - a) * e);
+        open.win.setBounds({
+          x: mix(from.x, target.x),
+          y: mix(from.y, target.y),
+          width: Math.max(1, mix(from.width, target.width)),
+          height: Math.max(1, mix(from.height, target.height)),
+        });
+      }
+      open.win.setOpacity(1 - 0.85 * e);
+      if (step < steps) setTimeout(tick, 16);
+      else this.release(false);
+    };
+    tick();
   }
 
   /** Closes the pop-out: the video pauses and goes back to its tab. */
@@ -189,7 +230,7 @@ export class VideoPopout {
     fit();
     win.on('resize', fit);
     const remember = () => {
-      if (!win.isDestroyed()) this.lastBounds = win.getBounds();
+      if (!win.isDestroyed() && !this.docking) this.lastBounds = win.getBounds();
     };
     win.on('moved', remember);
     win.on('resized', remember);
@@ -241,6 +282,7 @@ export class VideoPopout {
     const open = this.open;
     if (!open) return;
     this.open = null;
+    this.docking = false;
     clearInterval(open.hoverTimer);
     open.detach();
     const contents = open.page.webContents;

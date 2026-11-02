@@ -1,5 +1,6 @@
 import type { MediaState } from '@shared/types/media';
 import type { TabManager } from '../tabs/tab-manager';
+import { runTrackAction, TRACK_ACTIONS } from './session-bridge';
 
 /** Runs in the page's own world (with a user gesture) to control its media element. */
 const SCRIPTS = {
@@ -18,7 +19,7 @@ const SCRIPTS = {
   }))()`,
 } as const;
 
-export type MediaAction = 'toggle' | 'mute' | 'pip' | 'focus' | 'close';
+export type MediaAction = 'toggle' | 'mute' | 'pip' | 'focus' | 'close' | 'previous' | 'next';
 
 /**
  * The mini player for one window (F-09). Follows the most recent tab that played media; the
@@ -29,6 +30,8 @@ export class MediaController {
   private playing = false;
   private hasVideo = false;
   private sessionTitle = '';
+  private tracks = { previous: false, next: false };
+  private shown = false;
 
   constructor(
     private readonly tabs: TabManager,
@@ -60,6 +63,11 @@ export class MediaController {
       this.tabId = null;
       this.playing = false;
     }
+    // The card is coming up (you left the tab, or docked its video): what the site offers
+    // now — sites add previous / next once something plays.
+    const shown = this.current() !== null;
+    if (shown && !this.shown && this.tabId) void this.readInfo(this.tabId);
+    this.shown = shown;
     this.emit();
   }
 
@@ -75,6 +83,8 @@ export class MediaController {
       playing: this.playing,
       muted: !contents.isDestroyed() && contents.isAudioMuted(),
       hasVideo: this.hasVideo,
+      canPrevious: this.tracks.previous,
+      canNext: this.tracks.next,
     };
   }
 
@@ -92,6 +102,15 @@ export class MediaController {
         return;
       case 'pip':
         this.popOut(tab.id);
+        return;
+      case 'previous':
+      case 'next':
+        await contents
+          .executeJavaScript(
+            runTrackAction(action === 'next' ? 'nexttrack' : 'previoustrack'),
+            true,
+          )
+          .catch(() => undefined);
         return;
       case 'focus':
         this.tabs.activate(tab.id);
@@ -118,6 +137,10 @@ export class MediaController {
       if (this.tabId !== tabId) return;
       this.sessionTitle = info.artist ? `${info.title} — ${info.artist}` : info.title;
       this.hasVideo = info.hasVideo;
+      this.tracks = (await tab.view.webContents
+        .executeJavaScript(TRACK_ACTIONS)
+        .catch(() => null)) ?? { previous: false, next: false };
+      if (this.tabId !== tabId) return;
       this.emit();
     } catch {
       // Pages that refuse scripts just show the tab title.

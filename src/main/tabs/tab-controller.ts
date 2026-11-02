@@ -5,6 +5,7 @@ import { fetchFaviconDataUrl } from './favicon';
 import { attachContextMenu } from './context-menu';
 import type { PageMenuRequest } from './context-menu';
 import { guardWebContents } from './web-guards';
+import { MEDIA_SESSION_SHIM } from '../media/session-bridge';
 
 /** What a tab needs from the outside world. Keeps TabController free of window/manager details. */
 export type TabEnv = {
@@ -241,6 +242,11 @@ export class TabController {
       if (details.reason !== 'clean-exit') this.update({ crashed: true, isLoading: false });
     });
     contents.on('unresponsive', () => this.env.onUnresponsive?.());
+    // The mini player's previous / next track use the site's own media session handlers: the
+    // shim goes in as early as it can (once at commit, again when the page is parsed).
+    const shim = () => void contents.executeJavaScript(MEDIA_SESSION_SHIM).catch(() => undefined);
+    contents.on('did-navigate', shim);
+    contents.on('dom-ready', shim);
     contents.on('media-started-playing', () => this.env.onMedia?.('playing'));
     contents.on('media-paused', () => this.env.onMedia?.('paused'));
     contents.on('did-stop-loading', () => this.update({ isLoading: false, ...this.navState() }));

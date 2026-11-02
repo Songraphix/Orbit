@@ -41,6 +41,12 @@ const ROUTES: Record<string, string> = {
        const v = document.getElementById('v');
        v.srcObject = c.captureStream(30);
        v.play().catch((e) => { window.__playError = String(e); });
+       // Like a music or video site: next / previous track once its player has loaded.
+       window.__tracks = [];
+       setTimeout(() => {
+         navigator.mediaSession.setActionHandler('nexttrack', () => window.__tracks.push('next'));
+         navigator.mediaSession.setActionHandler('previoustrack', () => window.__tracks.push('previous'));
+       }, 400);
      </script>`,
   ),
   '/notify': page(

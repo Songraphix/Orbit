@@ -70,9 +70,23 @@ test('switching away from a playing video pops it out; minimize, back to video, 
     await bar.getByTestId('popout-toggle').click();
     await expect.poll(() => playing(app)).toBe(true);
 
-    // Minimize, then Back to Video: the tab again, the video where the site had it, still on.
+    // − docks it in the sidebar like a music player: still playing, the mini player takes over,
+    // with the site's own previous / next track.
     await bar.getByTestId('popout-minimize').click();
-    await expect.poll(async () => (await popoutWindow(app))?.minimized).toBe(true);
+    await expect.poll(() => popoutWindow(app)).toBeNull();
+    expect(await lifted(app)).toBe(false);
+    expect(await playing(app)).toBe(true);
+    const card = win.getByTestId('media-card');
+    await expect(card).toBeVisible();
+    await expect(card.getByTestId('media-next')).toBeEnabled();
+    await card.getByTestId('media-next').click();
+    await card.getByTestId('media-previous').click();
+    await expect.poll(() => inVideo(app, 'window.__tracks.join()')).toBe('next,previous');
+
+    // Its pop-out button floats it again; then Back to Video.
+    await card.getByTestId('media-popout').click();
+    bar = await controls(app);
+    await expect(card).toHaveCount(0);
     await bar.getByTestId('popout-back').click();
     await expect(win.locator('[aria-current="page"]')).toHaveText('Clip');
     await expect.poll(() => popoutWindow(app)).toBeNull();

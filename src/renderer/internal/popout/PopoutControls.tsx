@@ -42,7 +42,11 @@ export function PopoutControls() {
           <Round label="Close" onClick={() => act('close')} testId="popout-close">
             <X size={14} strokeWidth={2.25} />
           </Round>
-          <Round label="Minimize" onClick={() => act('minimize')} testId="popout-minimize">
+          <Round
+            label="Minimize to Sidebar"
+            onClick={() => act('minimize')}
+            testId="popout-minimize"
+          >
             <Minus size={14} strokeWidth={2.25} />
           </Round>
         </div>
