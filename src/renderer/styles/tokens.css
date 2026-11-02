@@ -195,6 +195,16 @@ body {
 }
 
 /* ── Motion ──────────────────────────────────────────────────────────────── */
+/* A sound playing: three bars bouncing (the Focus view and the toolbar's Focus button). */
+@keyframes orbit-bars {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
 /* Appearing popovers and the command bar: a small, springy settle. */
 @keyframes orbit-pop {
   from {

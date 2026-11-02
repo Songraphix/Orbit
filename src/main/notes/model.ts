@@ -55,10 +55,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function notesHash(param: string): string {
   const [mode = '', id, ...rest] = param.split('/');
   // The panel's other views: Projects (and one project), Tasks, the Project Board, Research
-  // (all, one project's, or Unsorted), the assistant and the toolkit.
+  // (all, one project's, or Unsorted), the assistant, the toolkit and Focus.
   if (
     mode === 'panel' &&
-    ['projects', 'tasks', 'board', 'research', 'assistant', 'tools'].includes(id ?? '')
+    ['projects', 'tasks', 'board', 'research', 'assistant', 'tools', 'focus'].includes(id ?? '')
   ) {
     if (rest.length === 0) return `/notes/panel/${id}`;
     const [sub] = rest;

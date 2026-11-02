@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { wallpaperChoiceSchema } from './types/newtab';
 import { DEFAULT_HOME, homeSettingsSchema } from './types/home';
-import { focusSessionSchema } from './focus';
+import { DEFAULT_FOCUS_PREFS, focusPrefsSchema, focusSessionSchema } from './focus';
+import { DEFAULT_VOLUME } from './sounds';
 import { aiPrefsSchema, DEFAULT_AI_PREFS } from './ai';
 import { rulesSchema } from './rules';
 import { rectSchema, SIDEBAR_WIDTH } from './types/layout';
@@ -63,6 +64,10 @@ export const settingsSchema = {
   'panel.state': z.object({ open: z.boolean(), route: z.string().max(120) }),
   /** The focus session under way (roadmap P2.3), kept across a restart. */
   'focus.session': focusSessionSchema.nullable(),
+  /** How you like to focus: length, break, blocking, sound (kept between sessions). */
+  'focus.prefs': focusPrefsSchema,
+  /** The sounds' volume (0–1). */
+  'sounds.volume': z.number().min(0).max(1),
   /** Orbit Capture's last project, the default next time (null = Unsorted). */
   'capture.lastProject': z.string().nullable(),
   /** AI (roadmap P3.7): on or off, the model, a monthly limit, attaching the page. */
@@ -105,6 +110,8 @@ export const settingsDefaults: Settings = {
   'panel.state': { open: false, route: 'panel' },
   'capture.lastProject': null,
   'focus.session': null,
+  'focus.prefs': DEFAULT_FOCUS_PREFS,
+  'sounds.volume': DEFAULT_VOLUME,
   'ai.prefs': DEFAULT_AI_PREFS,
   'toolkit.colors': [],
   rules: [],

@@ -1,24 +1,38 @@
-import { FOCUS_MINUTES, focusRemaining } from '@shared/focus';
-import type { FocusSession } from '@shared/focus';
+import { blockedSite, focusRemaining, normalizeSite } from '@shared/focus';
+import type { FocusPrefs, FocusSession, FocusView } from '@shared/focus';
+import type { SoundId } from '@shared/sounds';
 import { continueWith } from '@shared/work';
 import type { SettingsRepository } from '../persistence/repositories/settings';
 import type { WorkRepository } from '../persistence/repositories/work';
 import type { WindowController } from '../windows/window-manager';
+import type { SoundService } from './sounds';
 
 export type FocusDeps = {
   settings: SettingsRepository;
   work: WorkRepository;
+  sounds: SoundService;
   /** Every window's shell is told (the toolbar's focus pill). */
   broadcast: (session: FocusSession | null) => void;
+  /** Every productivity panel's Focus view is told. */
+  pushView: (view: FocusView) => void;
   /** Time's up (a macOS notification; quiet in test runs). */
   notify: (title: string, body: string) => void;
   toast: (controller: WindowController, message: string) => void;
 };
 
+export type StartInput = {
+  taskId?: string | null;
+  minutes?: number;
+  kind?: 'focus' | 'break';
+  block?: boolean;
+  sound?: SoundId | null;
+};
+
 /**
- * Focus mode (roadmap P2.3, minimal): focus on a task — its project's workspace comes up, the
- * sidebar steps aside, the toolbar shows the task and a countdown; when time's up, a
- * notification. Done completes the task. The session survives a restart.
+ * Focus mode (roadmap P2.3): focus on a task, a project or just time — its workspace comes up,
+ * the sidebar steps aside, the toolbar shows the task and a countdown; a sound can play and
+ * distracting sites can be blocked until it ends. Then a short break, if you like. Pausing stops
+ * the clock. The session survives a restart.
  */
 export class FocusService {
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -29,36 +43,71 @@ export class FocusService {
     return this.deps.settings.get('focus.session');
   }
 
-  /** `taskId`: that task; none: the next task of the project you were last on (or just focus). */
-  start(controller: WindowController, input: { taskId?: string; minutes?: number }): void {
+  get prefs(): FocusPrefs {
+    return this.deps.settings.get('focus.prefs');
+  }
+
+  view(): FocusView {
+    return { session: this.session, prefs: this.prefs, sounds: this.deps.sounds.state };
+  }
+
+  setPrefs(patch: Partial<FocusPrefs>): FocusView {
+    const next: FocusPrefs = { ...this.prefs, ...patch };
+    if (patch.blocklist) {
+      const sites = patch.blocklist.map(normalizeSite).filter((s): s is string => s !== null);
+      next.blocklist = [...new Set(sites)];
+    }
+    this.deps.settings.set('focus.prefs', next);
+    this.changed();
+    return this.view();
+  }
+
+  start(controller: WindowController, input: StartInput): void {
+    const prefs = this.prefs;
+    const kind = input.kind ?? 'focus';
     const { projects, tasks } = this.deps.work.all();
     let task = input.taskId ? tasks.find((t) => t.id === input.taskId) : undefined;
     let project = task?.projectId ? projects.find((p) => p.id === task!.projectId) : undefined;
-    if (!input.taskId) {
+    if (input.taskId === undefined && kind === 'focus') {
       const resume = continueWith(projects, tasks);
       project = resume?.project;
       task = resume?.next ?? undefined;
     }
+    const previous = this.session;
+    const sound = input.sound === undefined ? prefs.sound : input.sound;
     const session: FocusSession = {
       taskId: task?.id ?? null,
       projectId: project?.id ?? null,
-      title: task?.title ?? project?.name ?? 'Focus',
+      title: kind === 'break' ? 'Break' : (task?.title ?? project?.name ?? 'Focus'),
       startedAt: Date.now(),
-      minutes: input.minutes ?? FOCUS_MINUTES,
-      sidebarWasVisible:
-        this.session?.sidebarWasVisible ?? controller.layout.current().sidebar.visible,
+      minutes: input.minutes ?? (kind === 'break' ? prefs.breakMinutes : prefs.minutes),
+      sidebarWasVisible: previous?.sidebarWasVisible ?? controller.layout.current().sidebar.visible,
+      kind,
+      pausedAt: null,
+      pausedMs: 0,
+      // A break never blocks; that's the point of it.
+      block: kind === 'focus' && (input.block ?? prefs.block),
+      allowed: [],
+      sound: kind === 'focus' ? sound : (previous?.sound ?? null),
     };
     this.deps.settings.set('focus.session', session);
-    // Its workspace, the sidebar out of the way, and the task under way.
-    if (project?.spaceId && controller.store.space(project.spaceId)) {
-      controller.tabs.switchSpace(project.spaceId);
+    if (kind === 'focus') {
+      // Its workspace, the sidebar out of the way, and the task under way.
+      if (project?.spaceId && controller.store.space(project.spaceId)) {
+        controller.tabs.switchSpace(project.spaceId);
+      }
+      controller.layout.setSidebarVisible(false);
+      if (task && task.status === 'todo') this.deps.work.setTaskStatus(task.id, 'doing');
+      if (project) this.deps.work.markOpened(project.id);
+      if (session.sound && this.deps.sounds.state.playing !== session.sound) {
+        this.deps.sounds.play(session.sound);
+      }
+    } else if (session.sidebarWasVisible) {
+      controller.layout.setSidebarVisible(true); // a break gives you the sidebar back
     }
-    controller.layout.setSidebarVisible(false);
-    if (task && task.status === 'todo') this.deps.work.setTaskStatus(task.id, 'doing');
-    if (project) this.deps.work.markOpened(project.id);
     controller.notes.refresh();
     this.arm();
-    this.deps.broadcast(session);
+    this.changed();
   }
 
   /** End it; `complete` also ticks the task off. */
@@ -68,10 +117,65 @@ export class FocusService {
     if (complete && session.taskId) this.deps.work.setTaskStatus(session.taskId, 'done');
     this.deps.settings.set('focus.session', null);
     if (session.sidebarWasVisible) controller.layout.setSidebarVisible(true);
+    // The sound it started stops with it (one you started yourself keeps playing).
+    if (session.sound && this.deps.sounds.state.playing === session.sound) this.deps.sounds.stop();
     this.disarm();
     controller.notes.refresh();
-    this.deps.broadcast(null);
-    this.deps.toast(controller, complete && session.taskId ? 'Done — nice work' : 'Focus ended');
+    this.changed();
+    this.deps.toast(
+      controller,
+      session.kind === 'break'
+        ? 'Break over'
+        : complete && session.taskId
+          ? 'Done — nice work'
+          : 'Focus ended',
+    );
+  }
+
+  pause(paused: boolean): void {
+    const session = this.session;
+    if (!session || paused === (session.pausedAt !== null)) return;
+    const now = Date.now();
+    const next: FocusSession = paused
+      ? { ...session, pausedAt: now }
+      : { ...session, pausedAt: null, pausedMs: session.pausedMs + (now - session.pausedAt!) };
+    this.deps.settings.set('focus.session', next);
+    this.arm();
+    this.changed();
+  }
+
+  /** A few more minutes (from now, if time was already up). */
+  extend(minutes: number): void {
+    const session = this.session;
+    if (!session) return;
+    const left = focusRemaining(session, Date.now());
+    const over = left < 0 ? Math.ceil(-left / 60_000) : 0;
+    this.deps.settings.set('focus.session', {
+      ...session,
+      minutes: Math.min(240, session.minutes + over + minutes),
+    });
+    this.arm();
+    this.changed();
+  }
+
+  /**
+   * Where a navigation to `url` should go instead, while distracting sites are blocked: Orbit's
+   * "blocked" page (which offers to open it anyway). Null: let it through.
+   */
+  blockedRedirect(url: string): string | null {
+    const session = this.session;
+    if (!session?.block || session.kind !== 'focus') return null;
+    const site = blockedSite(url, this.prefs.blocklist, session.allowed);
+    return site ? `orbit://blocked/${encodeURIComponent(url)}` : null;
+  }
+
+  /** "Open Anyway": that site is allowed until the session ends. */
+  allow(url: string): void {
+    const session = this.session;
+    const site = session ? blockedSite(url, this.prefs.blocklist, session.allowed) : null;
+    if (!session || !site) return;
+    this.deps.settings.set('focus.session', { ...session, allowed: [...session.allowed, site] });
+    this.changed();
   }
 
   /** At launch: a session left running keeps its timer. */
@@ -79,17 +183,27 @@ export class FocusService {
     this.arm();
   }
 
+  private changed(): void {
+    this.deps.broadcast(this.session);
+    this.deps.pushView(this.view());
+  }
+
   private arm(): void {
     this.disarm();
     const session = this.session;
-    if (!session) return;
+    if (!session || session.pausedAt !== null) return;
     const left = focusRemaining(session, Date.now());
     if (left <= 0) return;
     this.timer = setTimeout(() => {
       this.timer = null;
       const now = this.session;
       if (!now || now.startedAt !== session.startedAt) return;
-      this.deps.notify('Time for a break', `${now.minutes} minutes on “${now.title}”.`);
+      if (now.kind === 'break') {
+        this.deps.notify('Break’s over', 'Ready for the next one?');
+      } else {
+        this.deps.notify('Time for a break', `${now.minutes} minutes on “${now.title}”.`);
+      }
+      this.changed(); // the Focus view offers a break (or the next session)
     }, left);
   }
 

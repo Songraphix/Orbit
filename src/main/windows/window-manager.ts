@@ -39,6 +39,8 @@ export type WindowManagerDeps = {
   sessionFor: (profileId: string) => Session | undefined;
   history: HistorySink;
   zoomFor: (url: string) => number;
+  /** Focus mode: a blocked site's navigation goes to Orbit's "blocked" page instead. */
+  redirectFor?: (url: string) => string | null;
   /** Chrome extensions (Phase 7). */
   extensions?: TabManagerDeps['extensions'];
   /** A site's own setting (e.g. 'peek' → 'off'), by page URL. */
@@ -225,6 +227,7 @@ export class WindowManager {
       unregisterInternal: (webContentsId) => senders.remove(webContentsId),
       history: this.deps.history,
       zoomFor: this.deps.zoomFor,
+      redirectFor: this.deps.redirectFor,
       onFoundInPage: (result) => find.onResult(result),
       onMedia: (tabId, event) => media?.onMedia(tabId, event),
       // A frozen page: offer to wait or reload (F-31).

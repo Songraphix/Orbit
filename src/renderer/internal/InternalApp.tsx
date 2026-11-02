@@ -5,6 +5,8 @@ import { EaselPage } from './easel/EaselPage';
 import { LibraryPage } from './library/LibraryPage';
 import { NewTabPage } from './newtab/NewTabPage';
 import { SettingsPage } from './SettingsPage';
+import { BlockedPage } from './focus/BlockedPage';
+import { SoundHost } from './sounds/SoundHost';
 import { preloaded } from './preload-routes';
 
 // The Boost editor brings CodeMirror; load it only on orbit://boost pages (the new tab page
@@ -33,6 +35,8 @@ const TITLES: Record<string, string> = {
   easel: 'Easel',
   note: 'Note',
   notes: 'Notes',
+  blocked: 'Blocked',
+  sounds: 'Orbit Sounds',
 };
 
 /** The hash main loaded; the Library changes it when switching sections. */
@@ -60,6 +64,8 @@ export function InternalApp() {
 
   if (page === 'newtab') return <NewTabPage />;
   if (page === 'archive') return <ArchivePage />;
+  if (page === 'blocked' && param) return <BlockedPage encoded={param} />;
+  if (page === 'sounds') return <SoundHost />;
   if (page === 'settings') return <SettingsPage section={param || null} />;
   if (page === 'boost' && param)
     return (

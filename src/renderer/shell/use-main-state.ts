@@ -11,6 +11,7 @@ const GETTERS = {
   'state:media': 'media:get',
   'state:library': 'library:get',
   'state:focus': 'focus:get',
+  'state:sounds': 'sounds:get',
 } as const;
 type StateEvent = keyof typeof GETTERS;
 

@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { focusClock, focusRemaining } from '@shared/focus';
+import { blockedSite, focusClock, focusRemaining, normalizeSite } from '@shared/focus';
+import type { SoundState } from '@shared/sounds';
+import { volumeToGain } from '@shared/sounds';
 import { FocusService } from '../../src/main/focus/service';
+import { SoundService } from '../../src/main/focus/sounds';
 import { openDatabase } from '../../src/main/persistence/db';
 import type { Database } from '../../src/main/persistence/db';
 import { migrate } from '../../src/main/persistence/migrate';
@@ -15,6 +18,87 @@ describe('focus clock', () => {
     expect(focusClock(24 * 60_000 + 5_000)).toBe('24:05');
     expect(focusClock(0)).toBe('0:00');
     expect(focusClock(-130_000)).toBe('+2:10');
+  });
+});
+
+/** A SoundService whose player page is a recorder. */
+function soundsFor(settings: SettingsRepository) {
+  const host = { sent: [] as SoundState[], opened: 0, closed: 0 };
+  const sounds = new SoundService({
+    settings,
+    openHost: (ready) => {
+      host.opened++;
+      queueMicrotask(ready);
+      return { send: (s) => host.sent.push(s), close: () => host.closed++ };
+    },
+    changed: () => undefined,
+  });
+  return { sounds, host };
+}
+
+describe('focus helpers', () => {
+  it('a pause stops the clock', () => {
+    const session = { startedAt: 0, minutes: 25, pausedAt: 60_000, pausedMs: 0 };
+    expect(focusRemaining(session, 600_000)).toBe(24 * 60_000);
+    expect(focusRemaining({ ...session, pausedAt: null, pausedMs: 540_000 }, 600_000)).toBe(
+      24 * 60_000,
+    );
+  });
+
+  it('reads sites the way people type them', () => {
+    expect(normalizeSite('YouTube.com')).toBe('youtube.com');
+    expect(normalizeSite('https://www.reddit.com/r/x')).toBe('reddit.com');
+    expect(normalizeSite('news.ycombinator.com')).toBe('news.ycombinator.com');
+    expect(normalizeSite('not a site')).toBeNull();
+    expect(normalizeSite('localhost')).toBeNull();
+  });
+
+  it('blocks a site and its subdomains, never lookalikes, unless allowed', () => {
+    const list = ['youtube.com', 'x.com'];
+    expect(blockedSite('https://www.youtube.com/watch?v=1', list)).toBe('youtube.com');
+    expect(blockedSite('https://m.youtube.com/', list)).toBe('youtube.com');
+    expect(blockedSite('https://notyoutube.com/', list)).toBeNull();
+    expect(blockedSite('https://box.com/', list)).toBeNull(); // not x.com
+    expect(blockedSite('orbit://newtab', list)).toBeNull();
+    expect(blockedSite('https://youtube.com/', list, ['youtube.com'])).toBeNull();
+  });
+
+  it('turns the volume slider into an even-sounding gain', () => {
+    expect(volumeToGain(0)).toBe(0);
+    expect(volumeToGain(0.5)).toBeCloseTo(0.25);
+    expect(volumeToGain(2)).toBe(1);
+  });
+});
+
+describe('SoundService', () => {
+  let db: Database | undefined;
+  afterEach(() => {
+    if (db?.isOpen) db.close();
+    vi.useRealTimers();
+  });
+
+  it('opens its player only while something plays, and fades out before closing it', async () => {
+    vi.useFakeTimers();
+    db = openDatabase(':memory:');
+    migrate(db, migrations);
+    const settings = new SettingsRepository(db);
+    const { sounds, host } = soundsFor(settings);
+    expect(sounds.state).toEqual({ playing: null, volume: 0.5 });
+    sounds.play('rain');
+    await Promise.resolve();
+    expect(host.opened).toBe(1);
+    expect(host.sent.at(-1)).toEqual({ playing: 'rain', volume: 0.5 });
+    sounds.toggle('ocean'); // another sound: same player
+    sounds.setVolume(0.8);
+    expect(host.opened).toBe(1);
+    expect(host.sent.at(-1)).toEqual({ playing: 'ocean', volume: 0.8 });
+    expect(settings.get('sounds.volume')).toBe(0.8);
+
+    sounds.toggle('ocean'); // the one playing: stop
+    expect(host.sent.at(-1)?.playing).toBeNull();
+    expect(host.closed).toBe(0); // still fading out
+    vi.advanceTimersByTime(3_000);
+    expect(host.closed).toBe(1);
   });
 });
 
@@ -46,14 +130,27 @@ describe('FocusService', () => {
     } as unknown as WindowController;
     const broadcasts: unknown[] = [];
     const notes: string[] = [];
+    const sounds = soundsFor(settings).sounds;
     const focus = new FocusService({
       settings,
       work,
+      sounds,
+      pushView: () => undefined,
       broadcast: (s) => broadcasts.push(s),
       notify: (title) => notes.push(title),
       toast: (_c, m) => calls.push(`toast:${m}`),
     });
-    return { settings, work, focus, controller, calls, broadcasts, notes, sidebar: () => sidebar };
+    return {
+      settings,
+      work,
+      focus,
+      sounds,
+      controller,
+      calls,
+      broadcasts,
+      notes,
+      sidebar: () => sidebar,
+    };
   };
   const base = { description: '', color: 'blue' as const, startDate: null, dueDate: null };
 
@@ -126,6 +223,8 @@ describe('FocusService', () => {
     const again = new FocusService({
       settings,
       work,
+      sounds: soundsFor(settings).sounds,
+      pushView: () => undefined,
       broadcast: () => undefined,
       notify: (t) => notes.push(t),
       toast: () => undefined,
@@ -134,5 +233,52 @@ describe('FocusService', () => {
     again.restore();
     vi.advanceTimersByTime(61_000);
     expect(notes).toHaveLength(2);
+  });
+
+  it('plays the chosen sound with a session and stops it after; blocks sites until it ends', () => {
+    const { focus, sounds, controller } = setup();
+    focus.setPrefs({ sound: 'brown', block: true, blocklist: ['www.YouTube.com', 'nonsense'] });
+    expect(focus.prefs.blocklist).toEqual(['youtube.com']);
+    focus.start(controller, { taskId: null });
+    expect(focus.session).toMatchObject({ title: 'Focus', block: true, sound: 'brown' });
+    expect(sounds.state.playing).toBe('brown');
+    expect(focus.blockedRedirect('https://m.youtube.com/x')).toBe(
+      `orbit://blocked/${encodeURIComponent('https://m.youtube.com/x')}`,
+    );
+    expect(focus.blockedRedirect('https://docs.example.com/')).toBeNull();
+    focus.allow('https://youtube.com/watch'); // "Open Anyway"
+    expect(focus.blockedRedirect('https://youtube.com/x')).toBeNull();
+
+    focus.end(controller, false);
+    expect(sounds.state.playing).toBeNull();
+    expect(focus.blockedRedirect('https://youtube.com/x')).toBeNull();
+  });
+
+  it('pauses, keeps going and takes a break (which never blocks)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const { focus, controller, notes } = setup();
+    focus.start(controller, { taskId: null, minutes: 10, block: true });
+    vi.advanceTimersByTime(60_000);
+    focus.pause(true);
+    vi.advanceTimersByTime(30 * 60_000); // paused: no "time's up"
+    expect(notes).toEqual([]);
+    focus.pause(false);
+    expect(focusRemaining(focus.session!, Date.now())).toBe(9 * 60_000);
+    vi.advanceTimersByTime(9 * 60_000 + 1);
+    expect(notes).toEqual(['Time for a break']);
+    focus.extend(5);
+    expect(focusRemaining(focus.session!, Date.now())).toBeGreaterThan(4 * 60_000);
+
+    focus.start(controller, { kind: 'break' });
+    expect(focus.session).toMatchObject({
+      kind: 'break',
+      title: 'Break',
+      minutes: 5,
+      block: false,
+    });
+    expect(focus.blockedRedirect('https://youtube.com/')).toBeNull();
+    vi.advanceTimersByTime(5 * 60_000 + 1);
+    expect(notes.at(-1)).toBe('Break’s over');
   });
 });

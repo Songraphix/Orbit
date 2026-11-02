@@ -87,6 +87,9 @@ import { registerCaptureHandlers } from './ipc/handlers/capture';
 import { registerTooltipHandlers } from './ipc/handlers/tooltip';
 import { registerFocusHandlers } from './ipc/handlers/focus';
 import { FocusService } from './focus/service';
+import { SoundService } from './focus/sounds';
+import { soundIdSchema } from '@shared/sounds';
+import type { FocusView } from '@shared/focus';
 import { CaptureService } from './capture/service';
 import { saveSpaceAsTemplate, spaceFromTemplate } from './sidebar/templates';
 import { captureLabel, captureMatches, hostOf } from '@shared/capture';
@@ -140,6 +143,12 @@ let windows: WindowManager | null = null;
 let floatingNotes: FloatingNotes | null = null;
 let captureService: CaptureService | null = null;
 let focusService: FocusService | null = null;
+let soundService: SoundService | null = null;
+
+/** The panel's Focus view (or closes the panel if that's what it shows). */
+function openFocusView(controller: WindowController): void {
+  controller.notes.openAt('panel/focus');
+}
 let assistantService: AssistantService | null = null;
 let toolkitService: ToolkitService | null = null;
 
@@ -214,6 +223,8 @@ function loadInternal(view: { webContents: Electron.WebContents }, url: string):
   if (page === 'note')
     hash = noteIdSchema.safeParse(param).success ? `/note/${param}` : '/not-found';
   if (page === 'notes') hash = notesHash(param);
+  // A site blocked during focus: its address rides along (the page offers to open it anyway).
+  if (page === 'blocked') hash = /^https?%3A/i.test(param) ? `/blocked/${param}` : '/not-found';
   if (devServer) void view.webContents.loadURL(`${devServer}/internal/index.html#${hash}`);
   else void view.webContents.loadFile(join(rendererDir, 'internal', 'index.html'), { hash });
 }
@@ -470,6 +481,12 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'focus-end':
       focusService?.end(controller, false);
       return;
+    case 'focus-open':
+      openFocusView(controller);
+      return;
+    case 'sounds-stop':
+      soundService?.stop();
+      return;
     case 'capture':
       void captureService?.begin(controller, controller.tabs.active, null);
       return;
@@ -567,6 +584,10 @@ function runCommand(controller: WindowController, commandId: string): void {
       return;
     }
   }
+  // ⌘T's "Play Rain" and the like.
+  const sound = /^sound-(.+)$/.exec(commandId)?.[1];
+  const parsed = sound ? soundIdSchema.safeParse(sound) : null;
+  if (parsed?.success) soundService?.toggle(parsed.data);
 }
 
 // HTTP authentication (F-31): ask for a username and password in the page's window.
@@ -584,7 +605,8 @@ app.on('login', (event, contents, details, authInfo, callback) => {
 });
 
 app.on('second-instance', () => {
-  const [win] = BrowserWindow.getAllWindows();
+  // (Not the hidden window that plays focus sounds.)
+  const win = BrowserWindow.getAllWindows().find((w) => w.isVisible());
   if (win) {
     if (win.isMinimized()) win.restore();
     win.focus();
@@ -799,6 +821,7 @@ void app.whenReady().then(() => {
     sessionFor,
     history: persistence.history,
     zoomFor: (url) => persistence?.siteSettings.zoomFor(url) ?? 0,
+    redirectFor: (url) => focusService?.blockedRedirect(url) ?? null,
     extensions: extensionHost,
     siteSetting: (url, key) => {
       try {
@@ -1109,9 +1132,61 @@ void app.whenReady().then(() => {
     runAuto: runAutoBackup,
   });
   registerTooltipHandlers(router, windowManager);
+  // Focus sounds play in one hidden Orbit page (Web Audio), only while something plays.
+  let soundHostId: number | null = null;
+  const sounds = new SoundService({
+    settings: persistence.settings,
+    openHost: (onReady) => {
+      const host = new BrowserWindow({
+        show: false,
+        width: 320,
+        height: 200,
+        skipTaskbar: true,
+        webPreferences: {
+          preload: join(import.meta.dirname, '../preload/internal.cjs'),
+          sandbox: true,
+          contextIsolation: true,
+          nodeIntegration: false,
+          // Its own sound, started from Orbit's UI: no click on this page is needed.
+          autoplayPolicy: 'no-user-gesture-required',
+          backgroundThrottling: false,
+        },
+      });
+      const contents = host.webContents;
+      soundHostId = contents.id;
+      senders.add(contents.id, 'internal');
+      contents.once('did-finish-load', onReady);
+      contents.on('render-process-gone', () => {
+        if (!host.isDestroyed()) host.destroy();
+        sounds.hostGone();
+      });
+      loadInternal(host, 'orbit://sounds');
+      return {
+        send: (state) => broadcaster.sendTo(contents, 'sounds:update', state),
+        close: () => {
+          senders.remove(contents.id);
+          if (soundHostId === contents.id) soundHostId = null;
+          if (!host.isDestroyed()) host.destroy();
+        },
+      };
+    },
+    changed: (state) => {
+      broadcaster.send('state:sounds', state);
+      if (focusService) pushFocusView(focusService.view());
+    },
+  });
+  soundService = sounds;
+  const pushFocusView = (view: FocusView) => {
+    for (const controller of windowManager.all()) {
+      const contents = controller.notes.contents;
+      if (contents) broadcaster.sendTo(contents, 'focus:update', view);
+    }
+  };
   const focus = new FocusService({
     settings: persistence.settings,
     work: persistence.work,
+    sounds,
+    pushView: pushFocusView,
     broadcast: (session) => broadcaster.send('state:focus', session),
     // Test runs stay quiet (no notifications popping up on the owner's screen).
     notify: (title, body) => {
@@ -1121,7 +1196,11 @@ void app.whenReady().then(() => {
     toast,
   });
   focusService = focus;
-  registerFocusHandlers(router, windowManager, focus);
+  registerFocusHandlers(router, windowManager, focus, {
+    sounds,
+    isSoundHost: (id) => id === soundHostId,
+    openView: openFocusView,
+  });
   registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
   router.handle('tabs:copyUrl', (_input, { sender }) => {

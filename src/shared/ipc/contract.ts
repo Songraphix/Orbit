@@ -35,7 +35,8 @@ import { userSettingsSchema } from '../settings';
 import { profilePatchSchema, profileViewSchema } from '../profile';
 import { homeSettingsSchema } from '../types/home';
 import { CAPTURE_LIMITS, captureDraftSchema } from '../capture';
-import { focusSessionSchema } from '../focus';
+import { focusPrefsSchema, focusSessionSchema, focusViewSchema } from '../focus';
+import { soundIdSchema, soundStateSchema } from '../sounds';
 import {
   PROJECT_STATUSES,
   TASK_STATUSES,
@@ -1094,10 +1095,72 @@ export const contract = {
   'focus:start': {
     input: z
       .object({
-        taskId: z.string().max(64).optional(),
+        /** A task; null: no task (just time); absent: the next task of your last project. */
+        taskId: z.string().max(64).nullable().optional(),
         minutes: z.number().int().min(1).max(240).optional(),
+        /** A break (after a session) instead of focus. */
+        kind: z.enum(['focus', 'break']).optional(),
+        /** Block distracting sites (default: your preference). */
+        block: z.boolean().optional(),
+        /** Play this sound with it (default: your preference; null: none). */
+        sound: soundIdSchema.nullable().optional(),
       })
       .strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  /** Pause or resume the session's clock. */
+  'focus:pause': {
+    input: z.object({ paused: z.boolean() }).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  /** Keep going: a few more minutes on the session. */
+  'focus:extend': {
+    input: z.object({ minutes: z.number().int().min(1).max(60) }).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  /** The panel's Focus view (toolbar button, menu, ⌘T). */
+  'focus:open': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  'focus:view': {
+    input: z.object({}).strict(),
+    output: focusViewSchema,
+    surfaces: ['internal'],
+  },
+  'focus:setPrefs': {
+    input: focusPrefsSchema.partial().strict(),
+    output: focusViewSchema,
+    surfaces: ['internal'],
+  },
+  /** "Open Anyway" on a site blocked during focus: allowed for the rest of the session. */
+  'focus:allow': {
+    input: z.object({ url: z.string().url().max(4096) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Focus and calming sounds, generated on the Mac (src/shared/sounds.ts). */
+  'sounds:get': {
+    input: z.object({}).strict(),
+    output: soundStateSchema,
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  'sounds:play': {
+    input: z.object({ id: soundIdSchema }).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  'sounds:stop': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  'sounds:volume': {
+    input: z.object({ volume: z.number().min(0).max(1) }).strict(),
     output: z.void(),
     surfaces: ['shell', 'overlay', 'internal'],
   },
@@ -1438,6 +1501,12 @@ export const events = {
   'assistant:update': assistantStateSchema,
   /** The Toolkit's state, sent to its window's productivity panel. */
   'toolkit:update': toolkitStateSchema,
+  /** The Focus view (session, preferences, sound), sent to every productivity panel. */
+  'focus:update': focusViewSchema,
+  /** What to play, sent to the hidden page that plays Orbit's sounds. */
+  'sounds:update': soundStateSchema,
+  /** What's playing, sent to every shell (the toolbar's Focus button). */
+  'state:sounds': soundStateSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type Contract = typeof contract;
@@ -1452,5 +1521,10 @@ export type EventPayload<E extends EventChannel> = z.output<Events[E]>;
 export const CHANNEL_NAME_PATTERN = /^[a-z]+:[a-z][a-zA-Z]*$/;
 
 /** The events internal orbit:// pages may listen to (main sends them to one page only). */
-export const INTERNAL_EVENTS = ['assistant:update', 'toolkit:update'] as const;
+export const INTERNAL_EVENTS = [
+  'assistant:update',
+  'toolkit:update',
+  'focus:update',
+  'sounds:update',
+] as const;
 export type InternalEventChannel = (typeof INTERNAL_EVENTS)[number];

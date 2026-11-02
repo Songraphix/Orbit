@@ -218,6 +218,12 @@ export function installAppMenu(actions: AppMenuActions): void {
           click: () => actions.command('summarize-page'),
         },
         { id: 'toolkit', label: 'Toolkit', click: () => actions.command('toolkit') },
+        {
+          id: 'focus-open',
+          label: 'Focus & Sounds…',
+          accelerator: 'Alt+CmdOrCtrl+F',
+          click: () => actions.command('focus-open'),
+        },
         { type: 'separator' },
         {
           id: 'reload',

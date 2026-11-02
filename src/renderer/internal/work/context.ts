@@ -44,7 +44,7 @@ export const showProject = (id: string | null) => {
   window.location.hash = id ? `#/notes/panel/projects/${id}` : '#/notes/panel/projects';
 };
 export const showPanelView = (
-  view: 'notes' | 'projects' | 'tasks' | 'board' | 'assistant' | 'tools',
+  view: 'notes' | 'projects' | 'tasks' | 'board' | 'assistant' | 'tools' | 'focus',
 ) => {
   window.location.hash = view === 'notes' ? '#/notes/panel' : `#/notes/panel/${view}`;
 };

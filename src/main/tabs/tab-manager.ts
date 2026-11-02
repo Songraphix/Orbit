@@ -34,6 +34,7 @@ export type TabManagerDeps = Pick<
   | 'unregisterInternal'
   | 'history'
   | 'zoomFor'
+  | 'redirectFor'
 > & {
   win: BrowserWindow;
   store: SidebarStore;
@@ -680,6 +681,7 @@ export class TabManager {
       unregisterInternal: this.deps.unregisterInternal,
       history: this.deps.history,
       zoomFor: this.deps.zoomFor,
+      redirectFor: this.deps.redirectFor,
       onFoundInPage: (result) => {
         if (this.activeId === id) this.deps.onFoundInPage(result);
       },

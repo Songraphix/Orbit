@@ -27,6 +27,8 @@ export type TabEnv = {
   history: HistorySink;
   /** Saved zoom level for a page's site (applied on every navigation). */
   zoomFor(url: string): number;
+  /** Where a navigation should go instead (a site blocked during focus), or null. */
+  redirectFor?(url: string): string | null;
   /** The page stopped responding (the window offers Wait / Reload). */
   onUnresponsive?(): void;
   /** Audio/video started or stopped (the sidebar mini player). */
@@ -177,6 +179,11 @@ export class TabController {
   }
 
   private loadIntoView(url: string): void {
+    const redirect = this.stateValue.kind === 'web' ? this.env.redirectFor?.(url) : null;
+    if (redirect) {
+      this.load(redirect);
+      return;
+    }
     if (this.stateValue.kind === 'internal') this.env.loadInternal(this.view, url);
     else
       void this.view.webContents.loadURL(url).catch(() => {
@@ -221,6 +228,14 @@ export class TabController {
     contents.on('leave-html-full-screen', () => this.env.onHtmlFullscreen(false));
 
     contents.on('did-start-loading', () => this.update({ isLoading: true, crashed: false }));
+    // Focus mode's blocked sites: links, redirects and typed addresses alike.
+    contents.on('did-start-navigation', (details) => {
+      if (!details.isMainFrame || details.isSameDocument) return;
+      const redirect = this.env.redirectFor?.(details.url);
+      if (!redirect) return;
+      contents.stop();
+      setImmediate(() => this.load(redirect));
+    });
     // Crash recovery (F-31): show a Reload card rather than a dead page.
     contents.on('render-process-gone', (_e, details) => {
       if (details.reason !== 'clean-exit') this.update({ crashed: true, isLoading: false });

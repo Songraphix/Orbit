@@ -14,6 +14,10 @@ export const INTERNAL_PAGES = [
   'easel',
   'note',
   'notes',
+  /** A site blocked while you focus (orbit://blocked/<its address>). */
+  'blocked',
+  /** The hidden page that plays focus sounds. */
+  'sounds',
 ] as const;
 export type InternalPage = (typeof INTERNAL_PAGES)[number];
 

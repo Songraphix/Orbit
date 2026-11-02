@@ -5,6 +5,7 @@ import {
   NotebookPen,
   PanelRight,
   PencilRuler,
+  Target,
   PictureInPicture2,
   Pin,
   PinOff,
@@ -45,6 +46,7 @@ import { Tip } from '../../tooltip/Tip';
 // The panel's colours and type (--note-*, --work-*) — every view needs them, not just notes.
 import '../../notes/notes.css';
 import { ToolkitView } from '../toolkit/ToolkitView';
+import { FocusView } from '../focus/FocusView';
 
 const invoke = window.orbit.invoke;
 /** Moves (or deletes) a note — after saving every keystroke, so the next place has it all. */
@@ -153,7 +155,9 @@ export function NotesPanelPage() {
           ? 'assistant'
           : a === 'tools'
             ? 'tools'
-            : 'notes';
+            : a === 'focus'
+              ? 'focus'
+              : 'notes';
   // The board's Back returns to whichever list opened it.
   const lastList = useRef<PanelTab>('projects');
   useEffect(() => {
@@ -174,6 +178,7 @@ export function NotesPanelPage() {
   else if (a === 'board') body = <BoardView onBack={() => showPanelView(lastList.current)} />;
   else if (a === 'assistant') body = <AssistantView />;
   else if (a === 'tools') body = <ToolkitView section={b} />;
+  else if (a === 'focus') body = <FocusView />;
   else body = a ? <PanelNote key={a} id={a} /> : <NotesList />;
   // Lists get the Quick Actions at their foot; a note, a project's page and the board don't.
   const lists = (a === 'projects' && !b) || a === 'tasks';
@@ -198,7 +203,7 @@ export function NotesPanelPage() {
   );
 }
 
-type PanelTab = 'notes' | 'projects' | 'tasks' | 'assistant' | 'tools';
+type PanelTab = 'notes' | 'projects' | 'tasks' | 'assistant' | 'tools' | 'focus';
 
 /**
  * Notes · Projects · Tasks · Assistant · Toolkit across the top of the panel (and Close). The open one
@@ -211,6 +216,7 @@ function PanelTabs({ current }: { current: PanelTab }) {
     { id: 'tasks', label: 'Tasks', icon: <SquareCheck size={15} /> },
     { id: 'assistant', label: 'Assistant', icon: <Sparkles size={15} />, keys: '⌘J' },
     { id: 'tools', label: 'Toolkit', icon: <PencilRuler size={15} /> },
+    { id: 'focus', label: 'Focus', icon: <Target size={15} />, keys: '⌥⌘F' },
   ];
   return (
     <nav

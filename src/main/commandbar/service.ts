@@ -1,5 +1,6 @@
 import { clipboard, net } from 'electron';
 import type { CommandBarMode, CommandItem } from '@shared/types/command-bar';
+import { SOUNDS } from '@shared/sounds';
 import { classifyInput, searchUrl } from '../omnibox/classify';
 import type { HistoryRepository } from '../persistence/repositories/history';
 import type { WindowController } from '../windows/window-manager';
@@ -54,11 +55,37 @@ export const COMMANDS: readonly CommandDef[] = [
     shortcut: '⌃⇧E',
   },
   {
+    id: 'focus-open',
+    title: 'Focus & Sounds',
+    keywords: ['focus', 'pomodoro', 'timer', 'music', 'sounds', 'therapy', 'relax', 'calm'],
+    shortcut: '⌥⌘F',
+  },
+  {
     id: 'focus-start',
     title: 'Start Focus',
     keywords: ['focus', 'pomodoro', 'timer', 'deep work', 'concentrate', 'task'],
   },
   { id: 'focus-end', title: 'End Focus', keywords: ['focus', 'stop', 'timer'] },
+  // One per sound ("Play Rain"), and Stop.
+  ...SOUNDS.map((sound) => ({
+    id: `sound-${sound.id}`,
+    title: `Play ${sound.name}`,
+    keywords: [
+      'sound',
+      'music',
+      'therapy',
+      'relax',
+      'calm',
+      'ambient',
+      'noise',
+      sound.group.toLowerCase(),
+    ],
+  })),
+  {
+    id: 'sounds-stop',
+    title: 'Stop Sounds',
+    keywords: ['sound', 'music', 'mute', 'silence', 'quiet'],
+  },
   {
     id: 'capture',
     title: 'Save to Orbit…',

@@ -11,6 +11,7 @@ import {
   NotebookPen,
   Sparkles,
   SlidersHorizontal,
+  Target,
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -21,6 +22,8 @@ import type { TabState } from '@shared/types/tabs';
 import { FindBar } from './FindBar';
 import { Tip } from '../tooltip/Tip';
 import { FocusPill } from './FocusPill';
+import { useMainState } from './use-main-state';
+import { soundName } from '@shared/sounds';
 import type { FocusSession } from '@shared/focus';
 import type { ProfileView } from '@shared/profile';
 import { Avatar } from '../profile/Avatar';
@@ -222,6 +225,7 @@ export function Toolbar({
           </ToolbarButton>
         )}
         {focus && <FocusPill session={focus} />}
+        {notesOpen !== undefined && <FocusButton />}
         {assistant && (
           <ToolbarButton
             label="Ask Orbit"
@@ -336,5 +340,35 @@ function ToolbarButton(props: {
         </span>
       </button>
     </Tip>
+  );
+}
+
+/** Focus & Sounds (⌥⌘F): the panel's Focus view; bars bounce while a sound plays. */
+function FocusButton() {
+  const sounds = useMainState('state:sounds');
+  const playing = sounds?.playing ?? null;
+  return (
+    <ToolbarButton
+      label={playing ? `Focus & Sounds · ${soundName(playing)}` : 'Focus & Sounds'}
+      keys="⌥⌘F"
+      anim="pop"
+      onClick={() => void window.orbit.invoke('focus:open', {})}
+      active={playing !== null}
+      testId="toolbar-focus"
+    >
+      {playing ? (
+        <span className="flex h-3.5 items-end gap-[2px]" aria-hidden data-testid="toolbar-playing">
+          {[0, 0.2, 0.4].map((delay) => (
+            <span
+              key={delay}
+              className="h-full w-[2.5px] rounded-full bg-current motion-safe:animate-[orbit-bars_0.9s_ease-in-out_infinite]"
+              style={{ animationDelay: `${delay}s` }}
+            />
+          ))}
+        </span>
+      ) : (
+        <Target size={14} />
+      )}
+    </ToolbarButton>
   );
 }
