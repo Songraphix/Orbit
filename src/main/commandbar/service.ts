@@ -11,6 +11,11 @@ import type { ArchivedHit, CommandDef, OpenTab, WorkHits } from './model';
 export const COMMANDS: readonly CommandDef[] = [
   { id: 'new-tab-page', title: 'New Tab Page', keywords: ['wallpaper', 'home'] },
   {
+    id: 'manage-apps',
+    title: 'Manage Apps',
+    keywords: ['app hub', 'favorites', 'favourites', 'web apps', 'panel', 'sidebar apps'],
+  },
+  {
     id: 'toggle-appearance',
     title: 'Toggle Light / Dark',
     keywords: ['dark mode', 'light mode', 'theme', 'appearance', 'night', 'white'],

@@ -14,6 +14,8 @@ export type NotesPanelDeps = {
   unregisterInternal: (webContentsId: number) => void;
   /** Remembers whether it's open and where, so a restart brings it back. */
   persist?: (state: { open: boolean; route: string }) => void;
+  /** It's opening: a docked app (App Hub) steps aside — the dock holds one at a time. */
+  onOpen?: () => void;
 };
 
 /**
@@ -54,6 +56,7 @@ export class NotesPanelController {
 
   /** Opens the panel: on note `id`, on one of its tabs, or where it was (Notes, at first). */
   open(id?: string, tab?: PanelView): void {
+    this.deps.onOpen?.();
     const fresh = this.view === null;
     const view = this.view ?? this.createView();
     // `id` was checked to be a UUID; `tab` is one of PanelView.

@@ -18,6 +18,7 @@ import type { Split } from './split';
 import { TabController } from './tab-controller';
 import type { TabEnv } from './tab-controller';
 import { randomUUID } from 'node:crypto';
+import { showsIn } from '@shared/apps';
 import { profileView } from '../sidebar/profiles';
 import type { PageMenuRequest } from './context-menu';
 import { fitViewport } from '@shared/toolkit/viewport';
@@ -187,6 +188,7 @@ export class TabManager {
           liveFolder: Boolean(item.data?.live),
           liveError: item.data?.live?.error ?? null,
           unread: Boolean(item.data?.feed?.unread),
+          openIn: item.data?.app?.openIn ?? 'tab',
         };
       });
     return {
@@ -202,7 +204,10 @@ export class TabManager {
         this.deps.store.profiles.find((p) => p.id === space.profileId) ??
           this.deps.store.profiles[0]!,
       ),
-      favorites: rows('favorite'),
+      // App Hub: a favourite can show in some Spaces only (brief M5).
+      favorites: rows('favorite').filter((row) =>
+        showsIn(this.deps.store.item(row.id)?.data?.app, space.id),
+      ),
       pinned: rows('pinned'),
       today: rows('today'),
       activeItemId: this.activeId,

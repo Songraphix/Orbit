@@ -12,6 +12,7 @@ const GETTERS = {
   'state:library': 'library:get',
   'state:focus': 'focus:get',
   'state:sounds': 'sounds:get',
+  'state:appPanel': 'apps:panelState',
 } as const;
 type StateEvent = keyof typeof GETTERS;
 

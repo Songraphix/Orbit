@@ -89,6 +89,7 @@ import { registerTooltipHandlers } from './ipc/handlers/tooltip';
 import { registerFocusHandlers } from './ipc/handlers/focus';
 import { FocusService } from './focus/service';
 import { WeatherService } from './newtab/weather';
+import { registerAppHubHandlers } from './ipc/handlers/apps';
 import { UnsplashService } from './newtab/unsplash';
 import { SoundService } from './focus/sounds';
 import { soundIdSchema } from '@shared/sounds';
@@ -225,7 +226,7 @@ function loadInternal(view: { webContents: Electron.WebContents }, url: string):
   // Settings can open on a section (orbit://settings/profiles).
   if (
     page === 'settings' &&
-    /^(general|appearance|profiles|workspaces|integrations|rules|backup|shortcuts|ai|privacy|about)$/.test(
+    /^(general|appearance|apps|profiles|workspaces|integrations|rules|backup|shortcuts|ai|privacy|about)$/.test(
       param,
     )
   )
@@ -470,6 +471,9 @@ function runCommand(controller: WindowController, commandId: string): void {
       return;
     case 'settings':
       controller.tabs.create('orbit://settings');
+      return;
+    case 'manage-apps':
+      controller.tabs.create('orbit://settings/apps');
       return;
     case 'new-easel':
       if (persistence) newEasel(persistence.easels, controller);
@@ -901,7 +905,8 @@ void app.whenReady().then(() => {
   const router = new IpcRouter(ipcMain, senders);
   registerAppHandlers(router);
   registerLayoutHandlers(router, windowManager);
-  registerTabHandlers(router, windowManager);
+  registerTabHandlers(router, windowManager, { openWindow: (url) => openLittle?.(url) });
+  registerAppHubHandlers(router, windowManager);
   registerNewTabHandlers(
     router,
     windowManager,

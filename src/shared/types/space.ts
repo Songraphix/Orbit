@@ -1,5 +1,6 @@
 import { profileViewSchema } from '../profile';
 import { z } from 'zod';
+import { OPEN_IN } from '../apps';
 
 /** A space's look (PLAN.md section 5.4). */
 export const spaceThemeSchema = z.object({
@@ -56,6 +57,8 @@ export const sidebarRowSchema = z.object({
   liveError: z.string().nullable(),
   /** A Live Folder item that hasn't been opened yet (a dot). */
   unread: z.boolean(),
+  /** A favourite's App Hub opening mode (tab, the docked panel, its own window). */
+  openIn: z.enum(OPEN_IN).default('tab'),
 });
 export type SidebarRow = z.output<typeof sidebarRowSchema>;
 

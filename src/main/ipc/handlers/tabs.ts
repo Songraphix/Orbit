@@ -3,7 +3,14 @@ import type { TabController } from '../../tabs/tab-controller';
 import { classifyInput } from '../../omnibox/classify';
 import type { WindowManager } from '../../windows/window-manager';
 
-export function registerTabHandlers(router: IpcRouter, windows: WindowManager): void {
+export function registerTabHandlers(
+  router: IpcRouter,
+  windows: WindowManager,
+  deps: {
+    /** App Hub: a favourite that opens in its own small window (Little Orbit). */
+    openWindow?: (url: string) => void;
+  } = {},
+): void {
   const tabsFor = (webContentsId: number) => {
     const controller = windows.forSender(webContentsId);
     if (!controller) throw new Error(`No window for sender ${webContentsId}`);
@@ -20,6 +27,19 @@ export function registerTabHandlers(router: IpcRouter, windows: WindowManager): 
   });
 
   router.handle('tabs:activate', ({ tabId }, { sender }) => {
+    // App Hub (brief M5): a favourite may open in the docked panel or its own window.
+    const controller = windows.forSender(sender.webContentsId);
+    const item = controller?.store.item(tabId);
+    const openIn = item?.section === 'favorite' ? item.data?.app?.openIn : undefined;
+    const url = item ? (item.homeUrl ?? item.url) : null;
+    if (controller && item && url && openIn === 'panel') {
+      controller.appPanel.toggle(item.id, url);
+      return;
+    }
+    if (url && openIn === 'window' && deps.openWindow) {
+      deps.openWindow(url);
+      return;
+    }
     tabsFor(sender.webContentsId).activate(tabId);
   });
 

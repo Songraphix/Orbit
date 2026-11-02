@@ -1,3 +1,4 @@
+import { appOptionsSchema } from '../apps';
 import { z } from 'zod';
 
 /** Where a Live Folder's items come from (F-28). */
@@ -28,5 +29,7 @@ export const itemDataSchema = z.object({
   feed: z.object({ guid: z.string(), unread: z.boolean() }).optional(),
   /** A folder Tidy made (F-29). */
   tidy: z.literal(true).optional(),
+  /** A favourite's App Hub options (brief M5): where it opens, which Spaces show it. */
+  app: appOptionsSchema.optional(),
 });
 export type ItemData = z.output<typeof itemDataSchema>;

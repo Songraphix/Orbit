@@ -2,7 +2,8 @@ import { ResponsiveFrame } from './ResponsiveFrame';
 import type { FocusSession } from '@shared/focus';
 import type { ProfileView } from '@shared/profile';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
+import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
+import { ArrowLeft, ExternalLink, RotateCw, X } from 'lucide-react';
 import { themeToVars } from '@shared/theme';
 import { useColorMode } from './use-color-mode';
 import { useUiPrefs } from '../ui/prefs-store';
@@ -15,6 +16,7 @@ import type { LibrarySection } from '@shared/types/library';
 import type { MediaState } from '@shared/types/media';
 import type { TabState, TabsSnapshot } from '@shared/types/tabs';
 import { LittleBar } from './LittleBar';
+import { Tip } from '../tooltip/Tip';
 import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
 import { TabStrip } from './TabStrip';
@@ -131,6 +133,8 @@ function Chrome({
 }) {
   const activeTab = tabs?.tabs.find((t) => t.id === tabs.activeTabId) ?? null;
   const { snapshot, onResizeStart, onResizeEnd } = useResizeSnapshot();
+  // The dock holds Notes or a docked app (App Hub); the Notes button is lit only for Notes.
+  const appPanel = useMainState('state:appPanel');
   // Split view (F-13): one card per pane, left to right. HTML fullscreen shows only the focused one.
   const split = tabs?.split && layout.panes.length === 2 ? tabs.split : null;
   const paneTabs = split
@@ -180,7 +184,7 @@ function Chrome({
             inSplit={split !== null}
             snapshot={split ? null : snapshot}
             // The right-most toolbar has the Notes button.
-            notesOpen={i === paneTabs.length - 1 ? layout.notes !== null : undefined}
+            notesOpen={i === paneTabs.length - 1 ? layout.notes !== null && !appPanel : undefined}
             profile={i === paneTabs.length - 1 ? sidebar?.profile : undefined}
             assistant={i === paneTabs.length - 1 ? (sidebar?.tidy.assistant ?? false) : false}
             focus={i === paneTabs.length - 1 ? focus : null}
@@ -195,6 +199,7 @@ function Chrome({
           data-testid="notes-card"
         />
       )}
+      {layout.notes && <AppPanelHeader rect={layout.notes} radius={layout.radius} />}
       {split && layout.divider && (
         <SplitDivider rect={layout.divider} left={layout.panes[0]!} right={layout.panes[1]!} />
       )}
@@ -347,5 +352,86 @@ function SplitDivider({ rect, left, right }: { rect: Rect; left: Pane; right: Pa
         className={`h-10 w-1 rounded-full transition-colors ${dragging ? 'bg-[var(--accent)]' : 'bg-[var(--sidebar-fg)] opacity-20'}`}
       />
     </div>
+  );
+}
+
+/**
+ * The docked app's header (App Hub, brief M5): which app, and Back, Reload, Open as Tab and
+ * Close. The app itself is a native view main places just below it.
+ */
+function AppPanelHeader({ rect, radius }: { rect: Rect; radius: number }) {
+  const app = useMainState('state:appPanel');
+  if (!app) return null;
+  const act = (action: 'close' | 'back' | 'reload' | 'openAsTab') =>
+    void window.orbit.invoke('apps:panel', { action });
+  return (
+    <div
+      className="ui-light absolute flex items-center gap-1 overflow-hidden border-b border-black/[0.06] bg-white px-2 text-neutral-700"
+      style={{
+        left: rect.x,
+        top: rect.y,
+        width: rect.width,
+        height: 40,
+        borderTopLeftRadius: radius,
+        borderTopRightRadius: radius,
+      }}
+      data-testid="app-panel-header"
+    >
+      <AppIcon favicon={app.favicon} />
+      <span
+        className="min-w-0 flex-1 truncate text-[13px] font-medium"
+        data-testid="app-panel-title"
+      >
+        {app.title}
+      </span>
+      <HeaderButton
+        label="Back"
+        onClick={() => act('back')}
+        disabled={!app.canGoBack}
+        testId="app-panel-back"
+      >
+        <ArrowLeft size={14} />
+      </HeaderButton>
+      <HeaderButton label="Reload" onClick={() => act('reload')} testId="app-panel-reload">
+        <RotateCw size={13} className={app.isLoading ? 'animate-spin' : ''} />
+      </HeaderButton>
+      <HeaderButton label="Open as Tab" onClick={() => act('openAsTab')} testId="app-panel-tab">
+        <ExternalLink size={13} />
+      </HeaderButton>
+      <HeaderButton label="Close" onClick={() => act('close')} testId="app-panel-close">
+        <X size={14} />
+      </HeaderButton>
+    </div>
+  );
+}
+
+function AppIcon({ favicon }: { favicon: string | null }) {
+  return favicon ? (
+    <img src={favicon} alt="" className="ml-1 size-4 shrink-0 rounded-[4px]" />
+  ) : (
+    <span className="ml-1 size-4 shrink-0 rounded-[4px] bg-neutral-200" />
+  );
+}
+
+function HeaderButton(props: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+  testId: string;
+  disabled?: boolean;
+}) {
+  return (
+    <Tip label={props.label}>
+      <button
+        type="button"
+        aria-label={props.label}
+        onClick={props.onClick}
+        disabled={props.disabled}
+        className="press grid size-7 shrink-0 place-items-center rounded-[8px] hover:bg-black/[0.06] disabled:opacity-30"
+        data-testid={props.testId}
+      >
+        {props.children}
+      </button>
+    </Tip>
   );
 }

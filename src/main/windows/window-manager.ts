@@ -19,6 +19,7 @@ import { MediaController } from '../media/controller';
 import { PeekController } from '../peek/controller';
 import { LibraryController } from '../library/controller';
 import { NotesPanelController } from '../notes/panel';
+import { AppPanelController } from '../apps/panel';
 import { notesHash } from '../notes/model';
 import type { PageMenuRequest } from '../tabs/context-menu';
 import { shouldPeek } from '../peek/policy';
@@ -88,6 +89,8 @@ export type WindowController = {
   library: LibraryController;
   /** The Notes panel on the right (F-33). */
   notes: NotesPanelController;
+  /** A favourite's app docked on the right (App Hub, brief M5); shares the dock with Notes. */
+  appPanel: AppPanelController;
   /** Slides the hidden sidebar out over the page, or back in. */
   setSidebarPeek: (open: boolean) => void;
   store: SidebarStore;
@@ -190,6 +193,7 @@ export class WindowManager {
     let peek: PeekController | null = null;
     let library: LibraryController | null = null;
     let notes: NotesPanelController | null = null;
+    let appPanel: AppPanelController | null = null;
     let overlayRef: OverlayController | null = null;
     let controllerRef: WindowController | null = null;
     /** The shell's sidebar state also goes to the overlay, which draws the slid-out sidebar. */
@@ -209,6 +213,7 @@ export class WindowManager {
       peek?.fit();
       library?.fit();
       notes?.fit();
+      appPanel?.fit();
       // Pinning the sidebar (or a page going fullscreen) ends the slide-out.
       if (next.sidebar.visible || next.fullscreen) closeSidebarPeek();
       broadcaster.sendTo(contents, 'state:layout', next);
@@ -402,8 +407,23 @@ export class WindowManager {
       loadInternal: this.deps.loadInternal,
       registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
       unregisterInternal: (webContentsId) => senders.remove(webContentsId),
+      onOpen: () => appPanel?.close(),
     });
     const notesPanel = notes;
+    // App Hub: a favourite's app docked beside the page (brief M5).
+    appPanel = new AppPanelController({
+      getLayout: () => layout.current(),
+      setDockOpen: (open) => layout.setNotes(open, false),
+      createPage: (url, itemId, onChange) => tabManager.createDetached(url, itemId, onChange),
+      attach: (view) => win.contentView.addChildView(view, 0),
+      detach: (view) => {
+        if (!win.isDestroyed()) win.contentView.removeChildView(view);
+      },
+      adopt: (page) => tabManager.adopt(page),
+      push: (state) => broadcaster.sendTo(contents, 'state:appPanel', state),
+      closeNotes: () => notesPanel.close(),
+    });
+    const appPanelController = appPanel;
     // The panel comes back where it was (roadmap P1.2: continue where you stopped).
     const panelState = settings.get('panel.state');
     if (panelState.open && notesHash(panelState.route) !== '/not-found') {
@@ -439,6 +459,7 @@ export class WindowManager {
       peek: peekController,
       library: libraryController,
       notes: notesPanel,
+      appPanel: appPanelController,
       setSidebarPeek,
       store: this.deps.store,
       sidebar,
@@ -466,6 +487,7 @@ export class WindowManager {
       peekController.close();
       libraryController.destroy();
       notesPanel.destroy();
+      appPanelController.destroy();
       tabManager.destroyAll();
       overlay.destroy();
     });

@@ -1,3 +1,5 @@
+import { DEFAULT_APP_OPTIONS } from '@shared/apps';
+import type { AppOptions } from '@shared/apps';
 import { duplicateTabs, fromBeforeToday, sortToday } from './tidy-model';
 import type { SortToday, TodayTab } from './tidy-model';
 import { clipboard, Menu, ShareMenu } from 'electron';
@@ -311,6 +313,48 @@ export class SidebarActions {
         label: item.section === 'favorite' ? 'Remove from Favorites' : 'Add to Favorites',
         click: () => this.toggleFavorite(item.id),
       });
+      if (item.section === 'favorite') {
+        // App Hub (brief M5): where this favourite opens, and which Spaces show it.
+        const app = item.data?.app ?? DEFAULT_APP_OPTIONS;
+        const setApp = (patch: Partial<AppOptions>) =>
+          this.store.setData(item.id, { ...item.data, app: { ...app, ...patch } });
+        const space = this.store.space(this.tabs.activeSpaceId);
+        template.push(
+          {
+            label: 'Open In',
+            submenu: (
+              [
+                ['tab', 'Tab'],
+                ['panel', 'Side Panel'],
+                ['window', 'Little Orbit Window'],
+              ] as const
+            ).map(([openIn, label]) => ({
+              label,
+              type: 'radio' as const,
+              checked: app.openIn === openIn,
+              click: () => setApp({ openIn }),
+            })),
+          },
+          {
+            label: 'Show In',
+            submenu: [
+              {
+                label: 'All Spaces',
+                type: 'radio' as const,
+                checked: app.spaces === null,
+                click: () => setApp({ spaces: null }),
+              },
+              {
+                label: `Only “${space?.name ?? 'This Space'}”`,
+                type: 'radio' as const,
+                checked: app.spaces !== null,
+                click: () => setApp({ spaces: [this.tabs.activeSpaceId] }),
+              },
+            ],
+          },
+          { label: 'Manage Apps…', click: () => this.ui.command('manage-apps') },
+        );
+      }
       if (item.spaceId === null || item.spaceId === this.tabs.activeSpaceId) {
         const splitIds = this.tabs.splitIds;
         template.push(

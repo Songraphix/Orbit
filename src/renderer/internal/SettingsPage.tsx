@@ -2,6 +2,7 @@ import {
   Info,
   Keyboard,
   Palette,
+  AppWindow,
   Archive,
   DatabaseBackup,
   LayoutTemplate,
@@ -17,6 +18,7 @@ import {
 import { SpaceIcon } from '../shell/sidebar/SpaceIcon';
 import { Group, Row, Section } from './settings/parts';
 import { AppearanceSection } from './settings/AppearanceSection';
+import { AppsSection } from './settings/AppsSection';
 import { buttonClass, FIELD } from '../ui/controls';
 import { useEffect, useState } from 'react';
 import type { UserSettings } from '@shared/settings';
@@ -227,6 +229,8 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
               update({ appearance });
             }}
           />
+
+          <AppsSection />
 
           <Section
             id="profiles"
@@ -604,6 +608,7 @@ function AiKeyRow(props: { hasKey: boolean; canStore: boolean; onChange: () => v
 const NAV = [
   { id: 'general', label: 'General', icon: <Settings size={16} /> },
   { id: 'appearance', label: 'Appearance', icon: <Palette size={16} /> },
+  { id: 'apps', label: 'Apps', icon: <AppWindow size={16} /> },
   { id: 'profiles', label: 'Profiles', icon: <UsersRound size={16} /> },
   { id: 'workspaces', label: 'Workspaces', icon: <LayoutTemplate size={16} /> },
   { id: 'rules', label: 'Rules', icon: <Route size={16} /> },

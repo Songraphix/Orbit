@@ -46,6 +46,7 @@ import { soundIdSchema, soundStateSchema } from '../sounds';
 import { uiPrefsPatchSchema, uiPrefsSchema } from '../ui-prefs';
 import { homeLayoutSchema, placeSchema, weatherSchema, widgetDataSchema } from '../home-widgets';
 import { lookSchema, ROTATIONS, unsplashPhotoSchema } from '../backgrounds';
+import { appListSchema, appPanelStateSchema, OPEN_IN } from '../apps';
 import {
   PROJECT_STATUSES,
   TASK_STATUSES,
@@ -654,6 +655,49 @@ export const contract = {
   'archive:restore': {
     input: z.object({ id: z.string().min(1).max(64) }).strict(),
     output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** App Hub (brief M5): the docked app panel — its state, and its header's buttons. */
+  'apps:panelState': {
+    input: z.object({}).strict(),
+    output: appPanelStateSchema.nullable(),
+    surfaces: ['shell'],
+  },
+  'apps:panel': {
+    input: z
+      .object({ action: z.enum(['close', 'back', 'forward', 'reload', 'openAsTab']) })
+      .strict(),
+    output: z.void(),
+    surfaces: ['shell'],
+  },
+  /** Settings → Apps: your favourites as apps, and the Spaces they can show in. */
+  'apps:list': {
+    input: z.object({}).strict(),
+    output: appListSchema,
+    surfaces: ['internal'],
+  },
+  'apps:add': {
+    input: z
+      .object({ url: z.string().min(1).max(2000), title: z.string().max(120).optional() })
+      .strict(),
+    output: appListSchema,
+    surfaces: ['internal'],
+  },
+  'apps:update': {
+    input: z
+      .object({
+        itemId: z.string().max(64),
+        title: z.string().max(120).optional(),
+        openIn: z.enum(OPEN_IN).optional(),
+        spaces: z.array(z.string().max(64)).max(50).nullable().optional(),
+      })
+      .strict(),
+    output: appListSchema,
+    surfaces: ['internal'],
+  },
+  'apps:remove': {
+    input: z.object({ itemId: z.string().max(64) }).strict(),
+    output: appListSchema,
     surfaces: ['internal'],
   },
   /** The customization engine (brief M2): every part of Orbit reads these. */
@@ -1620,6 +1664,8 @@ export const events = {
   'sounds:update': soundStateSchema,
   /** What's playing, sent to every shell (the toolbar's Focus button). */
   'state:sounds': soundStateSchema,
+  /** The docked app panel (null: closed), sent to its window's shell. */
+  'state:appPanel': appPanelStateSchema.nullable(),
   /** The customization preferences, sent to every shell and overlay. */
   'state:ui': uiPrefsSchema,
   /** …and to every Orbit page (Settings, the Homepage, the panel). */

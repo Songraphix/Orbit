@@ -137,6 +137,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — **Brief M4: Homepage backgrounds.** Customize → Background: **Gallery** (14 built-ins — six new — your favourites and your image), **Colour** (presets and any colour), **Gradient** (presets, two colours and an angle), **Unsplash** (search with your own access key from Settings → Integrations, kept in the Keychain; photos hot-linked from images.unsplash.com with “Photo by … on Unsplash” credit and Unsplash's download ping, as its API guidelines require; only search words go out). Everything previews first — **Apply** keeps it, Cancel goes back. **Adjust**: brightness, saturation, contrast, blur, a veil for photos, fit and position. **Favourites** and **rotation** (a new background each day or each new tab, from your favourites or the built-ins). src/shared/backgrounds.ts (unit-tested), src/main/newtab/unsplash.ts, internal/newtab/backgrounds.tsx
 
+- 2026-11-02 — **Brief M5: App Hub.** Favorites are your apps (no second launcher): **Settings → Apps** lists them with name, **where each opens** — a tab (as before), the **docked side panel** (owner's choice: a real sandboxed page in the favourite's profile beside the page, sharing the right-hand dock with Notes — one at a time — with a header for Back, Reload, Open as Tab, Close; hidden, not unloaded, when closed) or **its own Little Orbit window** — and **which Spaces show it**; add by address or from a catalogue grouped as AI, Google, Microsoft, Design, Development, Communication, Productivity (never added for you). A favourite's right-click menu gains Open In, Show In and Manage Apps…; ⌘T “Manage Apps”. Options live in the favourite's item data (no migration). Deferred: app groups in the sidebar, choosing several Spaces at once in Settings (one or all for now)
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0
@@ -165,6 +167,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 - 2026-11-01 — Notes use Tiptap 3.32.0 (ProseMirror) for the editor: contenteditable by hand is unreliable for lists/checklists/undo. Renderer-only devDependencies, lazy-loaded (not in the new tab page or overlay start-up bundles); five ProseMirror/linkify packages newer than two weeks are pinned back via `overrides`
 
 ## Known issues
+
+- universal-search e2e can miss a saved finding under full-suite load (passes alone); watch it
 
 - Vibrancy can't be verified by automated tests (it's composited by macOS behind the page) — check by eye in `npm run dev`
 
