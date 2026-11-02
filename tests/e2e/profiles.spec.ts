@@ -66,6 +66,7 @@ test('Settings has sections in a sidebar: About shows the versions', async () =>
     'General',
     'Profiles',
     'Workspaces',
+    'Rules',
     'Integrations',
     'Shortcuts',
     'AI',

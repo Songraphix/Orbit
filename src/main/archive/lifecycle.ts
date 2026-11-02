@@ -2,6 +2,7 @@ import { powerMonitor } from 'electron';
 import type { SettingsRepository } from '../persistence/repositories/settings';
 import type { TabManager } from '../tabs/tab-manager';
 import { tabsToArchive, tabsToSleep } from './policy';
+import { archiveAfterFor } from '@shared/rules';
 
 const ARCHIVE_EVERY_MS = 5 * 60_000;
 const SLEEP_EVERY_MS = 60_000;
@@ -36,7 +37,11 @@ export class TabLifecycle {
   }
 
   archiveIdle(now = Date.now()): number {
-    const after = this.settings.get('archive.after');
+    const global = this.settings.get('archive.after');
+    const rules = this.settings.get('rules');
+    // A Space with its own rule (roadmap P4.4) uses that; the rest, the global setting.
+    const after = (spaceId: string | null) =>
+      (spaceId ? archiveAfterFor(rules, spaceId) : null) ?? global;
     let count = 0;
     for (const tabs of this.windows()) {
       for (const id of tabsToArchive(tabs.facts(), now, after)) {

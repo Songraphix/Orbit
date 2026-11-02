@@ -1,8 +1,10 @@
 import {
   Info,
   Keyboard,
+  Archive,
   LayoutTemplate,
   Plug,
+  Route,
   Settings,
   Shield,
   Sparkles,
@@ -18,6 +20,7 @@ import type { InvokeOutput } from '@shared/ipc/contract';
 import { AI_FEATURE_LABELS, AI_MODELS, formatCost } from '@shared/ai';
 import type { AiActivity, AiPrefs } from '@shared/ai';
 import { relativeTime } from '@shared/time';
+import { describeRule } from '@shared/rules';
 
 const ARCHIVE_AFTER: { value: UserSettings['archiveAfter']; label: string }[] = [
   { value: '12h', label: 'After 12 hours' },
@@ -210,6 +213,10 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
 
           <Section id="workspaces" title="Workspaces">
             <WorkspacesSection />
+          </Section>
+
+          <Section id="rules" title="Rules">
+            <RulesSection />
           </Section>
 
           <Section id="integrations" title="Integrations">
@@ -565,6 +572,7 @@ const NAV = [
   { id: 'general', label: 'General', icon: <Settings size={16} /> },
   { id: 'profiles', label: 'Profiles', icon: <UsersRound size={16} /> },
   { id: 'workspaces', label: 'Workspaces', icon: <LayoutTemplate size={16} /> },
+  { id: 'rules', label: 'Rules', icon: <Route size={16} /> },
   { id: 'integrations', label: 'Integrations', icon: <Plug size={16} /> },
   { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard size={16} /> },
   { id: 'ai', label: 'AI', icon: <Sparkles size={16} /> },
@@ -928,6 +936,201 @@ function ProjectTemplateRow(props: {
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * Settings → Rules (roadmap P4.4): where links from other apps go, and a Space's own archive
+ * time — in words, each with a switch.
+ */
+function RulesSection() {
+  const [data, setData] = useState<InvokeOutput<'rules:list'> | null>(null);
+  const load = () => void window.orbit.invoke('rules:list', {}).then(setData);
+  useEffect(load, []);
+  if (!data) return null;
+  const spaceName = (id: string | null) =>
+    data.spaces.find((s) => s.id === id)?.name ?? 'a deleted Space';
+  return (
+    <>
+      <Group title="Your rules">
+        {data.rules.length === 0 && (
+          <p className="px-4 py-5 text-sm text-neutral-500" data-testid="rules-empty">
+            No rules yet. Links from other apps open in Little Orbit; Today tabs follow the archive
+            time in General.
+          </p>
+        )}
+        {data.rules.map((rule) => (
+          <div key={rule.id} className="flex items-center gap-3 px-4 py-2.5" data-testid="rule-row">
+            <span
+              className={`grid size-8 shrink-0 place-items-center rounded-[10px] ${rule.enabled ? 'bg-[var(--accent,#5b5bd6)]/10 text-[var(--accent,#5b5bd6)]' : 'bg-neutral-100 text-neutral-400'}`}
+            >
+              {rule.kind === 'link' ? <Route size={15} /> : <Archive size={15} />}
+            </span>
+            <span
+              className={`min-w-0 flex-1 text-sm ${rule.enabled ? '' : 'text-neutral-400'}`}
+              data-testid="rule-text"
+            >
+              {describeRule(rule, spaceName)}
+            </span>
+            <input
+              type="checkbox"
+              checked={rule.enabled}
+              aria-label="On"
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                // Show it at once; main's answer follows.
+                setData(
+                  (current) =>
+                    current && {
+                      ...current,
+                      rules: current.rules.map((r) => (r.id === rule.id ? { ...r, enabled } : r)),
+                    },
+                );
+                void window.orbit.invoke('rules:toggle', { id: rule.id, enabled }).then(load);
+              }}
+              className="size-4 accent-[var(--accent,#5b5bd6)]"
+              data-testid="rule-toggle"
+            />
+            <button
+              type="button"
+              aria-label="Delete rule"
+              onClick={() => void window.orbit.invoke('rules:delete', { id: rule.id }).then(load)}
+              className="grid size-8 shrink-0 place-items-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600"
+              data-testid="rule-delete"
+            >
+              <Trash2 size={15} />
+            </button>
+          </div>
+        ))}
+      </Group>
+      <AddRule spaces={data.spaces} onAdded={load} />
+    </>
+  );
+}
+
+function AddRule(props: { spaces: { id: string; name: string }[]; onAdded: () => void }) {
+  const [kind, setKind] = useState<'link' | 'archive'>('link');
+  const [pattern, setPattern] = useState('');
+  const [target, setTarget] = useState(props.spaces[0]?.id ?? 'little');
+  const [after, setAfter] = useState<'12h' | '24h' | '7d' | '30d' | 'never'>('7d');
+  const [space, setSpace] = useState(props.spaces[0]?.id ?? '');
+  const [error, setError] = useState<string | null>(null);
+  const add = () => {
+    const input =
+      kind === 'link'
+        ? {
+            kind,
+            enabled: true,
+            pattern,
+            target: (target === 'little' || target === 'current' ? target : 'space') as
+              'little' | 'current' | 'space',
+            spaceId: target === 'little' || target === 'current' ? null : target,
+          }
+        : { kind, enabled: true, spaceId: space, after };
+    void window.orbit.invoke('rules:add', input).then((r) => {
+      setError(r.error);
+      if (r.ok) {
+        setPattern('');
+        props.onAdded();
+      }
+    });
+  };
+  const SELECT = 'rounded-lg border border-neutral-200 px-2 py-1 text-sm';
+  return (
+    <Group title="Add a rule">
+      <div className="flex flex-col gap-3 px-4 py-3 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="w-12 shrink-0 text-neutral-500">When</span>
+          <select
+            value={kind}
+            onChange={(e) => setKind(e.target.value as 'link' | 'archive')}
+            className={SELECT}
+            data-testid="rule-kind"
+          >
+            <option value="link">a link from another app goes to…</option>
+            <option value="archive">Today tabs in a Space sit unopened…</option>
+          </select>
+        </div>
+        {kind === 'link' ? (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="w-12 shrink-0 text-neutral-500">Site</span>
+              <input
+                value={pattern}
+                onChange={(e) => {
+                  setPattern(e.target.value);
+                  setError(null);
+                }}
+                placeholder="figma.com, *.atlassian.net, github.com/my-org"
+                className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                data-testid="rule-pattern"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-12 shrink-0 text-neutral-500">Open</span>
+              <select
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                className={SELECT}
+                data-testid="rule-target"
+              >
+                {props.spaces.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    in {s.name}
+                  </option>
+                ))}
+                <option value="little">in Little Orbit</option>
+                <option value="current">where I am</option>
+              </select>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="w-12 shrink-0 text-neutral-500">In</span>
+            <select
+              value={space}
+              onChange={(e) => setSpace(e.target.value)}
+              className={SELECT}
+              data-testid="rule-space"
+            >
+              {props.spaces.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <span className="text-neutral-500">archive after</span>
+            <select
+              value={after}
+              onChange={(e) => setAfter(e.target.value as typeof after)}
+              className={SELECT}
+              data-testid="rule-after"
+            >
+              <option value="12h">12 hours</option>
+              <option value="24h">24 hours</option>
+              <option value="7d">7 days</option>
+              <option value="30d">30 days</option>
+              <option value="never">never</option>
+            </select>
+          </div>
+        )}
+        <div className="flex items-center justify-end gap-3">
+          {error && (
+            <span className="text-xs text-red-600" data-testid="rule-error">
+              {error}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={add}
+            className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+            data-testid="rule-add"
+          >
+            Add Rule
+          </button>
+        </div>
+      </div>
+    </Group>
   );
 }
 

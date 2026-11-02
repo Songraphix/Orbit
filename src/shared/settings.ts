@@ -3,6 +3,7 @@ import { wallpaperChoiceSchema } from './types/newtab';
 import { DEFAULT_HOME, homeSettingsSchema } from './types/home';
 import { focusSessionSchema } from './focus';
 import { aiPrefsSchema, DEFAULT_AI_PREFS } from './ai';
+import { rulesSchema } from './rules';
 import { rectSchema, SIDEBAR_WIDTH } from './types/layout';
 
 /**
@@ -66,6 +67,8 @@ export const settingsSchema = {
   'ai.prefs': aiPrefsSchema,
   /** The Toolkit's picked colours (roadmap P3.5), newest first. */
   'toolkit.colors': z.array(z.string().max(32)).max(16),
+  /** Your rules (roadmap P4.4): where links from other apps go; a Space's own archive time. */
+  rules: rulesSchema,
   /** Search engine URL with %s for the query. */
   'search.engine': z.enum(['google', 'duckduckgo', 'bing', 'kagi', 'ecosia']),
 } as const;
@@ -95,6 +98,7 @@ export const settingsDefaults: Settings = {
   'focus.session': null,
   'ai.prefs': DEFAULT_AI_PREFS,
   'toolkit.colors': [],
+  rules: [],
 };
 
 /** Query URL templates for `search.engine`. */

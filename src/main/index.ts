@@ -74,6 +74,7 @@ import { PermissionService } from './permissions/service';
 import { ArcImporter, findArcSources } from './importer/arc/import';
 import { WindowManager } from './windows/window-manager';
 import { acceptExternalUrl, LittleWindow } from './windows/little';
+import { routeLink } from '@shared/rules';
 import type { WindowController } from './windows/window-manager';
 import { notesHash } from './notes/model';
 import { enableQuietMode } from './app/quiet';
@@ -148,6 +149,8 @@ function loadRenderer(win: BrowserWindow, entry: RendererEntry, query?: string):
 const littleWindows = new Map<number, LittleWindow>();
 const pendingUrls: string[] = [];
 let openLittle: ((url: string | null) => void) | null = null;
+/** A link from another app: your rules first (roadmap P4.4), else Little Orbit (F-24). */
+let openExternal: ((url: string) => void) | null = null;
 /** ⌥⌘N, from any app (F-24). */
 const LITTLE_SHORTCUT = 'Alt+CommandOrControl+N';
 let lastEmptyLittle = 0;
@@ -172,7 +175,7 @@ app.on('will-finish-launching', () => {
   app.on('open-url', (event, url) => {
     event.preventDefault();
     if (!acceptExternalUrl(url)) return;
-    if (openLittle) openLittle(url);
+    if (openExternal) openExternal(url);
     else pendingUrls.push(url); // arrived before Orbit finished starting
   });
 });
@@ -1204,8 +1207,27 @@ void app.whenReady().then(() => {
     little.win.on('closed', () => littleWindows.delete(barId));
   };
 
+  openExternal = (url: string) => {
+    const rule = routeLink(settingsRepo.get('rules'), url);
+    if (rule?.target === 'space' && rule.spaceId && store.space(rule.spaceId)) {
+      const controller = windowManager.focused() ?? windowManager.all()[0];
+      if (controller) {
+        controller.tabs.switchSpace(rule.spaceId);
+        controller.tabs.create(url);
+        controller.win.show();
+        controller.win.focus();
+        return;
+      }
+    }
+    if (rule?.target === 'current') {
+      openInMain(url);
+      return;
+    }
+    openLittle?.(url);
+  };
+
   windowManager.createMainWindow();
-  for (const url of pendingUrls.splice(0)) openLittle(url);
+  for (const url of pendingUrls.splice(0)) openExternal(url);
 
   // Notes left empty last time go (unless a tab or floating note still shows them); floating
   // notes come back where they were.

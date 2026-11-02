@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { dialog } from 'electron';
+import { cleanPattern, patternProblem } from '@shared/rules';
 import { DEFAULT_PROFILE_ID } from '@shared/types/space';
 import { SEARCH_ENGINES } from '@shared/settings';
 import type { UserSettings } from '@shared/settings';
@@ -252,6 +254,61 @@ export function registerInternalPageHandlers(
       cancelId: 1,
     });
     if (response === 0) deps.projectTemplates.delete(id);
+  });
+
+  router.handle('rules:list', (_input, { sender }) => {
+    const { window } = ownerOf(sender.webContentsId, 'settings');
+    return {
+      rules: deps.settings.get('rules'),
+      spaces: window.store.spaces.map(({ id, name }) => ({ id, name })),
+    };
+  });
+
+  router.handle('rules:add', (input, { sender }) => {
+    const { window } = ownerOf(sender.webContentsId, 'settings');
+    const rules = deps.settings.get('rules');
+    if (rules.length >= 100)
+      return { ok: false, error: 'That’s a lot of rules — remove one first' };
+    if (input.kind === 'link') {
+      const problem = patternProblem(input.pattern);
+      if (problem) return { ok: false, error: problem };
+      if (input.target === 'space' && !(input.spaceId && window.store.space(input.spaceId))) {
+        return { ok: false, error: 'Choose a Space' };
+      }
+      deps.settings.set('rules', [
+        ...rules,
+        {
+          ...input,
+          id: randomUUID(),
+          pattern: cleanPattern(input.pattern),
+          spaceId: input.target === 'space' ? input.spaceId : null,
+        },
+      ]);
+    } else {
+      if (!window.store.space(input.spaceId)) return { ok: false, error: 'Choose a Space' };
+      // One archive rule per Space: a new one replaces the old.
+      deps.settings.set('rules', [
+        ...rules.filter((r) => !(r.kind === 'archive' && r.spaceId === input.spaceId)),
+        { ...input, id: randomUUID() },
+      ]);
+    }
+    return { ok: true, error: null };
+  });
+
+  router.handle('rules:toggle', ({ id, enabled }, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    deps.settings.set(
+      'rules',
+      deps.settings.get('rules').map((r) => (r.id === id ? { ...r, enabled } : r)),
+    );
+  });
+
+  router.handle('rules:delete', ({ id }, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    deps.settings.set(
+      'rules',
+      deps.settings.get('rules').filter((r) => r.id !== id),
+    );
   });
 
   router.handle('github:status', (_input, { sender }) => {

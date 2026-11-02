@@ -62,6 +62,29 @@ function projectMenu(
       ? [{ label: 'Save as Template…', onSelect: onSaveTemplate, testId: 'menu-save-template' }]
       : []),
     { divider: true },
+    {
+      label: 'Export Tasks as CSV…',
+      onSelect: () => void exportTasks(work, project, 'csv'),
+      testId: 'menu-export-csv',
+    },
+    {
+      label: 'Export Tasks as Markdown…',
+      onSelect: () => void exportTasks(work, project, 'md'),
+      testId: 'menu-export-md',
+    },
+    {
+      label: 'Import Tasks…',
+      onSelect: () =>
+        void work.run(invoke('work:importTasks', { projectId: project.id })).then((result) => {
+          if (!result) return;
+          work.set(result.data);
+          if (result.imported > 0) {
+            work.flash(`Imported ${result.imported} task${result.imported === 1 ? '' : 's'}`);
+          }
+        }),
+      testId: 'menu-import',
+    },
+    { divider: true },
     ...PROJECT_STATUSES.map((s) => ({
       label: PROJECT_STATUS_LABEL[s],
       checked: project.status === s,
@@ -84,6 +107,12 @@ function projectMenu(
         }),
     },
   ];
+}
+
+/** Export Tasks (roadmap P4.3): main asks where to save. */
+async function exportTasks(work: Work, project: Project, format: 'csv' | 'md') {
+  const result = await work.run(invoke('work:exportTasks', { projectId: project.id, format }));
+  if (result?.saved) work.flash('Tasks exported');
 }
 
 /** Goes to a project's workspace (its Space, with its tabs as they were left). */

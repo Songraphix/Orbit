@@ -48,6 +48,7 @@ import { aiActivitySchema, aiPrefsSchema, aiUsageSchema } from '../ai';
 import { ASSISTANT_LIMITS, assistantStateSchema, taskSuggestionSchema } from '../assistant';
 import { TOOLKIT_SECTIONS, toolkitStateSchema, viewportSchema } from '../toolkit/state';
 import { githubRepoViewSchema } from '../github';
+import { ruleInputSchema, rulesSchema } from '../rules';
 
 /**
  * Every IPC channel lives here (PLAN.md section 4.4). Names follow `domain:verb`.
@@ -935,6 +936,20 @@ export const contract = {
     output: z.object({ id: z.string(), data: workDataSchema }),
     surfaces: ['internal'],
   },
+  /** Tasks out to other services (roadmap P4.3): a save dialog for CSV or a Markdown checklist. */
+  'work:exportTasks': {
+    input: z
+      .object({ projectId: z.string().max(64).nullable(), format: z.enum(['csv', 'md']) })
+      .strict(),
+    output: z.object({ saved: z.boolean() }),
+    surfaces: ['internal'],
+  },
+  /** …and in: an open dialog for CSV, Markdown or a plain list. */
+  'work:importTasks': {
+    input: z.object({ projectId: z.string().max(64).nullable() }).strict(),
+    output: z.object({ imported: z.number().int(), data: workDataSchema }),
+    surfaces: ['internal'],
+  },
   /** Save as Template (roadmap P4.1): the project's tasks become a template for new projects. */
   'work:saveProjectTemplate': {
     input: z.object({ projectId: z.string().max(64), name: z.string().max(60) }).strict(),
@@ -1305,6 +1320,30 @@ export const contract = {
   },
   'github:clearToken': {
     input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  // Settings → Rules (roadmap P4.4): where links from other apps go; a Space's own archive time.
+  'rules:list': {
+    input: z.object({}).strict(),
+    output: z.object({
+      rules: rulesSchema,
+      spaces: z.array(z.object({ id: z.string(), name: z.string() })),
+    }),
+    surfaces: ['internal'],
+  },
+  'rules:add': {
+    input: ruleInputSchema,
+    output: z.object({ ok: z.boolean(), error: z.string().nullable() }),
+    surfaces: ['internal'],
+  },
+  'rules:toggle': {
+    input: z.object({ id: z.string().max(64), enabled: z.boolean() }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'rules:delete': {
+    input: z.object({ id: z.string().max(64) }).strict(),
     output: z.void(),
     surfaces: ['internal'],
   },

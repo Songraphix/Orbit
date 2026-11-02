@@ -13,6 +13,8 @@ export type TabFacts = {
   isAudible: boolean;
   /** Sites in Developer Mode are never auto-archived (F-30). */
   keep?: boolean;
+  /** Its Space (null for favorites): a Space can have its own archive time (roadmap P4.4). */
+  spaceId?: string | null;
 };
 
 export const ARCHIVE_AFTER_OPTIONS = {
@@ -28,12 +30,13 @@ export type ArchiveAfter = keyof typeof ARCHIVE_AFTER_OPTIONS;
 export function tabsToArchive(
   tabs: readonly TabFacts[],
   now: number,
-  after: ArchiveAfter,
+  after: ArchiveAfter | ((spaceId: string | null) => ArchiveAfter),
 ): string[] {
-  const limit = ARCHIVE_AFTER_OPTIONS[after];
+  const limit = (t: TabFacts) =>
+    ARCHIVE_AFTER_OPTIONS[typeof after === 'function' ? after(t.spaceId ?? null) : after];
   return tabs
     .filter((t) => t.section === 'today' && !t.isActive && !t.isAudible && !t.keep)
-    .filter((t) => t.lastActiveAt !== null && now - t.lastActiveAt > limit)
+    .filter((t) => t.lastActiveAt !== null && now - t.lastActiveAt > limit(t))
     .map((t) => t.id);
 }
 

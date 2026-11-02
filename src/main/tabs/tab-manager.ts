@@ -500,6 +500,7 @@ export class TabManager {
             ? !tab.view.webContents.isDestroyed() && tab.view.webContents.isCurrentlyAudible()
             : false,
           keep: this.devModeFor(tab?.state.url ?? i.url),
+          spaceId: i.spaceId,
         };
       });
   }

@@ -7,6 +7,9 @@ import type { ProjectTemplateRepository } from '../../persistence/repositories/p
 import { addDays, tasksAsTemplate } from '@shared/project-templates';
 import { dateKey } from '@shared/work';
 import type { GithubService } from '../../github/service';
+import { readFile, stat, writeFile } from 'node:fs/promises';
+import { basename } from 'node:path';
+import { parseTaskImport, tasksToCsv, tasksToMarkdown } from '@shared/task-transfer';
 import { spaceFromTemplate } from '../../sidebar/templates';
 import type { NotesRepository } from '../../persistence/repositories/notes';
 import type { WorkRepository } from '../../persistence/repositories/work';
@@ -114,6 +117,45 @@ export function registerWorkHandlers(
     panelOf(sender.webContentsId);
     const repo = work.project(projectId)?.githubRepo;
     return repo ? github.repo(repo, refresh === true) : null;
+  });
+
+  /** Export Tasks (roadmap P4.3): a project's tasks as CSV or a Markdown checklist. */
+  router.handle('work:exportTasks', async ({ projectId, format }, { sender }) => {
+    const window = panelOf(sender.webContentsId);
+    const project = projectId ? work.project(projectId) : null;
+    const name = project?.name ?? 'Tasks';
+    const tasks = work.all().tasks.filter((t) => t.projectId === projectId);
+    const { canceled, filePath } = await dialog.showSaveDialog(window.win, {
+      title: 'Export Tasks',
+      defaultPath: `${name.replace(/[/\\:]/g, '-')} tasks.${format}`,
+      filters:
+        format === 'csv'
+          ? [{ name: 'CSV', extensions: ['csv'] }]
+          : [{ name: 'Markdown', extensions: ['md'] }],
+    });
+    if (canceled || !filePath) return { saved: false };
+    const text = format === 'csv' ? tasksToCsv(tasks, name) : tasksToMarkdown(tasks, name);
+    await writeFile(filePath, text, 'utf8');
+    return { saved: true };
+  });
+
+  /** Import Tasks (roadmap P4.3): from another service's CSV, a checklist or a plain list. */
+  router.handle('work:importTasks', async ({ projectId }, { sender }) => {
+    const window = panelOf(sender.webContentsId);
+    const { canceled, filePaths } = await dialog.showOpenDialog(window.win, {
+      title: 'Import Tasks',
+      properties: ['openFile'],
+      filters: [{ name: 'Tasks', extensions: ['csv', 'md', 'markdown', 'txt'] }],
+    });
+    const file = filePaths[0];
+    if (canceled || !file) return { imported: 0, data: everything(window) };
+    const info = await stat(file);
+    if (info.size > 2 * 1024 * 1024)
+      throw new Error('That file is too large to import (2 MB at most)');
+    const parsed = parseTaskImport(await readFile(file, 'utf8'), basename(file));
+    const target = projectId && work.project(projectId) ? projectId : null;
+    for (const task of parsed) work.saveTask({ ...task, projectId: target });
+    return { imported: parsed.length, data: everything(window) };
   });
 
   /** Save as Template (roadmap P4.1): a project's tasks become a template for new projects. */

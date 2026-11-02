@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { captureLabel, hostOf, taskFromCapture } from '@shared/capture';
+import { knownService } from '@shared/task-transfer';
 import type { Capture } from '@shared/capture';
 import { relativeTime } from '@shared/time';
 import { colorHex } from '@shared/work';
@@ -87,6 +88,11 @@ function captureActions(work: Work, c: Capture): MenuItem[] {
       testId: 'research-open-source',
     },
     {
+      label: 'Open in Split View',
+      onSelect: () => void invoke('toolkit:split', { url: c.url }),
+      testId: 'research-open-split',
+    },
+    {
       label: 'Copy',
       onSelect: () =>
         void work.run(invoke('research:copy', { id: c.id }), 'Copied').then(() => undefined),
@@ -126,6 +132,8 @@ export function CaptureRow({
   const work = useWork();
   const [now] = useState(() => Date.now());
   const project = showProject ? work.data?.projects.find((p) => p.id === c.projectId) : undefined;
+  // A Figma file, a Google Doc, a Jira ticket… named as such (roadmap P4.3).
+  const service = knownService(c.url);
   const snippet =
     c.kind === 'text' || c.kind === 'code'
       ? c.text.replace(/\s+/g, ' ').trim()
@@ -157,7 +165,16 @@ export function CaptureRow({
               </span>
             )}
             <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11.5px] text-[var(--note-muted)]">
-              <span className="truncate">{hostOf(c.url) || c.title}</span>
+              {service ? (
+                <span
+                  className="rounded-full bg-[var(--work-accent-soft)] px-1.5 font-medium text-[var(--work-accent)]"
+                  data-testid="research-service"
+                >
+                  {service.name}
+                </span>
+              ) : (
+                <span className="truncate">{hostOf(c.url) || c.title}</span>
+              )}
               <span>{relativeTime(c.createdAt, now)}</span>
               {project && (
                 <span className="flex items-center gap-1">
