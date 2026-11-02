@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import '../styles/tokens.css';
 import { InternalApp } from './InternalApp';
 import { preloadFor } from './preload-routes';
+import { startUiPrefs } from '../ui/prefs-store';
+
+// Text size, density, accent… (Settings → Appearance) for every Orbit page.
+startUiPrefs('ui:update', { zoom: true });
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root missing');

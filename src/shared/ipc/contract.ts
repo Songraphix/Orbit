@@ -43,6 +43,7 @@ import { homeSettingsSchema } from '../types/home';
 import { CAPTURE_LIMITS, captureDraftSchema } from '../capture';
 import { focusPrefsSchema, focusSessionSchema, focusViewSchema } from '../focus';
 import { soundIdSchema, soundStateSchema } from '../sounds';
+import { uiPrefsPatchSchema, uiPrefsSchema } from '../ui-prefs';
 import {
   PROJECT_STATUSES,
   TASK_STATUSES,
@@ -51,7 +52,7 @@ import {
   workDataSchema,
 } from '../work';
 import { tabsSnapshotSchema } from '../types/tabs';
-import { aiActivitySchema, aiPrefsSchema, aiUsageSchema } from '../ai';
+import { aiActivitySchema, aiPrefsPatchSchema, aiPrefsSchema, aiUsageSchema } from '../ai';
 import { ASSISTANT_LIMITS, assistantStateSchema, taskSuggestionSchema } from '../assistant';
 import { TOOLKIT_SECTIONS, toolkitStateSchema, viewportSchema } from '../toolkit/state';
 import { githubRepoViewSchema } from '../github';
@@ -653,6 +654,18 @@ export const contract = {
     output: z.void(),
     surfaces: ['internal'],
   },
+  /** The customization engine (brief M2): every part of Orbit reads these. */
+  'ui:get': {
+    input: z.object({}).strict(),
+    output: uiPrefsSchema,
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  /** Settings → Appearance changes them (only Settings may). */
+  'ui:set': {
+    input: uiPrefsPatchSchema,
+    output: uiPrefsSchema,
+    surfaces: ['internal'],
+  },
   /** The sun/moon button and ⌘T: light ↔ dark for the whole app (Settings → Appearance). */
   'appearance:toggle': {
     input: z.object({}).strict(),
@@ -684,7 +697,7 @@ export const contract = {
   },
   /** Settings → AI (roadmap P3.7): on/off, model, monthly limit, attaching the page. */
   'ai:setPrefs': {
-    input: aiPrefsSchema.partial().strict(),
+    input: aiPrefsPatchSchema,
     output: z.void(),
     surfaces: ['internal'],
   },
@@ -1536,6 +1549,10 @@ export const events = {
   'sounds:update': soundStateSchema,
   /** What's playing, sent to every shell (the toolbar's Focus button). */
   'state:sounds': soundStateSchema,
+  /** The customization preferences, sent to every shell and overlay. */
+  'state:ui': uiPrefsSchema,
+  /** …and to every Orbit page (Settings, the Homepage, the panel). */
+  'ui:update': uiPrefsSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type Contract = typeof contract;
@@ -1555,5 +1572,6 @@ export const INTERNAL_EVENTS = [
   'toolkit:update',
   'focus:update',
   'sounds:update',
+  'ui:update',
 ] as const;
 export type InternalEventChannel = (typeof INTERNAL_EVENTS)[number];

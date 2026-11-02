@@ -47,6 +47,9 @@ import { Tip } from '../../tooltip/Tip';
 import '../../notes/notes.css';
 import { ToolkitView } from '../toolkit/ToolkitView';
 import { FocusView } from '../focus/FocusView';
+import { useUiPrefs } from '../../ui/prefs-store';
+import { isShown } from '@shared/ui-prefs';
+import type { Feature } from '@shared/ui-prefs';
 
 const invoke = window.orbit.invoke;
 /** Moves (or deletes) a note — after saving every keystroke, so the next place has it all. */
@@ -209,8 +212,19 @@ type PanelTab = 'notes' | 'projects' | 'tasks' | 'assistant' | 'tools' | 'focus'
  * Notes · Projects · Tasks · Assistant · Toolkit across the top of the panel (and Close). The open one
  * shows its name; the others are icons (named on hover), so all fit in the narrow column.
  */
+/** Which feature each panel tab belongs to (Settings → Appearance → Show hides tabs). */
+const PANEL_FEATURE: Record<PanelTab, Feature> = {
+  notes: 'notes',
+  projects: 'projects',
+  tasks: 'tasks',
+  assistant: 'assistant',
+  tools: 'toolkit',
+  focus: 'focus',
+};
+
 function PanelTabs({ current }: { current: PanelTab }) {
-  const tabs: { id: PanelTab; label: string; icon: ReactNode; keys?: string }[] = [
+  const prefs = useUiPrefs();
+  const all: { id: PanelTab; label: string; icon: ReactNode; keys?: string }[] = [
     { id: 'notes', label: 'Notes', icon: <NotebookPen size={15} /> },
     { id: 'projects', label: 'Projects', icon: <FolderClosed size={15} /> },
     { id: 'tasks', label: 'Tasks', icon: <SquareCheck size={15} /> },
@@ -218,6 +232,8 @@ function PanelTabs({ current }: { current: PanelTab }) {
     { id: 'tools', label: 'Toolkit', icon: <PencilRuler size={15} /> },
     { id: 'focus', label: 'Focus', icon: <Target size={15} />, keys: '⌥⌘F' },
   ];
+  // A hidden feature's tab goes (unless you're on it, so the panel never loses its place).
+  const tabs = all.filter((t) => isShown(prefs, PANEL_FEATURE[t.id]) || t.id === current);
   return (
     <nav
       className="flex shrink-0 items-center gap-1 border-b border-[var(--work-border)] px-2.5 py-2"

@@ -12,6 +12,7 @@ import {
   safeStorage,
   session,
   shell,
+  webContents,
 } from 'electron';
 import type { Session } from 'electron';
 import type { WebContentsView } from 'electron';
@@ -222,7 +223,7 @@ function loadInternal(view: { webContents: Electron.WebContents }, url: string):
   // Settings can open on a section (orbit://settings/profiles).
   if (
     page === 'settings' &&
-    /^(general|profiles|workspaces|integrations|rules|backup|shortcuts|ai|privacy|about)$/.test(
+    /^(general|appearance|profiles|workspaces|integrations|rules|backup|shortcuts|ai|privacy|about)$/.test(
       param,
     )
   )
@@ -1235,6 +1236,22 @@ void app.whenReady().then(() => {
   });
   registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
+  // The customization engine (brief M2).
+  router.handle('ui:get', () => persistence!.settings.get('ui'));
+  router.handle('ui:set', (patch, { sender }) => {
+    const settingsPage = windowManager.tabForContents(sender.webContentsId);
+    if (!settingsPage?.tab.state.url.startsWith('orbit://settings')) {
+      throw new Error(`Sender ${sender.webContentsId} is not Settings`);
+    }
+    const next = { ...persistence!.settings.get('ui'), ...patch };
+    persistence!.settings.set('ui', next);
+    broadcaster.send('state:ui', next);
+    for (const id of senders.idsOf('internal')) {
+      const contents = webContents.fromId(id);
+      if (contents) broadcaster.sendTo(contents, 'ui:update', next);
+    }
+    return next;
+  });
   router.handle('appearance:toggle', (_input, { sender }) => {
     if (!windowManager.forSender(sender.webContentsId)) {
       throw new Error(`Sender ${sender.webContentsId} has no window`);

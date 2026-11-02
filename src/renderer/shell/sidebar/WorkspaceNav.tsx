@@ -1,4 +1,6 @@
 import { FolderClosed, NotebookPen, SquareCheck } from 'lucide-react';
+import { isShown } from '@shared/ui-prefs';
+import { useUiPrefs } from '../../ui/prefs-store';
 
 const ITEMS = [
   { view: 'projects', label: 'Projects', icon: FolderClosed },
@@ -8,18 +10,20 @@ const ITEMS = [
 
 /** Projects, Notes and Tasks (owner request): each opens the productivity panel on its tab. */
 export function WorkspaceNav() {
+  const prefs = useUiPrefs(); // Settings → Appearance → Show can hide rows
+  if (ITEMS.every(({ view }) => !isShown(prefs, view))) return null;
   return (
     <nav
       className="mb-2 flex flex-col gap-0.5 px-2"
       aria-label="Workspace"
       data-testid="workspace-nav"
     >
-      {ITEMS.map(({ view, label, icon: Icon }) => (
+      {ITEMS.filter(({ view }) => isShown(prefs, view)).map(({ view, label, icon: Icon }) => (
         <button
           key={view}
           type="button"
           onClick={() => void window.orbit.invoke('notes:panel', { view })}
-          className="press flex h-[34px] items-center gap-2.5 rounded-[12px] px-2 text-left text-[13px] text-[var(--sidebar-fg)] hover:bg-[var(--hover)]"
+          className="press flex h-[var(--row-h,34px)] items-center gap-2.5 rounded-[12px] px-2 text-left text-[13px] text-[var(--sidebar-fg)] hover:bg-[var(--hover)]"
           data-testid="workspace-item"
           data-view={view}
         >

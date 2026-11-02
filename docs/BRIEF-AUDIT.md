@@ -126,3 +126,8 @@ for it.
    attribution and Unsplash's API rules).
 3. Weather: **yes — Open-Meteo, for a city you type** (only the city name goes out).
 4. Homepage: **one layout first**; per-Space layouts in M9.
+
+## 8. Progress
+
+- M1 design-system foundations — done (5cf14cc)
+- M2 customization engine — done

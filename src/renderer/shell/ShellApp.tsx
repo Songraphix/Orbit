@@ -5,6 +5,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { themeToVars } from '@shared/theme';
 import { useColorMode } from './use-color-mode';
+import { useUiPrefs } from '../ui/prefs-store';
 import { DEFAULT_THEME } from '@shared/types/space';
 import type { SidebarSnapshot } from '@shared/types/space';
 import type { Layout, Rect } from '@shared/types/layout';
@@ -44,14 +45,29 @@ function MainShell() {
   // ThemeEngine: the active space's theme becomes CSS variables for the whole shell.
   const theme = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId)?.theme ?? DEFAULT_THEME;
   const mode = useColorMode();
-  const vars = useMemo(() => themeToVars(theme, mode), [theme, mode]);
+  const ui = useUiPrefs();
+  // Settings → Appearance → Accent replaces the Space's accent everywhere.
+  const accent = ui?.accent ?? null;
+  const vars = useMemo(
+    () => ({ ...themeToVars(theme, mode), ...(accent ? { '--accent': accent } : {}) }),
+    [theme, mode, accent],
+  );
+  const solid = ui?.surfaces === 'solid';
 
   return (
     <div
       className="relative h-full overflow-hidden transition-[background] duration-500"
       style={{ ...(vars as CSSProperties), background: 'var(--sidebar-bg)' }}
       data-testid="shell"
+      data-surfaces={solid ? 'solid' : 'glass'}
     >
+      {/* Solid surfaces: an opaque base under the Space's colours (no desktop showing through). */}
+      {solid && (
+        <div
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{ background: mode === 'dark' ? 'rgb(24 24 28)' : 'rgb(240 240 244)' }}
+        />
+      )}
       <div
         className="pointer-events-none absolute inset-0 mix-blend-overlay"
         style={{ background: GRAIN, opacity: 'var(--grain)' }}

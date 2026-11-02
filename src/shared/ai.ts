@@ -53,6 +53,13 @@ export const aiPrefsSchema = z.object({
 });
 export type AiPrefs = z.output<typeof aiPrefsSchema>;
 
+/** A change to some AI preferences. (Not aiPrefsSchema.partial(): zod 4 keeps `.default()`
+ *  inside optional fields, so a patch would switch workAccess back on.) */
+export const aiPrefsPatchSchema = aiPrefsSchema
+  .extend({ workAccess: z.boolean() })
+  .partial()
+  .strict();
+
 export const DEFAULT_AI_PREFS: AiPrefs = {
   enabled: true,
   model: 'claude-opus-5-5',

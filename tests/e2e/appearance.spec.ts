@@ -96,3 +96,89 @@ test('Settings → Appearance: Light and Dark switch the whole app, and are kept
     await second.close();
   }
 });
+
+test('Settings → Appearance: accent, density, text size, surfaces, motion and what shows — kept', async () => {
+  const first = await launchOrbit();
+  const { userData } = first;
+  const rootClass = (page: Page) =>
+    page.evaluate(
+      () =>
+        (
+          (globalThis as unknown as Dom).document.documentElement as unknown as {
+            className: string;
+          }
+        ).className,
+    );
+  const cssVar = (page: Page, name: string) =>
+    page.evaluate((n) => {
+      const w = globalThis as unknown as Dom;
+      return w.getComputedStyle(w.document.documentElement).getPropertyValue(n);
+    }, name);
+  try {
+    const { app, win } = first;
+    await clickMenu(app, 'settings');
+    const settings = await pageWith(app, '#/settings');
+    await settings.locator('[data-testid="settings-nav"][data-section="appearance"]').click();
+    await expect(settings.getByTestId('settings-section-description').nth(1)).toBeVisible();
+
+    // Hide Tasks and Orbit AI: their sidebar row and toolbar button go; the data stays.
+    await expect(win.getByTestId('workspace-nav')).toContainText('Tasks');
+    await settings.getByTestId('ui-show-tasks').uncheck();
+    await expect(win.getByTestId('workspace-nav')).not.toContainText('Tasks');
+    await expect(win.getByTestId('workspace-nav')).toContainText('Projects');
+    await settings.getByTestId('ui-show-focus').uncheck();
+    await expect(win.getByTestId('toolbar-focus')).toHaveCount(0);
+
+    // Density: sidebar rows get roomier.
+    await settings.locator('[data-testid="ui-density"] [data-value="spacious"]').click();
+    await expect.poll(() => cssVar(win, '--row-h')).toBe('38px');
+
+    // Accent: Orbit's pages and the shell take it.
+    await settings.locator('[data-testid="ui-accent"] [data-value="#0f9488"]').click();
+    await expect.poll(() => cssVar(settings, '--accent-fill')).toBe('#0f9488');
+    await expect
+      .poll(() =>
+        win
+          .getByTestId('shell')
+          .evaluate((el) =>
+            (globalThis as unknown as Dom).getComputedStyle(el).getPropertyValue('--accent'),
+          ),
+      )
+      .toBe('#0f9488');
+
+    // Text size scales Orbit's pages; solid surfaces and reduced motion reach every renderer.
+    await settings.locator('[data-testid="ui-text-size"] [data-value="large"]').click();
+    await expect
+      .poll(() =>
+        settings.evaluate(
+          () =>
+            (
+              (globalThis as unknown as Dom).document.documentElement as unknown as {
+                style: { zoom: string };
+              }
+            ).style.zoom,
+        ),
+      )
+      .toBe('1.1');
+    await settings.locator('[data-testid="ui-surfaces"] [data-value="solid"]').click();
+    await settings.getByTestId('ui-reduce-motion').check();
+    await expect.poll(() => rootClass(win)).toContain('surfaces-solid');
+    await expect.poll(() => rootClass(win)).toContain('motion-reduced');
+    await expect(win.getByTestId('shell')).toHaveAttribute('data-surfaces', 'solid');
+  } finally {
+    await first.close({ keepData: true });
+  }
+
+  // All of it after a restart.
+  const second = await launchOrbit({ userData });
+  try {
+    const { win } = second;
+    await expect(win.getByTestId('workspace-nav')).not.toContainText('Tasks');
+    await expect(win.getByTestId('toolbar-focus')).toHaveCount(0);
+    await expect.poll(() => cssVar(win, '--row-h')).toBe('38px');
+    await expect(win.getByTestId('shell')).toHaveAttribute('data-surfaces', 'solid');
+    await expect.poll(() => rootClass(win)).toContain('motion-reduced');
+  } finally {
+    await second.close();
+  }
+});

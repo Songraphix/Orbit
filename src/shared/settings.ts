@@ -3,6 +3,7 @@ import { wallpaperChoiceSchema } from './types/newtab';
 import { DEFAULT_HOME, homeSettingsSchema } from './types/home';
 import { DEFAULT_FOCUS_PREFS, focusPrefsSchema, focusSessionSchema } from './focus';
 import { DEFAULT_VOLUME } from './sounds';
+import { DEFAULT_UI_PREFS, uiPrefsSchema } from './ui-prefs';
 import { aiPrefsSchema, DEFAULT_AI_PREFS } from './ai';
 import { rulesSchema } from './rules';
 import { rectSchema, SIDEBAR_WIDTH } from './types/layout';
@@ -38,6 +39,9 @@ export const settingsSchema = {
     z.string(),
     z.object({ ids: z.tuple([z.string(), z.string()]), ratio: z.number().min(0.2).max(0.8) }),
   ),
+  /** The customization engine (brief M2): features shown, density, text size, accent, surfaces,
+   *  motion. */
+  ui: uiPrefsSchema,
   /** Light or dark for the whole app (and pages that offer both), or follow the Mac. */
   appearance: z.enum(['system', 'light', 'dark']),
   /** Where tabs go: the sidebar (Arc) or a strip across the top (owner request). */
@@ -98,6 +102,7 @@ export const settingsDefaults: Settings = {
   'window.activeSpace': null,
   'archive.after': '12h',
   appearance: 'system',
+  ui: DEFAULT_UI_PREFS,
   'tabs.layout': 'sidebar',
   'tabs.splits': {},
   'tabs.maxLive': 8,

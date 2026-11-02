@@ -6,6 +6,7 @@ import { RecentFiles } from './RecentFiles';
 import { Tip } from '../../tooltip/Tip';
 import { SpaceIcon } from './SpaceIcon';
 import { useColorMode } from '../use-color-mode';
+import { useShown } from '../../ui/prefs-store';
 
 const invoke = window.orbit.invoke;
 
@@ -111,6 +112,7 @@ export function BottomBar({
   // Hovering the Library button shows recent files (after a short pause, like a tooltip).
   const [recent, setRecent] = useState(false);
   const timer = useRef<number | undefined>(undefined);
+  const libraryShown = useShown('library');
   const showRecent = () => {
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setRecent(true), 250);
@@ -134,23 +136,25 @@ export function BottomBar({
           <RecentFiles />
         </div>
       )}
-      <Tip label="View Library" keys="⌥⌘L" side="right">
-        <button
-          onPointerEnter={showRecent}
-          onPointerLeave={hideRecent}
-          type="button"
-          aria-label="Library"
-          onClick={() => {
-            setRecent(false);
-            window.clearTimeout(timer.current);
-            void invoke('library:open', { section: 'media' });
-          }}
-          className="hover-lean grid size-8 place-items-center rounded-[11px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
-          data-testid="library-button"
-        >
-          <Library size={16} />
-        </button>
-      </Tip>
+      {libraryShown && (
+        <Tip label="View Library" keys="⌥⌘L" side="right">
+          <button
+            onPointerEnter={showRecent}
+            onPointerLeave={hideRecent}
+            type="button"
+            aria-label="Library"
+            onClick={() => {
+              setRecent(false);
+              window.clearTimeout(timer.current);
+              void invoke('library:open', { section: 'media' });
+            }}
+            className="hover-lean grid size-8 place-items-center rounded-[11px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+            data-testid="library-button"
+          >
+            <Library size={16} />
+          </button>
+        </Tip>
+      )}
       <ThemeToggle />
       <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-hidden">
         {spaces.map((space, i) => (

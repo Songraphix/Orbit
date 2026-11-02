@@ -1,9 +1,7 @@
 import {
   Info,
   Keyboard,
-  Monitor,
-  Moon,
-  Sun,
+  Palette,
   Archive,
   DatabaseBackup,
   LayoutTemplate,
@@ -17,9 +15,10 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { SpaceIcon } from '../shell/sidebar/SpaceIcon';
+import { Group, Row, Section } from './settings/parts';
+import { AppearanceSection } from './settings/AppearanceSection';
 import { buttonClass, FIELD } from '../ui/controls';
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
 import type { UserSettings } from '@shared/settings';
 import type { InvokeOutput } from '@shared/ipc/contract';
 import { AI_FEATURE_LABELS, AI_MODELS, formatCost } from '@shared/ai';
@@ -74,17 +73,6 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
             title="General"
             description="How Orbit looks and behaves day to day."
           >
-            <Group title="Appearance">
-              <Row label="Appearance" hint="Light, dark, or the same as your Mac.">
-                <AppearancePicker
-                  value={settings.appearance}
-                  onChange={(appearance) => {
-                    setSettings({ ...settings, appearance }); // at once; main's answer follows
-                    update({ appearance });
-                  }}
-                />
-              </Row>
-            </Group>
             <Group title="Tabs">
               <Row
                 label="Tab layout"
@@ -232,6 +220,14 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
             </Group>
           </Section>
 
+          <AppearanceSection
+            appearance={settings.appearance}
+            onAppearance={(appearance) => {
+              setSettings({ ...settings, appearance }); // at once; main's answer follows
+              update({ appearance });
+            }}
+          />
+
           <Section
             id="profiles"
             title="Profiles"
@@ -313,146 +309,6 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
           </Section>
         </div>
       </main>
-    </div>
-  );
-}
-
-function Group({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="mt-6">
-      <h3 className="mb-2 px-1 text-subheading text-neutral-500">{title}</h3>
-      <div className="divide-y divide-neutral-100 rounded-[var(--radius-card)] border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
-        {children}
-      </div>
-    </section>
-  );
-}
-
-/** A page of Settings (its heading is what the nav jumps to), with a line saying what's in it. */
-function Section({
-  id,
-  title,
-  description,
-  children,
-}: {
-  id: string;
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section id={id} className="scroll-mt-8 pb-10" data-settings-section={id}>
-      <h2 className="text-title">{title}</h2>
-      {description && (
-        <p className="mt-1 text-label text-neutral-500" data-testid="settings-section-description">
-          {description}
-        </p>
-      )}
-      {children}
-    </section>
-  );
-}
-
-const APPEARANCES: { value: UserSettings['appearance']; label: string; icon: ReactNode }[] = [
-  { value: 'system', label: 'System', icon: <Monitor size={11} /> },
-  { value: 'light', label: 'Light', icon: <Sun size={11} /> },
-  { value: 'dark', label: 'Dark', icon: <Moon size={11} /> },
-];
-
-/** A tiny Orbit window in a mode: sidebar, page card (Settings → Appearance's picture cards). */
-function WindowPreview({ mode }: { mode: 'light' | 'dark' }) {
-  const dark = mode === 'dark';
-  return (
-    <span
-      className="flex h-full w-full gap-[3px] p-[4px]"
-      style={{ background: dark ? '#221b33' : '#e6e1f3' }}
-    >
-      <span className="flex w-[30%] flex-col gap-[3px] pt-[6px]">
-        {[0.9, 0.6, 0.6].map((o, i) => (
-          <span
-            key={i}
-            className="h-[3px] rounded-full"
-            style={{
-              background: dark ? `rgb(255 255 255 / ${o * 0.5})` : `rgb(0 0 0 / ${o * 0.3})`,
-            }}
-          />
-        ))}
-      </span>
-      <span
-        className="flex-1 rounded-[3px] shadow-[0_1px_2px_rgb(0_0_0/0.2)]"
-        style={{ background: dark ? '#2a2a31' : '#ffffff' }}
-      />
-    </span>
-  );
-}
-
-/** Settings → Appearance: System, Light or Dark, as small pictures of Orbit. */
-function AppearancePicker(props: {
-  value: UserSettings['appearance'];
-  onChange: (value: UserSettings['appearance']) => void;
-}) {
-  return (
-    <div
-      role="radiogroup"
-      aria-label="Appearance"
-      className="flex gap-3"
-      data-testid="setting-appearance"
-    >
-      {APPEARANCES.map((a) => {
-        const on = props.value === a.value;
-        return (
-          <button
-            key={a.value}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            onClick={() => props.onChange(a.value)}
-            className="group flex flex-col items-center gap-1.5"
-            data-value={a.value}
-          >
-            <span
-              className={`relative block h-[46px] w-[68px] overflow-hidden rounded-[9px] transition-shadow ${
-                on
-                  ? 'shadow-[0_0_0_2px_var(--accent-fill)]'
-                  : 'shadow-[0_0_0_1px_rgb(0_0_0/0.1)] group-hover:shadow-[0_0_0_1px_rgb(0_0_0/0.25)]'
-              }`}
-            >
-              {a.value === 'system' ? (
-                <>
-                  <span className="absolute inset-0">
-                    <WindowPreview mode="light" />
-                  </span>
-                  <span className="absolute inset-0 [clip-path:polygon(100%_0,100%_100%,0_100%)]">
-                    <WindowPreview mode="dark" />
-                  </span>
-                </>
-              ) : (
-                <WindowPreview mode={a.value} />
-              )}
-            </span>
-            <span
-              className={`flex items-center gap-1 text-meta ${on ? 'font-semibold text-neutral-900' : 'text-neutral-500'}`}
-            >
-              {a.icon}
-              {a.label}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/** A setting: its name and hint, and its control — beside them, or below when the page is
- *  narrow (Settings beside the productivity panel). */
-function Row({ label, hint, children }: { label: string; hint: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-      <div className="min-w-[180px] flex-[1_1_220px]">
-        <div className="text-label">{label}</div>
-        <div className="mt-0.5 text-meta text-neutral-500">{hint}</div>
-      </div>
-      <div className="max-w-full min-w-0 shrink-0">{children}</div>
     </div>
   );
 }
@@ -747,6 +603,7 @@ function AiKeyRow(props: { hasKey: boolean; canStore: boolean; onChange: () => v
 
 const NAV = [
   { id: 'general', label: 'General', icon: <Settings size={16} /> },
+  { id: 'appearance', label: 'Appearance', icon: <Palette size={16} /> },
   { id: 'profiles', label: 'Profiles', icon: <UsersRound size={16} /> },
   { id: 'workspaces', label: 'Workspaces', icon: <LayoutTemplate size={16} /> },
   { id: 'rules', label: 'Rules', icon: <Route size={16} /> },

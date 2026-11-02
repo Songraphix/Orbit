@@ -27,6 +27,11 @@ export class SenderRegistry {
     this.surfaces.delete(webContentsId);
   }
 
+  /** Every registered webContents of one kind (main sends Orbit's pages their updates). */
+  idsOf(surface: Surface): number[] {
+    return [...this.surfaces].filter(([, s]) => s === surface).map(([id]) => id);
+  }
+
   /** True for Orbit's own pages (shell, overlay, internal), whatever URL they show. */
   has(webContentsId: number): boolean {
     return this.surfaces.has(webContentsId);

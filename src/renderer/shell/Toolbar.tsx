@@ -25,6 +25,8 @@ import { FindBar } from './FindBar';
 import { Tip } from '../tooltip/Tip';
 import { FocusPill } from './FocusPill';
 import { useMainState } from './use-main-state';
+import { useUiPrefs } from '../ui/prefs-store';
+import { isShown } from '@shared/ui-prefs';
 import { soundName } from '@shared/sounds';
 import type { FocusSession } from '@shared/focus';
 import type { ProfileView } from '@shared/profile';
@@ -82,6 +84,14 @@ export function Toolbar({
   focus?: FocusSession | null | undefined;
 }) {
   const toastMessage = useToast();
+  // Settings → Appearance → Show: hidden features lose their toolbar buttons.
+  const prefs = useUiPrefs();
+  const shown = {
+    capture: isShown(prefs, 'capture'),
+    focus: isShown(prefs, 'focus'),
+    assistant: isShown(prefs, 'assistant'),
+    notes: isShown(prefs, 'notes'),
+  };
   const toast = focused ? toastMessage : null;
   const navigate = (action: NavAction) => {
     if (tab) void window.orbit.invoke('tabs:navigate', { tabId: tab.id, action });
@@ -226,7 +236,7 @@ export function Toolbar({
             <SlidersHorizontal size={14} />
           </ToolbarButton>
         )}
-        {tab?.kind === 'web' && (
+        {tab?.kind === 'web' && shown.capture && (
           <ToolbarButton
             label="Save to Orbit"
             keys="⇧⌘S"
@@ -238,8 +248,8 @@ export function Toolbar({
           </ToolbarButton>
         )}
         {focus && <FocusPill session={focus} />}
-        {notesOpen !== undefined && <FocusButton />}
-        {assistant && (
+        {notesOpen !== undefined && shown.focus && <FocusButton />}
+        {assistant && shown.assistant && (
           <ToolbarButton
             label="Ask Orbit"
             keys="⌘J"
@@ -250,7 +260,7 @@ export function Toolbar({
             <Sparkles size={14} />
           </ToolbarButton>
         )}
-        {notesOpen !== undefined && (
+        {notesOpen !== undefined && shown.notes && (
           <ToolbarButton
             label={notesOpen ? 'Hide Notes' : 'Notes'}
             keys="⇧⌘N"
