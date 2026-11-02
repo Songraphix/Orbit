@@ -44,6 +44,7 @@ import { CAPTURE_LIMITS, captureDraftSchema } from '../capture';
 import { focusPrefsSchema, focusSessionSchema, focusViewSchema } from '../focus';
 import { soundIdSchema, soundStateSchema } from '../sounds';
 import { uiPrefsPatchSchema, uiPrefsSchema } from '../ui-prefs';
+import { homeLayoutSchema, placeSchema, weatherSchema, widgetDataSchema } from '../home-widgets';
 import {
   PROJECT_STATUSES,
   TASK_STATUSES,
@@ -824,6 +825,35 @@ export const contract = {
       z.object({ action: z.enum(['toggle', 'remove']), id: z.string().max(64) }).strict(),
     ]),
     output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
+  /** The Homepage's widgets: their order, sizes and settings (brief M3). */
+  'newtab:setLayout': {
+    input: z.object({ layout: homeLayoutSchema }).strict(),
+    output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
+  /** What the Projects, Notes and Recently Visited widgets show. */
+  'newtab:widgetData': {
+    input: z.object({}).strict(),
+    output: widgetDataSchema,
+    surfaces: ['internal'],
+  },
+  /** Weather: cities matching a name (Open-Meteo), then a city's weather. */
+  'newtab:findPlace': {
+    input: z.object({ query: z.string().min(1).max(80) }).strict(),
+    output: z.array(placeSchema),
+    surfaces: ['internal'],
+  },
+  'newtab:weather': {
+    input: z.object({ place: placeSchema, units: z.enum(['c', 'f']) }).strict(),
+    output: weatherSchema,
+    surfaces: ['internal'],
+  },
+  /** A widget's item: a note (as a tab) or a project (in the panel). */
+  'newtab:open': {
+    input: z.object({ kind: z.enum(['note', 'project']), id: z.string().min(1).max(64) }).strict(),
+    output: z.void(),
     surfaces: ['internal'],
   },
   /** Loads what the user typed in the search box into the new tab page's own tab. */

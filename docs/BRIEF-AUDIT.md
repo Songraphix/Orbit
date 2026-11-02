@@ -130,4 +130,5 @@ for it.
 ## 8. Progress
 
 - M1 design-system foundations — done (5cf14cc)
-- M2 customization engine — done
+- M2 customization engine — done (1689165)
+- M3 Homepage widgets — done

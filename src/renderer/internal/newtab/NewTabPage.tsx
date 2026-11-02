@@ -18,6 +18,9 @@ import { BUILTIN_WALLPAPERS } from '@shared/types/newtab';
 import type { NewTabState, WallpaperChoice } from '@shared/types/newtab';
 import type { Shortcut } from '@shared/types/home';
 import { GRAIN, WALLPAPER_CSS } from './wallpapers';
+import { WidgetGrid } from './widgets';
+import { newWidget } from '@shared/home-widgets';
+import type { HomeLayout } from '@shared/home-widgets';
 
 const invoke = window.orbit.invoke;
 
@@ -35,6 +38,14 @@ const messageOf = (e: unknown) =>
 export function NewTabPage() {
   const [state, setState] = useState<NewTabState | null>(null);
   const [customizing, setCustomizing] = useState(false);
+  const [editing, setEditing] = useState(false);
+  // With several widgets the top steps back so they fit (UI REFERENCE S3).
+  const compact = (state?.layout.widgets.length ?? 0) >= 4;
+  // The widgets' layout: shown at once, then main's answer.
+  const setLayout = (layout: HomeLayout) => {
+    setState((s) => (s ? { ...s, layout } : s));
+    void invoke('newtab:setLayout', { layout }).then(setState);
+  };
 
   useEffect(() => {
     void invoke('newtab:get', {}).then(setState);
@@ -72,9 +83,11 @@ export function NewTabPage() {
       </div>
 
       {state && (
-        <div className="relative flex min-h-full flex-col px-8 pt-[6vh] pb-6">
+        <div
+          className={`relative flex min-h-full flex-col px-8 pb-6 ${compact ? 'pt-[3vh]' : 'pt-[6vh]'}`}
+        >
           <section className="flex flex-col items-center text-center">
-            <Clock />
+            <Clock compact={compact} />
             <Greeting name={state.name} onChange={setState} />
             {state.home.tagline && (
               <p className="mt-2 text-[17px] opacity-85" data-testid="tagline">
@@ -86,20 +99,36 @@ export function NewTabPage() {
               <Shortcuts shortcuts={state.shortcuts} light={light} onChange={setState} />
             )}
           </section>
-          <div className="min-h-6 flex-1" />
-          <section className="flex flex-wrap items-end justify-between gap-6">
-            {state.home.show.today ? (
-              <Today todos={state.todos} light={light} onChange={setState} />
-            ) : (
-              <span />
-            )}
-            {state.home.show.quote && <QuoteCard light={light} />}
-          </section>
+          <div className="min-h-8 flex-1" />
+          <WidgetGrid
+            layout={state.layout}
+            light={light}
+            glass={glass(light)}
+            editing={editing}
+            onEditing={setEditing}
+            onLayout={setLayout}
+            builtin={(type) =>
+              type === 'today' ? (
+                <Today todos={state.todos} light={light} onChange={setState} />
+              ) : (
+                <QuoteCard />
+              )
+            }
+          />
         </div>
       )}
 
       {customizing && state && (
-        <CustomizePanel state={state} onChange={setState} onClose={() => setCustomizing(false)} />
+        <CustomizePanel
+          state={state}
+          onChange={setState}
+          onLayout={setLayout}
+          onEditWidgets={() => {
+            setCustomizing(false);
+            setEditing(true);
+          }}
+          onClose={() => setCustomizing(false)}
+        />
       )}
     </main>
   );
@@ -189,14 +218,18 @@ function useMinute(): Date {
   return now;
 }
 
-function Clock() {
+function Clock({ compact = false }: { compact?: boolean }) {
   const now = useMinute();
   const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const date = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
   return (
     <div className="[text-shadow:0_2px_24px_rgb(0_0_0/0.18)]">
       <div
-        className="text-[clamp(48px,min(8.5vw,11vh),96px)] leading-none font-bold tracking-[-0.03em] tabular-nums"
+        className={`${
+          compact
+            ? 'text-[clamp(40px,min(5.5vw,7vh),64px)]'
+            : 'text-[clamp(48px,min(8.5vw,11vh),96px)]'
+        } leading-none font-bold tracking-[-0.03em] tabular-nums transition-[font-size] duration-300`}
         data-testid="clock"
       >
         {time}
@@ -503,13 +536,9 @@ function Today({
     });
   };
   return (
-    <section
-      className={`w-[min(440px,100%)] rounded-[26px] px-6 pt-4 pb-3 ${glass(light)}`}
-      aria-label="Today"
-      data-testid="today"
-    >
-      <h2 className="mb-2 flex items-center gap-2.5 text-[18px] font-semibold">
-        <Crosshair size={20} />
+    <section className="flex min-h-0 flex-1 flex-col" aria-label="Today" data-testid="today">
+      <h2 className="mb-2 flex items-center gap-2 text-[12px] font-semibold tracking-wide uppercase opacity-90">
+        <Crosshair size={14} />
         {/* Your tasks due today (and overdue), the same as the panel's Tasks → Today. */}
         <button
           type="button"
@@ -531,7 +560,7 @@ function Today({
           Nothing due today. Tasks with today’s date show here.
         </p>
       )}
-      <ul className="flex flex-col gap-1">
+      <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto">
         {todos.map((t) => (
           <li key={t.id} className="group flex items-center gap-3 py-0.5" data-testid="todo">
             <button
@@ -598,7 +627,7 @@ function Today({
   );
 }
 
-function QuoteCard({ light }: { light: boolean }) {
+function QuoteCard() {
   const [offset, setOffset] = useState(0);
   const quote = quoteFor(new Date(), offset);
   return (
@@ -606,11 +635,11 @@ function QuoteCard({ light }: { light: boolean }) {
       type="button"
       onClick={() => setOffset((n) => n + 1)}
       title="Another quote"
-      className={`press w-[min(430px,100%)] rounded-[26px] px-7 pt-5 pb-5 text-left ${glass(light)}`}
+      className="press flex h-full w-full flex-col overflow-hidden text-left"
       data-testid="quote"
     >
       <Quote size={30} className="fill-current opacity-90" strokeWidth={0} />
-      <p key={offset} className="animate-row-in mt-2 text-[22px] leading-snug font-semibold italic">
+      <p key={offset} className="animate-row-in mt-2 text-[19px] leading-snug font-semibold italic">
         {quote.text}
       </p>
       {quote.by && <p className="mt-2 text-[14px] opacity-65">— {quote.by}</p>}
@@ -622,10 +651,14 @@ function QuoteCard({ light }: { light: boolean }) {
 function CustomizePanel({
   state,
   onChange,
+  onLayout,
+  onEditWidgets,
   onClose,
 }: {
   state: NewTabState;
   onChange: (state: NewTabState) => void;
+  onLayout: (layout: HomeLayout) => void;
+  onEditWidgets: () => void;
   onClose: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -650,10 +683,18 @@ function CustomizePanel({
       (e: unknown) => setError(messageOf(e).replace(/^.*\] /, '')),
     );
   };
-  // Shown at once; main's answer follows.
+  // Shown at once; main's answer follows. Today and Quote are widgets (added or removed).
+  const has = (type: 'today' | 'quote') => state.layout.widgets.some((w) => w.type === type);
   const show = (key: keyof NewTabState['home']['show'], on: boolean) => {
-    onChange({ ...state, home: { ...state.home, show: { ...state.home.show, [key]: on } } });
-    void invoke('newtab:setHome', { show: { [key]: on } }).then(onChange);
+    if (key === 'shortcuts') {
+      onChange({ ...state, home: { ...state.home, show: { ...state.home.show, [key]: on } } });
+      void invoke('newtab:setHome', { show: { [key]: on } }).then(onChange);
+      return;
+    }
+    const widgets = on
+      ? [...state.layout.widgets, newWidget(key)]
+      : state.layout.widgets.filter((w) => w.type !== key);
+    onLayout({ widgets });
   };
 
   const isCurrent = (choice: WallpaperChoice) =>
@@ -712,7 +753,7 @@ function CustomizePanel({
         {(
           [
             ['shortcuts', 'Shortcuts'],
-            ['today', 'My Focus list'],
+            ['today', 'Today'],
             ['quote', 'Quote'],
           ] as const
         ).map(([key, label]) => (
@@ -723,7 +764,7 @@ function CustomizePanel({
             {label}
             <input
               type="checkbox"
-              checked={state.home.show[key]}
+              checked={key === 'shortcuts' ? state.home.show.shortcuts : has(key)}
               onChange={(e) => show(key, e.target.checked)}
               className="size-4 accent-[#0a84ff]"
               data-testid={`show-${key}`}
@@ -731,6 +772,15 @@ function CustomizePanel({
           </label>
         ))}
       </div>
+
+      <button
+        type="button"
+        onClick={onEditWidgets}
+        className="mt-2 h-9 w-full rounded-[11px] bg-white/10 text-[13.5px] font-medium hover:bg-white/15"
+        data-testid="customize-edit-widgets"
+      >
+        Edit Widgets…
+      </button>
 
       <PanelLabel>Wallpaper</PanelLabel>
       <div className="grid grid-cols-3 gap-2">

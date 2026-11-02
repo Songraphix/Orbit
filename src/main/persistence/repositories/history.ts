@@ -77,6 +77,18 @@ export class HistoryRepository {
     return rows.map((r) => ({ ...r, favicon: this.faviconFor(r.url) }));
   }
 
+  /** Pages opened lately, newest first (the Homepage's Recently Visited). */
+  recent(limit = 8): HistoryEntry[] {
+    const rows = this.db
+      .prepare(
+        `SELECT url, title, visit_count AS visitCount, last_visit_at AS lastVisitAt
+           FROM history WHERE profile_id = ?
+          ORDER BY last_visit_at DESC LIMIT ?`,
+      )
+      .all(PROFILE, limit) as Omit<HistoryEntry, 'favicon'>[];
+    return rows.map((r) => ({ ...r, favicon: this.faviconFor(r.url) }));
+  }
+
   /** Imported history (Arc importer, Phase 3) arrives in bulk. */
   importVisits(
     entries: { url: string; title: string; visitCount: number; lastVisitAt: number }[],

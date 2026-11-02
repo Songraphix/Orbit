@@ -416,6 +416,43 @@ export async function startTestServer(): Promise<TestServer> {
       });
       return;
     }
+    // Stand-ins for Open-Meteo (the Homepage's weather widget).
+    if (path === '/geo/search') {
+      const name = new URL(req.url ?? '/', 'http://x').searchParams.get('name') ?? '';
+      const results = /accra/i.test(name)
+        ? [
+            {
+              name: 'Accra',
+              country: 'Ghana',
+              admin1: 'Greater Accra',
+              latitude: 5.56,
+              longitude: -0.2,
+              timezone: 'UTC',
+            },
+          ]
+        : [];
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ results }));
+      return;
+    }
+    if (path === '/forecast') {
+      const start = new Date();
+      start.setUTCMinutes(0, 0, 0);
+      const time = Array.from({ length: 48 }, (_, i) =>
+        new Date(start.getTime() + (i - 2) * 3_600_000).toISOString().slice(0, 16),
+      );
+      res.writeHead(200, { 'content-type': 'application/json' }).end(
+        JSON.stringify({
+          current: { temperature_2m: 29.4, weather_code: 2 },
+          hourly: {
+            time,
+            temperature_2m: time.map((_, i) => 25 + (i % 6)),
+            weather_code: time.map(() => 0),
+          },
+          daily: { temperature_2m_max: [31.2, 30], temperature_2m_min: [24.1, 23] },
+        }),
+      );
+      return;
+    }
     if (path === '/feed.xml') {
       res.writeHead(200, { 'content-type': 'application/rss+xml' }).end(feed());
       return;

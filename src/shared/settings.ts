@@ -4,6 +4,7 @@ import { DEFAULT_HOME, homeSettingsSchema } from './types/home';
 import { DEFAULT_FOCUS_PREFS, focusPrefsSchema, focusSessionSchema } from './focus';
 import { DEFAULT_VOLUME } from './sounds';
 import { DEFAULT_UI_PREFS, uiPrefsSchema } from './ui-prefs';
+import { homeLayoutSchema } from './home-widgets';
 import { aiPrefsSchema, DEFAULT_AI_PREFS } from './ai';
 import { rulesSchema } from './rules';
 import { rectSchema, SIDEBAR_WIDTH } from './types/layout';
@@ -30,6 +31,8 @@ export const settingsSchema = {
   'newtab.wallpaper': wallpaperChoiceSchema,
   /** The new tab page's theme, tagline and widgets. */
   'newtab.home': homeSettingsSchema,
+  /** The Homepage's widgets (brief M3); null until you change them (then the old switches). */
+  'home.layout': homeLayoutSchema.nullable(),
   /** The space the main window shows. */
   'window.activeSpace': z.string().nullable(),
   /** Today tabs not opened for this long are archived (F-20). */
@@ -99,6 +102,7 @@ export const settingsDefaults: Settings = {
   'sidebar.visible': true,
   'newtab.wallpaper': { kind: 'builtin', id: 'aurora' },
   'newtab.home': DEFAULT_HOME,
+  'home.layout': null,
   'window.activeSpace': null,
   'archive.after': '12h',
   appearance: 'system',

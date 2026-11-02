@@ -1,3 +1,4 @@
+import { homeLayoutSchema } from '../home-widgets';
 import { z } from 'zod';
 import { homeSettingsSchema, shortcutSchema, todoSchema } from './home';
 
@@ -41,5 +42,7 @@ export const newTabStateSchema = wallpaperStateSchema.extend({
   name: z.string(),
   shortcuts: z.array(shortcutSchema),
   todos: z.array(todoSchema),
+  /** The widgets below the search box (brief M3). */
+  layout: homeLayoutSchema,
 });
 export type NewTabState = z.output<typeof newTabStateSchema>;

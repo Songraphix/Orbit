@@ -88,6 +88,7 @@ import { registerCaptureHandlers } from './ipc/handlers/capture';
 import { registerTooltipHandlers } from './ipc/handlers/tooltip';
 import { registerFocusHandlers } from './ipc/handlers/focus';
 import { FocusService } from './focus/service';
+import { WeatherService } from './newtab/weather';
 import { SoundService } from './focus/sounds';
 import { soundIdSchema } from '@shared/sounds';
 import type { FocusView } from '@shared/focus';
@@ -901,6 +902,15 @@ void app.whenReady().then(() => {
       work: persistence.work,
       // The panel's projects and tasks follow changes made on the new tab page.
       workChanged: () => windowManager.all().forEach((c) => c.notes.refresh()),
+      notes: persistence.notes,
+      weather: new WeatherService({
+        fetch: (url) => net.fetch(url),
+        geocodeUrl: devOnly('ORBIT_GEOCODE_URL'),
+        forecastUrl: devOnly('ORBIT_FORECAST_URL'),
+      }),
+      openNote: (controller, id) => {
+        if (persistence?.notes.title(id) !== null) controller.tabs.create(noteUrl(id));
+      },
     },
   );
   registerFindHandlers(router, windowManager);

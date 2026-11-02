@@ -13,6 +13,10 @@ import type { WorkRepository } from '../../persistence/repositories/work';
 import { dateKey, todayTasks } from '@shared/work';
 import type { TaskInput } from '@shared/work';
 import type { Todo } from '@shared/types/home';
+import { layoutFromShow } from '@shared/home-widgets';
+import { colorHex, projectProgress } from '@shared/work';
+import type { NotesRepository } from '../../persistence/repositories/notes';
+import type { WeatherService } from '../../newtab/weather';
 
 const NEW_TASK: Omit<TaskInput, 'title' | 'dueDate'> = {
   projectId: null,
@@ -33,6 +37,10 @@ export function registerNewTabHandlers(
     history: HistoryRepository;
     work: WorkRepository;
     workChanged: () => void;
+    notes: NotesRepository;
+    weather: WeatherService;
+    /** Opens a note as a tab, or a project in the panel, in this window. */
+    openNote: (window: WindowController, id: string) => void;
   },
 ): void {
   const { home, settings, history, work } = deps;
@@ -89,6 +97,7 @@ export function registerNewTabHandlers(
       name: owner.window.store.profiles.find((p) => p.id === profileId)?.displayName ?? '',
       shortcuts: home.shortcuts(profileId),
       todos: todos(profileId),
+      layout: settings.get('home.layout') ?? layoutFromShow(settings.get('newtab.home').show),
     };
   };
 
@@ -159,6 +168,59 @@ export function registerNewTabHandlers(
     }
     deps.workChanged();
     return state(owner);
+  });
+
+  router.handle('newtab:setLayout', ({ layout }, { sender }) => {
+    const owner = ownerOf(sender.webContentsId);
+    settings.set('home.layout', layout);
+    return state(owner);
+  });
+
+  router.handle('newtab:widgetData', (_input, { sender }) => {
+    ownerOf(sender.webContentsId);
+    work.seedSamples(); // the first time ever, into an empty list only (as the panel does)
+    const { projects, tasks } = work.all();
+    return {
+      projects: projects
+        .filter((p) => p.status === 'active')
+        .slice(0, 6)
+        .map((p) => {
+          const progress = projectProgress(p.id, tasks);
+          return {
+            id: p.id,
+            name: p.name,
+            color: colorHex(p.color),
+            done: progress.done,
+            total: progress.total,
+            dueDate: p.dueDate,
+          };
+        }),
+      notes: deps.notes
+        .list()
+        .slice(0, 6)
+        .map(({ id, title, updatedAt }) => ({ id, title, updatedAt })),
+      recent: history
+        .recent(30)
+        .filter((h) => /^https?:/i.test(h.url))
+        .slice(0, 8)
+        .map(({ url, title, favicon }) => ({ url, title: title || url, favicon })),
+    };
+  });
+
+  router.handle('newtab:findPlace', ({ query }, { sender }) => {
+    ownerOf(sender.webContentsId);
+    return deps.weather.findPlaces(query);
+  });
+
+  router.handle('newtab:weather', ({ place, units }, { sender }) => {
+    ownerOf(sender.webContentsId);
+    return deps.weather.weather(place, units);
+  });
+
+  router.handle('newtab:open', ({ kind, id }, { sender }) => {
+    const { window } = ownerOf(sender.webContentsId);
+    if (kind === 'note') deps.openNote(window, id);
+    else window.notes.openAt(`panel/projects/${id}`);
   });
 
   router.handle('newtab:navigate', ({ input }, { sender }) => {
