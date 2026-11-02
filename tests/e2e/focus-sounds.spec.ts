@@ -59,6 +59,8 @@ test('Focus & Sounds: a sound plays as you browse; focus blocks sites until it e
     await panel.getByTestId('focus-site-input').press('Enter');
     await expect(panel.getByTestId('focus-site').filter({ hasText: '127.0.0.1' })).toBeVisible();
     await panel.getByTestId('focus-block').check();
+    await panel.getByTestId('focus-notify').uncheck(); // the chime alone, when time's up
+    await expect(panel.getByTestId('focus-chime')).toBeChecked();
     await panel.locator('[data-testid="focus-minutes"][data-value="15"]').click();
     await panel.getByTestId('focus-start').click();
     await expect(panel.getByTestId('focus-session')).toBeVisible();
@@ -79,8 +81,13 @@ test('Focus & Sounds: a sound plays as you browse; focus blocks sites until it e
     const pausedAt = await panel.getByTestId('focus-clock').textContent();
     await new Promise((r) => setTimeout(r, 1500));
     await expect(panel.getByTestId('focus-clock')).toHaveText(pausedAt!);
+    // Start over: the clock goes back to the full 15 minutes.
+    await panel.getByTestId('focus-restart').click();
+    await expect(panel.getByTestId('focus-clock')).toHaveText(/^1[45]:\d\d$/);
     await invoke(win, 'focus:start', { kind: 'break' });
     await expect(win.getByTestId('focus-pill')).toHaveAttribute('data-kind', 'break');
+    // A break gives the sidebar back, with the session at a glance.
+    await expect(win.getByTestId('sidebar-focus')).toContainText('Break');
     await invoke(win, 'tabs:create', { url: server.url('/two') });
     await expect(win.getByTestId('toolbar-address')).toContainText('Page Two');
     await panel.getByTestId('focus-end').click();

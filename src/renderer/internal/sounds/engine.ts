@@ -51,7 +51,14 @@ export class SoundEngine {
 
   private suspendTimer: ReturnType<typeof setTimeout> | null = null;
 
+  private chimed: number | null = null;
+
   apply(state: SoundState): void {
+    // "Time's up": one bowl strike, if it's recent and not rung yet.
+    if (state.chimeAt && state.chimeAt !== this.chimed && Date.now() - state.chimeAt < 5000) {
+      this.chimed = state.chimeAt;
+      this.chime(state.volume);
+    }
     if (!state.playing && !this.ctx) return;
     const ctx = this.context();
     if (this.suspendTimer) clearTimeout(this.suspendTimer);
@@ -80,6 +87,31 @@ export class SoundEngine {
       voice.output.gain.linearRampToValueAtTime(1, ctx.currentTime + FADE);
       voice.output.connect(this.master!);
       this.voice = { id: state.playing, voice };
+    }
+  }
+
+  /** One soft singing-bowl strike, on its own (it works with nothing else playing). */
+  private chime(volume: number): void {
+    const ctx = this.context();
+    void ctx.resume();
+    const out = ctx.createGain();
+    out.gain.value = Math.max(0.25, volumeToGain(volume)) * 0.9;
+    out.connect(ctx.destination);
+    const at = ctx.currentTime + 0.05;
+    for (const [ratio, level, decay] of [
+      [1, 0.32, 6],
+      [2.76, 0.14, 4],
+      [5.4, 0.05, 2.5],
+    ] as const) {
+      const osc = ctx.createOscillator();
+      osc.frequency.value = 523.25 * ratio;
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0, at);
+      env.gain.linearRampToValueAtTime(level, at + 0.01);
+      env.gain.exponentialRampToValueAtTime(0.0001, at + decay);
+      osc.connect(env).connect(out);
+      osc.start(at);
+      osc.stop(at + decay + 0.1);
     }
   }
 

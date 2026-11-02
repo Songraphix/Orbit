@@ -57,6 +57,8 @@ export const soundStateSchema = z.object({
   playing: soundIdSchema.nullable(),
   paused: z.boolean(),
   volume: z.number().min(0).max(1),
+  /** When "time's up" last chimed (the player strikes a bowl once, if it's recent). */
+  chimeAt: z.number().nullable().default(null),
 });
 export type SoundState = z.output<typeof soundStateSchema>;
 

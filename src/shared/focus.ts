@@ -30,13 +30,24 @@ export const focusSessionSchema = z.object({
 export type FocusSession = z.output<typeof focusSessionSchema>;
 
 /** How you like to focus: kept between sessions (Settings key 'focus.prefs'). */
-export const focusPrefsSchema = z.object({
+const focusPrefFields = {
   minutes: z.number().int().min(1).max(240),
   breakMinutes: z.number().int().min(1).max(60),
   block: z.boolean(),
   blocklist: z.array(z.string().min(1).max(253)).max(100),
   sound: soundIdSchema.nullable(),
+  /** A macOS notification when time's up (brief M7). */
+  notify: z.boolean(),
+  /** A soft bowl chime when time's up. */
+  chime: z.boolean(),
+};
+export const focusPrefsSchema = z.object({
+  ...focusPrefFields,
+  notify: focusPrefFields.notify.default(true),
+  chime: focusPrefFields.chime.default(true),
 });
+/** A change to some of them (not .partial(): zod 4 would fill in the defaults). */
+export const focusPrefsPatchSchema = z.object(focusPrefFields).partial().strict();
 export type FocusPrefs = z.output<typeof focusPrefsSchema>;
 
 export const FOCUS_MINUTES = 25;
@@ -59,6 +70,8 @@ export const DEFAULT_FOCUS_PREFS: FocusPrefs = {
   block: false,
   blocklist: DEFAULT_BLOCKLIST,
   sound: null,
+  notify: true,
+  chime: true,
 };
 
 /** Time left in ms (negative: over time); a pause stops the clock. Pure. */
@@ -122,5 +135,22 @@ export const focusViewSchema = z.object({
   session: focusSessionSchema.nullable(),
   prefs: focusPrefsSchema,
   sounds: soundStateSchema,
+  /** Time focused today, sessions today, and the last 7 days (ms, oldest first). */
+  history: z
+    .object({ todayMs: z.number(), todaySessions: z.number(), week: z.array(z.number()) })
+    .default({ todayMs: 0, todaySessions: 0, week: [0, 0, 0, 0, 0, 0, 0] }),
 });
+
+/** "1h 25m", "40m", "0m". Pure. */
+export function focusTotal(ms: number): string {
+  const minutes = Math.round(ms / 60_000);
+  const h = Math.floor(minutes / 60);
+  return h ? `${h}h ${minutes % 60}m` : `${minutes}m`;
+}
+
+/** Time actually focused in a session so far (pauses don't count). Pure. */
+export function focusedMs(session: FocusSession, now: number): number {
+  const paused = session.pausedMs + (session.pausedAt ? now - session.pausedAt : 0);
+  return Math.max(0, now - session.startedAt - paused);
+}
 export type FocusView = z.output<typeof focusViewSchema>;

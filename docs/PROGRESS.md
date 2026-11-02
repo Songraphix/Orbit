@@ -141,6 +141,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — **Brief M6: context menus.** Pages: **Save Page As…** (the page with its files) and **Open in Split View**; selections: **Explain with Orbit AI** and **Translate with Orbit AI** (into your Mac's language, or English; the selection and the question go to Claude, as the labels say); images: **Search Image with Google** (Google Lens; only the image's address goes). A tab's menu in the sidebar: **Duplicate, Reload, Mute/Unmute, Close Other Today Tabs, Reopen Closed Tab** (existing actions kept). The **Homepage** has its own right-click menu — Customize, Edit Widgets, Change or Shuffle Background, Reset Layout — kept inside the window, keyboard-driven; text fields keep theirs. Deferred: Move to New Window
 
+- 2026-11-02 — **Brief M7: focus integration.** The existing timer and sounds, connected further (no new timer): a **focus log** on the Mac (migration 020; pauses don't count, under a minute isn't logged) with **today's total and the last 7 days** in the Focus view and the Homepage's Focus widget; **Chime** and **Notify** switches for when time's up (a soft bowl from the sound player, which opens just for it); **Start over**; and the session **at a glance in the sidebar** when it shows (a break, or brought back). Focus prefs take a patch schema (the zod 4 default issue)
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0

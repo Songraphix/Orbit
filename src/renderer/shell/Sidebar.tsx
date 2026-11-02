@@ -14,6 +14,7 @@ import { BottomBar, SpaceHeader } from './sidebar/SpaceParts';
 import { LibraryNav } from './sidebar/LibraryNav';
 import { Tip } from '../tooltip/Tip';
 import { WorkspaceNav } from './sidebar/WorkspaceNav';
+import { FocusChip } from './sidebar/FocusChip';
 import { AddressPill } from './sidebar/AddressPill';
 import type { TabState } from '@shared/types/tabs';
 import type { LibrarySection } from '@shared/types/library';
@@ -239,6 +240,7 @@ export function Sidebar({
       )}
       {!librarySection && media && <MediaCard media={media} />}
       {!librarySection && <DownloadsShelf items={downloads} />}
+      {!librarySection && <FocusChip />}
       {!librarySection && sidebar && (
         <BottomBar spaces={sidebar.spaces} activeSpaceId={sidebar.activeSpaceId} />
       )}

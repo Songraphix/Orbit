@@ -134,4 +134,5 @@ for it.
 - M3 Homepage widgets — done (8a8cfed)
 - M4 Backgrounds — done (e0ef9b2)
 - M5 App Hub — done (521aa62)
-- M6 Context menus — done
+- M6 Context menus — done (b87c20b)
+- M7 Focus integration — done

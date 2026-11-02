@@ -6,6 +6,7 @@ import { migrations } from './migrations';
 import { ArchiveRepository } from './repositories/archive';
 import { BoostRepository } from './repositories/boosts';
 import { EaselRepository } from './repositories/easels';
+import { FocusLogRepository } from './repositories/focus-log';
 import { NotesRepository } from './repositories/notes';
 import { HomeRepository } from './repositories/home';
 import { WorkRepository } from './repositories/work';
@@ -29,6 +30,8 @@ export type Persistence = {
   archive: ArchiveRepository;
   boosts: BoostRepository;
   easels: EaselRepository;
+  /** Finished focus sessions (brief M7). */
+  focusLog: FocusLogRepository;
   notes: NotesRepository;
   home: HomeRepository;
   work: WorkRepository;
@@ -52,6 +55,7 @@ export function openPersistence(userDataDir: string): Persistence {
     archive: new ArchiveRepository(db),
     boosts: new BoostRepository(db),
     easels: new EaselRepository(db),
+    focusLog: new FocusLogRepository(db),
     notes: new NotesRepository(db),
     home: new HomeRepository(db),
     work: new WorkRepository(db),

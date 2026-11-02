@@ -1266,6 +1266,8 @@ void app.whenReady().then(() => {
     settings: persistence.settings,
     work: persistence.work,
     sounds,
+    log: persistence.focusLog,
+    chime: () => sounds.chime(),
     pushView: pushFocusView,
     broadcast: (session) => broadcaster.send('state:focus', session),
     // Test runs stay quiet (no notifications popping up on the owner's screen).

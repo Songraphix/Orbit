@@ -41,7 +41,7 @@ import { userSettingsSchema } from '../settings';
 import { profilePatchSchema, profileViewSchema } from '../profile';
 import { homeSettingsSchema } from '../types/home';
 import { CAPTURE_LIMITS, captureDraftSchema } from '../capture';
-import { focusPrefsSchema, focusSessionSchema, focusViewSchema } from '../focus';
+import { focusPrefsPatchSchema, focusSessionSchema, focusViewSchema } from '../focus';
 import { soundIdSchema, soundStateSchema } from '../sounds';
 import { uiPrefsPatchSchema, uiPrefsSchema } from '../ui-prefs';
 import { homeLayoutSchema, placeSchema, weatherSchema, widgetDataSchema } from '../home-widgets';
@@ -1267,6 +1267,12 @@ export const contract = {
     output: z.void(),
     surfaces: ['shell', 'overlay', 'internal'],
   },
+  /** Start the session's clock over (same task, same length). */
+  'focus:restart': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
   /** Keep going: a few more minutes on the session. */
   'focus:extend': {
     input: z.object({ minutes: z.number().int().min(1).max(60) }).strict(),
@@ -1285,7 +1291,7 @@ export const contract = {
     surfaces: ['internal'],
   },
   'focus:setPrefs': {
-    input: focusPrefsSchema.partial().strict(),
+    input: focusPrefsPatchSchema,
     output: focusViewSchema,
     surfaces: ['internal'],
   },

@@ -47,6 +47,10 @@ export function registerFocusHandlers(
     windowOf(sender.webContentsId);
     focus.pause(paused);
   });
+  router.handle('focus:restart', (_input, { sender }) => {
+    windowOf(sender.webContentsId);
+    focus.restart();
+  });
   router.handle('focus:extend', ({ minutes }, { sender }) => {
     windowOf(sender.webContentsId);
     focus.extend(minutes);
@@ -55,7 +59,7 @@ export function registerFocusHandlers(
     deps.openView(windowOf(sender.webContentsId));
   });
   router.handle('focus:view', (_input, { sender }) => {
-    panelOf(sender.webContentsId);
+    windowOf(sender.webContentsId); // the panel, or the Homepage's Focus widget
     return focus.view();
   });
   router.handle('focus:setPrefs', (patch, { sender }) => {

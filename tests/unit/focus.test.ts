@@ -4,6 +4,7 @@ import type { SoundState } from '@shared/sounds';
 import { volumeToGain } from '@shared/sounds';
 import { FocusService } from '../../src/main/focus/service';
 import { SoundService } from '../../src/main/focus/sounds';
+import { FocusLogRepository } from '../../src/main/persistence/repositories/focus-log';
 import { openDatabase } from '../../src/main/persistence/db';
 import type { Database } from '../../src/main/persistence/db';
 import { migrate } from '../../src/main/persistence/migrate';
@@ -83,17 +84,32 @@ describe('SoundService', () => {
     migrate(db, migrations);
     const settings = new SettingsRepository(db);
     const { sounds, host } = soundsFor(settings);
-    expect(sounds.state).toEqual({ playing: null, paused: false, volume: 0.5 });
+    expect(sounds.state).toEqual({ playing: null, paused: false, volume: 0.5, chimeAt: null });
     sounds.play('rain');
     await Promise.resolve();
     expect(host.opened).toBe(1);
-    expect(host.sent.at(-1)).toEqual({ playing: 'rain', paused: false, volume: 0.5 });
+    expect(host.sent.at(-1)).toEqual({
+      playing: 'rain',
+      paused: false,
+      volume: 0.5,
+      chimeAt: null,
+    });
     sounds.toggle('ocean'); // another sound: same player
     sounds.setVolume(0.8);
     expect(host.opened).toBe(1);
-    expect(host.sent.at(-1)).toEqual({ playing: 'ocean', paused: false, volume: 0.8 });
+    expect(host.sent.at(-1)).toEqual({
+      playing: 'ocean',
+      paused: false,
+      volume: 0.8,
+      chimeAt: null,
+    });
     sounds.setPaused(true); // keeps its place
-    expect(host.sent.at(-1)).toEqual({ playing: 'ocean', paused: true, volume: 0.8 });
+    expect(host.sent.at(-1)).toEqual({
+      playing: 'ocean',
+      paused: true,
+      volume: 0.8,
+      chimeAt: null,
+    });
     sounds.setPaused(false);
     expect(sounds.state.paused).toBe(false);
     expect(settings.get('sounds.volume')).toBe(0.8);
@@ -288,5 +304,62 @@ describe('FocusService', () => {
     expect(focus.blockedRedirect('https://youtube.com/')).toBeNull();
     vi.advanceTimersByTime(5 * 60_000 + 1);
     expect(notes.at(-1)).toBe('Break’s over');
+  });
+
+  it('logs finished focus (pauses don’t count), restarts, and chimes or notifies as you chose', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 10, 2, 9, 0));
+    db = openDatabase(':memory:');
+    migrate(db, migrations);
+    const settings = new SettingsRepository(db);
+    const work = new WorkRepository(db);
+    const log = new FocusLogRepository(db);
+    const notes: string[] = [];
+    let chimes = 0;
+    const controller = {
+      layout: {
+        current: () => ({ sidebar: { visible: true } }),
+        setSidebarVisible: () => undefined,
+      },
+      store: { space: () => undefined },
+      tabs: { switchSpace: () => undefined },
+      notes: { refresh: () => undefined },
+    } as unknown as WindowController;
+    const focus = new FocusService({
+      settings,
+      work,
+      sounds: soundsFor(settings).sounds,
+      pushView: () => undefined,
+      broadcast: () => undefined,
+      notify: (t) => notes.push(t),
+      toast: () => undefined,
+      log,
+      chime: () => chimes++,
+    });
+    focus.start(controller, { taskId: null, minutes: 25 });
+    vi.advanceTimersByTime(10 * 60_000);
+    focus.pause(true);
+    vi.advanceTimersByTime(5 * 60_000); // paused: not counted
+    focus.pause(false);
+    vi.advanceTimersByTime(5 * 60_000);
+    focus.end(controller, false);
+    expect(log.summary(Date.now())).toMatchObject({ todayMs: 15 * 60_000, todaySessions: 1 });
+    expect(focus.view().history.week).toHaveLength(7);
+
+    // Too short to count; restart starts the clock over.
+    focus.start(controller, { taskId: null, minutes: 10 });
+    vi.advanceTimersByTime(30_000);
+    focus.restart();
+    expect(focusRemaining(focus.session!, Date.now())).toBe(10 * 60_000);
+    focus.end(controller, false);
+    expect(log.summary(Date.now()).todaySessions).toBe(1);
+
+    // Time's up: a chime and a notification — each can be turned off.
+    focus.setPrefs({ notify: false });
+    focus.start(controller, { taskId: null, minutes: 1 });
+    vi.advanceTimersByTime(61_000);
+    expect(chimes).toBe(1);
+    expect(notes).toEqual([]);
+    expect(focus.prefs.chime).toBe(true); // a patch keeps the other preferences
   });
 });

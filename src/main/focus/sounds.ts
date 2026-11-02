@@ -26,6 +26,7 @@ const FADE_MS = 2500;
 export class SoundService {
   private playing: SoundId | null = null;
   private paused = false;
+  private chimeAt: number | null = null;
   private host: SoundHost | null = null;
   private hostReady = false;
   private closeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -37,6 +38,7 @@ export class SoundService {
       playing: this.playing,
       paused: this.playing !== null && this.paused,
       volume: this.deps.settings.get('sounds.volume'),
+      chimeAt: this.chimeAt,
     };
   }
 
@@ -60,6 +62,24 @@ export class SoundService {
       this.host = null;
       this.hostReady = false;
     }, FADE_MS);
+  }
+
+  /** One soft bowl strike (time's up). Opens the player for it if nothing is playing, and
+   *  closes it again after the chime has rung out. */
+  chime(): void {
+    this.chimeAt = Date.now();
+    this.ensureHost();
+    this.sync();
+    if (!this.playing) {
+      if (this.closeTimer) clearTimeout(this.closeTimer);
+      this.closeTimer = setTimeout(() => {
+        this.closeTimer = null;
+        if (this.playing) return;
+        this.host?.close();
+        this.host = null;
+        this.hostReady = false;
+      }, 9000);
+    }
   }
 
   /** Pause or resume what's playing (the player keeps its place; it fades out and back in). */

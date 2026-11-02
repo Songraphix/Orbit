@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import {
   AudioLines,
   AudioWaveform,
+  Bell,
   BellRing,
   Brain,
   Check,
@@ -15,6 +16,7 @@ import {
   Play,
   Plus,
   Radio,
+  RotateCcw,
   ShieldBan,
   Sparkles,
   Square,
@@ -29,6 +31,7 @@ import {
   focusClock,
   focusProgress,
   focusRemaining,
+  focusTotal,
   normalizeSite,
 } from '@shared/focus';
 import type { FocusView as FocusState } from '@shared/focus';
@@ -96,6 +99,7 @@ export function FocusView() {
       ) : (
         <Setup state={state} setPrefs={setPrefs} />
       )}
+      <History history={state.history} />
       <Sounds state={state} setPrefs={setPrefs} />
     </div>
   );
@@ -199,6 +203,59 @@ function Session({ state, now }: { state: FocusState; now: number }) {
         <Big onClick={() => void invoke('focus:end', { complete: false })} testId="focus-end">
           <Square size={13} /> {brk ? 'End Break' : 'End'}
         </Big>
+      </div>
+      <button
+        type="button"
+        onClick={() => void invoke('focus:restart', {})}
+        className="mt-2 flex items-center gap-1 text-[12px] text-[var(--note-muted)] hover:text-[var(--note-fg)]"
+        data-testid="focus-restart"
+      >
+        <RotateCcw size={12} /> Start over
+      </button>
+    </section>
+  );
+}
+
+/** Today's focused time and the week, from Orbit's own log (it never leaves the Mac). */
+function History({ history }: { history: FocusState['history'] }) {
+  const max = Math.max(...history.week, 25 * 60_000);
+  // The last 7 days' initials, oldest first, in the Mac's language.
+  const [now] = useState(() => Date.now());
+  const day = (i: number) =>
+    new Date(now - (6 - i) * 86_400_000).toLocaleDateString(undefined, {
+      weekday: 'narrow',
+    });
+  return (
+    <section
+      className="mt-6 flex items-end gap-4 rounded-[12px] border border-[var(--work-border)] bg-[var(--work-card)] px-3.5 py-3"
+      data-testid="focus-history"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="text-[11.5px] font-semibold tracking-wide text-[var(--note-muted)] uppercase">
+          Today
+        </div>
+        <div
+          className="text-[22px] leading-tight font-semibold tabular-nums"
+          data-testid="focus-today"
+        >
+          {focusTotal(history.todayMs)}
+        </div>
+        <div className="text-[12px] text-[var(--note-muted)]">
+          {history.todaySessions} {history.todaySessions === 1 ? 'session' : 'sessions'}
+        </div>
+      </div>
+      <div className="flex h-12 items-end gap-1" aria-label="The last 7 days">
+        {history.week.map((ms, i) => {
+          return (
+            <div key={i} className="flex flex-col items-center gap-0.5" title={focusTotal(ms)}>
+              <span
+                className={`w-2.5 rounded-full ${i === 6 ? 'bg-[var(--work-accent)]' : 'bg-[var(--work-accent-soft)]'}`}
+                style={{ height: Math.max(3, Math.round((ms / max) * 36)) }}
+              />
+              <span className="text-[9.5px] text-[var(--note-muted)]">{day(i)}</span>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -360,6 +417,31 @@ function Setup({ state, setPrefs }: { state: FocusState; setPrefs: SetPrefs }) {
             </form>
           </div>
         )}
+      </div>
+
+      <div className="mt-3 flex flex-col gap-2 text-[13px]">
+        <label className="flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <BellRing size={14} className="text-[var(--note-muted)]" /> Chime when time’s up
+          </span>
+          <Toggle
+            checked={prefs.chime}
+            onChange={(chime) => setPrefs({ chime })}
+            label="Chime when time’s up"
+            testId="focus-chime"
+          />
+        </label>
+        <label className="flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <Bell size={14} className="text-[var(--note-muted)]" /> Notify me when time’s up
+          </span>
+          <Toggle
+            checked={prefs.notify}
+            onChange={(notify) => setPrefs({ notify })}
+            label="Notify me when time’s up"
+            testId="focus-notify"
+          />
+        </label>
       </div>
 
       <Big

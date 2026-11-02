@@ -1,4 +1,4 @@
-import { blockedSite, focusRemaining, normalizeSite } from '@shared/focus';
+import { blockedSite, focusedMs, focusRemaining, normalizeSite } from '@shared/focus';
 import type { FocusPrefs, FocusSession, FocusView } from '@shared/focus';
 import type { SoundId } from '@shared/sounds';
 import { continueWith } from '@shared/work';
@@ -6,6 +6,7 @@ import type { SettingsRepository } from '../persistence/repositories/settings';
 import type { WorkRepository } from '../persistence/repositories/work';
 import type { WindowController } from '../windows/window-manager';
 import type { SoundService } from './sounds';
+import type { FocusLogRepository } from '../persistence/repositories/focus-log';
 
 export type FocusDeps = {
   settings: SettingsRepository;
@@ -18,6 +19,11 @@ export type FocusDeps = {
   /** Time's up (a macOS notification; quiet in test runs). */
   notify: (title: string, body: string) => void;
   toast: (controller: WindowController, message: string) => void;
+  /** Finished focus sessions (brief M7: today's total, the week). */
+  log?: FocusLogRepository;
+  /** A soft chime when time's up (the sounds' player). */
+  chime?: () => void;
+  now?: () => number;
 };
 
 export type StartInput = {
@@ -48,7 +54,50 @@ export class FocusService {
   }
 
   view(): FocusView {
-    return { session: this.session, prefs: this.prefs, sounds: this.deps.sounds.state };
+    return {
+      session: this.session,
+      prefs: this.prefs,
+      sounds: this.deps.sounds.state,
+      history: this.deps.log?.summary(this.now) ?? {
+        todayMs: 0,
+        todaySessions: 0,
+        week: [0, 0, 0, 0, 0, 0, 0],
+      },
+    };
+  }
+
+  private get now(): number {
+    return this.deps.now?.() ?? Date.now();
+  }
+
+  /** A focus session that's finishing goes into the log (a minute or more of focus). */
+  private record(session: FocusSession, completed: boolean): void {
+    if (session.kind !== 'focus' || !this.deps.log) return;
+    const ms = focusedMs(session, this.now);
+    if (ms < 60_000) return;
+    this.deps.log.add({
+      taskId: session.taskId,
+      projectId: session.projectId,
+      title: session.title,
+      startedAt: session.startedAt,
+      endedAt: this.now,
+      focusedMs: ms,
+      completed,
+    });
+  }
+
+  /** The same session from the start (same task and length; the clock starts over). */
+  restart(): void {
+    const session = this.session;
+    if (!session) return;
+    this.deps.settings.set('focus.session', {
+      ...session,
+      startedAt: this.now,
+      pausedAt: null,
+      pausedMs: 0,
+    });
+    this.arm();
+    this.changed();
   }
 
   setPrefs(patch: Partial<FocusPrefs>): FocusView {
@@ -74,6 +123,7 @@ export class FocusService {
       task = resume?.next ?? undefined;
     }
     const previous = this.session;
+    if (previous) this.record(previous, false); // replaced by a new one (or a break)
     const sound = input.sound === undefined ? prefs.sound : input.sound;
     const session: FocusSession = {
       taskId: task?.id ?? null,
@@ -115,6 +165,7 @@ export class FocusService {
     const session = this.session;
     if (!session) return;
     if (complete && session.taskId) this.deps.work.setTaskStatus(session.taskId, 'done');
+    this.record(session, complete);
     this.deps.settings.set('focus.session', null);
     if (session.sidebarWasVisible) controller.layout.setSidebarVisible(true);
     // The sound it started stops with it (one you started yourself keeps playing).
@@ -202,10 +253,11 @@ export class FocusService {
       this.timer = null;
       const now = this.session;
       if (!now || now.startedAt !== session.startedAt) return;
-      if (now.kind === 'break') {
-        this.deps.notify('Break’s over', 'Ready for the next one?');
-      } else {
-        this.deps.notify('Time for a break', `${now.minutes} minutes on “${now.title}”.`);
+      const prefs = this.prefs;
+      if (prefs.chime) this.deps.chime?.();
+      if (prefs.notify) {
+        if (now.kind === 'break') this.deps.notify('Break’s over', 'Ready for the next one?');
+        else this.deps.notify('Time for a break', `${now.minutes} minutes on “${now.title}”.`);
       }
       this.changed(); // the Focus view offers a break (or the next session)
     }, left);

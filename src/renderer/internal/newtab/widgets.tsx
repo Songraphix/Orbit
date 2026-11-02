@@ -34,7 +34,7 @@ import type {
   WidgetOptions,
   WidgetType,
 } from '@shared/home-widgets';
-import { focusClock, focusRemaining } from '@shared/focus';
+import { focusClock, focusRemaining, focusTotal } from '@shared/focus';
 import type { FocusSession } from '@shared/focus';
 import { soundName } from '@shared/sounds';
 import type { SoundState } from '@shared/sounds';
@@ -370,16 +370,30 @@ function useTick(ms: number, on = true): number {
 function FocusWidget({ size }: { size: Widget['size'] }) {
   const [session, setSession] = useState<FocusSession | null>(null);
   const [sounds, setSounds] = useState<SoundState | null>(null);
+  const [todayMs, setTodayMs] = useState(0);
   const now = useTick(1000);
   useEffect(() => {
-    void invoke('focus:get', {}).then(setSession);
-    void invoke('sounds:get', {}).then(setSounds);
+    void invoke('focus:view', {}).then((view) => {
+      setSession(view.session);
+      setSounds(view.sounds);
+      setTodayMs(view.history.todayMs);
+    });
   }, [now]);
   const left = session ? focusRemaining(session, now) : null;
   const paused = session?.pausedAt != null;
   return (
     <div className="flex h-full flex-col" data-testid="focus-widget">
-      <Title>{session ? (session.kind === 'break' ? 'Break' : 'Focus') : 'Focus'}</Title>
+      <Title
+        action={
+          todayMs >= 60_000 ? (
+            <span className="normal-case" data-testid="focus-widget-today">
+              {focusTotal(todayMs)} today
+            </span>
+          ) : undefined
+        }
+      >
+        {session ? (session.kind === 'break' ? 'Break' : 'Focus') : 'Focus'}
+      </Title>
       <div className="flex flex-1 items-center gap-4">
         <div className="min-w-0 flex-1">
           <div
