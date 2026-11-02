@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Library, Moon, Plus, Sparkles, Sun, Undo2 } from 'lucide-react';
+import { ArrowDownToLine, Library, Moon, Plus, Settings, Sparkles, Sun, Undo2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { SidebarSnapshot, SpaceView } from '@shared/types/space';
 import { RenameInput } from './Rows';
@@ -156,6 +156,17 @@ export function BottomBar({
         </Tip>
       )}
       <ThemeToggle />
+      <Tip label="Settings" keys="⌘," side="top">
+        <button
+          type="button"
+          aria-label="Settings"
+          onClick={() => void invoke('profile:open', { page: 'settings' })}
+          className="press hover-turn grid size-8 place-items-center rounded-[11px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+          data-testid="settings-button"
+        >
+          <Settings size={16} />
+        </button>
+      </Tip>
       <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-hidden">
         {spaces.map((space, i) => (
           <Tip key={space.id} label={space.name} keys={i < 9 ? `⌃${i + 1}` : undefined} side="top">

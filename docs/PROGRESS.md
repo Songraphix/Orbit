@@ -161,6 +161,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — Owner request: **Homepage — a Mac Dock, a smaller search bar, blur as a switch.** Shortcuts now sit in a **Dock** along the bottom: a glass shelf of app-like tiles (the site's icon on white, or a coloured letter) that grow under the pointer and rise out of the shelf, the name above the one you point at, × to remove, + after a divider. The search bar is about two-thirds its old size. Customize → Background has a plain **Blur background** switch (the amount slider appears when it's on), and photos no longer get the film grain, which made them look soft
 
+- 2026-11-02 — Owner request: **sidebar — Settings and Easels.** A **Settings** button (⌘,) sits by the Spaces at the bottom left, next to the Library and light/dark buttons; **Easels** is a row under Tasks that opens the Library on your Easels (hideable in Settings → Appearance like the others)
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0

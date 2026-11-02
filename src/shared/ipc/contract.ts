@@ -1101,7 +1101,8 @@ export const contract = {
       .object({ page: z.enum(['settings', 'profiles', 'shortcuts', 'library', 'import']) })
       .strict(),
     output: z.void(),
-    surfaces: ['overlay'],
+    // The profile menu, and the sidebar's Settings button (owner request).
+    surfaces: ['overlay', 'shell'],
   },
 
   // Projects and tasks (owner request): the productivity panel's Projects, Tasks and Board.

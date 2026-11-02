@@ -69,3 +69,20 @@ test('Settings opens in a window of its own (⌘,), one at a time, on the sectio
     await orbit.close();
   }
 });
+
+test('the sidebar has a Settings button by the Spaces, and Easels under Tasks', async () => {
+  const orbit = await launchOrbit();
+  try {
+    const { app, win } = orbit;
+    await win.getByTestId('settings-button').click();
+    await expect.poll(() => settingsWindows(app).then((w) => w.length)).toBe(1);
+    await closeSettings(app);
+
+    await win.locator('[data-testid="workspace-item"][data-view="easels"]').click();
+    await expect(
+      win.locator('[data-testid="library-section"][data-section="easels"]'),
+    ).toHaveAttribute('aria-current', 'page');
+  } finally {
+    await orbit.close();
+  }
+});
