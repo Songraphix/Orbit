@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { accentVars, isShown, ROW_HEIGHT, TEXT_ZOOM } from '@shared/ui-prefs';
+import { FONT_INFO, ROW_HEIGHT, TEXT_ZOOM, accentVars, isShown } from '@shared/ui-prefs';
 import type { Feature, UiPrefs } from '@shared/ui-prefs';
 
 /**
@@ -53,6 +53,7 @@ function apply(prefs: UiPrefs, zoom: boolean): void {
     root.classList.toggle(`density-${d}`, prefs.density === d);
   }
   root.style.setProperty('--row-h', `${ROW_HEIGHT[prefs.density]}px`);
+  root.style.setProperty('--font-ui', FONT_INFO[prefs.font].stack); // owner request: Comfortaa
   if (zoom) root.style.zoom = String(TEXT_ZOOM[prefs.textSize]);
 
   // The accent: a style sheet (so it wins over each surface's own palette), light and dark.

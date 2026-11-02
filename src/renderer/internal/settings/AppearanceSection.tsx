@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Monitor, Moon, Sun } from 'lucide-react';
-import { ACCENTS, FEATURES, FEATURE_LABEL } from '@shared/ui-prefs';
+import {
+  ACCENTS,
+  FEATURES,
+  FEATURE_LABEL,
+  FONT_INFO,
+  FONTS,
+  matchingTemplate,
+  THEME_TEMPLATES,
+} from '@shared/ui-prefs';
 import type { UiPrefs } from '@shared/ui-prefs';
 import type { UserSettings } from '@shared/settings';
 import { useUiPrefs } from '../../ui/prefs-store';
@@ -10,9 +18,9 @@ import { Toggle } from '../../ui/Toggle';
 import { Group, Row, Section } from './parts';
 
 /**
- * Settings → Appearance (brief M2, the customization engine): light or dark, accent, text
- * size, density, glass or solid surfaces, motion, and which features show. One place for all
- * of it; every part of Orbit follows at once.
+ * Settings → Appearance (brief M2, the customization engine): theme templates, light or dark,
+ * accent, font, text size, density, glass or solid surfaces, motion, and which features show.
+ * One place for all of it; every part of Orbit follows at once.
  */
 export function AppearanceSection(props: {
   appearance: UserSettings['appearance'];
@@ -34,7 +42,50 @@ export function AppearanceSection(props: {
       title="Appearance"
       description="How Orbit looks and what it shows. Changes apply everywhere at once."
     >
+      <Group title="Templates">
+        <div className="grid grid-cols-2 gap-2.5 p-3 sm:grid-cols-4" data-testid="theme-templates">
+          {THEME_TEMPLATES.map((t) => (
+            <TemplateCard
+              key={t.id}
+              template={t}
+              on={matchingTemplate(prefs, props.appearance) === t.id}
+              onPick={() => {
+                set(t.look);
+                if (t.appearance !== props.appearance) props.onAppearance(t.appearance);
+              }}
+            />
+          ))}
+        </div>
+      </Group>
+
       <Group title="Theme">
+        <Row label="Font" hint="Orbit’s own text: the sidebar, menus, Settings and its pages.">
+          <div
+            className="flex max-w-[360px] flex-wrap justify-end gap-1.5"
+            role="radiogroup"
+            aria-label="Font"
+            data-testid="ui-font"
+          >
+            {FONTS.map((f) => (
+              <button
+                key={f}
+                type="button"
+                role="radio"
+                aria-checked={prefs.font === f}
+                onClick={() => set({ font: f })}
+                className={`press rounded-[9px] px-2.5 py-1 text-[13px] ${
+                  prefs.font === f
+                    ? 'bg-[var(--accent-fill,#5b5bd6)] text-on-accent'
+                    : 'bg-black/[0.05] hover:bg-black/[0.09] dark:bg-white/[0.08]'
+                }`}
+                style={{ fontFamily: FONT_INFO[f].stack }}
+                data-value={f}
+              >
+                {FONT_INFO[f].label}
+              </button>
+            ))}
+          </div>
+        </Row>
         <Row label="Appearance" hint="Light, dark, or the same as your Mac.">
           <AppearancePicker value={props.appearance} onChange={props.onAppearance} />
         </Row>
@@ -278,5 +329,69 @@ function AppearancePicker(props: {
         );
       })}
     </div>
+  );
+}
+
+/** A theme template as a little window: its light or dark, its accent, its font. */
+function TemplateCard(props: {
+  template: (typeof THEME_TEMPLATES)[number];
+  on: boolean;
+  onPick: () => void;
+}) {
+  const { template: t, on } = props;
+  const dark = t.appearance === 'dark';
+  const accent = t.look.accent ?? '#5b5bd6';
+  const surface =
+    t.appearance === 'system'
+      ? 'linear-gradient(135deg, #f4f4f6 0 50%, #26262c 50% 100%)'
+      : dark
+        ? '#26262c'
+        : '#f4f4f6';
+  return (
+    <button
+      type="button"
+      onClick={props.onPick}
+      aria-pressed={on}
+      className={`press flex flex-col gap-1.5 rounded-[12px] p-1.5 text-left ${
+        on ? 'ring-2 ring-[var(--accent-fill,#5b5bd6)]' : 'hover:bg-black/[0.04]'
+      }`}
+      data-testid="theme-template"
+      data-id={t.id}
+    >
+      <span
+        className="relative flex h-16 overflow-hidden rounded-[9px] shadow-[0_0_0_0.5px_rgb(0_0_0/0.15)]"
+        style={{ background: surface }}
+      >
+        <span
+          className={`flex w-[34%] flex-col gap-1 p-1.5 ${
+            t.look.surfaces === 'glass'
+              ? 'bg-white/25 backdrop-blur'
+              : dark
+                ? 'bg-black/30'
+                : 'bg-black/[0.06]'
+          }`}
+        >
+          <span className="h-1.5 rounded-full" style={{ background: accent }} />
+          <span className="h-1 w-3/4 rounded-full bg-current opacity-25" />
+          <span className="h-1 w-2/3 rounded-full bg-current opacity-25" />
+        </span>
+        <span
+          className="grid flex-1 place-items-center text-[20px] font-semibold"
+          style={{
+            fontFamily: FONT_INFO[t.look.font].stack,
+            // Half light, half dark ("same as your Mac"): the letters invert to read on both.
+            ...(t.appearance === 'system'
+              ? { color: '#fff', mixBlendMode: 'difference' as const }
+              : { color: dark ? '#fff' : '#1c1c1f' }),
+          }}
+        >
+          Aa
+        </span>
+      </span>
+      <span className="px-0.5">
+        <span className="block text-[12.5px] font-semibold">{t.name}</span>
+        <span className="block text-[11px] leading-snug opacity-60">{t.hint}</span>
+      </span>
+    </button>
   );
 }

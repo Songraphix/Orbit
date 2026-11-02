@@ -56,6 +56,31 @@ export const ACCENTS = [
   { name: 'Graphite', hex: '#5c5f6a' },
 ] as const;
 
+/** Orbit's own font (owner request: Comfortaa by default). The Mac's own faces need no files. */
+export const FONTS = [
+  'comfortaa',
+  'system',
+  'rounded',
+  'inter',
+  'nunito',
+  'manrope',
+  'serif',
+] as const;
+export type UiFont = (typeof FONTS)[number];
+
+const FALLBACK =
+  "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif";
+
+export const FONT_INFO: Record<UiFont, { label: string; stack: string }> = {
+  comfortaa: { label: 'Comfortaa', stack: `'Comfortaa Variable', ${FALLBACK}` },
+  system: { label: 'SF Pro', stack: FALLBACK },
+  rounded: { label: 'SF Pro Rounded', stack: `ui-rounded, ${FALLBACK}` },
+  inter: { label: 'Inter', stack: `'Inter Variable', ${FALLBACK}` },
+  nunito: { label: 'Nunito', stack: `'Nunito Variable', ${FALLBACK}` },
+  manrope: { label: 'Manrope', stack: `'Manrope Variable', ${FALLBACK}` },
+  serif: { label: 'New York', stack: `ui-serif, 'New York', Georgia, serif` },
+};
+
 const fields = {
   hidden: z.array(z.enum(FEATURES)).max(FEATURES.length),
   density: z.enum(['compact', 'comfortable', 'spacious']),
@@ -69,6 +94,7 @@ const fields = {
   surfaces: z.enum(['glass', 'solid']),
   /** Reduced: no movement beyond fades (as with the Mac's Reduce Motion). */
   motion: z.enum(['full', 'reduced']),
+  font: z.enum(FONTS),
 };
 
 export const uiPrefsSchema = z.object({
@@ -78,6 +104,7 @@ export const uiPrefsSchema = z.object({
   accent: fields.accent.default(null),
   surfaces: fields.surfaces.default('glass'),
   motion: fields.motion.default('full'),
+  font: fields.font.default('comfortaa'),
 });
 
 /** A change to some of them. (Not uiPrefsSchema.partial(): zod 4 would fill in every default.) */
@@ -129,4 +156,94 @@ export function accentVars(hex: string, mode: 'light' | 'dark'): Record<string, 
     '--work-accent-soft': `rgb(${r} ${g} ${b} / ${mode === 'dark' ? 0.22 : 0.12})`,
     '--note-accent': text,
   };
+}
+
+/** Light, dark or the Mac's choice (the app-wide setting, kept beside these). */
+export type AppearanceMode = 'system' | 'light' | 'dark';
+
+/** The parts of the look a theme template sets; everything else stays as you had it. */
+export type ThemeLook = Pick<UiPrefs, 'accent' | 'font' | 'surfaces' | 'density'>;
+
+/**
+ * Theme templates (owner request): a look in one click — light or dark, accent, font, glass or
+ * solid, density. Each part can still be tweaked afterwards.
+ */
+export const THEME_TEMPLATES: {
+  id: string;
+  name: string;
+  hint: string;
+  appearance: AppearanceMode;
+  look: ThemeLook;
+}[] = [
+  {
+    id: 'orbit',
+    name: 'Orbit',
+    hint: 'Comfortaa, glass, each Space’s colour',
+    appearance: 'system',
+    look: { accent: null, font: 'comfortaa', surfaces: 'glass', density: 'comfortable' },
+  },
+  {
+    id: 'classic',
+    name: 'Classic Mac',
+    hint: 'SF Pro and blue, like the Mac',
+    appearance: 'system',
+    look: { accent: '#0a7cff', font: 'system', surfaces: 'glass', density: 'comfortable' },
+  },
+  {
+    id: 'midnight',
+    name: 'Midnight',
+    hint: 'Dark, violet, Inter',
+    appearance: 'dark',
+    look: { accent: '#5b5bd6', font: 'inter', surfaces: 'glass', density: 'comfortable' },
+  },
+  {
+    id: 'paper',
+    name: 'Paper',
+    hint: 'Light, solid, New York serif',
+    appearance: 'light',
+    look: { accent: '#5c5f6a', font: 'serif', surfaces: 'solid', density: 'spacious' },
+  },
+  {
+    id: 'soft',
+    name: 'Soft',
+    hint: 'Rounded type, pink, roomy',
+    appearance: 'light',
+    look: { accent: '#d6336c', font: 'rounded', surfaces: 'glass', density: 'spacious' },
+  },
+  {
+    id: 'forest',
+    name: 'Forest',
+    hint: 'Dark, green, Nunito',
+    appearance: 'dark',
+    look: { accent: '#1f9d55', font: 'nunito', surfaces: 'glass', density: 'comfortable' },
+  },
+  {
+    id: 'sunset',
+    name: 'Sunset',
+    hint: 'Orange, Manrope',
+    appearance: 'system',
+    look: { accent: '#e8590c', font: 'manrope', surfaces: 'glass', density: 'comfortable' },
+  },
+  {
+    id: 'focus',
+    name: 'Focus',
+    hint: 'Solid, compact, graphite, Inter',
+    appearance: 'system',
+    look: { accent: '#5c5f6a', font: 'inter', surfaces: 'solid', density: 'compact' },
+  },
+];
+
+/** The template your current look matches, if any (tweak one part and it's your own). */
+export function matchingTemplate(prefs: UiPrefs, appearance: AppearanceMode): string | null {
+  const same = (a: string | null, b: string | null) =>
+    (a ?? '').toLowerCase() === (b ?? '').toLowerCase();
+  const match = THEME_TEMPLATES.find(
+    (t) =>
+      t.appearance === appearance &&
+      same(t.look.accent, prefs.accent) &&
+      t.look.font === prefs.font &&
+      t.look.surfaces === prefs.surfaces &&
+      t.look.density === prefs.density,
+  );
+  return match?.id ?? null;
 }

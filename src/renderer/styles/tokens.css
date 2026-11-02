@@ -1,4 +1,9 @@
 @import 'tailwindcss';
+/* Orbit's fonts (OFL), bundled: Comfortaa by default, and the other choices in Appearance. */
+@import '@fontsource-variable/comfortaa';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/nunito';
+@import '@fontsource-variable/manrope';
 
 /*
  * Theme tokens. ThemeEngine (Phase 3) rewrites these per space, so components
@@ -38,8 +43,17 @@ body,
 
 body {
   background: transparent;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  /* Settings → Appearance → Font (Comfortaa unless you choose another). */
+  font-family: var(
+    --font-ui,
+    'Comfortaa Variable',
+    -apple-system,
+    BlinkMacSystemFont,
+    'SF Pro Text',
+    'Helvetica Neue',
+    system-ui,
+    sans-serif
+  );
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
@@ -108,6 +122,15 @@ body {
 
 /* Text on an accent or coloured fill: white in light and dark alike (never remapped below). */
 @theme {
+  /* font-sans follows Settings → Appearance → Font too. */
+  --font-sans: var(
+    --font-ui,
+    'Comfortaa Variable',
+    -apple-system,
+    BlinkMacSystemFont,
+    system-ui,
+    sans-serif
+  );
   --color-on-accent: #fff;
 
   /* ── Type roles (design system, M1): use these instead of one-off sizes ──────────────────

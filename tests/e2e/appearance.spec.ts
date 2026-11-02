@@ -182,3 +182,43 @@ test('Settings → Appearance: accent, density, text size, surfaces, motion and 
     await second.close();
   }
 });
+
+test('theme templates set a whole look; Comfortaa by default, and the font can be changed', async () => {
+  const orbit = await launchOrbit({ colorScheme: null });
+  const font = (page: Page) =>
+    page.evaluate(() => {
+      const w = globalThis as unknown as Dom;
+      return w.getComputedStyle(w.document.documentElement).getPropertyValue('--font-ui');
+    });
+  try {
+    const { app, win } = orbit;
+    await expect.poll(() => font(win)).toContain('Comfortaa');
+
+    await clickMenu(app, 'settings');
+    const settings = await pageWith(app, '#/settings');
+    await settings.locator('[data-testid="settings-nav"][data-section="appearance"]').click();
+    const card = (id: string) =>
+      settings.locator(`[data-testid="theme-template"][data-id="${id}"]`);
+    await expect(card('orbit')).toHaveAttribute('aria-pressed', 'true');
+
+    // Midnight: dark, violet, Inter — everywhere at once.
+    await card('midnight').click();
+    await expect(card('midnight')).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => dark(win)).toBe(true);
+    await expect.poll(() => font(win)).toContain('Inter');
+    await expect.poll(() => font(settings)).toContain('Inter');
+
+    // A tweak makes it your own look.
+    await settings.locator('[data-testid="ui-font"] [data-value="serif"]').click();
+    await expect.poll(() => font(win)).toContain('ui-serif');
+    await expect(
+      settings.locator('[data-testid="theme-template"][aria-pressed="true"]'),
+    ).toHaveCount(0);
+
+    // Back to Orbit.
+    await card('orbit').click();
+    await expect.poll(() => font(win)).toContain('Comfortaa');
+  } finally {
+    await orbit.close();
+  }
+});

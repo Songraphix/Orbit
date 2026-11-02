@@ -165,6 +165,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — Owner request: **screenshots ask what to do.** A **camera** in the toolbar (and File → Take Screenshot, **⇧⌘2**, the command bar) starts the area capture — drag an area, or click for the whole page. Then a card under the toolbar shows the picture and its size with **Copy** (⌘C), **Save to Library** (⌘S, Library → Media), **Save As…** (a PNG named like macOS's, Downloads by default) and **Open in Easel** (a new Easel with it, to mark up); Esc or × discards it. Site Controls' Screenshot leads to the same card; Easels and Save to Orbit still take their screenshots directly. The toolbar button can be hidden in Settings → Appearance
 
+- 2026-11-02 — Owner request: **Comfortaa, a font choice and theme templates.** Orbit's own text (sidebar, toolbar, menus, Settings, its pages) is in **Comfortaa** by default; Settings → Appearance → **Font** offers Comfortaa, SF Pro, SF Pro Rounded, Inter, Nunito, Manrope and New York, each shown in itself. **Templates** set a whole look in one click — Orbit, Classic Mac, Midnight, Paper, Soft, Forest, Sunset, Focus (light/dark, accent, font, glass or solid, density) — and any part can be tweaked after (then it's your own; the gallery shows which template you match). New dependencies: @fontsource-variable/comfortaa, inter, nunito, manrope 5.3.0 (OFL font files bundled with the app, so no fonts load from the web)
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0
