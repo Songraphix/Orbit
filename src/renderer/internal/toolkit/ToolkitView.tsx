@@ -21,6 +21,7 @@ import { CopyButton, Group, SmallButton } from './parts';
 import { Tip } from '../../tooltip/Tip';
 import { CssSection, DevSection, ImageSection } from './sections';
 import { CodeSection, TypeSection } from './more-sections';
+import { PaletteGroups } from './palette-sections';
 import './toolkit.css';
 
 const invoke = window.orbit.invoke;
@@ -177,6 +178,8 @@ function ColorsSection({ state }: { state: ToolkitState }) {
           ))}
         </ul>
       )}
+
+      {color && <PaletteGroups base={color} onPick={setText} />}
 
       {state.colors.length > 0 && (
         <Group

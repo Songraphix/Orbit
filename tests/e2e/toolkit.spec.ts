@@ -122,6 +122,37 @@ test('Toolkit: pick a colour, the page’s palette, contrast, JSON and image inf
   await expect(palette.locator('[data-hex="#5b5bd6"]')).toHaveCount(1);
   await expect(palette.locator('[data-hex="#222222"]')).toHaveCount(1);
 
+  // Palette: complementary colours of the picked one; a click makes one the colour you're on.
+  await panel.locator('[data-testid="palette-mode"][data-value="complementary"]').click();
+  const strip = panel.getByTestId('palette-colors').getByTestId('strip-color');
+  await expect(strip).toHaveCount(5);
+  await expect(panel.getByTestId('gradient-css')).toContainText('linear-gradient(135deg');
+  const fourth = await strip.nth(3).getAttribute('data-hex');
+  await strip.nth(3).click();
+  await expect(panel.getByTestId('toolkit-color-input')).toHaveValue(fourth!);
+  // From an image: half red, half blue → those two colours.
+  const png = await app.evaluate(({ nativeImage }) => {
+    const [w, h] = [20, 20];
+    const bgra = Buffer.alloc(w * h * 4);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const o = (y * w + x) * 4;
+        bgra.set(x < 10 ? [0, 0, 255, 255] : [255, 0, 0, 255], o); // red | blue (BGRA)
+      }
+    return nativeImage.createFromBitmap(bgra, { width: w, height: h }).toPNG().toString('base64');
+  });
+  await panel.getByTestId('image-palette-file').setInputFiles({
+    name: 'flag.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(png, 'base64'),
+  });
+  const fromImage = panel.getByTestId('image-palette-colors').getByTestId('strip-color');
+  await expect(fromImage.first()).toBeVisible();
+  const hexes = await fromImage.evaluateAll((els) =>
+    els.map((e) => (e as unknown as { dataset: { hex: string } }).dataset.hex),
+  );
+  expect(hexes).toEqual(expect.arrayContaining(['#ff0000', '#0000ff']));
+
   // Contrast: light grey on white fails AA; the nearest passing grey fixes it.
   await panel.locator('[data-testid="toolkit-section"][data-section="contrast"]').click();
   await panel.getByTestId('contrast-fg').fill('#aaaaaa');
