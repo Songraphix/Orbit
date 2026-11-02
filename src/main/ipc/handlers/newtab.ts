@@ -17,6 +17,7 @@ import { layoutFromShow } from '@shared/home-widgets';
 import { colorHex, projectProgress } from '@shared/work';
 import type { NotesRepository } from '../../persistence/repositories/notes';
 import type { WeatherService } from '../../newtab/weather';
+import type { UnsplashService } from '../../newtab/unsplash';
 
 const NEW_TASK: Omit<TaskInput, 'title' | 'dueDate'> = {
   projectId: null,
@@ -39,6 +40,7 @@ export function registerNewTabHandlers(
     workChanged: () => void;
     notes: NotesRepository;
     weather: WeatherService;
+    unsplash: UnsplashService;
     /** Opens a note as a tab, or a project in the panel, in this window. */
     openNote: (window: WindowController, id: string) => void;
   },
@@ -92,7 +94,7 @@ export function registerNewTabHandlers(
       for (const s of seedShortcuts(history.topSites(30))) home.addShortcut(profileId, s);
     }
     return {
-      ...wallpapers.state(),
+      ...wallpapers.state(owner.tab.view.webContents.id),
       home: settings.get('newtab.home'),
       name: owner.window.store.profiles.find((p) => p.id === profileId)?.displayName ?? '',
       shortcuts: home.shortcuts(profileId),
@@ -101,7 +103,38 @@ export function registerNewTabHandlers(
     };
   };
 
-  router.handle('newtab:get', (_input, { sender }) => state(ownerOf(sender.webContentsId)));
+  router.handle('newtab:get', (_input, { sender }) => {
+    const owner = ownerOf(sender.webContentsId);
+    wallpapers.opened(owner.tab.view.webContents.id); // a rotation picks this page's background
+    return state(owner);
+  });
+
+  router.handle('newtab:setLook', ({ look }, { sender }) => {
+    const owner = ownerOf(sender.webContentsId);
+    wallpapers.setLook(look);
+    return state(owner);
+  });
+
+  router.handle('newtab:favorite', ({ wallpaper, on }, { sender }) => {
+    const owner = ownerOf(sender.webContentsId);
+    wallpapers.favorite(wallpaper, on);
+    return state(owner);
+  });
+
+  router.handle('newtab:setRotation', ({ rotation }, { sender }) => {
+    const owner = ownerOf(sender.webContentsId);
+    wallpapers.setRotation(rotation);
+    return state(owner);
+  });
+
+  router.handle('newtab:unsplashSearch', async ({ query, page }, { sender }) => {
+    ownerOf(sender.webContentsId);
+    try {
+      return { photos: await deps.unsplash.search(query, page), error: null };
+    } catch (e) {
+      return { photos: [], error: e instanceof Error ? e.message : String(e) };
+    }
+  });
 
   router.handle('newtab:setWallpaper', ({ wallpaper }, { sender }) => {
     const owner = ownerOf(sender.webContentsId);

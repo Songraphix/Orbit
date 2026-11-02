@@ -89,6 +89,7 @@ import { registerTooltipHandlers } from './ipc/handlers/tooltip';
 import { registerFocusHandlers } from './ipc/handlers/focus';
 import { FocusService } from './focus/service';
 import { WeatherService } from './newtab/weather';
+import { UnsplashService } from './newtab/unsplash';
 import { SoundService } from './focus/sounds';
 import { soundIdSchema } from '@shared/sounds';
 import type { FocusView } from '@shared/focus';
@@ -686,6 +687,16 @@ void app.whenReady().then(() => {
     join(app.getPath('userData'), 'github-token.bin'),
     testCipher ?? safeStorage,
   );
+  // Unsplash backgrounds (brief M4) with the owner's own access key, in the Keychain.
+  const unsplashKey = new AiKeyStore(
+    join(app.getPath('userData'), 'unsplash-key.bin'),
+    testCipher ?? safeStorage,
+  );
+  const unsplash = new UnsplashService({
+    key: () => unsplashKey.get(),
+    fetch: (url, init) => net.fetch(url, init),
+    apiUrl: devOnly('ORBIT_UNSPLASH_API_URL'),
+  });
   const github = new GithubService({
     fetch: (url, init) => net.fetch(url, init),
     token: () => githubKey.get(),
@@ -894,7 +905,7 @@ void app.whenReady().then(() => {
   registerNewTabHandlers(
     router,
     windowManager,
-    new WallpaperService(app.getPath('userData'), persistence.settings),
+    new WallpaperService(app.getPath('userData'), persistence.settings, unsplash),
     {
       home: persistence.home,
       settings: persistence.settings,
@@ -903,6 +914,7 @@ void app.whenReady().then(() => {
       // The panel's projects and tasks follow changes made on the new tab page.
       workChanged: () => windowManager.all().forEach((c) => c.notes.refresh()),
       notes: persistence.notes,
+      unsplash,
       weather: new WeatherService({
         fetch: (url) => net.fetch(url),
         geocodeUrl: devOnly('ORBIT_GEOCODE_URL'),
@@ -1248,6 +1260,33 @@ void app.whenReady().then(() => {
   registerBoostHandlers(router, windowManager, { boosts, toast });
   // The customization engine (brief M2).
   router.handle('ui:get', () => persistence!.settings.get('ui'));
+  // Settings → Integrations: the Unsplash access key (Settings only; never sent back).
+  const settingsOnly = (id: number) => {
+    if (!windowManager.tabForContents(id)?.tab.state.url.startsWith('orbit://settings')) {
+      throw new Error(`Sender ${id} is not Settings`);
+    }
+  };
+  router.handle('unsplash:status', (_input, { sender }) => {
+    settingsOnly(sender.webContentsId);
+    return { hasKey: unsplashKey.has(), canStore: unsplashKey.canStore };
+  });
+  router.handle('unsplash:setKey', ({ key }, { sender }) => {
+    settingsOnly(sender.webContentsId);
+    const clean = key.trim();
+    if (!/^[A-Za-z0-9_-]{20,100}$/.test(clean)) {
+      return { ok: false, error: 'That doesn’t look like an Unsplash access key' };
+    }
+    try {
+      unsplashKey.set(clean);
+      return { ok: true, error: null };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+  router.handle('unsplash:clearKey', (_input, { sender }) => {
+    settingsOnly(sender.webContentsId);
+    unsplashKey.clear();
+  });
   router.handle('ui:set', (patch, { sender }) => {
     const settingsPage = windowManager.tabForContents(sender.webContentsId);
     if (!settingsPage?.tab.state.url.startsWith('orbit://settings')) {

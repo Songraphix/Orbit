@@ -1420,33 +1420,114 @@ function IntegrationsSection() {
   useEffect(load, []);
   if (!status) return null;
   return (
-    <Group title="GitHub">
+    <>
+      <Group title="GitHub">
+        <Row
+          label="Personal access token"
+          hint={
+            status.hasToken
+              ? 'Saved in your Keychain. Used to read private repositories and for higher rate limits.'
+              : 'Optional. Public repositories work without one. A fine-grained, read-only token is enough.'
+          }
+        >
+          {status.hasToken ? (
+            <button
+              type="button"
+              className={buttonClass()}
+              onClick={() => void window.orbit.invoke('github:clearToken', {}).then(load)}
+              data-testid="github-token-remove"
+            >
+              Remove Token
+            </button>
+          ) : (
+            <form
+              className="flex flex-col items-end gap-1"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void window.orbit.invoke('github:setToken', { token }).then((r) => {
+                  setError(r.error);
+                  if (r.ok) {
+                    setToken('');
+                    load();
+                  }
+                });
+              }}
+            >
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="github_pat_…"
+                  autoComplete="off"
+                  disabled={!status.canStore}
+                  className={`${FIELD} w-44`}
+                  data-testid="github-token"
+                />
+                <button
+                  type="submit"
+                  disabled={!token.trim()}
+                  className={buttonClass()}
+                  data-testid="github-token-save"
+                >
+                  Save
+                </button>
+              </div>
+              {error && (
+                <span className="text-xs text-red-600" data-testid="github-token-error">
+                  {error}
+                </span>
+              )}
+            </form>
+          )}
+        </Row>
+        <div className="px-4 py-3 text-xs leading-relaxed text-neutral-500">
+          A project can follow a repository (Edit Project → GitHub repository): its open pull
+          requests and issues show on its page, and any of them can become a task. Live Folders use
+          the token too. Orbit only reads; it never writes to GitHub.
+        </div>
+      </Group>
+      <UnsplashGroup />
+    </>
+  );
+}
+
+/** Settings → Integrations → Unsplash: the owner's access key for Homepage photos (brief M4). */
+function UnsplashGroup() {
+  const [status, setStatus] = useState<InvokeOutput<'unsplash:status'> | null>(null);
+  const [key, setKey] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const load = () => void window.orbit.invoke('unsplash:status', {}).then(setStatus);
+  useEffect(load, []);
+  if (!status) return null;
+  return (
+    <Group title="Unsplash">
       <Row
-        label="Personal access token"
+        label="Access key"
         hint={
-          status.hasToken
-            ? 'Saved in your Keychain. Used to read private repositories and for higher rate limits.'
-            : 'Optional. Public repositories work without one. A fine-grained, read-only token is enough.'
+          status.hasKey
+            ? 'Saved in your Keychain. Search Unsplash in the Homepage’s Customize → Background.'
+            : 'For Homepage backgrounds from Unsplash. Create a free app at unsplash.com/developers and paste its Access Key.'
         }
       >
-        {status.hasToken ? (
+        {status.hasKey ? (
           <button
             type="button"
             className={buttonClass()}
-            onClick={() => void window.orbit.invoke('github:clearToken', {}).then(load)}
-            data-testid="github-token-remove"
+            onClick={() => void window.orbit.invoke('unsplash:clearKey', {}).then(load)}
+            data-testid="unsplash-key-remove"
           >
-            Remove Token
+            Remove Key
           </button>
         ) : (
           <form
             className="flex flex-col items-end gap-1"
             onSubmit={(e) => {
               e.preventDefault();
-              void window.orbit.invoke('github:setToken', { token }).then((r) => {
+              void window.orbit.invoke('unsplash:setKey', { key }).then((r) => {
                 setError(r.error);
                 if (r.ok) {
-                  setToken('');
+                  setKey('');
                   load();
                 }
               });
@@ -1455,25 +1536,25 @@ function IntegrationsSection() {
             <div className="flex gap-2">
               <input
                 type="password"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="github_pat_…"
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                placeholder="Access Key"
                 autoComplete="off"
                 disabled={!status.canStore}
                 className={`${FIELD} w-44`}
-                data-testid="github-token"
+                data-testid="unsplash-key"
               />
               <button
                 type="submit"
-                disabled={!token.trim()}
+                disabled={!key.trim()}
                 className={buttonClass()}
-                data-testid="github-token-save"
+                data-testid="unsplash-key-save"
               >
                 Save
               </button>
             </div>
             {error && (
-              <span className="text-xs text-red-600" data-testid="github-token-error">
+              <span className="text-xs text-red-600" data-testid="unsplash-key-error">
                 {error}
               </span>
             )}
@@ -1481,9 +1562,8 @@ function IntegrationsSection() {
         )}
       </Row>
       <div className="px-4 py-3 text-xs leading-relaxed text-neutral-500">
-        A project can follow a repository (Edit Project → GitHub repository): its open pull requests
-        and issues show on its page, and any of them can become a task. Live Folders use the token
-        too. Orbit only reads; it never writes to GitHub.
+        Only your search words and this key go to Unsplash. Photos load from Unsplash and are
+        credited on the page, as Unsplash asks.
       </div>
     </Group>
   );

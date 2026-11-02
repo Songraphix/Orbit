@@ -101,8 +101,11 @@ test('picking a wallpaper persists and applies to new tab pages', async () => {
   const page = await newTabPage(app);
   await page.getByTestId('customize-button').click();
   await page.getByTestId('wallpaper-dune').click();
+  // It previews first; Apply keeps it.
   await expect(page.getByTestId('wallpaper')).toHaveAttribute('data-wallpaper', 'dune');
   await expect(page.getByTestId('wallpaper-dune')).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('background-apply').click();
+  await expect(page.getByTestId('background-preview-bar')).toHaveCount(0);
 
   await win.getByTestId('new-tab-row').click();
   const newTabPages = () => app.windows().filter((p) => p.url().includes('#/newtab'));

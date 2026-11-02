@@ -1,23 +1,13 @@
-import {
-  Check,
-  Crosshair,
-  ImagePlus,
-  LayoutGrid,
-  Moon,
-  Plus,
-  Quote,
-  Search,
-  Sun,
-  X,
-} from 'lucide-react';
+import { Check, Crosshair, LayoutGrid, Moon, Plus, Quote, Search, Sun, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { greetingFor } from '@shared/profile';
 import { quoteFor } from '@shared/quotes';
-import { BUILTIN_WALLPAPERS } from '@shared/types/newtab';
 import type { NewTabState, WallpaperChoice } from '@shared/types/newtab';
 import type { Shortcut } from '@shared/types/home';
-import { GRAIN, WALLPAPER_CSS } from './wallpapers';
+import { BackgroundSection, UnsplashCredit, Wallpaper } from './backgrounds';
+import { DEFAULT_LOOK } from '@shared/backgrounds';
+import type { BackgroundLook } from '@shared/backgrounds';
 import { WidgetGrid } from './widgets';
 import { newWidget } from '@shared/home-widgets';
 import type { HomeLayout } from '@shared/home-widgets';
@@ -39,6 +29,10 @@ export function NewTabPage() {
   const [state, setState] = useState<NewTabState | null>(null);
   const [customizing, setCustomizing] = useState(false);
   const [editing, setEditing] = useState(false);
+  // A background being previewed (Apply keeps it), and adjustments as you drag.
+  const [preview, setPreview] = useState<WallpaperChoice | null>(null);
+  const [lookPreview, setLookPreview] = useState<BackgroundLook | null>(null);
+  const shownChoice = preview ?? state?.shown ?? null;
   // With several widgets the top steps back so they fit (UI REFERENCE S3).
   const compact = (state?.layout.widgets.length ?? 0) >= 4;
   // The widgets' layout: shown at once, then main's answer.
@@ -58,7 +52,13 @@ export function NewTabPage() {
       data-theme={light ? 'light' : 'dark'}
       data-testid="newtab"
     >
-      <Wallpaper state={state} light={light} />
+      <Wallpaper
+        choice={preview ?? state?.shown ?? null}
+        state={state}
+        look={lookPreview ?? state?.look ?? DEFAULT_LOOK}
+        light={light}
+      />
+      {shownChoice?.kind === 'unsplash' && <UnsplashCredit photo={shownChoice.photo} />}
       <div className="absolute top-5 right-5 z-10 flex gap-2">
         <CornerButton
           label={light ? 'Dark Glass' : 'Light Glass'}
@@ -127,7 +127,14 @@ export function NewTabPage() {
             setCustomizing(false);
             setEditing(true);
           }}
-          onClose={() => setCustomizing(false)}
+          onClose={() => {
+            setCustomizing(false);
+            setPreview(null); // closing without Apply goes back
+          }}
+          preview={preview}
+          onPreview={setPreview}
+          look={lookPreview ?? state.look}
+          onLook={setLookPreview}
         />
       )}
     </main>
@@ -163,37 +170,6 @@ function CornerButton(props: {
     >
       {props.children}
     </button>
-  );
-}
-
-function Wallpaper({ state, light }: { state: NewTabState | null; light: boolean }) {
-  const choice = state?.wallpaper;
-  const background =
-    choice?.kind === 'custom' && state?.customImage
-      ? `center / cover no-repeat url("${state.customImage}")`
-      : WALLPAPER_CSS[choice?.kind === 'builtin' ? choice.id : 'aurora'];
-
-  return (
-    <div
-      className="fixed inset-0 transition-[background] duration-500"
-      style={{ background }}
-      data-testid="wallpaper"
-      data-wallpaper={choice ? (choice.kind === 'custom' ? 'custom' : choice.id) : 'loading'}
-    >
-      {/* Grain plus a soft vignette keeps text readable on any wallpaper; light glass adds a
-          pale veil instead. */}
-      <div
-        className="absolute inset-0 opacity-[0.12] mix-blend-overlay"
-        style={{ background: GRAIN }}
-      />
-      <div
-        className={`absolute inset-0 transition-colors duration-500 ${
-          light
-            ? 'bg-white/45'
-            : 'bg-[radial-gradient(ellipse_at_center,transparent_30%,rgb(0_0_0/0.35)_100%)]'
-        }`}
-      />
-    </div>
   );
 }
 
@@ -654,17 +630,24 @@ function CustomizePanel({
   onLayout,
   onEditWidgets,
   onClose,
+  preview,
+  onPreview,
+  look,
+  onLook,
 }: {
   state: NewTabState;
   onChange: (state: NewTabState) => void;
   onLayout: (layout: HomeLayout) => void;
   onEditWidgets: () => void;
   onClose: () => void;
+  preview: WallpaperChoice | null;
+  onPreview: (choice: WallpaperChoice | null) => void;
+  look: BackgroundLook;
+  onLook: (look: BackgroundLook) => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(state.name);
   const [tagline, setTagline] = useState(state.home.tagline);
-  const current = state.wallpaper;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -672,17 +655,6 @@ function CustomizePanel({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const pick = (wallpaper: WallpaperChoice) => {
-    setError(null);
-    void invoke('newtab:setWallpaper', { wallpaper }).then(onChange);
-  };
-  const chooseImage = () => {
-    setError(null);
-    invoke('newtab:chooseImage', {}).then(
-      (next) => next && onChange(next),
-      (e: unknown) => setError(messageOf(e).replace(/^.*\] /, '')),
-    );
-  };
   // Shown at once; main's answer follows. Today and Quote are widgets (added or removed).
   const has = (type: 'today' | 'quote') => state.layout.widgets.some((w) => w.type === type);
   const show = (key: keyof NewTabState['home']['show'], on: boolean) => {
@@ -697,9 +669,6 @@ function CustomizePanel({
     onLayout({ widgets });
   };
 
-  const isCurrent = (choice: WallpaperChoice) =>
-    choice.kind === current.kind &&
-    (choice.kind === 'custom' || (current.kind === 'builtin' && choice.id === current.id));
   const field =
     'h-9 w-full rounded-[11px] bg-white/10 px-3 text-[13.5px] outline-none ring-1 ring-white/10 placeholder:text-white/40 focus:ring-white/30';
 
@@ -782,41 +751,16 @@ function CustomizePanel({
         Edit Widgets…
       </button>
 
-      <PanelLabel>Wallpaper</PanelLabel>
-      <div className="grid grid-cols-3 gap-2">
-        {BUILTIN_WALLPAPERS.map(({ id, name: label }) => {
-          const choice: WallpaperChoice = { kind: 'builtin', id };
-          return (
-            <Swatch
-              key={id}
-              label={label}
-              background={WALLPAPER_CSS[id]}
-              selected={isCurrent(choice)}
-              onClick={() => pick(choice)}
-              testId={`wallpaper-${id}`}
-            />
-          );
-        })}
-        {state.customImage && (
-          <Swatch
-            label="Your image"
-            background={`center / cover url("${state.customImage}")`}
-            selected={isCurrent({ kind: 'custom' })}
-            onClick={() => pick({ kind: 'custom' })}
-            testId="wallpaper-custom"
-          />
-        )}
-      </div>
-
-      <button
-        type="button"
-        onClick={chooseImage}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 py-2 text-[13px] font-medium hover:bg-white/15"
-        data-testid="choose-image"
-      >
-        <ImagePlus size={15} />
-        {state.customImage ? 'Choose another image…' : 'Choose your own image…'}
-      </button>
+      <PanelLabel>Background</PanelLabel>
+      <BackgroundSection
+        state={state}
+        preview={preview}
+        onPreview={onPreview}
+        look={look}
+        onLook={onLook}
+        onChange={onChange}
+        onError={setError}
+      />
       {error && (
         <p className="mt-2 text-xs text-red-300" role="alert">
           {error}
@@ -831,35 +775,5 @@ function PanelLabel({ children }: { children: ReactNode }) {
     <h3 className="mt-4 mb-1.5 text-[11.5px] font-semibold tracking-wide text-white/50 uppercase first-of-type:mt-0">
       {children}
     </h3>
-  );
-}
-
-function Swatch(props: {
-  label: string;
-  background: string;
-  selected: boolean;
-  onClick: () => void;
-  testId: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={props.onClick}
-      aria-pressed={props.selected}
-      className={`group relative aspect-[16/10] overflow-hidden rounded-lg ring-2 transition ${
-        props.selected ? 'ring-white' : 'ring-transparent hover:ring-white/40'
-      }`}
-      style={{ background: props.background }}
-      data-testid={props.testId}
-    >
-      <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-1.5 pt-3 pb-1 text-left text-[11px] font-medium">
-        {props.label}
-      </span>
-      {props.selected && (
-        <span className="absolute top-1 right-1 grid size-4 place-items-center rounded-full bg-white text-neutral-900">
-          <Check size={11} strokeWidth={3} />
-        </span>
-      )}
-    </button>
   );
 }

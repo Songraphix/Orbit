@@ -131,4 +131,5 @@ for it.
 
 - M1 design-system foundations — done (5cf14cc)
 - M2 customization engine — done (1689165)
-- M3 Homepage widgets — done
+- M3 Homepage widgets — done (8a8cfed)
+- M4 Backgrounds — done

@@ -45,6 +45,7 @@ import { focusPrefsSchema, focusSessionSchema, focusViewSchema } from '../focus'
 import { soundIdSchema, soundStateSchema } from '../sounds';
 import { uiPrefsPatchSchema, uiPrefsSchema } from '../ui-prefs';
 import { homeLayoutSchema, placeSchema, weatherSchema, widgetDataSchema } from '../home-widgets';
+import { lookSchema, ROTATIONS, unsplashPhotoSchema } from '../backgrounds';
 import {
   PROJECT_STATUSES,
   TASK_STATUSES,
@@ -779,6 +780,46 @@ export const contract = {
   'newtab:setWallpaper': {
     input: z.object({ wallpaper: wallpaperChoiceSchema }).strict(),
     output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
+  /** Background adjustments, favourites and rotation (brief M4). */
+  'newtab:setLook': {
+    input: z.object({ look: lookSchema }).strict(),
+    output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
+  'newtab:favorite': {
+    input: z.object({ wallpaper: wallpaperChoiceSchema, on: z.boolean() }).strict(),
+    output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
+  'newtab:setRotation': {
+    input: z.object({ rotation: z.enum(ROTATIONS) }).strict(),
+    output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
+  /** Unsplash photos for what you typed (needs the owner's access key). */
+  'newtab:unsplashSearch': {
+    input: z
+      .object({ query: z.string().min(1).max(80), page: z.number().int().min(1).max(50) })
+      .strict(),
+    output: z.object({ photos: z.array(unsplashPhotoSchema), error: z.string().nullable() }),
+    surfaces: ['internal'],
+  },
+  /** Settings → Integrations: the Unsplash access key (kept in the Keychain, never sent back). */
+  'unsplash:status': {
+    input: z.object({}).strict(),
+    output: z.object({ hasKey: z.boolean(), canStore: z.boolean() }),
+    surfaces: ['internal'],
+  },
+  'unsplash:setKey': {
+    input: z.object({ key: z.string().min(1).max(200) }).strict(),
+    output: z.object({ ok: z.boolean(), error: z.string().nullable() }),
+    surfaces: ['internal'],
+  },
+  'unsplash:clearKey': {
+    input: z.object({}).strict(),
+    output: z.void(),
     surfaces: ['internal'],
   },
   /** Opens a file picker; resolves to the new state, or null if the user cancelled. */

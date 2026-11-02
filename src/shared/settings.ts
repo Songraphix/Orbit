@@ -5,6 +5,7 @@ import { DEFAULT_FOCUS_PREFS, focusPrefsSchema, focusSessionSchema } from './foc
 import { DEFAULT_VOLUME } from './sounds';
 import { DEFAULT_UI_PREFS, uiPrefsSchema } from './ui-prefs';
 import { homeLayoutSchema } from './home-widgets';
+import { DEFAULT_LOOK, lookSchema, ROTATIONS } from './backgrounds';
 import { aiPrefsSchema, DEFAULT_AI_PREFS } from './ai';
 import { rulesSchema } from './rules';
 import { rectSchema, SIDEBAR_WIDTH } from './types/layout';
@@ -29,6 +30,11 @@ export const settingsSchema = {
   'sidebar.width': z.number().int().min(SIDEBAR_WIDTH.min).max(SIDEBAR_WIDTH.max),
   'sidebar.visible': z.boolean(),
   'newtab.wallpaper': wallpaperChoiceSchema,
+  /** Background adjustments (brief M4): brightness, blur, saturation, contrast, overlay… */
+  'newtab.look': lookSchema,
+  /** Favourite backgrounds (rotation picks from these). */
+  'newtab.favorites': z.array(wallpaperChoiceSchema).max(30),
+  'newtab.rotation': z.enum(ROTATIONS),
   /** The new tab page's theme, tagline and widgets. */
   'newtab.home': homeSettingsSchema,
   /** The Homepage's widgets (brief M3); null until you change them (then the old switches). */
@@ -101,6 +107,9 @@ export const settingsDefaults: Settings = {
   'sidebar.width': 260,
   'sidebar.visible': true,
   'newtab.wallpaper': { kind: 'builtin', id: 'aurora' },
+  'newtab.look': DEFAULT_LOOK,
+  'newtab.favorites': [],
+  'newtab.rotation': 'off',
   'newtab.home': DEFAULT_HOME,
   'home.layout': null,
   'window.activeSpace': null,

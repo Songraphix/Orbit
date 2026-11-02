@@ -115,6 +115,8 @@ export type TestServer = {
   lastAiRequest: () => { headers: Record<string, unknown>; body: Record<string, unknown> } | null;
   /** Every request the stand-in API received, oldest first. */
   aiRequests: () => { headers: Record<string, unknown>; body: Record<string, unknown> }[];
+  /** Photos the app told the fake Unsplash it used. */
+  unsplashDownloads: () => string[];
   /** The Authorization header of the last request to the stand-in GitHub API ('' = none). */
   lastGithubAuth: () => string;
 };
@@ -383,6 +385,8 @@ export async function startTestServer(): Promise<TestServer> {
   let lastAiRequest: ReturnType<TestServer['lastAiRequest']> = null;
   const aiRequests: NonNullable<ReturnType<TestServer['lastAiRequest']>>[] = [];
   let lastGithubAuth = '';
+  const unsplashDownloads: string[] = [];
+  const livePort = () => (server.address() as AddressInfo).port;
   const server = createServer((req, res) => {
     const path = (req.url ?? '/').split('?')[0]!;
     if (path === '/v1/messages' && req.method === 'POST') {
@@ -415,6 +419,37 @@ export async function startTestServer(): Promise<TestServer> {
         );
       });
       return;
+    }
+    // A stand-in for the Unsplash API (Homepage backgrounds): needs the key, counts downloads.
+    if (path.startsWith('/unsplash/')) {
+      if (req.headers['authorization'] !== 'Client-ID test_unsplash_key_0123456789') {
+        res.writeHead(401).end('{}');
+        return;
+      }
+      if (path === '/unsplash/search/photos') {
+        const photo = (id: string, name: string) => ({
+          id,
+          color: '#406080',
+          urls: {
+            raw: `http://127.0.0.1:${livePort()}/unsplash-img/${id}.jpg?ixid=1`,
+            small: `http://127.0.0.1:${livePort()}/unsplash-img/${id}-s.jpg`,
+          },
+          links: {
+            html: `https://unsplash.com/photos/${id}`,
+            download_location: `http://127.0.0.1:${livePort()}/unsplash/photos/${id}/download?ixid=1`,
+          },
+          user: { name, links: { html: `https://unsplash.com/@${name.toLowerCase()}` } },
+        });
+        res
+          .writeHead(200, { 'content-type': 'application/json' })
+          .end(JSON.stringify({ results: [photo('peak1', 'Ama'), photo('lake2', 'Kofi')] }));
+        return;
+      }
+      if (/^\/unsplash\/photos\/[^/]+\/download$/.test(path)) {
+        unsplashDownloads.push(path.split('/')[3]!);
+        res.writeHead(200, { 'content-type': 'application/json' }).end('{"url":"x"}');
+        return;
+      }
     }
     // Stand-ins for Open-Meteo (the Homepage's weather widget).
     if (path === '/geo/search') {
@@ -578,6 +613,7 @@ export async function startTestServer(): Promise<TestServer> {
     close: () => new Promise((resolve) => server.close(() => resolve())),
     lastAiRequest: () => lastAiRequest,
     aiRequests: () => aiRequests,
+    unsplashDownloads: () => unsplashDownloads,
     lastGithubAuth: () => lastGithubAuth,
   };
 }

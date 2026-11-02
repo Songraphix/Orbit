@@ -1,4 +1,4 @@
-import type { BuiltinWallpaperId } from '@shared/types/newtab';
+import type { BuiltinWallpaperId, WallpaperChoice } from '@shared/types/newtab';
 
 /** Soft "mesh" wallpapers: a few blurred colour blobs over a deep base colour. */
 function mesh(base: string, blobs: [x: number, y: number, color: string, size: number][]): string {
@@ -54,8 +54,55 @@ export const WALLPAPER_CSS: Record<BuiltinWallpaperId, string> = {
     [80, 30, '#eacda3', 42],
     [55, 95, '#c06c84', 48],
   ]),
+  glacier: mesh('#0c1a2b', [
+    [15, 20, '#a1c4fd', 50],
+    [80, 25, '#c2e9fb', 42],
+    [50, 95, '#4b79a1', 50],
+  ]),
+  nebula: mesh('#0a0518', [
+    [20, 70, '#ff6ec4', 42],
+    [75, 25, '#7873f5', 48],
+    [45, 10, '#4ade80', 28],
+    [90, 90, '#1e3a8a', 45],
+  ]),
+  meadow: mesh('#0f2414', [
+    [20, 20, '#d4fc79', 42],
+    [80, 65, '#96e6a1', 48],
+    [35, 95, '#2f855a', 45],
+  ]),
+  peach: mesh('#3a1e1e', [
+    [25, 25, '#ffd1a9', 50],
+    [80, 30, '#ff9a8b', 45],
+    [60, 95, '#ff6a88', 45],
+  ]),
+  rosewood: mesh('#1f0a10', [
+    [20, 80, '#b24592', 48],
+    [80, 20, '#f15f79', 44],
+    [60, 60, '#5b1a3a', 40],
+  ]),
+  slate: mesh('#111418', [
+    [20, 25, '#434343', 50],
+    [80, 70, '#2c3e50', 50],
+    [50, 5, '#6b7b8c', 32],
+  ]),
 };
 
 /** Film-grain overlay (SVG noise) that keeps gradients from looking flat or banding. */
 export const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E\")";
+
+/** A background's CSS (its image layer). */
+export function backgroundCss(choice: WallpaperChoice, customImage: string | null): string {
+  switch (choice.kind) {
+    case 'builtin':
+      return WALLPAPER_CSS[choice.id];
+    case 'custom':
+      return customImage ? `url("${customImage}")` : WALLPAPER_CSS.aurora;
+    case 'color':
+      return choice.color;
+    case 'gradient':
+      return `linear-gradient(${choice.angle}deg, ${choice.from}, ${choice.to})`;
+    case 'unsplash':
+      return `url("${choice.photo.url}")`;
+  }
+}
