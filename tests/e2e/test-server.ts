@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import type { ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 /** A 1×1 PNG, served as the test pages' favicon. */
@@ -72,6 +73,20 @@ const ROUTES: Record<string, string> = {
      </script>`,
   ),
   '/three': page('Page Three'),
+  // The assistant (roadmap Phase 3): an article to summarize, ask about and make tasks from.
+  '/article': page(
+    'Grid Systems',
+    '<nav><a href="/one">Home</a> <a href="/two">Menu link</a></nav>' +
+      '<article><h2>Why grids</h2>' +
+      '<p id="rhythm">Grids give a layout rhythm and make pages easier to scan.</p>' +
+      '<p id="baseline">Use an 8 pt baseline so spacing stays consistent.</p>' +
+      '<h2>Next steps</h2><ul><li>TODO: Audit the spacing on the pricing page.</li>' +
+      '<li>TODO: Share the grid spec with the design team.</li></ul>' +
+      '<p>' +
+      'Long article text. '.repeat(30) +
+      '</p></article>' +
+      '<footer>Footer text</footer>',
+  ),
   '/inbox': page('Inbox (12) - Mail'),
   '/boost': page(
     'Boost Me',
@@ -85,7 +100,165 @@ export type TestServer = {
   close: () => Promise<void>;
   /** The last request the stand-in Anthropic API received (headers and JSON body). */
   lastAiRequest: () => { headers: Record<string, unknown>; body: Record<string, unknown> } | null;
+  /** Every request the stand-in API received, oldest first. */
+  aiRequests: () => { headers: Record<string, unknown>; body: Record<string, unknown> }[];
 };
+
+type FakeBlock =
+  | { type: 'text'; text: string }
+  | {
+      type: 'document';
+      title?: string;
+      source:
+        | { type: 'content'; content: { type: 'text'; text: string }[] }
+        | { type: 'text'; data: string };
+    };
+type FakeRequest = {
+  model: string;
+  stream?: boolean;
+  output_config?: { format?: unknown };
+  messages: { role: string; content: string | FakeBlock[] }[];
+};
+
+/** Tidy: groups tabs whose titles start with "Page" into "Pages". */
+function tidyAnswer(body: FakeRequest): string {
+  const first = body.messages[0]?.content;
+  const lines = String(typeof first === 'string' ? first : '')
+    .split('\n')
+    .slice(1);
+  const pages = lines.filter((l) => / \| Page /.test(l)).map((l) => l.split(' | ')[0]!);
+  return JSON.stringify({ groups: [{ name: 'Pages', tabs: pages }] });
+}
+
+const blocksOf = (body: FakeRequest) =>
+  body.messages.flatMap((m) => (typeof m.content === 'string' ? [] : m.content));
+const docText = (doc: Extract<FakeBlock, { type: 'document' }>) =>
+  doc.source.type === 'content'
+    ? doc.source.content.map((b) => b.text).join('\n')
+    : doc.source.data;
+
+/** Tasks: each "TODO:" line in the text, or one task when there are none. */
+function fakeTasks(body: FakeRequest) {
+  const text = blocksOf(body)
+    .map((b) => (b.type === 'document' ? docText(b) : ''))
+    .join('\n');
+  const todos = [...text.matchAll(/TODO: ([^\n]+)/g)].map((m) => m[1]!.trim());
+  return (todos.length ? todos : ['Read it again']).map((title) => ({ title, notes: '' }));
+}
+
+/**
+ * The assistant's answers, streamed as the API streams them: an opening line, then one cited
+ * claim per document (a page's passage that mentions "Grids", or a finding's first words).
+ * A question containing SLOW streams slowly (for Stop).
+ */
+function streamAnswer(body: FakeRequest, res: ServerResponse) {
+  const docs = blocksOf(body).filter(
+    (b): b is Extract<FakeBlock, { type: 'document' }> => b.type === 'document',
+  );
+  const last = body.messages.at(-1)?.content;
+  const question =
+    typeof last === 'string'
+      ? last
+      : (last ?? []).map((b) => (b.type === 'text' ? b.text : '')).join(' ');
+  type Piece = { text: string; citation?: Record<string, unknown> };
+  const pieces: Piece[] = [
+    { text: docs.length ? 'Here is what I found. ' : `You asked: ${question}` },
+  ];
+  docs.slice(0, 3).forEach((doc, index) => {
+    if (doc.source.type === 'content') {
+      const blocks = doc.source.content;
+      const at = Math.max(
+        0,
+        blocks.findIndex((b) => b.text.includes('Grids')),
+      );
+      pieces.push({
+        text: `Grids give rhythm (from ${doc.title ?? 'the page'}). `,
+        citation: {
+          type: 'content_block_location',
+          cited_text: blocks[at]?.text ?? '',
+          document_index: index,
+          document_title: doc.title ?? null,
+          start_block_index: at,
+          end_block_index: at + 1,
+        },
+      });
+    } else {
+      const data = doc.source.data;
+      pieces.push({
+        text: `A finding says so (${doc.title ?? 'finding'}). `,
+        citation: {
+          type: 'char_location',
+          cited_text: data.slice(0, 30),
+          document_index: index,
+          document_title: doc.title ?? null,
+          start_char_index: 0,
+          end_char_index: Math.min(30, data.length),
+          file_id: null,
+        },
+      });
+    }
+  });
+  if (/SLOW/.test(question)) {
+    pieces.push(...Array.from({ length: 40 }, (_, i) => ({ text: `word${i} ` })));
+  }
+  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
+  const send = (event: Record<string, unknown>) =>
+    res.write(`event: ${String(event['type'])}\ndata: ${JSON.stringify(event)}\n\n`);
+  const events: Record<string, unknown>[] = [
+    {
+      type: 'message_start',
+      message: {
+        id: 'msg_stream',
+        type: 'message',
+        role: 'assistant',
+        model: body.model,
+        content: [],
+        stop_reason: null,
+        stop_sequence: null,
+        usage: { input_tokens: 1200, output_tokens: 1 },
+      },
+    },
+  ];
+  pieces.forEach((piece, index) => {
+    events.push(
+      {
+        type: 'content_block_start',
+        index,
+        content_block: { type: 'text', text: '', citations: null },
+      },
+      { type: 'content_block_delta', index, delta: { type: 'text_delta', text: piece.text } },
+    );
+    if (piece.citation) {
+      events.push({
+        type: 'content_block_delta',
+        index,
+        delta: { type: 'citations_delta', citation: piece.citation },
+      });
+    }
+    events.push({ type: 'content_block_stop', index });
+  });
+  events.push(
+    {
+      type: 'message_delta',
+      delta: { stop_reason: 'end_turn', stop_sequence: null },
+      usage: { output_tokens: 80 },
+    },
+    { type: 'message_stop' },
+  );
+  const slow = /SLOW/.test(question);
+  let i = 0;
+  const next = () => {
+    if (res.destroyed) return;
+    if (i >= events.length) {
+      res.end();
+      return;
+    }
+    send(events[i++]!);
+    if (slow) setTimeout(next, 120);
+    else next();
+  };
+  next();
+}
 
 /** Serves a few static pages on 127.0.0.1 so tests never depend on the internet. */
 export async function startTestServer(): Promise<TestServer> {
@@ -99,31 +272,32 @@ export async function startTestServer(): Promise<TestServer> {
         `<pubDate>${new Date(Date.UTC(2026, 9, 1 + i)).toUTCString()}</pubDate></item>`,
     ).join('')}</channel></rss>`;
   let lastAiRequest: ReturnType<TestServer['lastAiRequest']> = null;
+  const aiRequests: NonNullable<ReturnType<TestServer['lastAiRequest']>>[] = [];
   const server = createServer((req, res) => {
     const path = (req.url ?? '/').split('?')[0]!;
     if (path === '/v1/messages' && req.method === 'POST') {
-      // A stand-in for the Anthropic Messages API (Tidy tests): groups tabs whose titles start
-      // with "Page" into "Pages", answering in the structured-output JSON shape.
+      // A stand-in for the Anthropic Messages API: Tidy's structured answer, the assistant's
+      // streamed answers with citations, and tasks drawn from text.
       let raw = '';
       req.on('data', (chunk: Buffer) => (raw += chunk.toString()));
       req.on('end', () => {
-        const body = JSON.parse(raw) as {
-          messages: { content: string }[];
-        };
+        const body = JSON.parse(raw) as FakeRequest;
         lastAiRequest = { headers: req.headers, body: body as Record<string, unknown> };
-        const lines = String(body.messages[0]?.content ?? '')
-          .split('\n')
-          .slice(1);
-        const pages = lines.filter((l) => / \| Page /.test(l)).map((l) => l.split(' | ')[0]!);
+        aiRequests.push(lastAiRequest);
+        if (body.stream) {
+          streamAnswer(body, res);
+          return;
+        }
+        const text = JSON.stringify(body.output_config?.format ?? {}).includes('"tasks"')
+          ? JSON.stringify({ tasks: fakeTasks(body) })
+          : tidyAnswer(body);
         res.writeHead(200, { 'content-type': 'application/json' }).end(
           JSON.stringify({
             id: 'msg_test',
             type: 'message',
             role: 'assistant',
-            model: 'claude-haiku-5-5',
-            content: [
-              { type: 'text', text: JSON.stringify({ groups: [{ name: 'Pages', tabs: pages }] }) },
-            ],
+            model: body.model,
+            content: [{ type: 'text', text }],
             stop_reason: 'end_turn',
             stop_sequence: null,
             usage: { input_tokens: 10, output_tokens: 10 },
@@ -216,5 +390,6 @@ export async function startTestServer(): Promise<TestServer> {
     url: (path) => `http://127.0.0.1:${port}${path}`,
     close: () => new Promise((resolve) => server.close(() => resolve())),
     lastAiRequest: () => lastAiRequest,
+    aiRequests: () => aiRequests,
   };
 }

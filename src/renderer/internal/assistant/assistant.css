@@ -1,0 +1,196 @@
+/* The assistant (roadmap P3.1): answers set like a short article, with citation chips. */
+
+.assistant .md > :first-child {
+  margin-top: 0;
+}
+.assistant .md p,
+.assistant .md ul,
+.assistant .md ol,
+.assistant .md pre,
+.assistant .md blockquote,
+.assistant .md .md-table {
+  margin: 0.5em 0;
+}
+.assistant .md h3,
+.assistant .md h4,
+.assistant .md h5 {
+  margin: 0.9em 0 0.35em;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.assistant .md h3 {
+  font-size: 15px;
+}
+.assistant .md h4 {
+  font-size: 14px;
+}
+.assistant .md h5 {
+  font-size: 13px;
+}
+.assistant .md ul,
+.assistant .md ol {
+  padding-left: 1.25em;
+}
+.assistant .md ul {
+  list-style: disc;
+}
+.assistant .md ol {
+  list-style: decimal;
+}
+.assistant .md li {
+  margin: 0.2em 0;
+}
+.assistant .md li > p {
+  margin: 0;
+}
+.assistant .md li::marker {
+  color: var(--note-muted);
+}
+.assistant .md a {
+  color: var(--work-accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--work-accent) 35%, transparent);
+  text-underline-offset: 2px;
+}
+.assistant .md code {
+  border-radius: 5px;
+  background: var(--work-card);
+  padding: 0.1em 0.35em;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.88em;
+}
+.assistant .md pre {
+  overflow-x: auto;
+  border-radius: 10px;
+  background: var(--work-card);
+  padding: 0.65em 0.8em;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.assistant .md pre code {
+  background: none;
+  padding: 0;
+}
+.assistant .md blockquote {
+  border-left: 3px solid var(--work-border);
+  padding-left: 0.75em;
+  color: var(--note-muted);
+}
+.assistant .md hr {
+  margin: 0.9em 0;
+  border: 0;
+  border-top: 1px solid var(--work-border);
+}
+.assistant .md-table {
+  overflow-x: auto;
+}
+.assistant .md table {
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.assistant .md th,
+.assistant .md td {
+  border: 1px solid var(--work-border);
+  padding: 0.3em 0.55em;
+  text-align: left;
+}
+
+/* A citation: a small numbered chip that sits on the line. */
+.assistant .cite {
+  display: inline-grid;
+  place-items: center;
+  margin-left: 2px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--work-accent-soft);
+  padding: 0 4px;
+  vertical-align: 1px;
+  color: var(--work-accent);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    transform 120ms ease;
+}
+.assistant button.cite:hover {
+  background: var(--work-accent);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.assistant .cite.static {
+  margin: 1px 0 0;
+  flex-shrink: 0;
+}
+
+/* Thinking: the words shimmer while Claude reads. */
+.assistant .thinking {
+  background: linear-gradient(
+      90deg,
+      var(--note-muted) 0%,
+      var(--note-fg) 45%,
+      var(--note-muted) 60%,
+      var(--note-muted) 100%
+    )
+    0 0 / 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: assistant-shimmer 1.6s linear infinite;
+}
+.assistant .thinking svg {
+  color: var(--work-accent);
+}
+@keyframes assistant-shimmer {
+  to {
+    background-position: -220% 0;
+  }
+}
+.assistant .spin-slow {
+  animation: assistant-spin 2.4s linear infinite;
+}
+@keyframes assistant-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* While writing, a soft caret follows the last word. */
+.assistant .md.streaming > :last-child::after {
+  content: '';
+  display: inline-block;
+  margin-left: 2px;
+  width: 7px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--work-accent);
+  vertical-align: -1px;
+  animation: assistant-caret 1s ease-in-out infinite;
+}
+@keyframes assistant-caret {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* The welcome orb: Orbit's accent, lit from the top. */
+.assistant .orb {
+  background:
+    radial-gradient(120% 90% at 30% 15%, rgb(255 255 255 / 0.35), transparent 60%),
+    linear-gradient(140deg, #8b7bff, var(--work-accent) 55%, #4f3fd9);
+  box-shadow: 0 10px 24px -10px var(--work-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant .thinking,
+  .assistant .spin-slow,
+  .assistant .md.streaming > :last-child::after {
+    animation: none;
+  }
+  .assistant .thinking {
+    color: var(--note-muted);
+    background: none;
+  }
+}

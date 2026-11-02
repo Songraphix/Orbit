@@ -19,7 +19,7 @@ import { TabController } from './tab-controller';
 import type { TabEnv } from './tab-controller';
 import { randomUUID } from 'node:crypto';
 import { profileView } from '../sidebar/profiles';
-import type { PageCaptureRequest } from './context-menu';
+import type { PageMenuRequest } from './context-menu';
 
 /** A pre-drag snapshot older than this is stale (the page may have changed). */
 const SNAPSHOT_MAX_AGE_MS = 10_000;
@@ -49,7 +49,7 @@ export type TabManagerDeps = Pick<
   /** A tab's page stopped responding. */
   onUnresponsive?: (tabId: string) => void;
   /** "Save … to Orbit" from a page's right-click menu. */
-  onCapture?: (tabId: string, request: PageCaptureRequest) => void;
+  onCapture?: (tabId: string, request: PageMenuRequest) => void;
   /** A tab's media started or stopped. */
   onMedia?: (tabId: string, event: 'playing' | 'paused') => void;
   /** Chrome extensions see web tabs as tabs (chrome.tabs.*). */
@@ -68,7 +68,12 @@ export type TabManagerDeps = Pick<
   /** …and kept as it changes. */
   onSplitsChange?: (splits: Record<string, { ids: [string, string]; ratio: number }>) => void;
   /** Tidy's state for a space (F-29). */
-  tidyState?: (spaceId: string) => { available: boolean; running: boolean; canUndo: boolean };
+  tidyState?: (spaceId: string) => {
+    available: boolean;
+    running: boolean;
+    canUndo: boolean;
+    assistant: boolean;
+  };
 };
 
 const isInternal = (url: string | null) => (url ?? '').startsWith('orbit://');
@@ -193,7 +198,12 @@ export class TabManager {
       pinned: rows('pinned'),
       today: rows('today'),
       activeItemId: this.activeId,
-      tidy: this.deps.tidyState?.(space.id) ?? { available: false, running: false, canUndo: false },
+      tidy: this.deps.tidyState?.(space.id) ?? {
+        available: false,
+        running: false,
+        canUndo: false,
+        assistant: false,
+      },
     };
   }
 

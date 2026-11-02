@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { wallpaperChoiceSchema } from './types/newtab';
 import { DEFAULT_HOME, homeSettingsSchema } from './types/home';
 import { focusSessionSchema } from './focus';
+import { aiPrefsSchema, DEFAULT_AI_PREFS } from './ai';
 import { rectSchema, SIDEBAR_WIDTH } from './types/layout';
 
 /**
@@ -61,6 +62,8 @@ export const settingsSchema = {
   'focus.session': focusSessionSchema.nullable(),
   /** Orbit Capture's last project, the default next time (null = Unsorted). */
   'capture.lastProject': z.string().nullable(),
+  /** AI (roadmap P3.7): on or off, the model, a monthly limit, attaching the page. */
+  'ai.prefs': aiPrefsSchema,
   /** Search engine URL with %s for the query. */
   'search.engine': z.enum(['google', 'duckduckgo', 'bing', 'kagi', 'ecosia']),
 } as const;
@@ -88,6 +91,7 @@ export const settingsDefaults: Settings = {
   'panel.state': { open: false, route: 'panel' },
   'capture.lastProject': null,
   'focus.session': null,
+  'ai.prefs': DEFAULT_AI_PREFS,
 };
 
 /** Query URL templates for `search.engine`. */

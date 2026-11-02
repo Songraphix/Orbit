@@ -44,6 +44,12 @@ export type ContextAction =
   | 'capture-selection'
   | 'capture-link'
   | 'capture-image'
+  // The assistant and notes (roadmap P3.1–P3.3): selected text into answers, tasks or a note.
+  | 'ask-selection'
+  | 'tasks-selection'
+  | 'note-selection'
+  | 'ask-page'
+  | 'summarize-page'
   | `spell:${string}`;
 
 export type ContextItem =
@@ -112,9 +118,11 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
 
   const selection = params.selectionText.trim();
   if (selection && !params.isEditable) {
+    groups.push([item('copy', 'Copy'), item('search-selection', searchLabel(selection))]);
     groups.push([
-      item('copy', 'Copy'),
-      item('search-selection', searchLabel(selection)),
+      item('ask-selection', 'Ask Orbit About Selection'),
+      item('tasks-selection', 'Make Tasks from Selection…'),
+      item('note-selection', 'New Note from Selection'),
       item('capture-selection', 'Save Selection to Orbit…'),
     ]);
   }
@@ -126,7 +134,11 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
       item('forward', 'Forward', page.canGoForward),
       item('reload', 'Reload'),
     ]);
-    groups.push([item('capture-page', 'Save Page to Orbit…')]);
+    groups.push([
+      item('summarize-page', 'Summarize Page'),
+      item('ask-page', 'Ask Orbit About This Page'),
+      item('capture-page', 'Save Page to Orbit…'),
+    ]);
   }
 
   groups.push([item('inspect', 'Inspect Element')]);

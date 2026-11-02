@@ -51,8 +51,11 @@ export function InternalApp() {
     // Internal pages use the normal light page background, except the new tab page (wallpaper)
     // and the Library (transparent, over the space's colours).
     // Notes pages paint their own.
-    if (!['newtab', 'library', 'note', 'notes'].includes(page))
+    if (!['newtab', 'library', 'note', 'notes'].includes(page)) {
       document.documentElement.style.background = '#fff';
+      // A light page keeps light form controls when macOS is in dark mode.
+      document.documentElement.style.colorScheme = 'light';
+    }
   }, [page]);
 
   if (page === 'newtab') return <NewTabPage />;

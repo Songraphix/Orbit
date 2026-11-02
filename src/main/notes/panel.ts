@@ -22,7 +22,7 @@ export type NotesPanelDeps = {
  * Closing only hides the view, so reopening is instant and an unsaved word is never lost.
  */
 /** The panel's tabs (and the Project Board). */
-export type PanelView = 'notes' | 'projects' | 'tasks' | 'board';
+export type PanelView = 'notes' | 'projects' | 'tasks' | 'board' | 'assistant' | 'tools';
 
 export class NotesPanelController {
   private view: WebContentsView | null = null;
@@ -35,6 +35,12 @@ export class NotesPanelController {
 
   get isOpen(): boolean {
     return this.shown;
+  }
+
+  /** The panel's page, once it has been opened (for events meant only for it). */
+  get contents(): WebContents | null {
+    const contents = this.view?.webContents;
+    return contents && !contents.isDestroyed() ? contents : null;
   }
 
   owns(webContentsId: number): boolean {

@@ -9,6 +9,7 @@ import {
   PinOff,
   Plus,
   Search,
+  Sparkles,
   SquareCheck,
   Trash2,
   X,
@@ -28,6 +29,7 @@ import { ResearchView } from '../work/research';
 import { WorkProvider } from '../work/WorkProvider';
 import { saveOpenNotes } from '../../notes/save-notes';
 import { useAppearance } from '../appearance';
+import { AssistantView } from '../assistant/AssistantView';
 
 const invoke = window.orbit.invoke;
 /** Moves (or deletes) a note — after saving every keystroke, so the next place has it all. */
@@ -130,7 +132,9 @@ export function NotesPanelPage() {
       ? 'projects'
       : a === 'tasks'
         ? 'tasks'
-        : 'notes';
+        : a === 'assistant'
+          ? 'assistant'
+          : 'notes';
   // The board's Back returns to whichever list opened it.
   const lastList = useRef<PanelTab>('projects');
   useEffect(() => {
@@ -149,6 +153,7 @@ export function NotesPanelPage() {
   else if (a === 'tasks') body = <TasksView />;
   else if (a === 'research') body = <ResearchView filter={b} />;
   else if (a === 'board') body = <BoardView onBack={() => showPanelView(lastList.current)} />;
+  else if (a === 'assistant') body = <AssistantView />;
   else body = a ? <PanelNote key={a} id={a} /> : <NotesList />;
   // Lists get the Quick Actions at their foot; a note, a project's page and the board don't.
   const lists = (a === 'projects' && !b) || a === 'tasks';
@@ -173,14 +178,18 @@ export function NotesPanelPage() {
   );
 }
 
-type PanelTab = 'notes' | 'projects' | 'tasks';
+type PanelTab = 'notes' | 'projects' | 'tasks' | 'assistant';
 
-/** Notes · Projects · Tasks across the top of the panel (and Close). */
+/**
+ * Notes · Projects · Tasks · Assistant across the top of the panel (and Close). The open one
+ * shows its name; the others are icons (named on hover), so all fit in the narrow column.
+ */
 function PanelTabs({ current }: { current: PanelTab }) {
-  const tabs: { id: PanelTab; label: string; icon: ReactNode }[] = [
+  const tabs: { id: PanelTab; label: string; icon: ReactNode; keys?: string }[] = [
     { id: 'notes', label: 'Notes', icon: <NotebookPen size={15} /> },
     { id: 'projects', label: 'Projects', icon: <FolderClosed size={15} /> },
     { id: 'tasks', label: 'Tasks', icon: <SquareCheck size={15} /> },
+    { id: 'assistant', label: 'Assistant', icon: <Sparkles size={15} />, keys: '⌘J' },
   ];
   return (
     <nav
@@ -188,24 +197,29 @@ function PanelTabs({ current }: { current: PanelTab }) {
       aria-label="Panel"
       data-testid="panel-tabs"
     >
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          aria-current={t.id === current ? 'page' : undefined}
-          onClick={() => showPanelView(t.id)}
-          className={`press flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[11px] text-[13px] font-medium ${
-            t.id === current
-              ? 'bg-[var(--work-accent)] text-white shadow-[0_6px_16px_-8px_var(--work-accent)]'
-              : 'text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
-          }`}
-          data-testid="panel-tab"
-          data-tab={t.id}
-        >
-          {t.icon}
-          {t.label}
-        </button>
-      ))}
+      {tabs.map((t) => {
+        const on = t.id === current;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            aria-current={on ? 'page' : undefined}
+            aria-label={t.label}
+            title={on ? undefined : t.keys ? `${t.label} (${t.keys})` : t.label}
+            onClick={() => showPanelView(t.id)}
+            className={`press panel-tab flex h-9 items-center justify-center gap-1.5 rounded-[11px] text-[13px] font-medium ${
+              on
+                ? 'flex-1 bg-[var(--work-accent)] text-white shadow-[0_6px_16px_-8px_var(--work-accent)]'
+                : 'w-10 text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
+            }`}
+            data-testid="panel-tab"
+            data-tab={t.id}
+          >
+            {t.icon}
+            {on && <span className="panel-tab-label">{t.label}</span>}
+          </button>
+        );
+      })}
       <IconButton label="Close Panel (⇧⌘N)" onClick={closePanel} testId="notes-close">
         <X size={15} />
       </IconButton>

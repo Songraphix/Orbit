@@ -112,6 +112,7 @@ describe('TidyService', () => {
     );
     const ai = {
       available: true,
+      prefs: { enabled: true },
       tidy: async (tabs: readonly TidyTab[]) => answer(tabs),
     } as unknown as AIService;
     const tidy = new TidyService({ store, ai, onChange: () => undefined });
@@ -131,7 +132,12 @@ describe('TidyService', () => {
     const before = top();
     expect(await tidy.tidy(space)).toBe(2);
     expect(top()).toEqual(['Alpha', '  A1', '  A2', 'Beta', '  B1', '  B2', 'C']);
-    expect(tidy.state(space.id)).toEqual({ available: true, running: false, canUndo: true });
+    expect(tidy.state(space.id)).toEqual({
+      available: true,
+      running: false,
+      canUndo: true,
+      assistant: true,
+    });
 
     tidy.untidy(space);
     expect(top()).toEqual(before);

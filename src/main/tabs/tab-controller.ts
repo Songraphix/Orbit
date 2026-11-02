@@ -3,7 +3,7 @@ import type { Session } from 'electron';
 import type { TabState } from '@shared/types/tabs';
 import { fetchFaviconDataUrl } from './favicon';
 import { attachContextMenu } from './context-menu';
-import type { PageCaptureRequest } from './context-menu';
+import type { PageMenuRequest } from './context-menu';
 import { guardWebContents } from './web-guards';
 
 /** What a tab needs from the outside world. Keeps TabController free of window/manager details. */
@@ -36,7 +36,7 @@ export type TabEnv = {
   /** The page took keyboard focus (e.g. clicked in split view). */
   onFocus?(): void;
   /** "Save … to Orbit" from the page's right-click menu (roadmap P2.1). */
-  onCapture?(request: PageCaptureRequest): void;
+  onCapture?(request: PageMenuRequest): void;
 };
 
 export type HistorySink = {

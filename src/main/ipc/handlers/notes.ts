@@ -172,7 +172,8 @@ export function registerNotesHandlers(
 
   router.handle('notes:openUrl', ({ url }, { sender }) => {
     const { window } = surfaceOf(sender.webContentsId);
-    if (!window || !isWeb(url)) return;
+    // Web pages, or Settings (the assistant's "Open Settings → AI").
+    if (!window || !(isWeb(url) || /^orbit:\/\/settings(\/[a-z]+)?$/.test(url))) return;
     window.tabs.create(url);
     window.win.focus();
   });

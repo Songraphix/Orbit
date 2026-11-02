@@ -68,8 +68,14 @@ export const sidebarSnapshotSchema = z.object({
   pinned: z.array(sidebarRowSchema),
   today: z.array(sidebarRowSchema),
   activeItemId: z.string().nullable(),
-  /** Tidy (F-29) for the active space: offered (a key is set), working, or undoable. */
-  tidy: z.object({ available: z.boolean(), running: z.boolean(), canUndo: z.boolean() }),
+  /** Tidy (F-29) for the active space: offered (a key is set), working, or undoable. `assistant`:
+   *  the toolbar offers the assistant (unless AI is turned off in Settings). */
+  tidy: z.object({
+    available: z.boolean(),
+    running: z.boolean(),
+    canUndo: z.boolean(),
+    assistant: z.boolean(),
+  }),
 });
 export type SidebarSnapshot = z.output<typeof sidebarSnapshotSchema>;
 

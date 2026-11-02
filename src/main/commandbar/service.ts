@@ -83,6 +83,17 @@ export const COMMANDS: readonly CommandDef[] = [
     title: 'New Floating Note',
     keywords: ['notes', 'sticky', 'window', 'pin', 'on top'],
   },
+  {
+    id: 'assistant',
+    title: 'Ask Orbit',
+    keywords: ['ai', 'assistant', 'claude', 'chat', 'question', 'ask'],
+    shortcut: '⌘J',
+  },
+  {
+    id: 'summarize-page',
+    title: 'Summarize Page',
+    keywords: ['ai', 'summary', 'tldr', 'claude', 'read', 'digest'],
+  },
   { id: 'new-boost', title: 'New Boost', keywords: ['css', 'customise', 'customize', 'style'] },
   { id: 'archived-tabs', title: 'Archived Tabs', keywords: ['archive', 'closed', 'history'] },
   { id: 'settings', title: 'Settings', keywords: ['preferences', 'options'], shortcut: '⌘,' },

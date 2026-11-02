@@ -9,6 +9,7 @@ import {
   PanelLeft,
   RotateCw,
   NotebookPen,
+  Sparkles,
   SlidersHorizontal,
   X,
 } from 'lucide-react';
@@ -53,6 +54,7 @@ export function Toolbar({
   focused = true,
   inSplit = false,
   notesOpen,
+  assistant = false,
   profile,
   focus,
 }: {
@@ -67,6 +69,8 @@ export function Toolbar({
   inSplit?: boolean;
   /** The Notes button (right-most toolbar only): whether the panel is open. */
   notesOpen?: boolean | undefined;
+  /** The assistant's ✦ button (right-most toolbar only, unless AI is turned off). */
+  assistant?: boolean;
   /** The profile button (right-most toolbar only). */
   profile?: ProfileView | null | undefined;
   /** Focus mode's pill (right-most toolbar only). */
@@ -218,6 +222,17 @@ export function Toolbar({
           </ToolbarButton>
         )}
         {focus && <FocusPill session={focus} />}
+        {assistant && (
+          <ToolbarButton
+            label="Ask Orbit"
+            keys="⌘J"
+            anim="pop"
+            onClick={() => void window.orbit.invoke('assistant:open', {})}
+            testId="toolbar-assistant"
+          >
+            <Sparkles size={14} />
+          </ToolbarButton>
+        )}
         {notesOpen !== undefined && (
           <ToolbarButton
             label={notesOpen ? 'Hide Notes' : 'Notes'}

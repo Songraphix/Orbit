@@ -20,7 +20,7 @@ import { PeekController } from '../peek/controller';
 import { LibraryController } from '../library/controller';
 import { NotesPanelController } from '../notes/panel';
 import { notesHash } from '../notes/model';
-import type { PageCaptureRequest } from '../tabs/context-menu';
+import type { PageMenuRequest } from '../tabs/context-menu';
 import { shouldPeek } from '../peek/policy';
 import { LayoutEngine } from './layout-engine';
 import { OverlayController } from './overlay';
@@ -55,7 +55,7 @@ export type WindowManagerDeps = {
   /** Runs an app command for a window (the sidebar's + menu). */
   runCommand?: (controller: WindowController, id: string) => void;
   /** Orbit Capture from a page's right-click menu (roadmap P2.1). */
-  capture?: (controller: WindowController, tabId: string, request: PageCaptureRequest) => void;
+  capture?: (controller: WindowController, tabId: string, request: PageMenuRequest) => void;
   /** Tidy's state per space (F-29), shown in the space header. */
   tidyState?: TabManagerDeps['tidyState'];
   /** Live Folders (F-28), for the space and folder menus. */
@@ -64,6 +64,8 @@ export type WindowManagerDeps = {
     refresh: (folderId: string | null) => void;
     markAllRead: (folderId: string) => void;
   };
+  /** A window's tabs changed (the assistant's page chip follows the page you're on). */
+  onTabsChange?: (controller: WindowController) => void;
   /** Workspace templates (roadmap P2.5). */
   templates?: {
     save: (controller: WindowController, spaceId: string) => void;
@@ -187,6 +189,7 @@ export class WindowManager {
     let library: LibraryController | null = null;
     let notes: NotesPanelController | null = null;
     let overlayRef: OverlayController | null = null;
+    let controllerRef: WindowController | null = null;
     /** The shell's sidebar state also goes to the overlay, which draws the slid-out sidebar. */
     const toOverlay = <E extends 'state:sidebar' | 'state:tabs' | 'state:media' | 'state:library'>(
       event: E,
@@ -254,6 +257,7 @@ export class WindowManager {
           find.close();
         }
         media?.refresh(); // the mini player shows only while its tab is off screen
+        if (controllerRef) this.deps.onTabsChange?.(controllerRef);
       },
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
       onSplitChange: (ratio) => layout.setSplitRatio(ratio),
@@ -422,7 +426,7 @@ export class WindowManager {
         use: (templateId) => this.deps.templates?.use(controller, templateId),
       },
     });
-    const controller: WindowController = {
+    const controller: WindowController = (controllerRef = {
       win,
       layout,
       tabs: tabManager,
@@ -435,7 +439,7 @@ export class WindowManager {
       setSidebarPeek,
       store: this.deps.store,
       sidebar,
-    };
+    });
     this.controllers.set(id, controller);
     this.controllers.set(overlayId, controller);
     senders.add(id, 'shell');

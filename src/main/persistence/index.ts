@@ -11,6 +11,7 @@ import { HomeRepository } from './repositories/home';
 import { WorkRepository } from './repositories/work';
 import { CaptureRepository } from './repositories/captures';
 import { TemplateRepository } from './repositories/templates';
+import { AiActivityRepository } from './repositories/ai-activity';
 import { HistoryRepository } from './repositories/history';
 import { SettingsRepository } from './repositories/settings';
 import { SiteSettingsRepository } from './repositories/site-settings';
@@ -32,6 +33,7 @@ export type Persistence = {
   work: WorkRepository;
   captures: CaptureRepository;
   templates: TemplateRepository;
+  aiActivity: AiActivityRepository;
   close(): void;
 };
 
@@ -53,6 +55,7 @@ export function openPersistence(userDataDir: string): Persistence {
     work: new WorkRepository(db),
     captures: new CaptureRepository(db),
     templates: new TemplateRepository(db),
+    aiActivity: new AiActivityRepository(db),
     close: () => {
       if (db.isOpen) db.close();
     },

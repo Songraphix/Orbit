@@ -12,6 +12,16 @@ export type PageCaptureRequest =
   | { kind: 'link'; url: string; text: string }
   | { kind: 'image'; src: string };
 
+/** …or asked the assistant (or Notes) to do with the page or the selection (roadmap P3.1–P3.3). */
+export type PageAssistRequest =
+  | { kind: 'ask-selection'; text: string }
+  | { kind: 'tasks-selection'; text: string }
+  | { kind: 'note-selection'; text: string }
+  | { kind: 'ask-page' }
+  | { kind: 'summarize-page' };
+
+export type PageMenuRequest = PageCaptureRequest | PageAssistRequest;
+
 /**
  * Electron shows no right-click menu in web pages; this builds Chrome's essentials (F-31).
  * `openInTab(url, activate)` opens links/images/searches as Orbit tabs.
@@ -19,7 +29,7 @@ export type PageCaptureRequest =
 export function attachContextMenu(
   contents: WebContents,
   openInTab: (url: string, activate: boolean) => void,
-  capture?: (request: PageCaptureRequest) => void,
+  capture?: (request: PageMenuRequest) => void,
 ): void {
   contents.on('context-menu', (_event, params) => {
     const history = contents.navigationHistory;
@@ -76,6 +86,13 @@ export function attachContextMenu(
           return capture?.({ kind: 'link', url: params.linkURL, text: params.linkText });
         case 'capture-image':
           return capture?.({ kind: 'image', src: params.srcURL });
+        case 'ask-selection':
+        case 'tasks-selection':
+        case 'note-selection':
+          return capture?.({ kind: action, text: params.selectionText });
+        case 'ask-page':
+        case 'summarize-page':
+          return capture?.({ kind: action });
         case 'inspect':
           contents.inspectElement(params.x, params.y);
           if (contents.isDevToolsOpened()) contents.devToolsWebContents?.focus();

@@ -210,3 +210,27 @@
   --work-track: rgb(255 255 255 / 0.1);
   --work-sheet: #26262b;
 }
+
+/* The panel's open tab names itself with a small slide (the others stay icons). */
+.panel-tab {
+  transition:
+    flex-grow 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.panel-tab-label {
+  animation: panel-tab-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes panel-tab-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-tab,
+  .panel-tab-label {
+    transition: none;
+    animation: none;
+  }
+}

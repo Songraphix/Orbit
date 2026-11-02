@@ -6,7 +6,12 @@ import { TIDY_MIN_TABS } from './tidy-model';
 /** How long "Undo" stays next to Tidy. */
 const UNDO_FOR_MS = 60_000;
 
-export type TidyState = { available: boolean; running: boolean; canUndo: boolean };
+export type TidyState = {
+  available: boolean;
+  running: boolean;
+  canUndo: boolean;
+  assistant: boolean;
+};
 
 type Undo = { folderIds: string[]; order: string[]; timer: ReturnType<typeof setTimeout> };
 
@@ -32,6 +37,7 @@ export class TidyService {
       available: this.deps.ai.available,
       running: this.running.has(spaceId),
       canUndo: this.undo.has(spaceId),
+      assistant: this.deps.ai.prefs.enabled,
     };
   }
 

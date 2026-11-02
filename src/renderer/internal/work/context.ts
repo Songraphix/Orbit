@@ -43,7 +43,9 @@ export const messageOf = (e: unknown) =>
 export const showProject = (id: string | null) => {
   window.location.hash = id ? `#/notes/panel/projects/${id}` : '#/notes/panel/projects';
 };
-export const showPanelView = (view: 'notes' | 'projects' | 'tasks' | 'board') => {
+export const showPanelView = (
+  view: 'notes' | 'projects' | 'tasks' | 'board' | 'assistant' | 'tools',
+) => {
   window.location.hash = view === 'notes' ? '#/notes/panel' : `#/notes/panel/${view}`;
 };
 export const showResearch = (filter: string) => {

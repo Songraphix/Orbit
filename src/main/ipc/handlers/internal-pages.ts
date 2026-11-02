@@ -2,6 +2,7 @@ import { dialog } from 'electron';
 import { DEFAULT_PROFILE_ID } from '@shared/types/space';
 import { SEARCH_ENGINES } from '@shared/settings';
 import type { UserSettings } from '@shared/settings';
+import type { AiActivity, AiPrefs, AiUsage } from '@shared/ai';
 import type { IpcRouter } from '../router';
 import { setSearchEngine } from '../../omnibox/classify';
 import type { ArchiveRepository } from '../../persistence/repositories/archive';
@@ -29,9 +30,18 @@ export function registerInternalPageHandlers(
     templates: TemplateRepository;
     /** The Anthropic API key (F-29). */
     ai: {
-      status: () => { hasKey: boolean; canStore: boolean; model: string };
+      status: () => {
+        hasKey: boolean;
+        canStore: boolean;
+        model: string;
+        prefs: AiPrefs;
+        usage: AiUsage;
+      };
       setKey: (key: string) => { ok: boolean; error: string | null };
       clearKey: () => void;
+      setPrefs: (patch: Partial<AiPrefs>) => void;
+      activity: () => { entries: AiActivity[]; usage: AiUsage };
+      clearActivity: () => void;
     };
   },
 ): void {
@@ -182,6 +192,30 @@ export function registerInternalPageHandlers(
   router.handle('ai:clearKey', (_input, { sender }) => {
     ownerOf(sender.webContentsId, 'settings');
     deps.ai.clearKey();
+  });
+
+  router.handle('ai:setPrefs', (patch, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    deps.ai.setPrefs(patch);
+  });
+
+  router.handle('ai:activity', (_input, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    return deps.ai.activity();
+  });
+
+  /** Asks first: the log is the only record of what was sent. */
+  router.handle('ai:clearActivity', async (_input, { sender }) => {
+    const { window } = ownerOf(sender.webContentsId, 'settings');
+    const { response } = await dialog.showMessageBox(window.win, {
+      type: 'warning',
+      message: 'Clear the AI activity log?',
+      detail: 'This month’s usage starts again from zero, and the monthly limit with it.',
+      buttons: ['Clear', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    if (response === 0) deps.ai.clearActivity();
   });
 
   router.handle('templates:list', (_input, { sender }) => {

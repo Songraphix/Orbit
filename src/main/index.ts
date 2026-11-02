@@ -37,6 +37,10 @@ import { LiveFolderService } from './live-folders/service';
 import { AiKeyStore, cleanApiKey } from './ai/key-store';
 import type { Cipher } from './ai/key-store';
 import { AIService, TIDY_MODEL } from './ai/service';
+import { AssistantService } from './ai/assistant';
+import { registerAssistantHandlers } from './ipc/handlers/assistant';
+import { noteFromMarkdown } from './notes/from-markdown';
+import type { PageMenuRequest } from './tabs/context-menu';
 import { TidyService } from './ai/tidy';
 import { feedInputUrl, githubRepo } from './live-folders/model';
 import type { LiveSource } from '@shared/types/live-folders';
@@ -126,6 +130,7 @@ let windows: WindowManager | null = null;
 let floatingNotes: FloatingNotes | null = null;
 let captureService: CaptureService | null = null;
 let focusService: FocusService | null = null;
+let assistantService: AssistantService | null = null;
 
 function loadRenderer(win: BrowserWindow, entry: RendererEntry, query?: string): void {
   if (devServer) void win.loadURL(`${devServer}/${entry}/index.html${query ? `?${query}` : ''}`);
@@ -320,6 +325,53 @@ async function addLiveFolder(
   }
 }
 
+/** A page's right-click menu asked Orbit to do something with the page or the selection: save
+ *  it (Capture), ask the assistant, make tasks, or start a note. */
+function pageMenuRequest(
+  controller: WindowController,
+  tabId: string,
+  request: PageMenuRequest,
+): void {
+  const tab = controller.tabs.get(tabId);
+  const page = { url: tab?.state.url ?? '', title: tab?.state.title ?? '' };
+  switch (request.kind) {
+    case 'ask-selection':
+      assistantService?.open(controller, { selection: { text: request.text, ...page } });
+      return;
+    case 'tasks-selection':
+      assistantService?.open(controller, {
+        selection: { text: request.text, ...page },
+        tasksFromSelection: true,
+      });
+      return;
+    case 'note-selection': {
+      if (!persistence) return;
+      const quote = request.text
+        .trim()
+        .split('\n')
+        .map((line) => `> ${line}`)
+        .join('\n');
+      const from = page.title.trim() || hostOf(page.url) || 'the web';
+      const link = /^https?:/i.test(page.url)
+        ? `[${from.replace(/[[\]]/g, '')}](${page.url})`
+        : from;
+      const note = noteFromMarkdown(from, `${quote}\n\nFrom ${link}`);
+      const id = persistence.notes.create();
+      persistence.notes.save(id, note.doc, note.text);
+      controller.notes.open(id);
+      return;
+    }
+    case 'ask-page':
+      assistantService?.open(controller, { attachPage: true });
+      return;
+    case 'summarize-page':
+      assistantService?.open(controller, { summarize: true });
+      return;
+    default:
+      void captureService?.begin(controller, tab, request);
+  }
+}
+
 /** Runs a command by id for a window (command bar items and menu items share these). */
 function runCommand(controller: WindowController, commandId: string): void {
   const { tabs, layout } = controller;
@@ -389,6 +441,12 @@ function runCommand(controller: WindowController, commandId: string): void {
       return;
     case 'toggle-notes':
       controller.notes.toggle();
+      return;
+    case 'assistant':
+      assistantService?.open(controller);
+      return;
+    case 'summarize-page':
+      assistantService?.open(controller, { summarize: true });
       return;
     case 'float-note':
       if (persistence) floatingNotes?.show(persistence.notes.create());
@@ -508,6 +566,8 @@ void app.whenReady().then(() => {
   const ai = new AIService({
     apiKey: () => keyStore.get(),
     baseURL: devOnly('ORBIT_ANTHROPIC_BASE_URL'),
+    prefs: () => persistence!.settings.get('ai.prefs'),
+    activity: persistence.aiActivity,
   });
   const refreshSidebars = () => windows?.all().forEach((c) => c.tabs.refresh());
   const tidy = new TidyService({ store, ai, onChange: refreshSidebars });
@@ -639,9 +699,9 @@ void app.whenReady().then(() => {
         if (space) controller.tabs.switchSpace(space.id);
       },
     },
-    capture: (controller, tabId, request) =>
-      void captureService?.begin(controller, controller.tabs.get(tabId), request),
+    capture: (controller, tabId, request) => pageMenuRequest(controller, tabId, request),
     tidyState: (spaceId) => tidy.state(spaceId),
+    onTabsChange: (controller) => assistantService?.pageChanged(controller),
     liveFolders: {
       add: (controller, kind, spaceId) => void addLiveFolder(controller, kind, spaceId),
       refresh: (folderId) => void (folderId ? live.refresh(folderId) : live.refreshAll()),
@@ -719,7 +779,13 @@ void app.whenReady().then(() => {
     applyTabLayout,
     templates: persistence.templates,
     ai: {
-      status: () => ({ hasKey: keyStore.has(), canStore: keyStore.canStore, model: TIDY_MODEL }),
+      status: () => ({
+        hasKey: keyStore.has(),
+        canStore: keyStore.canStore,
+        model: TIDY_MODEL,
+        prefs: persistence!.settings.get('ai.prefs'),
+        usage: persistence!.aiActivity.usage(),
+      }),
       setKey: (input) => {
         const key = cleanApiKey(input);
         if (!key)
@@ -735,6 +801,20 @@ void app.whenReady().then(() => {
       clearKey: () => {
         keyStore.clear();
         refreshSidebars();
+      },
+      setPrefs: (patch) => {
+        const next = { ...persistence!.settings.get('ai.prefs'), ...patch };
+        persistence!.settings.set('ai.prefs', next);
+        refreshSidebars(); // Tidy shows only while AI is on
+        windows?.all().forEach((c) => assistantService?.push(c));
+      },
+      activity: () => ({
+        entries: persistence!.aiActivity.list(100),
+        usage: persistence!.aiActivity.usage(),
+      }),
+      clearActivity: () => {
+        persistence!.aiActivity.clear();
+        windows?.all().forEach((c) => assistantService?.push(c));
       },
     },
   });
@@ -794,6 +874,39 @@ void app.whenReady().then(() => {
     persistence.templates,
   );
   registerCaptureHandlers(router, windowManager, captureFlow);
+  // The assistant (roadmap Phase 3) in each window's productivity panel.
+  const assistant = new AssistantService({
+    ai,
+    captures: (ids) => ids.flatMap((id) => persistence!.captures.get(id) ?? []),
+    projectName: (projectId) =>
+      (projectId && persistence!.work.project(projectId)?.name) || 'Tasks',
+    addTasks: (projectId, tasks) => {
+      for (const task of tasks) {
+        persistence!.work.saveTask({
+          projectId,
+          title: task.title,
+          description: task.notes,
+          priority: 'medium',
+          status: 'todo',
+          dueDate: null,
+        });
+      }
+      windowManager.all().forEach((c) => c.notes.refresh());
+    },
+    saveNote: (doc, text, projectId) => {
+      const id = persistence!.notes.create(Date.now(), projectId);
+      persistence!.notes.save(id, doc, text);
+      windowManager.all().forEach((c) => c.notes.refresh());
+      return id;
+    },
+    push: (controller, state) => {
+      const contents = controller.notes.contents;
+      if (contents) broadcaster.sendTo(contents, 'assistant:update', state);
+    },
+    toast,
+  });
+  assistantService = assistant;
+  registerAssistantHandlers(router, windowManager, assistant);
   registerTooltipHandlers(router, windowManager);
   const focus = new FocusService({
     settings: persistence.settings,

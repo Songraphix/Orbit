@@ -206,6 +206,17 @@ export function installAppMenu(actions: AppMenuActions): void {
           accelerator: 'Shift+CmdOrCtrl+N',
           click: () => actions.command('toggle-notes'),
         },
+        {
+          id: 'assistant',
+          label: 'Ask Orbit',
+          accelerator: 'CmdOrCtrl+J',
+          click: () => actions.command('assistant'),
+        },
+        {
+          id: 'summarize-page',
+          label: 'Summarize Page',
+          click: () => actions.command('summarize-page'),
+        },
         { type: 'separator' },
         {
           id: 'reload',

@@ -163,6 +163,7 @@ function Chrome({
             // The right-most toolbar has the Notes button.
             notesOpen={i === paneTabs.length - 1 ? layout.notes !== null : undefined}
             profile={i === paneTabs.length - 1 ? sidebar?.profile : undefined}
+            assistant={i === paneTabs.length - 1 ? (sidebar?.tidy.assistant ?? false) : false}
             focus={i === paneTabs.length - 1 ? focus : null}
           />
         );
@@ -199,6 +200,7 @@ function ContentCard(props: {
   inSplit: boolean;
   snapshot: string | null;
   notesOpen: boolean | undefined;
+  assistant: boolean;
   profile: ProfileView | undefined;
   focus: FocusSession | null;
 }) {
@@ -236,6 +238,7 @@ function ContentCard(props: {
           focused={focused}
           inSplit={inSplit}
           notesOpen={props.notesOpen}
+          assistant={props.assistant}
           profile={props.profile}
           focus={props.focus}
         />

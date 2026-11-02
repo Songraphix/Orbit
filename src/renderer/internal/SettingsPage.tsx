@@ -14,6 +14,9 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { UserSettings } from '@shared/settings';
 import type { InvokeOutput } from '@shared/ipc/contract';
+import { AI_FEATURE_LABELS, AI_MODELS, formatCost } from '@shared/ai';
+import type { AiActivity, AiPrefs } from '@shared/ai';
+import { relativeTime } from '@shared/time';
 
 const ARCHIVE_AFTER: { value: UserSettings['archiveAfter']; label: string }[] = [
   { value: '12h', label: 'After 12 hours' },
@@ -213,9 +216,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
           </Section>
 
           <Section id="ai" title="AI">
-            <Group title="Tidy">
-              <AiKeyRow />
-            </Group>
+            <AiSection />
           </Section>
 
           <Section id="privacy" title="Privacy">
@@ -313,30 +314,196 @@ function DefaultBrowserRow() {
 }
 
 /**
- * Tidy (F-29) uses your own Anthropic API key. It's stored encrypted in the macOS Keychain and
- * never shown again; only tab titles and sites are sent when you press Tidy.
+ * Settings → AI (F-29, roadmap P3.7): your own Anthropic API key (encrypted in the Keychain,
+ * never shown again), which model answers, a monthly spending limit, whether the assistant
+ * attaches the page you're on, and a log of what was sent — metadata only, kept on this Mac.
  */
-function AiKeyRow() {
+function AiSection() {
   const [status, setStatus] = useState<InvokeOutput<'ai:status'> | null>(null);
-  const [key, setKey] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const load = () => void window.orbit.invoke('ai:status', {}).then(setStatus);
+  const [activity, setActivity] = useState<AiActivity[]>([]);
+  const [now, setNow] = useState(() => Date.now());
+  const load = () => {
+    void window.orbit.invoke('ai:status', {}).then(setStatus);
+    void window.orbit.invoke('ai:activity', {}).then((r) => {
+      setActivity(r.entries);
+      setNow(Date.now());
+    });
+  };
   useEffect(load, []);
   if (!status) return null;
+  const { prefs, usage } = status;
+  // Show the change at once; main's answer follows.
+  const set = (patch: Partial<AiPrefs>) => {
+    setStatus((current) => current && { ...current, prefs: { ...current.prefs, ...patch } });
+    void window.orbit.invoke('ai:setPrefs', patch).then(load);
+  };
+  const limit = prefs.monthlyBudget;
+  const share = limit ? Math.min(1, usage.cost / limit) : 0;
+  return (
+    <>
+      <Group title="Claude">
+        <AiKeyRow hasKey={status.hasKey} canStore={status.canStore} onChange={load} />
+        <Row
+          label="Use AI features"
+          hint="When off, nothing is sent to Anthropic: the assistant and Tidy are hidden."
+        >
+          <input
+            type="checkbox"
+            checked={prefs.enabled}
+            onChange={(e) => set({ enabled: e.target.checked })}
+            className="size-4 accent-[var(--accent,#5b5bd6)]"
+            data-testid="ai-enabled"
+          />
+        </Row>
+        <Row
+          label="Model"
+          hint={`${AI_MODELS.find((m) => m.id === prefs.model)?.blurb ?? ''}. Tidy always uses Claude Haiku 5.5.`}
+        >
+          <select
+            value={prefs.model}
+            onChange={(e) => set({ model: e.target.value as AiPrefs['model'] })}
+            className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+            data-testid="ai-model"
+          >
+            {AI_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </Row>
+      </Group>
+
+      <Group title="Privacy">
+        <Row
+          label="Attach the page you’re on"
+          hint="Off: the assistant reads a page only when you attach it or ask for a summary. Pages are read when you send, never before."
+        >
+          <input
+            type="checkbox"
+            checked={prefs.attachPage}
+            onChange={(e) => set({ attachPage: e.target.checked })}
+            className="size-4 accent-[var(--accent,#5b5bd6)]"
+            data-testid="ai-attach-page"
+          />
+        </Row>
+        <div
+          className="px-4 py-3 text-xs leading-relaxed text-neutral-500"
+          data-testid="ai-privacy"
+        >
+          What you attach (a page’s text, a selection, saved findings) and your question go to
+          Anthropic’s API with your key, and nothing else — no history, no other tabs. Anthropic
+          doesn’t train on API data. Conversations stay in memory until Orbit quits; answers you
+          save become notes. Orbit keeps a log of each request below (when, what kind, tokens and
+          cost — not the words).
+        </div>
+      </Group>
+
+      <Group title="Usage">
+        <Row
+          label={`This month: ${formatCost(usage.cost)}`}
+          hint={`${usage.requests} request${usage.requests === 1 ? '' : 's'} · ${(usage.inputTokens + usage.outputTokens).toLocaleString()} tokens (estimated from Anthropic’s prices)`}
+        >
+          <div className="h-1.5 w-28 overflow-hidden rounded-full bg-neutral-100" aria-hidden>
+            <div
+              className={`h-full rounded-full ${share >= 1 ? 'bg-red-500' : share > 0.8 ? 'bg-amber-500' : 'bg-[var(--accent,#5b5bd6)]'}`}
+              style={{ width: `${Math.max(share * 100, usage.cost > 0 ? 3 : 0)}%` }}
+            />
+          </div>
+        </Row>
+        <Row
+          label="Monthly limit"
+          hint="AI stops sending once this month’s estimated spend reaches the limit."
+        >
+          <select
+            value={limit === null ? 'none' : String(limit)}
+            onChange={(e) =>
+              set({ monthlyBudget: e.target.value === 'none' ? null : Number(e.target.value) })
+            }
+            className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+            data-testid="ai-budget"
+          >
+            {[1, 5, 10, 25, 50, 100].map((n) => (
+              <option key={n} value={String(n)}>
+                ${n}
+              </option>
+            ))}
+            {limit !== null && ![1, 5, 10, 25, 50, 100].includes(limit) && (
+              <option value={String(limit)}>{formatCost(limit)}</option>
+            )}
+            <option value="none">No limit</option>
+          </select>
+        </Row>
+      </Group>
+
+      <Group title="Activity">
+        {activity.length === 0 ? (
+          <div className="px-4 py-3 text-sm text-neutral-400" data-testid="ai-activity-empty">
+            Nothing has been sent yet.
+          </div>
+        ) : (
+          <>
+            <ul
+              className="max-h-72 divide-y divide-neutral-100 overflow-y-auto"
+              data-testid="ai-activity"
+            >
+              {activity.map((entry) => (
+                <li key={entry.id} className="px-4 py-2.5" data-testid="ai-activity-entry">
+                  <div className="flex items-baseline gap-2 text-sm">
+                    <span className="truncate">{AI_FEATURE_LABELS[entry.feature]}</span>
+                    <span className="shrink-0 text-xs text-neutral-400">
+                      {relativeTime(entry.at, now)}
+                    </span>
+                    <span className="flex-1" />
+                    <span className="shrink-0 text-xs text-neutral-500 tabular-nums">
+                      {formatCost(entry.cost)}
+                    </span>
+                  </div>
+                  <div className="truncate text-xs text-neutral-500" title={entry.sent}>
+                    Sent: {entry.sent}
+                  </div>
+                  <div className="text-xs text-neutral-400">
+                    {AI_MODELS.find((m) => m.id === entry.model)?.name ?? entry.model} ·{' '}
+                    {(entry.inputTokens + entry.outputTokens).toLocaleString()} tokens
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-end px-4 py-2.5">
+              <button
+                type="button"
+                className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+                onClick={() => void window.orbit.invoke('ai:clearActivity', {}).then(load)}
+                data-testid="ai-activity-clear"
+              >
+                Clear Log…
+              </button>
+            </div>
+          </>
+        )}
+      </Group>
+    </>
+  );
+}
+
+/** Your Anthropic API key: saved encrypted in the Keychain, never shown again. */
+function AiKeyRow(props: { hasKey: boolean; canStore: boolean; onChange: () => void }) {
+  const [key, setKey] = useState('');
+  const [error, setError] = useState<string | null>(null);
   return (
     <Row
       label="Anthropic API key"
       hint={
-        status.hasKey
-          ? `Saved in your Keychain. Tidy in the space header groups Today’s tabs with ${status.model} (titles and sites only).`
-          : 'For Tidy: groups Today’s tabs into folders. Get a key at console.anthropic.com.'
+        props.hasKey
+          ? 'Saved in your Keychain. Used for the assistant (⌘J) and Tidy.'
+          : 'For the assistant (⌘J) and Tidy. Get a key at console.anthropic.com.'
       }
     >
-      {status.hasKey ? (
+      {props.hasKey ? (
         <button
           type="button"
           className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
-          onClick={() => void window.orbit.invoke('ai:clearKey', {}).then(load)}
+          onClick={() => void window.orbit.invoke('ai:clearKey', {}).then(props.onChange)}
           data-testid="ai-key-remove"
         >
           Remove Key
@@ -350,7 +517,7 @@ function AiKeyRow() {
               setError(r.error);
               if (r.ok) {
                 setKey('');
-                load();
+                props.onChange();
               }
             });
           }}
@@ -362,7 +529,7 @@ function AiKeyRow() {
               onChange={(e) => setKey(e.target.value)}
               placeholder="sk-ant-…"
               autoComplete="off"
-              disabled={!status.canStore}
+              disabled={!props.canStore}
               className="w-44 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
               data-testid="ai-key"
             />
@@ -380,7 +547,7 @@ function AiKeyRow() {
               {error}
             </span>
           )}
-          {!status.canStore && (
+          {!props.canStore && (
             <span className="text-xs text-neutral-400">Secure storage isn’t available.</span>
           )}
         </form>

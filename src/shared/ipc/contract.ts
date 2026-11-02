@@ -44,6 +44,8 @@ import {
   workDataSchema,
 } from '../work';
 import { tabsSnapshotSchema } from '../types/tabs';
+import { aiActivitySchema, aiPrefsSchema, aiUsageSchema } from '../ai';
+import { ASSISTANT_LIMITS, assistantStateSchema, taskSuggestionSchema } from '../assistant';
 
 /**
  * Every IPC channel lives here (PLAN.md section 4.4). Names follow `domain:verb`.
@@ -648,7 +650,31 @@ export const contract = {
   /** The Anthropic API key for Tidy (Settings). The key itself is never sent back. */
   'ai:status': {
     input: z.object({}).strict(),
-    output: z.object({ hasKey: z.boolean(), canStore: z.boolean(), model: z.string() }),
+    output: z.object({
+      hasKey: z.boolean(),
+      canStore: z.boolean(),
+      /** Tidy's model (the assistant's is in prefs). */
+      model: z.string(),
+      prefs: aiPrefsSchema,
+      usage: aiUsageSchema,
+    }),
+    surfaces: ['internal'],
+  },
+  /** Settings → AI (roadmap P3.7): on/off, model, monthly limit, attaching the page. */
+  'ai:setPrefs': {
+    input: aiPrefsSchema.partial().strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** What was sent to Claude, newest first (metadata only), and this month's totals. */
+  'ai:activity': {
+    input: z.object({}).strict(),
+    output: z.object({ entries: z.array(aiActivitySchema), usage: aiUsageSchema }),
+    surfaces: ['internal'],
+  },
+  'ai:clearActivity': {
+    input: z.object({}).strict(),
+    output: z.void(),
     surfaces: ['internal'],
   },
   'ai:setKey': {
@@ -1077,6 +1103,92 @@ export const contract = {
     output: z.object({ deleted: z.boolean() }),
     surfaces: ['internal'],
   },
+  // The assistant (roadmap P3.1–P3.4) in the productivity panel. Opened from the toolbar,
+  // the command bar, menus and a page's right-click menu; everything else comes from the panel.
+  'assistant:open': {
+    input: z.object({ summarize: z.boolean().optional() }).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'internal'],
+  },
+  'assistant:get': {
+    input: z.object({}).strict(),
+    output: assistantStateSchema,
+    surfaces: ['internal'],
+  },
+  /** Sends a question with what's attached (or asks for a summary of the page). */
+  'assistant:ask': {
+    input: z
+      .object({
+        text: z.string().max(ASSISTANT_LIMITS.question),
+        action: z.enum(['ask', 'summarize']),
+      })
+      .strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'assistant:stop': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** A new conversation. */
+  'assistant:clear': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Attach or detach the page, drop the selection, pick or drop saved research. */
+  'assistant:attach': {
+    input: z
+      .object({
+        page: z.boolean().optional(),
+        selection: z.null().optional(),
+        research: z
+          .object({
+            projectId: z.string().max(64).nullable(),
+            captureIds: z.array(z.string().max(64)).max(ASSISTANT_LIMITS.captures),
+          })
+          .strict()
+          .nullable()
+          .optional(),
+      })
+      .strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Shows where an answer's source `n` came from (scrolls the page, or opens the finding). */
+  'assistant:source': {
+    input: z
+      .object({ messageId: z.string().max(64), n: z.number().int().min(1).max(500) })
+      .strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'assistant:toNote': {
+    input: z.object({ messageId: z.string().max(64) }).strict(),
+    output: z.object({ noteId: z.string().nullable() }),
+    surfaces: ['internal'],
+  },
+  'assistant:suggestTasks': {
+    input: z.object({ from: z.enum(['selection', 'page']) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'assistant:addTasks': {
+    input: z
+      .object({
+        projectId: z.string().max(64).nullable(),
+        tasks: z.array(taskSuggestionSchema).min(1).max(20),
+      })
+      .strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'assistant:dismissTasks': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
 } as const satisfies Record<string, ChannelSpec>;
 
 export const events = {
@@ -1104,6 +1216,8 @@ export const events = {
   'rename:start': z.object({ target: z.enum(['item', 'space']), id: z.string(), at: z.number() }),
   /** A short confirmation in the toolbar ("Copied link"). */
   'toast:show': z.object({ message: z.string().max(200), at: z.number() }),
+  /** The assistant's conversation, sent to its window's productivity panel. */
+  'assistant:update': assistantStateSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type Contract = typeof contract;
@@ -1116,3 +1230,7 @@ export type EventChannel = keyof Events;
 export type EventPayload<E extends EventChannel> = z.output<Events[E]>;
 
 export const CHANNEL_NAME_PATTERN = /^[a-z]+:[a-z][a-zA-Z]*$/;
+
+/** The events internal orbit:// pages may listen to (main sends them to one page only). */
+export const INTERNAL_EVENTS = ['assistant:update'] as const;
+export type InternalEventChannel = (typeof INTERNAL_EVENTS)[number];
