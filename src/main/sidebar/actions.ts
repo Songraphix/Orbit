@@ -1,3 +1,5 @@
+import { duplicateTabs, fromBeforeToday, sortToday } from './tidy-model';
+import type { SortToday, TodayTab } from './tidy-model';
 import { clipboard, Menu, ShareMenu } from 'electron';
 import type { MenuItemConstructorOptions } from 'electron';
 import type { Space } from '../persistence/repositories/sidebar';
@@ -145,6 +147,58 @@ export class SidebarActions {
     }
     if (tabs.length > 0) this.ui.toast(`Cleared ${tabs.length} tab${tabs.length === 1 ? '' : 's'}`);
     return tabs.length;
+  }
+
+  /** Today tabs as the housekeeping helpers see them (roadmap P4.5): top-level tabs only. */
+  private todayTabs(): TodayTab[] {
+    return this.store
+      .rows('today', this.space)
+      .filter((r) => r.depth === 0 && r.item.kind === 'tab' && r.item.url)
+      .map(({ item }) => ({
+        id: item.id,
+        url: item.url!,
+        title: item.titleOverride || item.title,
+        lastActiveAt: item.lastActiveAt,
+        createdAt: item.createdAt,
+      }));
+  }
+
+  /** Close Duplicate Tabs (roadmap P4.5): Today tabs that repeat a page already open here. */
+  closeDuplicates(): number {
+    const kept = [
+      ...this.store.rows('pinned', this.space),
+      ...this.store.rows('favorite', this.space),
+    ]
+      .map((r) => r.item.url)
+      .filter((url): url is string => url !== null);
+    // Tabs inside Today's folders count as open pages too (but aren't closed from here).
+    const inFolders = this.store
+      .rows('today', this.space)
+      .filter((r) => r.depth > 0 && r.item.url)
+      .map((r) => r.item.url!);
+    const ids = duplicateTabs(this.todayTabs(), [...kept, ...inFolders]);
+    for (const id of ids) this.tabs.close(id, 'closed');
+    this.ui.toast(
+      ids.length ? `Closed ${ids.length} duplicate${ids.length === 1 ? '' : 's'}` : 'No duplicates',
+    );
+    return ids.length;
+  }
+
+  /** Sort Today (roadmap P4.5): loose tabs by site, title or last opened; folders stay on top. */
+  sortToday(by: SortToday): void {
+    for (const id of sortToday(this.todayTabs(), by)) this.store.move(id, this.at('today'));
+  }
+
+  /** Archive Tabs from Before Today (roadmap P4.5): Today tabs not used since yesterday. */
+  archiveBeforeToday(): number {
+    const ids = fromBeforeToday(this.todayTabs(), Date.now(), this.tabs.activeItemId);
+    for (const id of ids) this.tabs.close(id, 'auto');
+    this.ui.toast(
+      ids.length
+        ? `Archived ${ids.length} tab${ids.length === 1 ? '' : 's'}`
+        : 'Nothing older than today',
+    );
+    return ids.length;
   }
 
   newSpace(): void {
@@ -353,6 +407,21 @@ export class SidebarActions {
       },
       { type: 'separator' },
       { label: 'Tidy Today', enabled: today >= 2, click: () => this.ui.command('tidy') },
+      {
+        label: 'Sort Today',
+        enabled: today >= 2,
+        submenu: [
+          { label: 'By Site', click: () => this.sortToday('site') },
+          { label: 'By Title', click: () => this.sortToday('title') },
+          { label: 'By Last Opened', click: () => this.sortToday('recent') },
+        ],
+      },
+      { label: 'Close Duplicate Tabs', enabled: today >= 2, click: () => this.closeDuplicates() },
+      {
+        label: 'Archive Tabs from Before Today',
+        enabled: today > 0,
+        click: () => this.archiveBeforeToday(),
+      },
       { label: 'Clear Today', enabled: today > 0, click: () => this.clearToday() },
       { type: 'separator' },
       { label: `Space “${space.name}”`, submenu: this.spaceMenuTemplate(space.id) },

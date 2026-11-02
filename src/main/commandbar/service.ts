@@ -123,6 +123,23 @@ export const COMMANDS: readonly CommandDef[] = [
   },
   { id: 'new-boost', title: 'New Boost', keywords: ['css', 'customise', 'customize', 'style'] },
   { id: 'archived-tabs', title: 'Archived Tabs', keywords: ['archive', 'closed', 'history'] },
+  {
+    id: 'close-duplicates',
+    title: 'Close Duplicate Tabs',
+    keywords: ['duplicates', 'dedupe', 'same', 'tidy', 'clean'],
+  },
+  { id: 'sort-today-site', title: 'Sort Today by Site', keywords: ['order', 'arrange', 'domain'] },
+  { id: 'sort-today-title', title: 'Sort Today by Title', keywords: ['order', 'arrange', 'name'] },
+  {
+    id: 'sort-today-recent',
+    title: 'Sort Today by Last Opened',
+    keywords: ['order', 'arrange', 'recent'],
+  },
+  {
+    id: 'archive-before-today',
+    title: 'Archive Tabs from Before Today',
+    keywords: ['old', 'yesterday', 'clean', 'tidy', 'close'],
+  },
   { id: 'settings', title: 'Settings', keywords: ['preferences', 'options'], shortcut: '⌘,' },
 ];
 

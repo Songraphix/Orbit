@@ -476,6 +476,23 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'toolkit':
       toolkitService?.open(controller);
       return;
+    case 'close-duplicates':
+      controller.sidebar.closeDuplicates();
+      return;
+    case 'sort-today-site':
+    case 'sort-today-title':
+    case 'sort-today-recent':
+      controller.sidebar.sortToday(
+        commandId === 'sort-today-site'
+          ? 'site'
+          : commandId === 'sort-today-title'
+            ? 'title'
+            : 'recent',
+      );
+      return;
+    case 'archive-before-today':
+      controller.sidebar.archiveBeforeToday();
+      return;
     case 'format-json':
       toolkitService?.open(controller, 'json');
       return;
