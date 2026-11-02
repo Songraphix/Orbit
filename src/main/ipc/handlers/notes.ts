@@ -1,3 +1,4 @@
+import { NEW_TAB_URL } from '@shared/types/tabs';
 import { BrowserWindow, dialog } from 'electron';
 import type { NoteSurfaceKind } from '@shared/types/notes';
 import type { IpcRouter } from '../router';
@@ -179,8 +180,12 @@ export function registerNotesHandlers(
   });
 
   router.handle('notes:panel', ({ open, id, view, projectId }, { sender }) => {
+    // The new tab page's Today list opens the panel's Tasks too.
+    const newTab = windows.tabForContents(sender.webContentsId);
     const window =
-      windows.forSender(sender.webContentsId) ?? surfaceOf(sender.webContentsId).window;
+      windows.forSender(sender.webContentsId) ??
+      surfaceOf(sender.webContentsId).window ??
+      (newTab?.tab.state.url === NEW_TAB_URL ? newTab.window : null);
     if (!window) return;
     if (projectId) window.notes.openAt(`panel/projects/${projectId}`);
     else if (id || view || open === true) window.notes.open(id, view);

@@ -224,6 +224,24 @@ export function filterTasks(tasks: readonly Task[], filter: TaskFilter, today: s
   }
 }
 
+/**
+ * Today's list (the new tab page's, in step with Tasks → Today): open tasks due today or
+ * overdue, then the ones ticked off today (struck through, so the day's progress shows). Pure.
+ */
+export function todayTasks(tasks: readonly Task[], today: string): Task[] {
+  const done = tasks
+    .filter(
+      (t) =>
+        t.status === 'done' &&
+        t.dueDate !== null &&
+        t.dueDate <= today &&
+        t.completedAt !== null &&
+        dateKey(t.completedAt) === today,
+    )
+    .sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0));
+  return [...filterTasks(tasks, 'today', today), ...done];
+}
+
 export function taskCounts(tasks: readonly Task[], today: string): Record<TaskFilter, number> {
   return {
     all: tasks.length,

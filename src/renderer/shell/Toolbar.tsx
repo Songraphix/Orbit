@@ -2,16 +2,18 @@ import {
   ArrowLeft,
   ArrowLeftRight,
   ArrowRight,
+  BookmarkPlus,
   Bug,
   Check,
   Lock,
-  Maximize2,
   PanelLeft,
   RotateCw,
   NotebookPen,
   Sparkles,
   SlidersHorizontal,
   Target,
+  Pause,
+  Play,
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -224,6 +226,17 @@ export function Toolbar({
             <SlidersHorizontal size={14} />
           </ToolbarButton>
         )}
+        {tab?.kind === 'web' && (
+          <ToolbarButton
+            label="Save to Orbit"
+            keys="⇧⌘S"
+            anim="pop"
+            onClick={() => void window.orbit.invoke('capture:open', {})}
+            testId="toolbar-capture"
+          >
+            <BookmarkPlus size={14} />
+          </ToolbarButton>
+        )}
         {focus && <FocusPill session={focus} />}
         {notesOpen !== undefined && <FocusButton />}
         {assistant && (
@@ -277,12 +290,13 @@ export function Toolbar({
             >
               <ArrowLeftRight size={14} />
             </ToolbarButton>
+            {/* Ends the split, keeping this pane's page (a click here focuses it first). */}
             <ToolbarButton
-              label="Show This Page Alone"
+              label="Close Split View"
               onClick={() => void window.orbit.invoke('split:exit', {})}
               testId="split-exit"
             >
-              <Maximize2 size={13} />
+              <X size={14} />
             </ToolbarButton>
           </>
         )}
@@ -343,32 +357,49 @@ function ToolbarButton(props: {
   );
 }
 
-/** Focus & Sounds (⌥⌘F): the panel's Focus view; bars bounce while a sound plays. */
+/** Focus & Sounds (⌥⌘F): the panel's Focus view; bars bounce while a sound plays, and a
+ *  pause button sits beside it while there's a sound. */
 function FocusButton() {
   const sounds = useMainState('state:sounds');
   const playing = sounds?.playing ?? null;
+  const paused = sounds?.paused ?? false;
   return (
-    <ToolbarButton
-      label={playing ? `Focus & Sounds · ${soundName(playing)}` : 'Focus & Sounds'}
-      keys="⌥⌘F"
-      anim="pop"
-      onClick={() => void window.orbit.invoke('focus:open', {})}
-      active={playing !== null}
-      testId="toolbar-focus"
-    >
-      {playing ? (
-        <span className="flex h-3.5 items-end gap-[2px]" aria-hidden data-testid="toolbar-playing">
-          {[0, 0.2, 0.4].map((delay) => (
-            <span
-              key={delay}
-              className="h-full w-[2.5px] rounded-full bg-current motion-safe:animate-[orbit-bars_0.9s_ease-in-out_infinite]"
-              style={{ animationDelay: `${delay}s` }}
-            />
-          ))}
-        </span>
-      ) : (
-        <Target size={14} />
+    <>
+      {playing && (
+        <ToolbarButton
+          label={paused ? `Resume ${soundName(playing)}` : `Pause ${soundName(playing)}`}
+          onClick={() => void window.orbit.invoke('sounds:pause', { paused: !paused })}
+          testId="toolbar-sound-pause"
+        >
+          {paused ? <Play size={13} /> : <Pause size={13} />}
+        </ToolbarButton>
       )}
-    </ToolbarButton>
+      <ToolbarButton
+        label={playing ? `Focus & Sounds · ${soundName(playing)}` : 'Focus & Sounds'}
+        keys="⌥⌘F"
+        anim="pop"
+        onClick={() => void window.orbit.invoke('focus:open', {})}
+        active={playing !== null && !paused}
+        testId="toolbar-focus"
+      >
+        {playing && !paused ? (
+          <span
+            className="flex h-3.5 items-end gap-[2px]"
+            aria-hidden
+            data-testid="toolbar-playing"
+          >
+            {[0, 0.2, 0.4].map((delay) => (
+              <span
+                key={delay}
+                className="h-full w-[2.5px] rounded-full bg-current motion-safe:animate-[orbit-bars_0.9s_ease-in-out_infinite]"
+                style={{ animationDelay: `${delay}s` }}
+              />
+            ))}
+          </span>
+        ) : (
+          <Target size={14} />
+        )}
+      </ToolbarButton>
+    </>
   );
 }

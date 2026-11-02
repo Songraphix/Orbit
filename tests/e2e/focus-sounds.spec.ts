@@ -42,6 +42,12 @@ test('Focus & Sounds: a sound plays as you browse; focus blocks sites until it e
       'true',
     );
     expect(player(app)).toBe(1);
+    // Pause from the toolbar; the bars stop; resume.
+    await win.getByTestId('toolbar-sound-pause').click();
+    await expect(win.getByTestId('toolbar-playing')).toHaveCount(0);
+    await expect(panel.getByTestId('sounds-pause')).toContainText('Resume');
+    await panel.getByTestId('sounds-pause').click();
+    await expect(win.getByTestId('toolbar-playing')).toBeVisible();
     await panel.getByTestId('sounds-volume').fill('0.3');
     await expect
       .poll(() => invoke<{ volume: number }>(win, 'sounds:get').then((s) => s.volume))
@@ -69,6 +75,7 @@ test('Focus & Sounds: a sound plays as you browse; focus blocks sites until it e
     // Pause stops the clock; a break never blocks; ending the break stops the sound.
     await panel.getByTestId('focus-pause').click();
     await expect(win.getByTestId('focus-pill-pause')).toHaveAttribute('aria-label', 'Resume');
+    await expect(panel.getByTestId('focus-pause')).toContainText('Resume');
     const pausedAt = await panel.getByTestId('focus-clock').textContent();
     await new Promise((r) => setTimeout(r, 1500));
     await expect(panel.getByTestId('focus-clock')).toHaveText(pausedAt!);

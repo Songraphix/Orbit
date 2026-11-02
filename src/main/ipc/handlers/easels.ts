@@ -47,8 +47,19 @@ export function registerEaselHandlers(
     editorFor(sender.webContentsId, id);
     const easel = easels.get(id);
     return easel
-      ? { id: easel.id, title: easel.title, scene: easel.scene, updatedAt: easel.updatedAt }
+      ? {
+          id: easel.id,
+          title: easel.title,
+          scene: easel.scene,
+          background: easel.background,
+          updatedAt: easel.updatedAt,
+        }
       : null;
+  });
+
+  router.handle('easels:background', ({ id, background }, { sender }) => {
+    editorFor(sender.webContentsId, id);
+    easels.setBackground(id, background);
   });
 
   router.handle('easels:save', ({ id, title, scene, preview }, { sender }) => {

@@ -87,6 +87,10 @@ export function registerFocusHandlers(
     windowOf(sender.webContentsId);
     deps.sounds.stop();
   });
+  router.handle('sounds:pause', ({ paused }, { sender }) => {
+    windowOf(sender.webContentsId);
+    deps.sounds.setPaused(paused);
+  });
   router.handle('sounds:volume', ({ volume }, { sender }) => {
     windowOf(sender.webContentsId);
     deps.sounds.setVolume(volume);

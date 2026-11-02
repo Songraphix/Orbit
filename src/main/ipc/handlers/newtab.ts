@@ -9,6 +9,17 @@ import type { HistoryRepository } from '../../persistence/repositories/history';
 import type { HomeRepository } from '../../persistence/repositories/home';
 import type { SettingsRepository } from '../../persistence/repositories/settings';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
+import type { WorkRepository } from '../../persistence/repositories/work';
+import { dateKey, todayTasks } from '@shared/work';
+import type { TaskInput } from '@shared/work';
+import type { Todo } from '@shared/types/home';
+
+const NEW_TASK: Omit<TaskInput, 'title' | 'dueDate'> = {
+  projectId: null,
+  description: '',
+  priority: 'medium',
+  status: 'todo',
+};
 import type { TabController } from '../../tabs/tab-controller';
 
 /** Handlers for orbit://newtab. The router only lets internal pages call these. */
@@ -16,9 +27,42 @@ export function registerNewTabHandlers(
   router: IpcRouter,
   windows: WindowManager,
   wallpapers: WallpaperService,
-  deps: { home: HomeRepository; settings: SettingsRepository; history: HistoryRepository },
+  deps: {
+    home: HomeRepository;
+    settings: SettingsRepository;
+    history: HistoryRepository;
+    work: WorkRepository;
+    workChanged: () => void;
+  },
 ): void {
-  const { home, settings, history } = deps;
+  const { home, settings, history, work } = deps;
+
+  /**
+   * The Today list is your real tasks (in step with Tasks → Today). Items written in the new tab
+   * page's old list of its own become tasks due today, once.
+   */
+  const todos = (profileId: string): Todo[] => {
+    const today = dateKey(new Date());
+    const old = home.todos(profileId);
+    for (const t of old) {
+      if (!t.done) {
+        work.saveTask({ ...NEW_TASK, title: t.text.slice(0, 200), dueDate: today });
+      }
+      home.removeTodo(profileId, t.id);
+    }
+    if (old.length > 0) deps.workChanged();
+    const { projects, tasks } = work.all();
+    return todayTasks(tasks, today).map((t) => ({
+      id: t.id,
+      text: t.title,
+      done: t.status === 'done',
+      note:
+        t.status !== 'done' && t.dueDate !== null && t.dueDate < today
+          ? 'Overdue'
+          : (projects.find((p) => p.id === t.projectId)?.name ?? ''),
+      overdue: t.status !== 'done' && t.dueDate !== null && t.dueDate < today,
+    }));
+  };
 
   const ownerOf = (webContentsId: number) => {
     const owner = windows.tabForContents(webContentsId);
@@ -44,7 +88,7 @@ export function registerNewTabHandlers(
       home: settings.get('newtab.home'),
       name: owner.window.store.profiles.find((p) => p.id === profileId)?.displayName ?? '',
       shortcuts: home.shortcuts(profileId),
-      todos: home.todos(profileId),
+      todos: todos(profileId),
     };
   };
 
@@ -100,10 +144,20 @@ export function registerNewTabHandlers(
 
   router.handle('newtab:todo', (input, { sender }) => {
     const owner = ownerOf(sender.webContentsId);
-    const profileId = profileOf(owner);
-    if (input.action === 'add') home.addTodo(profileId, input.text.trim());
-    else if (input.action === 'toggle') home.toggleTodo(profileId, input.id);
-    else home.removeTodo(profileId, input.id);
+    if (input.action === 'add') {
+      work.saveTask({ ...NEW_TASK, title: input.text.trim(), dueDate: dateKey(new Date()) });
+    } else {
+      const task = work.task(input.id);
+      if (!task) throw new Error('That task no longer exists');
+      if (input.action === 'toggle') {
+        work.setTaskStatus(task.id, task.status === 'done' ? 'todo' : 'done');
+      } else {
+        // "Remove from Today": the task stays, without its date.
+        const { id, projectId, title, description, priority, status } = task;
+        work.saveTask({ id, projectId, title, description, priority, status, dueDate: null });
+      }
+    }
+    deps.workChanged();
     return state(owner);
   });
 

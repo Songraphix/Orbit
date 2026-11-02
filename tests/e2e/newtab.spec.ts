@@ -32,6 +32,11 @@ async function newTabPage(app: ElectronApplication, index = -1): Promise<Page> {
 }
 
 /** Presses Enter in the search box. The page is replaced by the site, so "closed" is success. */
+async function pageWith(app: ElectronApplication, fragment: string): Promise<Page> {
+  await expect.poll(() => app.windows().some((p) => p.url().includes(fragment))).toBe(true);
+  return app.windows().find((p) => p.url().includes(fragment))!;
+}
+
 async function submitSearch(page: Page, text: string): Promise<void> {
   const box = page.getByTestId('newtab-search');
   await box.fill(text);
@@ -167,26 +172,47 @@ test('the home page greets you by name, keeps today’s to-dos and shows a quote
   await page.getByTestId('greeting-name').press('Enter');
   await expect(page.getByTestId('greeting')).toContainText(', Joseph');
 
-  // Today: add two, tick one, remove one.
+  // Today: your real tasks due today. Add two, tick one, take one off today's list.
   const input = page.getByTestId('todo-input');
   await input.fill('Finish brand guide');
   await input.press('Enter');
   await input.fill('Edit video');
   await input.press('Enter');
-  await expect(page.getByTestId('todo')).toHaveText(['Finish brand guide', 'Edit video']);
-  await page.getByTestId('todo-check').first().click();
-  await expect(page.getByTestId('todo-check').first()).toHaveAttribute('aria-checked', 'true');
-  await page.getByTestId('todo').nth(1).hover();
-  await page.getByTestId('todo-remove').nth(1).click();
-  await expect(page.getByTestId('todo')).toHaveCount(1);
+  const row = (p: typeof page, text: string) => p.getByTestId('todo').filter({ hasText: text });
+  await expect(row(page, 'Finish brand guide')).toHaveCount(1);
+  await expect(row(page, 'Edit video')).toHaveCount(1);
+  await row(page, 'Finish brand guide').getByTestId('todo-check').click();
+  await expect(row(page, 'Finish brand guide').getByTestId('todo-check')).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await row(page, 'Edit video').hover();
+  await row(page, 'Edit video').getByTestId('todo-remove').click();
+  await expect(row(page, 'Edit video')).toHaveCount(0);
+
+  // They're tasks: the panel's Tasks has them (done, and without a date).
+  await orbit.win.evaluate(() =>
+    (globalThis as unknown as { orbit: { invoke: Invoke } }).orbit.invoke('notes:panel', {
+      view: 'tasks',
+    }),
+  );
+  const panel = await pageWith(orbit.app, '#/notes/panel/tasks');
+  const tasks = (await panel.evaluate(() =>
+    (globalThis as unknown as { orbit: { invoke: Invoke } }).orbit.invoke('work:get', {}),
+  )) as { tasks: { title: string; status: string; dueDate: string | null }[] };
+  expect(tasks.tasks.find((t) => t.title === 'Finish brand guide')?.status).toBe('done');
+  expect(tasks.tasks.find((t) => t.title === 'Edit video')?.dueDate).toBeNull();
 
   // A new tab page later shows the same list.
   await orbit.win.evaluate(() =>
     (globalThis as unknown as { orbit: { invoke: Invoke } }).orbit.invoke('tabs:create', {}),
   );
   const second = await newTabPage(orbit.app);
-  await expect(second.getByTestId('todo')).toHaveCount(1);
-  await expect(second.getByTestId('todo-check')).toHaveAttribute('aria-checked', 'true');
+  await expect(row(second, 'Finish brand guide').getByTestId('todo-check')).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(row(second, 'Edit video')).toHaveCount(0);
   await expect(second.getByTestId('greeting')).toContainText(', Joseph');
 });
 

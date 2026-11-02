@@ -49,9 +49,19 @@ export class SoundEngine {
   private voice: { id: SoundId; voice: Voice } | null = null;
   private buffers = new Map<string, AudioBuffer>();
 
+  private suspendTimer: ReturnType<typeof setTimeout> | null = null;
+
   apply(state: SoundState): void {
     if (!state.playing && !this.ctx) return;
     const ctx = this.context();
+    if (this.suspendTimer) clearTimeout(this.suspendTimer);
+    this.suspendTimer = null;
+    if (state.paused) {
+      // Fade out, then stop the clock (no CPU while paused); resuming picks up where it was.
+      this.master!.gain.setTargetAtTime(0, ctx.currentTime, 0.25);
+      this.suspendTimer = setTimeout(() => void ctx.suspend(), 1200);
+      return;
+    }
     void ctx.resume();
     this.master!.gain.setTargetAtTime(volumeToGain(state.volume), ctx.currentTime, 0.08);
     if (state.playing === (this.voice?.id ?? null)) return;

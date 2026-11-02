@@ -83,15 +83,19 @@ describe('SoundService', () => {
     migrate(db, migrations);
     const settings = new SettingsRepository(db);
     const { sounds, host } = soundsFor(settings);
-    expect(sounds.state).toEqual({ playing: null, volume: 0.5 });
+    expect(sounds.state).toEqual({ playing: null, paused: false, volume: 0.5 });
     sounds.play('rain');
     await Promise.resolve();
     expect(host.opened).toBe(1);
-    expect(host.sent.at(-1)).toEqual({ playing: 'rain', volume: 0.5 });
+    expect(host.sent.at(-1)).toEqual({ playing: 'rain', paused: false, volume: 0.5 });
     sounds.toggle('ocean'); // another sound: same player
     sounds.setVolume(0.8);
     expect(host.opened).toBe(1);
-    expect(host.sent.at(-1)).toEqual({ playing: 'ocean', volume: 0.8 });
+    expect(host.sent.at(-1)).toEqual({ playing: 'ocean', paused: false, volume: 0.8 });
+    sounds.setPaused(true); // keeps its place
+    expect(host.sent.at(-1)).toEqual({ playing: 'ocean', paused: true, volume: 0.8 });
+    sounds.setPaused(false);
+    expect(sounds.state.paused).toBe(false);
     expect(settings.get('sounds.volume')).toBe(0.8);
 
     sounds.toggle('ocean'); // the one playing: stop
@@ -249,6 +253,10 @@ describe('FocusService', () => {
     focus.allow('https://youtube.com/watch'); // "Open Anyway"
     expect(focus.blockedRedirect('https://youtube.com/x')).toBeNull();
 
+    focus.pause(true); // its sound pauses with it
+    expect(sounds.state.paused).toBe(true);
+    focus.pause(false);
+    expect(sounds.state.paused).toBe(false);
     focus.end(controller, false);
     expect(sounds.state.playing).toBeNull();
     expect(focus.blockedRedirect('https://youtube.com/x')).toBeNull();

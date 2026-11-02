@@ -109,9 +109,9 @@ test('code snippets keep their language; the page, a screenshot and a task in on
     await bar.getByTestId('capture-save').click();
     await expect(bar.getByTestId('capture-card')).toHaveCount(0);
 
-    // The page itself, with a task made at the same time.
+    // The page itself (from the toolbar's Save to Orbit button), with a task at the same time.
     await site.evaluate('window.getSelection().removeAllRanges()');
-    await clickMenu(app, 'capture');
+    await win.getByTestId('toolbar-capture').click();
     await expect(bar.getByTestId('capture-kind-link')).toHaveAttribute('aria-pressed', 'true');
     await expect(bar.getByTestId('capture-kind-text')).toBeDisabled();
     await bar.getByText('Also add a task').click();

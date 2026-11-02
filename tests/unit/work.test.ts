@@ -10,6 +10,7 @@ import {
   projectProgress,
   taskCounts,
   taskProblem,
+  todayTasks,
 } from '@shared/work';
 import type { Project, Task } from '@shared/work';
 import { openDatabase } from '../../src/main/persistence/db';
@@ -86,6 +87,20 @@ describe('work model', () => {
     expect(ids('completed')).toEqual(['done']);
     expect(ids('all')).toEqual(['late', 'now', 'soon', 'whenever', 'done']);
     expect(taskCounts(tasks, today)).toEqual({ all: 5, today: 2, upcoming: 1, completed: 1 });
+  });
+
+  it('today’s list: open tasks due today or overdue, then the ones ticked off today', () => {
+    const today = '2026-11-01';
+    const noon = new Date(2026, 10, 1, 12).getTime();
+    const tasks = [
+      task({ id: 'now', dueDate: today }),
+      task({ id: 'late', dueDate: '2026-10-30' }),
+      task({ id: 'soon', dueDate: '2026-11-03' }),
+      task({ id: 'whenever' }),
+      task({ id: 'doneToday', status: 'done', dueDate: today, completedAt: noon }),
+      task({ id: 'doneBefore', status: 'done', dueDate: '2026-10-29', completedAt: 5 }),
+    ];
+    expect(todayTasks(tasks, today).map((t) => t.id)).toEqual(['late', 'now', 'doneToday']);
   });
 
   it('continues with the open project looked at last, and its next task', () => {

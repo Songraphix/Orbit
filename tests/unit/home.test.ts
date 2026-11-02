@@ -105,8 +105,8 @@ describe('HomeRepository', () => {
     const [write] = r.todos('p1', noon);
     r.toggleTodo('p1', write!.id, noon + 2);
     expect(r.todos('p1', noon + 3)).toEqual([
-      { id: write!.id, text: 'Write', done: true },
-      { id: expect.any(String), text: 'Edit', done: false },
+      { id: write!.id, text: 'Write', done: true, note: '', overdue: false },
+      { id: expect.any(String), text: 'Edit', done: false, note: '', overdue: false },
     ]);
     // Done today shows today; tomorrow it's gone, a week on it's deleted.
     expect(r.todos('p1', noon + 86_400_000)).toHaveLength(1);

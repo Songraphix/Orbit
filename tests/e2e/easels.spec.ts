@@ -63,6 +63,26 @@ test('Easels: ⌃⇧E, draw, rename, capture from a page, reopen from the Librar
   await expect(easel.locator('.excalidraw')).toBeVisible({ timeout: 15_000 });
   await expect(easel.getByTestId('easel-title')).toHaveValue('Untitled Easel');
 
+  // Backgrounds: dots, then a grid, kept with the Easel (checked again when it reopens).
+  const backdrop = easel.getByTestId('easel-backdrop');
+  await easel.locator('[data-testid="easel-background"] [data-value="dots"]').click();
+  await expect(backdrop).toHaveAttribute('data-background', 'dots');
+  await expect
+    .poll(() =>
+      backdrop.evaluate(
+        (el) => (el as unknown as { style: { backgroundImage: string } }).style.backgroundImage,
+      ),
+    )
+    .toContain('radial-gradient');
+  await easel.locator('[data-testid="easel-background"] [data-value="grid"]').click();
+  await expect
+    .poll(() =>
+      backdrop.evaluate(
+        (el) => (el as unknown as { style: { backgroundImage: string } }).style.backgroundImage,
+      ),
+    )
+    .toContain('linear-gradient');
+
   // Draw a rectangle; it's saved by itself.
   await easel.locator('.excalidraw').click({ position: { x: 600, y: 400 } });
   await easel.keyboard.press('r');
@@ -123,5 +143,6 @@ test('Easels: ⌃⇧E, draw, rename, capture from a page, reopen from the Librar
   const reopened = await pageWith(app, '#/easel/');
   await expect(reopened.locator('.excalidraw')).toBeVisible({ timeout: 15_000 });
   await expect(reopened.getByTestId('easel-title')).toHaveValue('Ideas');
+  await expect(reopened.getByTestId('easel-backdrop')).toHaveAttribute('data-background', 'grid');
   expect(await savedTypes(reopened)).toEqual(['rectangle', 'text', 'image']);
 });

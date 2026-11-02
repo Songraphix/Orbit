@@ -2,7 +2,13 @@ import { z } from 'zod';
 import { layoutSchema, rectSchema } from '../types/layout';
 import { siteActionSchema } from '../types/site-controls';
 import { boostIdSchema, boostPatchSchema, boostSchema } from '../types/boosts';
-import { easelCaptureSchema, easelEntrySchema, easelIdSchema, easelSchema } from '../types/easels';
+import {
+  easelBackgroundSchema,
+  easelCaptureSchema,
+  easelEntrySchema,
+  easelIdSchema,
+  easelSchema,
+} from '../types/easels';
 import {
   NOTE_LIMITS,
   noteActionSchema,
@@ -604,6 +610,12 @@ export const contract = {
     output: z.void(),
     surfaces: ['internal'],
   },
+  /** Behind the drawing: plain, grid or dots. */
+  'easels:background': {
+    input: z.object({ id: easelIdSchema, background: easelBackgroundSchema }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
   /** Area capture from a web page in this window; null if cancelled. */
   'easels:capture': {
     input: z.object({ id: easelIdSchema }).strict(),
@@ -640,6 +652,12 @@ export const contract = {
     input: z.object({ id: z.string().min(1).max(64) }).strict(),
     output: z.void(),
     surfaces: ['internal'],
+  },
+  /** The sun/moon button and ⌘T: light ↔ dark for the whole app (Settings → Appearance). */
+  'appearance:toggle': {
+    input: z.object({}).strict(),
+    output: z.enum(['light', 'dark']),
+    surfaces: ['shell', 'overlay', 'internal'],
   },
   'settings:get': {
     input: z.object({}).strict(),
@@ -1038,6 +1056,12 @@ export const contract = {
     output: z.void(),
     surfaces: ['overlay'],
   },
+  /** The toolbar's Save to Orbit button (⇧⌘S): the capture card for the page you're on. */
+  'capture:open': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell'],
+  },
   'capture:close': {
     input: z.object({}).strict(),
     output: z.void(),
@@ -1156,6 +1180,11 @@ export const contract = {
   },
   'sounds:stop': {
     input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  'sounds:pause': {
+    input: z.object({ paused: z.boolean() }).strict(),
     output: z.void(),
     surfaces: ['shell', 'overlay', 'internal'],
   },

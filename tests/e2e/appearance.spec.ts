@@ -80,11 +80,18 @@ test('Settings → Appearance: Light and Dark switch the whole app, and are kept
     await first.close({ keepData: true });
   }
 
+  // The sidebar's sun/moon button flips it too (light → dark here), and is kept.
+  // (Done in the restarted app below.)
   // Kept across a restart, before the first frame.
   const second = await launchOrbit({ userData, colorScheme: null });
   try {
     expect(await dark(second.win)).toBe(false);
     expect(await sidebarFg(second.win)).toBe('rgb(29 29 31 / 1)');
+    const toggle = second.win.getByTestId('appearance-toggle');
+    await expect(toggle).toHaveAttribute('data-mode', 'light');
+    await toggle.click();
+    await expect.poll(() => dark(second.win)).toBe(true);
+    await expect(toggle).toHaveAttribute('data-mode', 'dark');
   } finally {
     await second.close();
   }

@@ -1,10 +1,11 @@
-import { ArrowDownToLine, Library, Plus, Sparkles, Undo2 } from 'lucide-react';
+import { ArrowDownToLine, Library, Moon, Plus, Sparkles, Sun, Undo2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { SidebarSnapshot, SpaceView } from '@shared/types/space';
 import { RenameInput } from './Rows';
 import { RecentFiles } from './RecentFiles';
 import { Tip } from '../../tooltip/Tip';
 import { SpaceIcon } from './SpaceIcon';
+import { useColorMode } from '../use-color-mode';
 
 const invoke = window.orbit.invoke;
 
@@ -150,6 +151,7 @@ export function BottomBar({
           <Library size={16} />
         </button>
       </Tip>
+      <ThemeToggle />
       <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-hidden">
         {spaces.map((space, i) => (
           <Tip key={space.id} label={space.name} keys={i < 9 ? `⌃${i + 1}` : undefined} side="top">
@@ -197,5 +199,27 @@ export function BottomBar({
         </button>
       </Tip>
     </div>
+  );
+}
+
+/** Light ↔ dark for the whole app (Settings → Appearance has System too). */
+function ThemeToggle() {
+  const mode = useColorMode();
+  const next = mode === 'dark' ? 'Light' : 'Dark';
+  return (
+    <Tip label={`${next} Mode`} keys="⌥⌘D" side="top">
+      <button
+        type="button"
+        aria-label={`Switch to ${next} Mode`}
+        onClick={() => void invoke('appearance:toggle', {})}
+        className="press grid size-8 place-items-center rounded-[11px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+        data-testid="appearance-toggle"
+        data-mode={mode}
+      >
+        <span key={mode} className="anim-pop grid">
+          {mode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </span>
+      </button>
+    </Tip>
   );
 }

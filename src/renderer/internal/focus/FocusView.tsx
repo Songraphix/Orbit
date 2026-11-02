@@ -375,7 +375,7 @@ function Setup({ state, setPrefs }: { state: FocusState; setPrefs: SetPrefs }) {
 }
 
 function Sounds({ state, setPrefs }: { state: FocusState; setPrefs: SetPrefs }) {
-  const { playing, volume } = state.sounds;
+  const { playing, paused, volume } = state.sounds;
   // While dragging, the slider shows where it is; otherwise main's volume.
   const [dragging, setLevel] = useState<number | null>(null);
   const level = dragging ?? volume;
@@ -389,6 +389,16 @@ function Sounds({ state, setPrefs }: { state: FocusState; setPrefs: SetPrefs }) 
           <button
             type="button"
             className="flex items-center gap-1 text-[12px] font-medium text-[var(--work-accent-text)]"
+            onClick={() => void invoke('sounds:pause', { paused: !paused })}
+            data-testid="sounds-pause"
+          >
+            {paused ? <Play size={11} /> : <Pause size={11} />} {paused ? 'Resume' : 'Pause'}
+          </button>
+        )}
+        {playing && (
+          <button
+            type="button"
+            className="ml-2 flex items-center gap-1 text-[12px] font-medium text-[var(--work-accent-text)]"
             onClick={() => {
               void invoke('sounds:stop', {});
               setPrefs({ sound: null });
@@ -427,7 +437,7 @@ function Sounds({ state, setPrefs }: { state: FocusState; setPrefs: SetPrefs }) 
                   data-testid="sound"
                   data-sound={s.id}
                 >
-                  {on ? <PlayingBars /> : ICONS[s.id]}
+                  {on && !paused ? <PlayingBars /> : ICONS[s.id]}
                   <span className="max-w-full truncate px-1">{s.name}</span>
                 </button>
               );

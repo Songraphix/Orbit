@@ -505,18 +505,32 @@ function Today({
   return (
     <section
       className={`w-[min(440px,100%)] rounded-[26px] px-6 pt-4 pb-3 ${glass(light)}`}
-      aria-label="My Focus"
+      aria-label="Today"
       data-testid="today"
     >
       <h2 className="mb-2 flex items-center gap-2.5 text-[18px] font-semibold">
         <Crosshair size={20} />
-        <span className="flex-1">My Focus</span>
+        {/* Your tasks due today (and overdue), the same as the panel's Tasks → Today. */}
+        <button
+          type="button"
+          className="flex-1 text-left hover:underline"
+          title="Open in Tasks"
+          onClick={() => void invoke('notes:panel', { view: 'tasks' })}
+          data-testid="today-open-tasks"
+        >
+          Today
+        </button>
         {todos.some((t) => !t.done) && (
           <span className="text-[13px] font-normal opacity-60" data-testid="focus-remaining">
             {todos.filter((t) => !t.done).length} remaining
           </span>
         )}
       </h2>
+      {todos.length === 0 && (
+        <p className="mb-1 text-[13.5px] opacity-60" data-testid="today-empty">
+          Nothing due today. Tasks with today’s date show here.
+        </p>
+      )}
       <ul className="flex flex-col gap-1">
         {todos.map((t) => (
           <li key={t.id} className="group flex items-center gap-3 py-0.5" data-testid="todo">
@@ -543,10 +557,19 @@ function Today({
               className={`min-w-0 flex-1 truncate text-[16px] transition ${t.done ? 'line-through opacity-50' : ''}`}
             >
               {t.text}
+              {t.note && (
+                <span
+                  className={`ml-2 text-[12.5px] ${t.overdue ? 'font-medium text-[#ff6b5e]' : 'opacity-55'}`}
+                  data-testid="todo-note"
+                >
+                  {t.note}
+                </span>
+              )}
             </span>
             <button
               type="button"
-              aria-label={`Remove ${t.text}`}
+              title="Remove from Today"
+              aria-label={`Remove ${t.text} from Today`}
               onClick={() =>
                 void invoke('newtab:todo', { action: 'remove', id: t.id }).then(onChange)
               }
@@ -563,7 +586,7 @@ function Today({
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={todos.length === 0 ? 'What’s on today?' : 'Add a task'}
+          placeholder={todos.length === 0 ? 'What’s on today?' : 'Add a task for today'}
           maxLength={200}
           className={`min-w-0 flex-1 bg-transparent text-[16px] outline-none ${
             light ? 'placeholder:text-neutral-500' : 'placeholder:text-white/50'

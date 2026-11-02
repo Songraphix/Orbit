@@ -10,6 +10,12 @@ import type { ArchivedHit, CommandDef, OpenTab, WorkHits } from './model';
 /** Commands the bar can run (F-21). Each also has a menu shortcut, shown as the subtitle. */
 export const COMMANDS: readonly CommandDef[] = [
   { id: 'new-tab-page', title: 'New Tab Page', keywords: ['wallpaper', 'home'] },
+  {
+    id: 'toggle-appearance',
+    title: 'Toggle Light / Dark',
+    keywords: ['dark mode', 'light mode', 'theme', 'appearance', 'night', 'white'],
+    shortcut: '⌥⌘D',
+  },
   { id: 'toggle-sidebar', title: 'Toggle Sidebar', keywords: ['hide', 'show'], shortcut: '⌘S' },
   {
     id: 'toggle-tabs-top',

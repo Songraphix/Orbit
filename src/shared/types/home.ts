@@ -24,7 +24,14 @@ export const shortcutSchema = z.object({
 });
 export type Shortcut = z.output<typeof shortcutSchema>;
 
-export const todoSchema = z.object({ id: z.string(), text: z.string(), done: z.boolean() });
+export const todoSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  done: z.boolean(),
+  /** The task's project, or "Overdue" (the new tab page's Today list shows real tasks). */
+  note: z.string().default(''),
+  overdue: z.boolean().default(false),
+});
 export type Todo = z.output<typeof todoSchema>;
 
 export const MAX_SHORTCUTS = 10;

@@ -52,9 +52,10 @@ export const SOUND_GROUPS: readonly SoundGroup[] = ['Nature', 'Noise', 'Calm'];
 
 export const soundIdSchema = z.enum(SOUND_IDS);
 
-/** What's playing (null: nothing) and how loud (0–1). */
+/** What's playing (null: nothing), whether it's paused, and how loud (0–1). */
 export const soundStateSchema = z.object({
   playing: soundIdSchema.nullable(),
+  paused: z.boolean(),
   volume: z.number().min(0).max(1),
 });
 export type SoundState = z.output<typeof soundStateSchema>;

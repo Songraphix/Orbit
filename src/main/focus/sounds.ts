@@ -25,6 +25,7 @@ const FADE_MS = 2500;
  */
 export class SoundService {
   private playing: SoundId | null = null;
+  private paused = false;
   private host: SoundHost | null = null;
   private hostReady = false;
   private closeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -32,11 +33,16 @@ export class SoundService {
   constructor(private readonly deps: SoundDeps) {}
 
   get state(): SoundState {
-    return { playing: this.playing, volume: this.deps.settings.get('sounds.volume') };
+    return {
+      playing: this.playing,
+      paused: this.playing !== null && this.paused,
+      volume: this.deps.settings.get('sounds.volume'),
+    };
   }
 
   play(id: SoundId): void {
     this.playing = id;
+    this.paused = false;
     this.ensureHost();
     this.sync();
   }
@@ -44,6 +50,7 @@ export class SoundService {
   stop(): void {
     if (!this.playing) return;
     this.playing = null;
+    this.paused = false;
     this.sync();
     if (this.closeTimer) clearTimeout(this.closeTimer);
     this.closeTimer = setTimeout(() => {
@@ -53,6 +60,13 @@ export class SoundService {
       this.host = null;
       this.hostReady = false;
     }, FADE_MS);
+  }
+
+  /** Pause or resume what's playing (the player keeps its place; it fades out and back in). */
+  setPaused(paused: boolean): void {
+    if (!this.playing || this.paused === paused) return;
+    this.paused = paused;
+    this.sync();
   }
 
   /** Play `id`, or stop it if it's the one playing. */

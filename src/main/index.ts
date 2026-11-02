@@ -177,6 +177,14 @@ function applyAppearance(appearance: 'system' | 'light' | 'dark'): void {
   nativeTheme.themeSource = appearance;
 }
 
+/** Light ↔ dark (from whatever shows now), kept as the Appearance setting. */
+function toggleAppearance(): 'light' | 'dark' {
+  const next = nativeTheme.shouldUseDarkColors ? 'light' : 'dark';
+  persistence?.settings.set('appearance', next);
+  applyAppearance(next);
+  return next;
+}
+
 /** The menu accelerator and the global shortcut can both fire for one press; open one window. */
 function openEmptyLittle(): void {
   if (Date.now() - lastEmptyLittle < 400) return;
@@ -486,6 +494,12 @@ function runCommand(controller: WindowController, commandId: string): void {
       return;
     case 'sounds-stop':
       soundService?.stop();
+      return;
+    case 'toggle-appearance':
+      toggleAppearance();
+      return;
+    case 'sounds-pause':
+      soundService?.setPaused(!soundService.state.paused);
       return;
     case 'capture':
       void captureService?.begin(controller, controller.tabs.active, null);
@@ -879,7 +893,14 @@ void app.whenReady().then(() => {
     router,
     windowManager,
     new WallpaperService(app.getPath('userData'), persistence.settings),
-    { home: persistence.home, settings: persistence.settings, history: persistence.history },
+    {
+      home: persistence.home,
+      settings: persistence.settings,
+      history: persistence.history,
+      work: persistence.work,
+      // The panel's projects and tasks follow changes made on the new tab page.
+      workChanged: () => windowManager.all().forEach((c) => c.notes.refresh()),
+    },
   );
   registerFindHandlers(router, windowManager);
   registerSidebarHandlers(router, windowManager);
@@ -1060,6 +1081,13 @@ void app.whenReady().then(() => {
     github,
   );
   registerCaptureHandlers(router, windowManager, captureFlow);
+  router.handle('capture:open', (_input, { sender }) => {
+    const controller = windowManager.forSender(sender.webContentsId);
+    if (!controller || controller.win.webContents.id !== sender.webContentsId) {
+      throw new Error(`Sender ${sender.webContentsId} is not a shell`);
+    }
+    void captureFlow.begin(controller, controller.tabs.active, null);
+  });
   // The assistant (roadmap Phase 3) in each window's productivity panel.
   const assistant = new AssistantService({
     ai,
@@ -1203,6 +1231,12 @@ void app.whenReady().then(() => {
   });
   registerLibraryHandlers(router, windowManager, { downloads, media, boosts, toast });
   registerBoostHandlers(router, windowManager, { boosts, toast });
+  router.handle('appearance:toggle', (_input, { sender }) => {
+    if (!windowManager.forSender(sender.webContentsId)) {
+      throw new Error(`Sender ${sender.webContentsId} has no window`);
+    }
+    return toggleAppearance();
+  });
   router.handle('tabs:copyUrl', (_input, { sender }) => {
     const controller = windowManager.forSender(sender.webContentsId);
     if (controller && copyActiveUrl(controller)) toast(controller, 'Copied link');

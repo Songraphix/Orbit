@@ -219,6 +219,12 @@ export function installAppMenu(actions: AppMenuActions): void {
         },
         { id: 'toolkit', label: 'Toolkit', click: () => actions.command('toolkit') },
         {
+          id: 'toggle-appearance',
+          label: 'Toggle Light / Dark',
+          accelerator: 'Alt+CmdOrCtrl+D',
+          click: () => actions.command('toggle-appearance'),
+        },
+        {
           id: 'focus-open',
           label: 'Focus & Sounds…',
           accelerator: 'Alt+CmdOrCtrl+F',

@@ -54,7 +54,7 @@ export class HomeRepository {
     return visibleTodos(
       rows.map((r) => ({ id: r.id, text: r.text, doneAt: r.done_at, createdAt: r.created_at })),
       now,
-    ).map((t) => ({ id: t.id, text: t.text, done: t.doneAt !== null }));
+    ).map((t) => ({ id: t.id, text: t.text, done: t.doneAt !== null, note: '', overdue: false }));
   }
 
   addTodo(profileId: string, text: string, now = Date.now()): void {

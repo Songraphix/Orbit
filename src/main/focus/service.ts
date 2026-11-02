@@ -140,6 +140,10 @@ export class FocusService {
       ? { ...session, pausedAt: now }
       : { ...session, pausedAt: null, pausedMs: session.pausedMs + (now - session.pausedAt!) };
     this.deps.settings.set('focus.session', next);
+    // Its sound pauses and resumes with it.
+    if (session.sound && this.deps.sounds.state.playing === session.sound) {
+      this.deps.sounds.setPaused(paused);
+    }
     this.arm();
     this.changed();
   }

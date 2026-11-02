@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Database } from '../db';
+import type { EaselBackground } from '@shared/types/easels';
 
 const PROFILE = 'default';
 
@@ -10,6 +11,7 @@ export type Easel = {
   /** The Excalidraw scene as JSON ('' for a new, empty easel). */
   scene: string;
   preview: string | null;
+  background: EaselBackground;
   updatedAt: number;
 };
 
@@ -19,6 +21,7 @@ type Row = {
   title: string;
   scene_json: string;
   preview: string | null;
+  background: string;
   updated_at: number;
 };
 
@@ -28,6 +31,7 @@ const toEasel = (row: Row): Easel => ({
   title: row.title,
   scene: row.scene_json,
   preview: row.preview,
+  background: (['grid', 'dots'] as const).find((b) => b === row.background) ?? 'plain',
   updatedAt: row.updated_at,
 });
 
@@ -36,13 +40,13 @@ export class EaselRepository {
   constructor(private readonly db: Database) {}
 
   /** Newest first, without their scenes (Library → Easels). */
-  list(): Omit<Easel, 'scene'>[] {
+  list(): Omit<Easel, 'scene' | 'background'>[] {
     const rows = this.db
       .prepare(
         `SELECT id, space_id, title, preview, updated_at FROM easels
          WHERE profile_id = ? ORDER BY updated_at DESC, id`,
       )
-      .all(PROFILE) as Omit<Row, 'scene_json'>[];
+      .all(PROFILE) as Omit<Row, 'scene_json' | 'background'>[];
     return rows.map((row) => ({
       id: row.id,
       spaceId: row.space_id,
@@ -91,6 +95,12 @@ export class EaselRepository {
         id,
       );
     return true;
+  }
+
+  setBackground(id: string, background: EaselBackground): void {
+    this.db
+      .prepare('UPDATE easels SET background = ? WHERE profile_id = ? AND id = ?')
+      .run(background, PROFILE, id);
   }
 
   delete(id: string): void {
