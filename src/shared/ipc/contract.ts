@@ -1402,6 +1402,10 @@ export const contract = {
           .strict()
           .nullable()
           .optional(),
+        /** Other open tabs to send too (compare pages). */
+        tabs: z.array(z.string().max(64)).max(4).optional(),
+        /** A project to share (null: stop sharing it). */
+        project: z.string().max(64).nullable().optional(),
       })
       .strict(),
     output: z.void(),

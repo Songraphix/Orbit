@@ -48,6 +48,15 @@ export type ConversationDoc =
     }
   | { kind: 'selection'; title: string; url: string; text: string; key: string }
   | {
+      /** A project the user shared: its brief, tasks and notes (brief M8). */
+      kind: 'project';
+      title: string;
+      url: string;
+      text: string;
+      projectId: string;
+      key: string;
+    }
+  | {
       kind: 'research';
       title: string;
       url: string;
@@ -135,6 +144,15 @@ export function documentBlock(doc: ConversationDoc): BetaRequestDocumentBlock {
       source: { type: 'text', media_type: 'text/plain', data: doc.text },
     };
   }
+  if (doc.kind === 'project') {
+    return {
+      ...base,
+      title: clip(`Project: ${doc.title}`, 300),
+      context:
+        'One of the user’s own projects in Orbit, which they chose to share: its brief, tasks and linked notes.',
+      source: { type: 'text', media_type: 'text/plain', data: doc.text },
+    };
+  }
   return {
     ...base,
     title: clip(doc.title || 'Saved finding', 300),
@@ -151,6 +169,9 @@ export function contextLabel(doc: ConversationDoc): AssistantContext {
   }
   if (doc.kind === 'selection') {
     return { kind: 'selection', label: `Selection · ${host || 'page'}`, partial: false };
+  }
+  if (doc.kind === 'project') {
+    return { kind: 'project', label: clip(`Project · ${doc.title}`, 80), partial: false };
   }
   return { kind: 'research', label: clip(doc.title || host || 'Finding', 80), partial: false };
 }
@@ -322,6 +343,8 @@ export function describeSent(docs: readonly ConversationDoc[], prompt: string): 
     }
     if (doc.kind === 'selection')
       return `Selected text from ${host} (${doc.text.length} characters)`;
+    if (doc.kind === 'project')
+      return `Project “${clip(doc.title, 40)}” (${doc.text.length.toLocaleString('en-US')} characters)`;
     return `Finding “${clip(doc.title, 40)}”`;
   });
   const findings = parts.filter((p) => p.startsWith('Finding')).length;

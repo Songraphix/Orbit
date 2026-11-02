@@ -135,4 +135,5 @@ for it.
 - M4 Backgrounds — done (e0ef9b2)
 - M5 App Hub — done (521aa62)
 - M6 Context menus — done (b87c20b)
-- M7 Focus integration — done
+- M7 Focus integration — done (110d392)
+- M8 AI context — done

@@ -143,6 +143,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — **Brief M7: focus integration.** The existing timer and sounds, connected further (no new timer): a **focus log** on the Mac (migration 020; pauses don't count, under a minute isn't logged) with **today's total and the last 7 days** in the Focus view and the Homepage's Focus widget; **Chime** and **Notify** switches for when time's up (a soft bowl from the sound player, which opens just for it); **Start over**; and the session **at a glance in the sidebar** when it shows (a break, or brought back). Focus prefs take a patch schema (the zod 4 default issue)
 
+- 2026-11-02 — **Brief M8: AI context.** The assistant's composer gains **+ Tab** (other open pages, read when you send — compare pages; up to four) and **+ Project** (a project's brief, dates, tasks and linked notes, shared only when you pick it; a citation opens the project). Each shows as a chip and in what was sent; Settings → AI's log describes it. The system prompt asks Claude to be a thinking partner: name weak assumptions, risks and missing information, ask when unclear, say how sure it is. (Explain and Translate Selection came with M6; the coworker tools before.) Deferred: AI memory and other providers
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0

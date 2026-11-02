@@ -3,6 +3,7 @@ import {
   BookMarked,
   Check,
   ClipboardCopy,
+  Columns2,
   Eye,
   FolderKanban,
   FileText,
@@ -132,6 +133,8 @@ function Conversation({ state }: { state: AssistantState }) {
                         <FileText size={11} />
                       ) : c.kind === 'selection' ? (
                         <Quote size={11} />
+                      ) : c.kind === 'project' ? (
+                        <FolderKanban size={11} />
                       ) : (
                         <BookMarked size={11} />
                       )}
@@ -550,6 +553,50 @@ function Composer({ state }: { state: AssistantState }) {
             attached
           />
         )}
+        {state.tabs.map((t) => (
+          <Chip
+            key={t.id}
+            icon={<Columns2 size={12} />}
+            label={t.title}
+            onRemove={() =>
+              void invoke('assistant:attach', {
+                tabs: state.tabs.filter((x) => x.id !== t.id).map((x) => x.id),
+              })
+            }
+            testId="assistant-tab-chip"
+            attached
+          />
+        ))}
+        {state.otherTabs.length > 0 && state.tabs.length < 4 && (
+          <AddPicker
+            label="Tab"
+            title="Add another open tab — compare pages (read when you send)"
+            options={state.otherTabs.map((t) => ({ id: t.id, label: t.title, hint: t.host }))}
+            onPick={(id) =>
+              void invoke('assistant:attach', { tabs: [...state.tabs.map((t) => t.id), id] })
+            }
+            testId="assistant-attach-tab"
+          />
+        )}
+        {state.project ? (
+          <Chip
+            icon={<FolderKanban size={12} />}
+            label={`Project · ${state.project.name}`}
+            onRemove={() => void invoke('assistant:attach', { project: null })}
+            testId="assistant-project-chip"
+            attached
+          />
+        ) : (
+          state.projects.length > 0 && (
+            <AddPicker
+              label="Project"
+              title="Share a project’s brief, tasks and notes with your questions"
+              options={state.projects.map((p) => ({ id: p.id, label: p.name }))}
+              onPick={(id) => void invoke('assistant:attach', { project: id })}
+              testId="assistant-attach-project"
+            />
+          )
+        )}
         {state.workAccess && (
           <span
             className="flex h-6 items-center gap-1 rounded-full bg-[var(--work-accent-soft)] px-2 text-[11.5px] font-medium text-[var(--work-accent-text)]"
@@ -707,6 +754,63 @@ function ResearchPicker({ onClose }: { onClose: () => void }) {
             <span className="text-[11px] text-[var(--note-muted)]">{group.ids.length}</span>
           </button>
         ))
+      )}
+    </div>
+  );
+}
+
+/** "+ Tab", "+ Project": a dashed chip that opens a short list to pick from. */
+function AddPicker(props: {
+  label: string;
+  title: string;
+  options: { id: string; label: string; hint?: string }[];
+  onPick: (id: string) => void;
+  testId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: globalThis.KeyboardEvent) => event.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [open]);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className="press flex h-6 items-center gap-1 rounded-full border border-dashed border-[var(--note-muted)] px-2 text-[11.5px] text-[var(--note-muted)] hover:border-[var(--work-accent)] hover:text-[var(--work-accent-text)]"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        title={props.title}
+        data-testid={props.testId}
+      >
+        <Plus size={12} />
+        {props.label}
+      </button>
+      {open && (
+        <div
+          className="absolute bottom-8 left-0 z-20 max-h-[260px] w-[250px] overflow-y-auto rounded-[12px] border border-[var(--work-border)] bg-[var(--work-sheet)] p-1 shadow-[0_12px_32px_-8px_rgb(0_0_0/0.35)]"
+          role="menu"
+        >
+          {props.options.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              role="menuitem"
+              className="flex w-full flex-col rounded-[9px] px-2.5 py-1.5 text-left text-[12.5px] hover:bg-[var(--note-hover)]"
+              onClick={() => {
+                props.onPick(o.id);
+                setOpen(false);
+              }}
+              data-testid={`${props.testId}-option`}
+            >
+              <span className="truncate">{o.label}</span>
+              {o.hint && (
+                <span className="truncate text-[11px] text-[var(--note-muted)]">{o.hint}</span>
+              )}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

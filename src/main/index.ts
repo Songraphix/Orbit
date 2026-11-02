@@ -1157,6 +1157,45 @@ void app.whenReady().then(() => {
     },
     // Orbit AI as a coworker: your projects and tasks (Settings → AI → Projects and tasks).
     work: persistence.work,
+    // A project you share in the assistant (brief M8): its brief, tasks and linked notes.
+    projects: () =>
+      persistence!.work
+        .all()
+        .projects.filter((p) => p.status !== 'done')
+        .map((p) => ({ id: p.id, name: p.name })),
+    projectContext: (projectId) => {
+      const project = persistence!.work.project(projectId);
+      if (!project) return null;
+      const tasks = persistence!.work.all().tasks.filter((t) => t.projectId === projectId);
+      const notes = persistence!.notes.linked().filter((n) => n.projectId === projectId);
+      const lines = [
+        `Project: ${project.name} (${project.status})`,
+        project.description ? `Brief: ${project.description}` : null,
+        project.startDate ? `Starts: ${project.startDate}` : null,
+        project.dueDate ? `Due: ${project.dueDate}` : null,
+        '',
+        `Tasks (${tasks.filter((t) => t.status === 'done').length} of ${tasks.length} done):`,
+        ...tasks.map(
+          (t) =>
+            `- [${t.status === 'done' ? 'x' : t.status === 'doing' ? '~' : ' '}] ${t.title}` +
+            `${t.dueDate ? ` (due ${t.dueDate})` : ''} · ${t.priority} priority` +
+            `${t.description ? ` — ${t.description.slice(0, 300)}` : ''}`,
+        ),
+        '',
+        notes.length ? 'Notes:' : '',
+        ...notes.slice(0, 10).map((n) => {
+          const text = persistence!.notes.get(n.id)?.text ?? '';
+          return `## ${n.title}\n${text.slice(0, 1500)}`;
+        }),
+      ];
+      return {
+        name: project.name,
+        text: lines
+          .filter((l): l is string => typeof l === 'string')
+          .join('\n')
+          .slice(0, 30_000),
+      };
+    },
     startFocus: (controller, input) => focusService?.start(controller, input),
     workChanged: () => windowManager.all().forEach((c) => c.notes.refresh()),
     saveNote: (doc, text, projectId) => {

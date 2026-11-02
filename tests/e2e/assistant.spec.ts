@@ -245,3 +245,34 @@ test('Orbit AI as a coworker: it looks at today’s tasks, adds one, and says wh
   expect(server.lastAiRequest()!.body['tools']).toBeUndefined();
   await expect(panel.getByTestId('assistant-work-access')).toHaveCount(0);
 });
+
+test('compare pages and share a project: both go with the question, and say so', async () => {
+  const { app, win } = orbit;
+  await addKey(app);
+  await invoke(win, 'tabs:create', { url: server.url('/research') });
+  await invoke(win, 'tabs:create', { url: server.url('/article') });
+  await expect(win.getByTestId('toolbar-address')).toContainText('Grid Systems');
+  await win.getByTestId('toolbar-assistant').click();
+  const panel = await pageWith(app, '#/notes/panel/assistant');
+
+  // + Tab: the other open page; + Project: a project's brief, tasks and notes.
+  await panel.getByTestId('assistant-attach-tab').click();
+  await panel.getByTestId('assistant-attach-tab-option').first().click();
+  await expect(panel.getByTestId('assistant-tab-chip')).toHaveCount(1);
+  await panel.getByTestId('assistant-attach-project').click();
+  await panel.getByTestId('assistant-attach-project-option').first().click();
+  await expect(panel.getByTestId('assistant-project-chip')).toBeVisible();
+  const project = (await panel.getByTestId('assistant-project-chip').textContent())!.replace(
+    'Project · ',
+    '',
+  );
+
+  await panel.getByTestId('assistant-input').fill('How do these compare?');
+  await panel.getByTestId('assistant-input').press('Enter');
+  await expect(panel.getByTestId('assistant-answer').last()).toHaveAttribute('data-status', 'done');
+  await expect(panel.getByTestId('assistant-sent-context')).toContainText([/Project · /]);
+  const sent = JSON.stringify(server.lastAiRequest()!.body['messages']);
+  expect(sent).toContain(`Project: ${project.trim()}`);
+  expect(sent).toContain('Tasks (');
+  expect((sent.match(/A web page the user chose to share/g) ?? []).length).toBe(1); // the other tab
+});

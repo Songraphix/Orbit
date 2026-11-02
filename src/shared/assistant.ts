@@ -14,7 +14,7 @@ export const ASSISTANT_LIMITS = { question: 4000, selection: 20_000, captures: 4
 export const assistantSourceSchema = z.object({
   /** The number shown in the answer, from 1. */
   n: z.number().int().min(1),
-  kind: z.enum(['page', 'selection', 'research']),
+  kind: z.enum(['page', 'selection', 'research', 'project']),
   /** The page's or the finding's title. */
   title: z.string(),
   host: z.string(),
@@ -32,7 +32,7 @@ export type AssistantPart = z.output<typeof assistantPartSchema>;
 
 /** What a question was sent with, as the conversation shows it ("Page · example.com"). */
 export const assistantContextSchema = z.object({
-  kind: z.enum(['page', 'selection', 'research']),
+  kind: z.enum(['page', 'selection', 'research', 'project']),
   label: z.string(),
   /** Only the first part of a long page was read. */
   partial: z.boolean(),
@@ -98,6 +98,14 @@ export const assistantStateSchema = z.object({
   research: z
     .object({ projectId: z.string().nullable(), label: z.string(), count: z.number().int() })
     .nullable(),
+  /** Other open tabs you added (to compare pages; read when you send). */
+  tabs: z.array(z.object({ id: z.string(), title: z.string(), host: z.string() })).default([]),
+  /** Open tabs you could add. */
+  otherTabs: z.array(z.object({ id: z.string(), title: z.string(), host: z.string() })).default([]),
+  /** A project you chose to share: its brief, tasks and notes (sent when you ask). */
+  project: z.object({ id: z.string(), name: z.string() }).nullable().default(null),
+  /** Projects you could share. */
+  projects: z.array(z.object({ id: z.string(), name: z.string() })).default([]),
   /** Why Claude can't be asked right now (no key, AI off, monthly limit) — or null. */
   blocked: z.string().nullable(),
   /** The model that will answer. */
