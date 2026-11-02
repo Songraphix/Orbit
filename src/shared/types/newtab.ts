@@ -70,5 +70,9 @@ export const newTabStateSchema = wallpaperStateSchema.extend({
   todos: z.array(todoSchema),
   /** The widgets below the search box (brief M3). */
   layout: homeLayoutSchema,
+  /** Whose layout it is: every Space's, or only this Space's (brief M9). */
+  layoutScope: z.enum(['all', 'space']).default('all'),
+  /** This page's Space (for "Only in …"). */
+  spaceName: z.string().default(''),
 });
 export type NewTabState = z.output<typeof newTabStateSchema>;

@@ -64,6 +64,10 @@ export function WidgetGrid(props: {
   onLayout: (layout: HomeLayout) => void;
   builtin: (type: 'today' | 'quote') => ReactNode;
   glass: string;
+  /** Whose layout: every Space's, or only this one's (brief M9). */
+  scope: 'all' | 'space';
+  spaceName: string;
+  onScope: (scope: 'all' | 'space') => void;
 }) {
   const { layout, editing } = props;
   const [adding, setAdding] = useState(false);
@@ -114,6 +118,42 @@ export function WidgetGrid(props: {
           >
             <RotateCcw size={14} /> Reset
           </BarButton>
+          {props.spaceName && (
+            <div
+              className="flex rounded-full bg-white/10 p-0.5 text-[12.5px]"
+              role="radiogroup"
+              aria-label="Layout for"
+              data-testid="widgets-scope"
+            >
+              {(
+                [
+                  ['all', 'All Spaces'],
+                  ['space', `Only ${props.spaceName}`],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={props.scope === value}
+                  onClick={() => props.scope !== value && props.onScope(value)}
+                  className={`h-7 max-w-[160px] truncate rounded-full px-3 ${
+                    props.scope === value
+                      ? 'bg-white/25 font-semibold'
+                      : 'opacity-70 hover:opacity-100'
+                  }`}
+                  title={
+                    value === 'all'
+                      ? 'One layout for every Space'
+                      : `${props.spaceName} keeps its own layout`
+                  }
+                  data-value={value}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           <BarButton onClick={() => props.onEditing(false)} testId="widgets-done">
             <Check size={15} /> Done
           </BarButton>

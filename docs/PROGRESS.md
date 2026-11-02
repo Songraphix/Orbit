@@ -145,6 +145,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — **Brief M8: AI context.** The assistant's composer gains **+ Tab** (other open pages, read when you send — compare pages; up to four) and **+ Project** (a project's brief, dates, tasks and linked notes, shared only when you pick it; a citation opens the project). Each shows as a chip and in what was sent; Settings → AI's log describes it. The system prompt asks Claude to be a thinking partner: name weak assumptions, risks and missing information, ask when unclear, say how sure it is. (Explain and Translate Selection came with M6; the coworker tools before.) Deferred: AI memory and other providers
 
+- 2026-11-02 — **Brief M9: per-Space customization.** A Space can keep **its own Homepage layout** (edit mode: All Spaces / Only ‹Space›; switching back to All Spaces shares again); apps already show per Space (M5) and the accent can follow each Space's colours (M2). **The brief's milestones M1–M9 are done** (docs/BRIEF-AUDIT.md); deferred: app groups in the sidebar, several Spaces per app in Settings, Move Tab to New Window, AI memory and other providers, workflow suggestions (P3)
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0

@@ -87,6 +87,22 @@ export function registerNewTabHandlers(
   const profileOf = ({ window, tab }: { window: WindowController; tab: TabController }) =>
     window.store.item(tab.id)?.profileId ?? window.tabs.space.profileId;
 
+  /** The Space this new tab page is in. */
+  const spaceOf = ({ window, tab }: { window: WindowController; tab: TabController }) =>
+    window.store.item(tab.id)?.spaceId ?? window.tabs.space.id;
+
+  /** The layout this page shows: its Space's own, or the one every Space shares. */
+  const layoutFor = (owner: { window: WindowController; tab: TabController }) => {
+    const spaceId = spaceOf(owner);
+    const own = settings.get('home.spaceLayouts')[spaceId];
+    return {
+      layout:
+        own ?? settings.get('home.layout') ?? layoutFromShow(settings.get('newtab.home').show),
+      layoutScope: own ? ('space' as const) : ('all' as const),
+      spaceName: owner.window.store.space(spaceId)?.name ?? '',
+    };
+  };
+
   const state = (owner: { window: WindowController; tab: TabController }): NewTabState => {
     const profileId = profileOf(owner);
     // A profile's first visit fills its shortcuts with its most-visited sites.
@@ -99,7 +115,7 @@ export function registerNewTabHandlers(
       name: owner.window.store.profiles.find((p) => p.id === profileId)?.displayName ?? '',
       shortcuts: home.shortcuts(profileId),
       todos: todos(profileId),
-      layout: settings.get('home.layout') ?? layoutFromShow(settings.get('newtab.home').show),
+      ...layoutFor(owner),
     };
   };
 
@@ -205,7 +221,21 @@ export function registerNewTabHandlers(
 
   router.handle('newtab:setLayout', ({ layout }, { sender }) => {
     const owner = ownerOf(sender.webContentsId);
-    settings.set('home.layout', layout);
+    const spaceId = spaceOf(owner);
+    const own = settings.get('home.spaceLayouts');
+    // A Space with its own layout keeps changes to itself; otherwise every Space shares them.
+    if (own[spaceId]) settings.set('home.spaceLayouts', { ...own, [spaceId]: layout });
+    else settings.set('home.layout', layout);
+    return state(owner);
+  });
+
+  router.handle('newtab:layoutScope', ({ scope }, { sender }) => {
+    const owner = ownerOf(sender.webContentsId);
+    const spaceId = spaceOf(owner);
+    const own = { ...settings.get('home.spaceLayouts') };
+    if (scope === 'space') own[spaceId] = layoutFor(owner).layout;
+    else delete own[spaceId];
+    settings.set('home.spaceLayouts', own);
     return state(owner);
   });
 

@@ -39,6 +39,8 @@ export const settingsSchema = {
   'newtab.home': homeSettingsSchema,
   /** The Homepage's widgets (brief M3); null until you change them (then the old switches). */
   'home.layout': homeLayoutSchema.nullable(),
+  /** A Space's own Homepage layout, when it has one (brief M9); else the one above. */
+  'home.spaceLayouts': z.record(z.string(), homeLayoutSchema),
   /** The space the main window shows. */
   'window.activeSpace': z.string().nullable(),
   /** Today tabs not opened for this long are archived (F-20). */
@@ -112,6 +114,7 @@ export const settingsDefaults: Settings = {
   'newtab.rotation': 'off',
   'newtab.home': DEFAULT_HOME,
   'home.layout': null,
+  'home.spaceLayouts': {},
   'window.activeSpace': null,
   'archive.after': '12h',
   appearance: 'system',

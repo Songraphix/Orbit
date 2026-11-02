@@ -119,3 +119,51 @@ test('Homepage widgets: add, set up, resize, reorder, remove, presets — kept a
     await server.close();
   }
 });
+
+test('a Space can keep its own Homepage layout; the others share one', async () => {
+  const orbit = await launchOrbit();
+  try {
+    const { app, win } = orbit;
+    const clickMenu = (id: string) =>
+      app.evaluate(
+        ({ Menu }, menuId) => Menu.getApplicationMenu()!.getMenuItemById(menuId)!.click(),
+        id,
+      );
+    const page = await homepage(app);
+    expect(await types(page)).toEqual(['today', 'quote']);
+    // This Space only: then Minimal here.
+    await page.getByTestId('customize-button').click();
+    await page.getByTestId('customize-edit-widgets').click();
+    await page.locator('[data-testid="widgets-scope"] [data-value="space"]').click();
+    await expect(
+      page.locator('[data-testid="widgets-scope"] [data-value="space"]'),
+    ).toHaveAttribute('aria-checked', 'true');
+    await page.getByTestId('widgets-preset').selectOption('minimal');
+    await page.getByTestId('widgets-done').click();
+    await expect(page.getByTestId('widgets-empty')).toBeVisible();
+
+    // Another Space still has the shared layout.
+    await clickMenu('new-space');
+    await win.evaluate(() =>
+      (
+        globalThis as unknown as { orbit: { invoke: (c: string, i: unknown) => Promise<unknown> } }
+      ).orbit.invoke('tabs:create', {}),
+    );
+    const others = () => app.windows().filter((p) => p.url().includes('#/newtab') && p !== page);
+    await expect.poll(() => others().length).toBeGreaterThan(0);
+    const other = others()[0]!;
+    await other.getByTestId('newtab').waitFor();
+    expect(await types(other)).toEqual(['today', 'quote']);
+
+    // Back to All Spaces: the first Space shares again.
+    await win.getByTestId('space-button').first().click();
+    await page.reload();
+    await page.getByTestId('newtab').waitFor();
+    await page.getByTestId('customize-button').click();
+    await page.getByTestId('customize-edit-widgets').click();
+    await page.locator('[data-testid="widgets-scope"] [data-value="all"]').click();
+    expect(await types(page)).toEqual(['today', 'quote']);
+  } finally {
+    await orbit.close();
+  }
+});

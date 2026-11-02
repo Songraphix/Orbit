@@ -918,6 +918,13 @@ export const contract = {
     output: newTabStateSchema,
     surfaces: ['internal'],
   },
+  /** This Space gets its own layout (starting from the current one), or goes back to the
+   *  one every Space shares. */
+  'newtab:layoutScope': {
+    input: z.object({ scope: z.enum(['all', 'space']) }).strict(),
+    output: newTabStateSchema,
+    surfaces: ['internal'],
+  },
   /** What the Projects, Notes and Recently Visited widgets show. */
   'newtab:widgetData': {
     input: z.object({}).strict(),

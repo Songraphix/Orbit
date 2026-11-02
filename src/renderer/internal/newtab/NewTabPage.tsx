@@ -117,6 +117,9 @@ export function NewTabPage() {
             editing={editing}
             onEditing={setEditing}
             onLayout={setLayout}
+            scope={state.layoutScope}
+            spaceName={state.spaceName}
+            onScope={(scope) => void invoke('newtab:layoutScope', { scope }).then(setState)}
             builtin={(type) =>
               type === 'today' ? (
                 <Today todos={state.todos} light={light} onChange={setState} />

@@ -136,4 +136,8 @@ for it.
 - M5 App Hub — done (521aa62)
 - M6 Context menus — done (b87c20b)
 - M7 Focus integration — done (110d392)
-- M8 AI context — done
+- M8 AI context — done (3adc257)
+- M9 Per-Space customization — done
+
+Deferred (brief P3 or not yet needed): app groups in the sidebar, several Spaces per app in
+Settings, Move Tab to New Window, AI memory and other providers, workflow suggestions.
