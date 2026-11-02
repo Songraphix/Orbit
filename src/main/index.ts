@@ -382,6 +382,26 @@ function pageMenuRequest(
     case 'ask-selection':
       assistantService?.open(controller, { selection: { text: request.text, ...page } });
       return;
+    // Brief M6: the selection goes to Claude with the question (the menu says Orbit AI).
+    case 'explain-selection':
+      assistantService?.open(controller, {
+        selection: { text: request.text, ...page },
+        prompt: 'Explain this selection in plain words: what it says and what it means here.',
+      });
+      return;
+    case 'translate-selection': {
+      const language =
+        new Intl.DisplayNames(['en'], { type: 'language' }).of(app.getLocale().split('-')[0]!) ??
+        'English';
+      assistantService?.open(controller, {
+        selection: { text: request.text, ...page },
+        prompt: `Translate this selection into ${language}. If it is already in ${language}, translate it into English. Give only the translation, then a one-line note on anything that doesn't translate cleanly.`,
+      });
+      return;
+    }
+    case 'split-page':
+      if (tab) controller.tabs.splitWithNew();
+      return;
     case 'tasks-selection':
       assistantService?.open(controller, {
         selection: { text: request.text, ...page },

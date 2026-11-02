@@ -397,11 +397,46 @@ export class SidebarActions {
           })),
         });
       }
+      // Brief M6: the browser's usual tab actions.
+      const live = this.tabs.get(item.id);
+      const contents = live && !live.view.webContents.isDestroyed() ? live.view.webContents : null;
+      const otherToday =
+        item.section === 'today'
+          ? this.store
+              .rows('today', this.space)
+              .filter((r) => r.item.kind === 'tab' && r.item.id !== item.id)
+          : [];
       template.push(
+        { type: 'separator' },
+        {
+          label: 'Duplicate',
+          enabled: Boolean(item.url),
+          click: () => this.tabs.create(item.url ?? undefined),
+        },
+        { label: 'Reload', enabled: contents !== null, click: () => contents?.reload() },
+        {
+          label: contents?.isAudioMuted() ? 'Unmute Tab' : 'Mute Tab',
+          enabled: contents !== null,
+          click: () => contents?.setAudioMuted(!contents.isAudioMuted()),
+        },
         { type: 'separator' },
         {
           label: item.section === 'today' ? 'Close Tab' : 'Unload Tab',
           click: () => this.tabs.close(item.id),
+        },
+        ...(item.section === 'today'
+          ? [
+              {
+                label: 'Close Other Today Tabs',
+                enabled: otherToday.length > 0,
+                click: () => otherToday.forEach((r) => this.tabs.close(r.item.id)),
+              },
+            ]
+          : []),
+        {
+          label: 'Reopen Closed Tab',
+          accelerator: 'Shift+CmdOrCtrl+T',
+          click: () => this.tabs.reopenClosed(),
         },
       );
     }

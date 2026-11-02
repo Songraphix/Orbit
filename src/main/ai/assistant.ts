@@ -205,6 +205,8 @@ export class AssistantService {
       research?: { projectId: string | null; captureIds: string[] };
       summarize?: boolean;
       tasksFromSelection?: boolean;
+      /** Asks this at once (Explain / Translate Selection). */
+      prompt?: string;
     } = {},
   ): void {
     const session = this.session(controller);
@@ -220,6 +222,7 @@ export class AssistantService {
     controller.notes.openAt('panel/assistant');
     this.push(controller);
     if (options.summarize) void this.ask(controller, '', 'summarize');
+    else if (options.prompt) void this.ask(controller, options.prompt, 'ask');
     else if (options.tasksFromSelection) void this.suggestTasks(controller, 'selection');
   }
 

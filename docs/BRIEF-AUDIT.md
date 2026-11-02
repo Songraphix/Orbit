@@ -133,4 +133,5 @@ for it.
 - M2 customization engine — done (1689165)
 - M3 Homepage widgets — done (8a8cfed)
 - M4 Backgrounds — done (e0ef9b2)
-- M5 App Hub — done
+- M5 App Hub — done (521aa62)
+- M6 Context menus — done

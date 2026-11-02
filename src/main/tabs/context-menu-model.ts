@@ -46,6 +46,8 @@ export type ContextAction =
   | 'capture-image'
   // The assistant and notes (roadmap P3.1–P3.3): selected text into answers, tasks or a note.
   | 'ask-selection'
+  | 'explain-selection'
+  | 'translate-selection'
   | 'tasks-selection'
   | 'note-selection'
   | 'ask-page'
@@ -53,6 +55,10 @@ export type ContextAction =
   // The Toolkit (roadmap P3.5): what's in an image; a screenshot to draw on.
   | 'image-info'
   | 'annotate-page'
+  // Brief M6: the gaps in Chrome's and Orbit's menus.
+  | 'search-image'
+  | 'save-page'
+  | 'split-page'
   | `spell:${string}`;
 
 export type ContextItem =
@@ -116,6 +122,7 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
       item('copy-image', 'Copy Image'),
       item('copy-image-url', 'Copy Image Address'),
       item('capture-image', 'Save Image to Orbit…', isWeb(params.srcURL)),
+      item('search-image', 'Search Image with Google', isWeb(params.srcURL)),
       item('image-info', 'Image Info…', isWeb(params.srcURL) || params.srcURL.startsWith('data:')),
     ]);
   }
@@ -125,6 +132,8 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
     groups.push([item('copy', 'Copy'), item('search-selection', searchLabel(selection))]);
     groups.push([
       item('ask-selection', 'Ask Orbit About Selection'),
+      item('explain-selection', 'Explain with Orbit AI'),
+      item('translate-selection', 'Translate with Orbit AI'),
       item('tasks-selection', 'Make Tasks from Selection…'),
       item('note-selection', 'New Note from Selection'),
       item('capture-selection', 'Save Selection to Orbit…'),
@@ -138,6 +147,7 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
       item('forward', 'Forward', page.canGoForward),
       item('reload', 'Reload'),
     ]);
+    groups.push([item('save-page', 'Save Page As…'), item('split-page', 'Open in Split View')]);
     groups.push([
       item('summarize-page', 'Summarize Page'),
       item('ask-page', 'Ask Orbit About This Page'),

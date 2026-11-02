@@ -1,4 +1,5 @@
-import { Menu, MenuItem, clipboard } from 'electron';
+import { join } from 'node:path';
+import { Menu, MenuItem, app, clipboard, dialog } from 'electron';
 import { ElectronChromeExtensions } from 'electron-chrome-extensions';
 import type { MenuItemConstructorOptions, WebContents } from 'electron';
 import { searchUrl } from '../omnibox/classify';
@@ -15,6 +16,8 @@ export type PageCaptureRequest =
 /** …or asked the assistant (or Notes) to do with the page or the selection (roadmap P3.1–P3.3). */
 export type PageAssistRequest =
   | { kind: 'ask-selection'; text: string }
+  | { kind: 'explain-selection'; text: string }
+  | { kind: 'translate-selection'; text: string }
   | { kind: 'tasks-selection'; text: string }
   | { kind: 'note-selection'; text: string }
   | { kind: 'ask-page' }
@@ -22,7 +25,9 @@ export type PageAssistRequest =
 
 /** …or the Toolkit (roadmap P3.5): an image's details, a screenshot to annotate. */
 export type PageToolRequest =
-  { kind: 'image-info'; src: string; alt: string } | { kind: 'annotate-page' };
+  | { kind: 'image-info'; src: string; alt: string }
+  | { kind: 'annotate-page' }
+  | { kind: 'split-page' };
 
 export type PageMenuRequest = PageCaptureRequest | PageAssistRequest | PageToolRequest;
 
@@ -91,9 +96,21 @@ export function attachContextMenu(
         case 'capture-image':
           return capture?.({ kind: 'image', src: params.srcURL });
         case 'ask-selection':
+        case 'explain-selection':
+        case 'translate-selection':
         case 'tasks-selection':
         case 'note-selection':
           return capture?.({ kind: action, text: params.selectionText });
+        case 'split-page':
+          return capture?.({ kind: 'split-page' });
+        case 'search-image':
+          return openInTab(
+            `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(params.srcURL)}`,
+            true,
+          );
+        case 'save-page':
+          void savePage(contents);
+          return;
         case 'ask-page':
         case 'summarize-page':
         case 'annotate-page':
@@ -125,4 +142,16 @@ export function attachContextMenu(
     }
     menu.popup();
   });
+}
+
+/** Save Page As…: the whole page with its files, where you choose. */
+async function savePage(contents: WebContents): Promise<void> {
+  const title = (contents.getTitle() || 'Page').replace(/[/\\:*?"<>|]+/g, ' ').trim();
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: 'Save Page As',
+    defaultPath: join(app.getPath('downloads'), `${title.slice(0, 80) || 'Page'}.html`),
+    filters: [{ name: 'Web Page', extensions: ['html'] }],
+  });
+  if (canceled || !filePath || contents.isDestroyed()) return;
+  await contents.savePage(filePath, 'HTMLComplete').catch(() => undefined);
 }

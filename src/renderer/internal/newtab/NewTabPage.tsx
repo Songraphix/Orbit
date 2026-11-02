@@ -9,7 +9,9 @@ import { BackgroundSection, UnsplashCredit, Wallpaper } from './backgrounds';
 import { DEFAULT_LOOK } from '@shared/backgrounds';
 import type { BackgroundLook } from '@shared/backgrounds';
 import { WidgetGrid } from './widgets';
-import { newWidget } from '@shared/home-widgets';
+import { HomeMenu } from './HomeMenu';
+import { BUILTIN_WALLPAPERS } from '@shared/types/newtab';
+import { layoutFromShow, newWidget } from '@shared/home-widgets';
 import type { HomeLayout } from '@shared/home-widgets';
 
 const invoke = window.orbit.invoke;
@@ -28,6 +30,7 @@ const messageOf = (e: unknown) =>
 export function NewTabPage() {
   const [state, setState] = useState<NewTabState | null>(null);
   const [customizing, setCustomizing] = useState(false);
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
   const [editing, setEditing] = useState(false);
   // A background being previewed (Apply keeps it), and adjustments as you drag.
   const [preview, setPreview] = useState<WallpaperChoice | null>(null);
@@ -50,6 +53,13 @@ export function NewTabPage() {
     <main
       className={`relative h-full overflow-y-auto ${light ? 'text-neutral-900' : 'text-white'}`}
       data-theme={light ? 'light' : 'dark'}
+      onContextMenu={(e) => {
+        // Text fields keep their own menu; anywhere else, the Homepage's.
+        const target = e.target as HTMLElement;
+        if (target.closest('input, textarea, [contenteditable="true"]')) return;
+        e.preventDefault();
+        setMenuAt({ x: e.clientX, y: e.clientY });
+      }}
       data-testid="newtab"
     >
       <Wallpaper
@@ -118,6 +128,28 @@ export function NewTabPage() {
         </div>
       )}
 
+      {menuAt && state && (
+        <HomeMenu
+          at={menuAt}
+          onClose={() => setMenuAt(null)}
+          onPick={(action) => {
+            if (action === 'customize' || action === 'background') setCustomizing(true);
+            if (action === 'widgets') setEditing(true);
+            if (action === 'reset') setLayout(layoutFromShow({ today: true, quote: true }));
+            if (action === 'shuffle') {
+              // A different background at once: one of your favourites, else a built-in.
+              const pool: WallpaperChoice[] = state.favorites.length
+                ? state.favorites
+                : BUILTIN_WALLPAPERS.map((w) => ({ kind: 'builtin' as const, id: w.id }));
+              const others = pool.filter(
+                (c) => JSON.stringify(c) !== JSON.stringify(state.wallpaper),
+              );
+              const next = others[Math.floor(Math.random() * others.length)] ?? pool[0];
+              if (next) void invoke('newtab:setWallpaper', { wallpaper: next }).then(setState);
+            }
+          }}
+        />
+      )}
       {customizing && state && (
         <CustomizePanel
           state={state}
