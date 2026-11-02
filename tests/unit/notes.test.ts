@@ -53,7 +53,7 @@ describe('notesHash', () => {
   it('routes the panel and floating notes, and nothing else', () => {
     expect(notesHash('panel')).toBe('/notes/panel');
     expect(notesHash('panel/assistant')).toBe('/notes/panel/assistant');
-    expect(notesHash('panel/tools/json')).toBe('/notes/panel/tools/json');
+    expect(notesHash('panel/tools/code')).toBe('/notes/panel/tools/code');
     expect(notesHash('panel/tools/nope')).toBe('/not-found');
     expect(notesHash(`panel/${id}`)).toBe(`/notes/panel/${id}`);
     expect(notesHash(`float/${id}`)).toBe(`/notes/float/${id}`);
