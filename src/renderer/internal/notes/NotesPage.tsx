@@ -42,6 +42,8 @@ import { saveOpenNotes } from '../../notes/save-notes';
 import { useAppearance } from '../appearance';
 import { AssistantView } from '../assistant/AssistantView';
 import { Tip } from '../../tooltip/Tip';
+// The panel's colours and type (--note-*, --work-*) — every view needs them, not just notes.
+import '../../notes/notes.css';
 import { ToolkitView } from '../toolkit/ToolkitView';
 
 const invoke = window.orbit.invoke;

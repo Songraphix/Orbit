@@ -122,6 +122,23 @@ test('Orbit’s own pages get the same tooltips: the panel’s tabs, placed over
       ({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getContentSize()[0]!,
     );
     expect(bounds.x).toBeGreaterThan(width / 2);
+
+    // The panel's colours load with it (not only with the note editor): the open tab is filled
+    // with the accent, and a form's sheet is opaque.
+    const fill = (selector: string) =>
+      panel.locator(selector).evaluate(
+        (el) =>
+          (
+            globalThis as unknown as {
+              getComputedStyle: (e: unknown) => { backgroundColor: string };
+            }
+          ).getComputedStyle(el).backgroundColor,
+      );
+    expect(await fill('[data-testid="panel-tab"][aria-current="page"]')).not.toBe(
+      'rgba(0, 0, 0, 0)',
+    );
+    await panel.getByTestId('new-project').click();
+    expect(await fill('[data-testid="project-form"]')).toMatch(/^rgb\(/);
   } finally {
     await orbit.close();
   }

@@ -83,6 +83,11 @@ export const COMMANDS: readonly CommandDef[] = [
     title: 'New Floating Note',
     keywords: ['notes', 'sticky', 'window', 'pin', 'on top'],
   },
+  { id: 'open-projects', title: 'Projects', keywords: ['panel', 'work', 'clients'] },
+  { id: 'open-tasks', title: 'Tasks', keywords: ['panel', 'todo', 'to-do', 'today'] },
+  { id: 'open-notes', title: 'Notes', keywords: ['panel', 'notebook', 'list'] },
+  { id: 'open-board', title: 'Project Board', keywords: ['kanban', 'columns', 'tasks'] },
+  { id: 'open-research', title: 'Research', keywords: ['findings', 'captures', 'saved'] },
   {
     id: 'assistant',
     title: 'Ask Orbit',

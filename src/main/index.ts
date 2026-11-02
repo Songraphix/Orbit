@@ -469,6 +469,21 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'toggle-notes':
       controller.notes.toggle();
       return;
+    case 'open-projects':
+      controller.notes.openAt('panel/projects');
+      return;
+    case 'open-tasks':
+      controller.notes.openAt('panel/tasks');
+      return;
+    case 'open-notes':
+      controller.notes.openAt('panel');
+      return;
+    case 'open-board':
+      controller.notes.openAt('panel/board');
+      return;
+    case 'open-research':
+      controller.notes.openAt('panel/research');
+      return;
     case 'assistant':
       assistantService?.open(controller);
       return;

@@ -60,7 +60,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
   return (
     <div className="flex min-h-screen bg-[#f6f6f8] text-neutral-800" data-testid="settings-page">
       <SettingsNav />
-      <main className="min-w-0 flex-1 px-10 pt-9 pb-24">
+      <main className="min-w-0 flex-1 px-5 pt-9 pb-24 md:px-10">
         <div className="mx-auto max-w-2xl">
           <Section id="general" title="General">
             <Group title="Tabs">
@@ -286,14 +286,16 @@ function Section({ id, title, children }: { id: string; title: string; children:
   );
 }
 
+/** A setting: its name and hint, and its control — beside them, or below when the page is
+ *  narrow (Settings beside the productivity panel). */
 function Row({ label, hint, children }: { label: string; hint: string; children: ReactNode }) {
   return (
-    <div className="flex items-center gap-4 px-4 py-3">
-      <div className="min-w-0 flex-1">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+      <div className="min-w-[180px] flex-[1_1_220px]">
         <div className="text-sm">{label}</div>
         <div className="text-xs text-neutral-400">{hint}</div>
       </div>
-      {children}
+      <div className="max-w-full min-w-0 shrink-0">{children}</div>
     </div>
   );
 }
@@ -604,11 +606,11 @@ function SettingsNav() {
   }, []);
   return (
     <nav
-      className="sticky top-0 flex h-screen w-56 shrink-0 flex-col gap-0.5 border-r border-black/[0.06] bg-white/70 px-3 pt-9 backdrop-blur-xl"
+      className="sticky top-0 flex h-screen w-[60px] shrink-0 flex-col gap-0.5 border-r border-black/[0.06] bg-white/70 px-2 pt-9 backdrop-blur-xl md:w-56 md:px-3"
       aria-label="Settings"
     >
       <div className="mb-4 flex items-center gap-2 px-2.5 text-[15px] font-semibold">
-        <Settings size={17} /> Settings
+        <Settings size={17} /> <span className="hidden md:inline">Settings</span>
       </div>
       {NAV.map((item) => (
         <button
@@ -619,6 +621,8 @@ function SettingsNav() {
             setActive(item.id);
             document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' });
           }}
+          aria-label={item.label}
+          title={item.label}
           className={`press flex h-9 items-center gap-2.5 rounded-[9px] px-2.5 text-left text-[13.5px] ${
             active === item.id
               ? 'bg-[#5b5bd6] font-medium text-white shadow-[0_1px_2px_rgb(0_0_0/0.15)]'
@@ -628,7 +632,8 @@ function SettingsNav() {
           data-section={item.id}
         >
           {item.icon}
-          {item.label}
+          {/* Narrow pages (Settings beside the panel) show the icons only. */}
+          <span className="hidden md:inline">{item.label}</span>
         </button>
       ))}
     </nav>
@@ -1041,11 +1046,11 @@ function AddRule(props: { spaces: { id: string; name: string }[]; onAdded: () =>
       }
     });
   };
-  const SELECT = 'rounded-lg border border-neutral-200 px-2 py-1 text-sm';
+  const SELECT = 'max-w-full min-w-0 rounded-lg border border-neutral-200 px-2 py-1 text-sm';
   return (
     <Group title="Add a rule">
       <div className="flex flex-col gap-3 px-4 py-3 text-sm">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="w-12 shrink-0 text-neutral-500">When</span>
           <select
             value={kind}
@@ -1059,7 +1064,7 @@ function AddRule(props: { spaces: { id: string; name: string }[]; onAdded: () =>
         </div>
         {kind === 'link' ? (
           <>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="w-12 shrink-0 text-neutral-500">Site</span>
               <input
                 value={pattern}
@@ -1072,7 +1077,7 @@ function AddRule(props: { spaces: { id: string; name: string }[]; onAdded: () =>
                 data-testid="rule-pattern"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="w-12 shrink-0 text-neutral-500">Open</span>
               <select
                 value={target}
@@ -1091,7 +1096,7 @@ function AddRule(props: { spaces: { id: string; name: string }[]; onAdded: () =>
             </div>
           </>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="w-12 shrink-0 text-neutral-500">In</span>
             <select
               value={space}
