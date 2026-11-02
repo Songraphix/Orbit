@@ -135,7 +135,7 @@ function ContinueCard({ project, next }: { project: Project; next: { title: stri
       className="mx-3 mt-3 rounded-[16px] bg-[var(--work-accent-soft)] p-3 ring-1 ring-[var(--work-accent)]/30"
       data-testid="continue-card"
     >
-      <div className="text-[11px] font-semibold tracking-wide text-[var(--work-accent)] uppercase">
+      <div className="text-[11px] font-semibold tracking-wide text-[var(--work-accent-text)] uppercase">
         Continue where you left off
       </div>
       <button
@@ -421,7 +421,7 @@ export function ProjectDetail({ id }: { id: string }) {
                 taskId: tasks.find((t) => t.status !== 'done')!.id,
               })
             }
-            className="press flex h-7 items-center gap-1 rounded-[9px] px-2 text-[12.5px] font-semibold text-[var(--work-accent)] hover:bg-[var(--work-accent-soft)]"
+            className="press flex h-7 items-center gap-1 rounded-[9px] px-2 text-[12.5px] font-semibold text-[var(--work-accent-text)] hover:bg-[var(--work-accent-soft)]"
             data-testid="project-focus"
           >
             <Crosshair size={13} />
@@ -502,7 +502,7 @@ function Workspace(props: {
         <button
           type="button"
           onClick={() => work.editProject(props.project)}
-          className="press shrink-0 rounded-[9px] px-2 py-1 text-[12.5px] font-semibold text-[var(--work-accent)] hover:bg-[var(--work-accent-soft)]"
+          className="press shrink-0 rounded-[9px] px-2 py-1 text-[12.5px] font-semibold text-[var(--work-accent-text)] hover:bg-[var(--work-accent-soft)]"
           data-testid="link-workspace"
         >
           Link a Space
@@ -530,7 +530,7 @@ function ProjectNotes(props: {
         <button
           type="button"
           onClick={() => void create()}
-          className="press flex h-7 items-center gap-1 rounded-[9px] px-2 text-[12.5px] font-semibold text-[var(--work-accent)] hover:bg-[var(--work-accent-soft)]"
+          className="press flex h-7 items-center gap-1 rounded-[9px] px-2 text-[12.5px] font-semibold text-[var(--work-accent-text)] hover:bg-[var(--work-accent-soft)]"
           data-testid="project-new-note"
         >
           <Plus size={13} strokeWidth={2.4} />

@@ -178,7 +178,8 @@
 /* Light and dark palettes; a surface picks one with data-note-theme. */
 [data-note-theme='light'] {
   --note-fg: #1d1d1f;
-  --note-muted: rgb(60 60 67 / 0.55);
+  /* Secondary text that still reads: WCAG AA (4.5:1) on the panel's surfaces. */
+  --note-muted: rgb(60 60 67 / 0.72);
   --note-accent: #b8860b;
   --note-line: rgb(0 0 0 / 0.07);
   --note-bg: #fffdf8;
@@ -186,7 +187,7 @@
 }
 [data-note-theme='dark'] {
   --note-fg: rgb(255 255 255 / 0.92);
-  --note-muted: rgb(235 235 245 / 0.5);
+  --note-muted: rgb(235 235 245 / 0.58);
   --note-accent: #f5c451;
   --note-line: rgb(255 255 255 / 0.09);
   --note-bg: #1f1f22;
@@ -196,6 +197,8 @@
 /* The productivity panel's Projects / Tasks / Board (owner request): purple accent, quiet cards. */
 [data-note-theme='light'] {
   --work-accent: #6d5dfc;
+  /* Accent-coloured text: the same purple reads on white (4.5:1). */
+  --work-accent-text: #6d5dfc;
   --work-accent-soft: rgb(109 93 252 / 0.12);
   --work-card: rgb(0 0 0 / 0.035);
   --work-border: rgb(0 0 0 / 0.07);
@@ -203,7 +206,9 @@
   --work-sheet: #ffffff;
 }
 [data-note-theme='dark'] {
-  --work-accent: #7c6cff;
+  /* Fills keep white text readable (4.5:1); text in the accent is lighter (5:1 on the panel). */
+  --work-accent: #6d5dfc;
+  --work-accent-text: #8a7cff;
   --work-accent-soft: rgb(124 108 255 / 0.2);
   --work-card: rgb(255 255 255 / 0.045);
   --work-border: rgb(255 255 255 / 0.07);

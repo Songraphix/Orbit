@@ -79,7 +79,7 @@ export function ImageSection({ state }: { state: ToolkitState }) {
           className="mt-6 flex flex-col items-center gap-1.5 text-center"
           data-testid="toolkit-image-empty"
         >
-          <ImageIcon size={22} className="text-[var(--work-accent)]" />
+          <ImageIcon size={22} className="text-[var(--work-accent-text)]" />
           <p className="text-[13.5px] font-semibold">Inspect an image</p>
           <p className="max-w-[240px] text-[12.5px] text-[var(--note-muted)]">
             Right-click any image on a page and choose Image Info… to see its format, size, camera
@@ -89,7 +89,7 @@ export function ImageSection({ state }: { state: ToolkitState }) {
       )}
       <Group title="Annotate">
         <div className="flex items-center gap-3 rounded-[12px] border border-[var(--work-border)] bg-[var(--work-card)] p-3">
-          <PenTool size={18} className="shrink-0 text-[var(--work-accent)]" />
+          <PenTool size={18} className="shrink-0 text-[var(--work-accent-text)]" />
           <p className="flex-1 text-[12.5px]">
             Drag over part of the page; it opens on a new Easel to draw arrows and notes on.
           </p>
@@ -297,14 +297,14 @@ export function CssSection() {
           <span className="flex-1" />
           <button
             type="button"
-            className={`rounded-full px-2 py-0.5 ${gradient.kind === 'linear' ? 'bg-[var(--work-accent-soft)] text-[var(--work-accent)]' : 'text-[var(--note-muted)]'}`}
+            className={`rounded-full px-2 py-0.5 ${gradient.kind === 'linear' ? 'bg-[var(--work-accent-soft)] text-[var(--work-accent-text)]' : 'text-[var(--note-muted)]'}`}
             onClick={() => setGradient((g) => ({ ...g, kind: 'linear' }))}
           >
             Linear
           </button>
           <button
             type="button"
-            className={`rounded-full px-2 py-0.5 ${gradient.kind === 'radial' ? 'bg-[var(--work-accent-soft)] text-[var(--work-accent)]' : 'text-[var(--note-muted)]'}`}
+            className={`rounded-full px-2 py-0.5 ${gradient.kind === 'radial' ? 'bg-[var(--work-accent-soft)] text-[var(--work-accent-text)]' : 'text-[var(--note-muted)]'}`}
             onClick={() => setGradient((g) => ({ ...g, kind: 'radial' }))}
           >
             Radial
@@ -410,7 +410,7 @@ export function DevSection({ state }: { state: ToolkitState }) {
           viewport && (
             <button
               type="button"
-              className="text-[11.5px] font-medium text-[var(--work-accent)]"
+              className="text-[11.5px] font-medium text-[var(--work-accent-text)]"
               onClick={() => void invoke('toolkit:viewport', { viewport: null })}
               data-testid="toolkit-viewport-off"
             >
@@ -483,7 +483,7 @@ export function DevSection({ state }: { state: ToolkitState }) {
         action={
           <button
             type="button"
-            className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--work-accent)]"
+            className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--work-accent-text)]"
             onClick={scan}
             data-testid="toolkit-scan-servers"
           >
@@ -552,7 +552,7 @@ function IconAction(props: { label: string; onClick: () => void; children: React
 function Hint(props: { icon: ReactNode; children: ReactNode }) {
   return (
     <p className="flex gap-2 rounded-[12px] bg-[var(--work-card)] p-3 text-[12.5px] text-[var(--note-muted)]">
-      <span className="shrink-0 text-[var(--work-accent)]">{props.icon}</span>
+      <span className="shrink-0 text-[var(--work-accent-text)]">{props.icon}</span>
       <span>{props.children}</span>
     </p>
   );

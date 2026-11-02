@@ -148,7 +148,7 @@ export function Empty(props: {
 }) {
   return (
     <div className="flex flex-col items-center gap-2 px-6 py-10 text-center" data-testid="empty">
-      <span className="mb-1 text-[var(--work-accent)]">{props.icon}</span>
+      <span className="mb-1 text-[var(--work-accent-text)]">{props.icon}</span>
       <span className="text-[14px] font-semibold">{props.title}</span>
       {props.hint && <span className="text-[12.5px] text-[var(--note-muted)]">{props.hint}</span>}
       {props.action && (

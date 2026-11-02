@@ -75,7 +75,7 @@ export function ToolkitView({ section }: { section: string }) {
                 onClick={() => (window.location.hash = `#/notes/panel/tools/${id}`)}
                 className={`press panel-tab flex h-8 items-center justify-center gap-1.5 rounded-full text-[12.5px] font-medium ${
                   on
-                    ? 'flex-1 bg-[var(--work-accent-soft)] text-[var(--work-accent)]'
+                    ? 'flex-1 bg-[var(--work-accent-soft)] text-[var(--work-accent-text)]'
                     : 'w-9 text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
                 }`}
                 data-testid="toolkit-section"
@@ -189,7 +189,7 @@ function ColorsSection({ state }: { state: ToolkitState }) {
           <button
             type="button"
             disabled={!state.page}
-            className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--work-accent)] disabled:opacity-40"
+            className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--work-accent-text)] disabled:opacity-40"
             onClick={() => void invoke('toolkit:palette', {})}
             data-testid="toolkit-scan-palette"
           >

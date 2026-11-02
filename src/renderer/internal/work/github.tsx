@@ -86,7 +86,7 @@ export function ProjectGithub({ project }: { project: Project }) {
             onClick={() => setTab(kind)}
             className={`press flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-medium ${
               tab === kind
-                ? 'bg-[var(--work-accent-soft)] text-[var(--work-accent)]'
+                ? 'bg-[var(--work-accent-soft)] text-[var(--work-accent-text)]'
                 : 'text-[var(--note-muted)] hover:bg-[var(--note-hover)]'
             }`}
             data-testid="github-tab"
@@ -170,7 +170,7 @@ function GithubRow(props: { item: GithubItem; now: number; onTask: () => void })
       <button
         type="button"
         onClick={props.onTask}
-        className="press flex h-6 shrink-0 items-center gap-0.5 rounded-[8px] px-1.5 text-[11.5px] font-semibold text-[var(--work-accent)] opacity-0 group-hover:opacity-100 hover:bg-[var(--work-accent-soft)] focus-visible:opacity-100"
+        className="press flex h-6 shrink-0 items-center gap-0.5 rounded-[8px] px-1.5 text-[11.5px] font-semibold text-[var(--work-accent-text)] opacity-0 group-hover:opacity-100 hover:bg-[var(--work-accent-soft)] focus-visible:opacity-100"
         aria-label={`Make a task from #${item.number}`}
         data-testid="github-make-task"
       >

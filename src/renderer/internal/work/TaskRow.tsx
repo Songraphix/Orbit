@@ -80,7 +80,7 @@ export function TaskRow({
             </span>
           )}
           {task.status === 'doing' && (
-            <span className="rounded-full bg-[var(--work-accent-soft)] px-1.5 text-[var(--work-accent)]">
+            <span className="rounded-full bg-[var(--work-accent-soft)] px-1.5 text-[var(--work-accent-text)]">
               In Progress
             </span>
           )}
@@ -101,7 +101,7 @@ export function TaskRow({
           aria-label={`Focus on ${task.title}`}
           title="Focus on this"
           onClick={() => void invoke('focus:start', { taskId: task.id })}
-          className="grid size-7 shrink-0 place-items-center rounded-[8px] text-[var(--note-muted)] opacity-0 group-hover:opacity-100 hover:bg-[var(--note-hover)] hover:text-[var(--work-accent)] focus-visible:opacity-100"
+          className="grid size-7 shrink-0 place-items-center rounded-[8px] text-[var(--note-muted)] opacity-0 group-hover:opacity-100 hover:bg-[var(--note-hover)] hover:text-[var(--work-accent-text)] focus-visible:opacity-100"
           data-testid="task-focus"
         >
           <Crosshair size={13} />

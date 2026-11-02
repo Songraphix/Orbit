@@ -51,10 +51,10 @@ export function AssistantView() {
   return (
     <div className="assistant flex min-h-0 flex-1 flex-col" data-testid="assistant">
       <header className="flex h-11 shrink-0 items-center gap-2 px-4">
-        <Sparkles size={15} className="text-[var(--work-accent)]" aria-hidden />
+        <Sparkles size={15} className="text-[var(--work-accent-text)]" aria-hidden />
         <h1 className="text-[14px] font-semibold">Assistant</h1>
         <span
-          className="truncate rounded-full bg-[var(--work-accent-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--work-accent)]"
+          className="truncate rounded-full bg-[var(--work-accent-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--work-accent-text)]"
           data-testid="assistant-model"
         >
           {modelName(state.model)}
@@ -164,7 +164,7 @@ function Reply({ reply }: { reply: AssistantReply }) {
           className="thinking flex items-center gap-2 text-[13px]"
           data-testid="assistant-thinking"
         >
-          <Sparkles size={14} className="spin-slow text-[var(--work-accent)]" />
+          <Sparkles size={14} className="spin-slow text-[var(--work-accent-text)]" />
           <span>Thinking…</span>
         </div>
       )}
@@ -340,7 +340,7 @@ function Suggestion(props: {
       className="press flex items-center gap-2.5 rounded-[12px] border border-[var(--work-border)] bg-[var(--work-card)] px-3 py-2.5 text-left text-[13px] hover:border-[var(--work-accent)] hover:bg-[var(--work-accent-soft)]"
       data-testid={props.testId}
     >
-      <span className="text-[var(--work-accent)]">{props.icon}</span>
+      <span className="text-[var(--work-accent-text)]">{props.icon}</span>
       {props.label}
     </button>
   );
@@ -360,7 +360,7 @@ function TasksCard({ tasks }: { tasks: NonNullable<AssistantState['tasks']> }) {
       data-testid="assistant-tasks"
     >
       <div className="flex items-center gap-2">
-        <ListChecks size={15} className="text-[var(--work-accent)]" />
+        <ListChecks size={15} className="text-[var(--work-accent-text)]" />
         <h2 className="flex-1 text-[13px] font-semibold">Tasks from {tasks.from}</h2>
         <button
           type="button"
@@ -496,7 +496,7 @@ function Composer({ state }: { state: AssistantState }) {
           ) : (
             <button
               type="button"
-              className="press flex h-6 max-w-[200px] items-center gap-1 rounded-full border border-dashed border-[var(--note-muted)] px-2 text-[11.5px] text-[var(--note-muted)] hover:border-[var(--work-accent)] hover:text-[var(--work-accent)]"
+              className="press flex h-6 max-w-[200px] items-center gap-1 rounded-full border border-dashed border-[var(--note-muted)] px-2 text-[11.5px] text-[var(--note-muted)] hover:border-[var(--work-accent)] hover:text-[var(--work-accent-text)]"
               onClick={() => void invoke('assistant:attach', { page: true })}
               title={`Attach “${state.page.title}” to your next question`}
               data-testid="assistant-attach-page"
@@ -526,7 +526,7 @@ function Composer({ state }: { state: AssistantState }) {
           <div className="relative">
             <button
               type="button"
-              className="press flex h-6 items-center gap-1 rounded-full border border-dashed border-[var(--note-muted)] px-2 text-[11.5px] text-[var(--note-muted)] hover:border-[var(--work-accent)] hover:text-[var(--work-accent)]"
+              className="press flex h-6 items-center gap-1 rounded-full border border-dashed border-[var(--note-muted)] px-2 text-[11.5px] text-[var(--note-muted)] hover:border-[var(--work-accent)] hover:text-[var(--work-accent-text)]"
               onClick={() => setPicking((open) => !open)}
               aria-expanded={picking}
               data-testid="assistant-attach-research"
@@ -590,7 +590,7 @@ function Chip(props: {
 }) {
   return (
     <span
-      className="flex h-6 max-w-[220px] items-center gap-1 rounded-full bg-[var(--work-accent-soft)] pr-0.5 pl-2 text-[11.5px] text-[var(--work-accent)]"
+      className="flex h-6 max-w-[220px] items-center gap-1 rounded-full bg-[var(--work-accent-soft)] pr-0.5 pl-2 text-[11.5px] text-[var(--work-accent-text)]"
       data-testid={props.testId}
     >
       {props.icon}
@@ -656,7 +656,7 @@ function ResearchPicker({ onClose }: { onClose: () => void }) {
             }}
             data-testid="assistant-research-option"
           >
-            <BookMarked size={13} className="text-[var(--work-accent)]" />
+            <BookMarked size={13} className="text-[var(--work-accent-text)]" />
             <span className="flex-1 truncate">{group.name}</span>
             <span className="text-[11px] text-[var(--note-muted)]">{group.ids.length}</span>
           </button>

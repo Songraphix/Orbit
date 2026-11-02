@@ -293,7 +293,7 @@ function Row({ label, hint, children }: { label: string; hint: string; children:
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
       <div className="min-w-[180px] flex-[1_1_220px]">
         <div className="text-sm">{label}</div>
-        <div className="text-xs text-neutral-400">{hint}</div>
+        <div className="text-xs text-neutral-500">{hint}</div>
       </div>
       <div className="max-w-full min-w-0 shrink-0">{children}</div>
     </div>
@@ -470,7 +470,7 @@ function AiSection() {
                 <li key={entry.id} className="px-4 py-2.5" data-testid="ai-activity-entry">
                   <div className="flex items-baseline gap-2 text-sm">
                     <span className="truncate">{AI_FEATURE_LABELS[entry.feature]}</span>
-                    <span className="shrink-0 text-xs text-neutral-400">
+                    <span className="shrink-0 text-xs text-neutral-500">
                       {relativeTime(entry.at, now)}
                     </span>
                     <span className="flex-1" />
@@ -481,7 +481,7 @@ function AiSection() {
                   <div className="truncate text-xs text-neutral-500" title={entry.sent}>
                     Sent: {entry.sent}
                   </div>
-                  <div className="text-xs text-neutral-400">
+                  <div className="text-xs text-neutral-500">
                     {AI_MODELS.find((m) => m.id === entry.model)?.name ?? entry.model} ·{' '}
                     {(entry.inputTokens + entry.outputTokens).toLocaleString()} tokens
                   </div>
@@ -567,7 +567,7 @@ function AiKeyRow(props: { hasKey: boolean; canStore: boolean; onChange: () => v
             </span>
           )}
           {!props.canStore && (
-            <span className="text-xs text-neutral-400">Secure storage isn’t available.</span>
+            <span className="text-xs text-neutral-500">Secure storage isn’t available.</span>
           )}
         </form>
       )}
@@ -690,7 +690,7 @@ function ProfilesSection() {
                 className="w-full rounded bg-transparent px-1 text-sm font-medium outline-none hover:bg-neutral-50 focus:bg-neutral-100"
                 data-testid="profile-name"
               />
-              <div className="px-1 text-xs text-neutral-400">
+              <div className="px-1 text-xs text-neutral-500">
                 {p.isDefault ? 'Default · ' : ''}
                 {p.spaces === 0 ? 'No spaces' : `${p.spaces} space${p.spaces === 1 ? '' : 's'}`}
               </div>
@@ -828,7 +828,7 @@ function AboutSection() {
         </div>
         <div className="flex-1">
           <div className="text-[15px] font-semibold">Orbit {info?.version}</div>
-          <div className="text-xs text-neutral-400" data-testid="about-versions">
+          <div className="text-xs text-neutral-500" data-testid="about-versions">
             {info ? `Chromium ${info.chrome} · Electron ${info.electron}` : ''}
           </div>
         </div>
@@ -927,7 +927,7 @@ function ProjectTemplateRow(props: {
           data-testid="project-template-name"
         />
       )}
-      <span className="shrink-0 text-xs text-neutral-400">
+      <span className="shrink-0 text-xs text-neutral-500">
         {template.builtIn ? 'Built in · ' : ''}
         {template.tasks === 1 ? '1 task' : `${template.tasks} tasks`}
       </span>
@@ -1490,7 +1490,7 @@ function TemplateRow({ template, onChange }: { template: TemplateEntry; onChange
         className="min-w-0 flex-1 rounded-md px-2 py-1 text-sm hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-300 focus:outline-none"
         data-testid="template-name"
       />
-      <span className="shrink-0 text-xs text-neutral-400">
+      <span className="shrink-0 text-xs text-neutral-500">
         {template.tabs === 1 ? '1 tab' : `${template.tabs} tabs`}
       </span>
       <button

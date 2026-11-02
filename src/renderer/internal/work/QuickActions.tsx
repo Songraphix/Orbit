@@ -15,7 +15,7 @@ export function QuickActions() {
       data-testid="quick-actions"
     >
       <h2 className="mb-3 flex items-center gap-2 text-[15px] font-semibold">
-        <Zap size={16} className="text-[var(--work-accent)]" />
+        <Zap size={16} className="text-[var(--work-accent-text)]" />
         Quick Actions
       </h2>
       <div className="grid grid-cols-2 gap-2">
@@ -67,7 +67,9 @@ function Action(props: {
       }`}
       data-testid={props.testId}
     >
-      <span className={props.primary ? 'text-[var(--work-accent)]' : 'text-[var(--note-muted)]'}>
+      <span
+        className={props.primary ? 'text-[var(--work-accent-text)]' : 'text-[var(--note-muted)]'}
+      >
         {props.icon}
       </span>
       {props.label}

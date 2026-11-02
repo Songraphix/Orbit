@@ -38,7 +38,7 @@ export function TypeSection({ state }: { state: ToolkitState }) {
           <button
             type="button"
             disabled={!state.page}
-            className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--work-accent)] disabled:opacity-40"
+            className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--work-accent-text)] disabled:opacity-40"
             onClick={() => void invoke('toolkit:fonts', {})}
             data-testid="toolkit-scan-fonts"
           >
@@ -166,7 +166,7 @@ function EncodeTool() {
             key={c.id}
             type="button"
             onClick={() => setCodec(c.id)}
-            className={`rounded-full px-2.5 py-0.5 text-[12px] ${codec === c.id ? 'bg-[var(--work-accent-soft)] text-[var(--work-accent)]' : 'text-[var(--note-muted)] hover:bg-[var(--note-hover)]'}`}
+            className={`rounded-full px-2.5 py-0.5 text-[12px] ${codec === c.id ? 'bg-[var(--work-accent-soft)] text-[var(--work-accent-text)]' : 'text-[var(--note-muted)] hover:bg-[var(--note-hover)]'}`}
             data-testid="codec"
             data-codec={c.id}
           >
@@ -220,7 +220,7 @@ function TimeTool() {
       action={
         <button
           type="button"
-          className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--work-accent)]"
+          className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--work-accent-text)]"
           onClick={() => {
             setInput('');
             setNow(Date.now());

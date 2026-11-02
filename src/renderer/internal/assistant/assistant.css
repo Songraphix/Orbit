@@ -47,7 +47,7 @@
   color: var(--note-muted);
 }
 .assistant .md a {
-  color: var(--work-accent);
+  color: var(--work-accent-text);
   text-decoration: underline;
   text-decoration-color: color-mix(in srgb, var(--work-accent) 35%, transparent);
   text-underline-offset: 2px;
@@ -106,7 +106,7 @@
   background: var(--work-accent-soft);
   padding: 0 4px;
   vertical-align: 1px;
-  color: var(--work-accent);
+  color: var(--work-accent-text);
   font-size: 10px;
   font-weight: 650;
   line-height: 1;
@@ -141,7 +141,7 @@
   animation: assistant-shimmer 1.6s linear infinite;
 }
 .assistant .thinking svg {
-  color: var(--work-accent);
+  color: var(--work-accent-text);
 }
 @keyframes assistant-shimmer {
   to {

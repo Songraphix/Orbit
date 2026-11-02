@@ -69,7 +69,7 @@ function Field(props: { label: string; required?: boolean; children: ReactNode }
     <label className="mb-3 block">
       <span className="mb-1 block text-[12px] font-medium text-[var(--note-muted)]">
         {props.label}
-        {props.required && <span className="text-[var(--work-accent)]"> *</span>}
+        {props.required && <span className="text-[var(--work-accent-text)]"> *</span>}
       </span>
       {props.children}
     </label>

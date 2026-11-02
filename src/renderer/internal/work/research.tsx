@@ -58,7 +58,7 @@ function KindIcon({ kind, size }: { kind: Capture['kind']; size: number }) {
   const Icon = KIND_ICON[kind];
   return (
     <span
-      className="grid shrink-0 place-items-center rounded-[10px] bg-[var(--work-accent-soft)] text-[var(--work-accent)]"
+      className="grid shrink-0 place-items-center rounded-[10px] bg-[var(--work-accent-soft)] text-[var(--work-accent-text)]"
       style={{ width: size, height: size }}
       aria-hidden
     >
@@ -167,7 +167,7 @@ export function CaptureRow({
             <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11.5px] text-[var(--note-muted)]">
               {service ? (
                 <span
-                  className="rounded-full bg-[var(--work-accent-soft)] px-1.5 font-medium text-[var(--work-accent)]"
+                  className="rounded-full bg-[var(--work-accent-soft)] px-1.5 font-medium text-[var(--work-accent-text)]"
                   data-testid="research-service"
                 >
                   {service.name}
@@ -187,7 +187,7 @@ export function CaptureRow({
               )}
               {c.taskId && (
                 <span
-                  className="flex items-center gap-1 text-[var(--work-accent)]"
+                  className="flex items-center gap-1 text-[var(--work-accent-text)]"
                   data-testid="research-has-task"
                 >
                   <SquareCheck size={11} />
@@ -409,7 +409,7 @@ export function ProjectResearch({ projectId }: { projectId: string }) {
           <button
             type="button"
             onClick={() => showResearch(projectId)}
-            className="press flex h-7 items-center gap-1 rounded-[9px] px-2 text-[12.5px] font-semibold text-[var(--work-accent)] hover:bg-[var(--work-accent-soft)]"
+            className="press flex h-7 items-center gap-1 rounded-[9px] px-2 text-[12.5px] font-semibold text-[var(--work-accent-text)] hover:bg-[var(--work-accent-soft)]"
             data-testid="project-research-all"
           >
             See all {mine.length}
@@ -442,7 +442,7 @@ export function UnsortedResearch() {
       className="press mx-3 mb-2 flex w-[calc(100%-1.5rem)] items-center gap-2.5 rounded-[12px] bg-[var(--work-card)] px-3 py-2 text-left text-[13px] ring-1 ring-[var(--work-border)] hover:bg-[var(--note-hover)]"
       data-testid="unsorted-research"
     >
-      <Bookmark size={15} className="text-[var(--work-accent)]" />
+      <Bookmark size={15} className="text-[var(--work-accent-text)]" />
       <span className="flex-1 font-medium">Unsorted research</span>
       <span className="text-[var(--note-muted)] tabular-nums">{count}</span>
       <ArrowRight size={14} className="text-[var(--note-muted)]" />
