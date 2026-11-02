@@ -101,7 +101,7 @@ export function SiteControls({ view }: { view: SiteControlsView }) {
               type="button"
               disabled={view.storeExtension.installed}
               onClick={() => void window.orbit.invoke('extensions:install', {})}
-              className="mb-1.5 flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[var(--accent,#5b5bd6)] font-semibold text-white hover:brightness-110 disabled:bg-white/10 disabled:text-white/60"
+              className="mb-1.5 flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[var(--accent,#5b5bd6)] font-semibold text-on-accent hover:brightness-110 disabled:bg-white/10 disabled:text-white/60"
               data-testid="site-extension-install"
             >
               {view.storeExtension.installed ? 'Added to Orbit' : 'Add to Orbit'}
@@ -214,7 +214,7 @@ function ExtensionButton({ ext }: { ext: ExtensionAction }) {
       {ext.icon ? <img src={ext.icon} alt="" className="size-5" /> : <Puzzle size={16} />}
       {ext.badgeText && (
         <span
-          className="absolute right-0.5 bottom-0.5 rounded px-1 text-[9px] leading-3 font-semibold text-white"
+          className="absolute right-0.5 bottom-0.5 rounded px-1 text-[9px] leading-3 font-semibold text-on-accent"
           style={{ background: ext.badgeColor ?? '#d33' }}
         >
           {ext.badgeText}
@@ -238,7 +238,7 @@ function BoostRow({ boost }: { boost: BoostSummary }) {
         title="Edit Boost"
         data-testid="site-boost-edit"
       >
-        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--accent,#5b5bd6)] text-white">
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--accent,#5b5bd6)] text-on-accent">
           <Wand2 size={14} />
         </span>
         <span className="truncate font-semibold">{boost.name}</span>
@@ -255,7 +255,7 @@ function BoostRow({ boost }: { boost: BoostSummary }) {
         data-testid="site-boost-toggle"
       >
         <span
-          className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-[left] ${boost.enabled ? 'left-[18px]' : 'left-0.5'}`}
+          className={`absolute top-0.5 size-4 rounded-full bg-on-accent shadow transition-[left] ${boost.enabled ? 'left-[18px]' : 'left-0.5'}`}
         />
       </button>
     </div>

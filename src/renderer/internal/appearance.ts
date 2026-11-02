@@ -18,7 +18,13 @@ export function useAppearance(): Appearance['mode'] | null {
       });
     load();
     window.addEventListener('focus', load);
-    return () => window.removeEventListener('focus', load);
+    // Settings → Appearance (or the Mac, on System) switched light/dark.
+    const scheme = window.matchMedia('(prefers-color-scheme: dark)');
+    scheme.addEventListener('change', load);
+    return () => {
+      window.removeEventListener('focus', load);
+      scheme.removeEventListener('change', load);
+    };
   }, []);
   return mode;
 }

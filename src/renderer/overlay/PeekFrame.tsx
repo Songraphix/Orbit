@@ -30,7 +30,7 @@ export function PeekFrame({ peek, interactive }: { peek: PeekView; interactive: 
       data-testid="peek-backdrop"
     >
       <div
-        className="absolute bg-white shadow-[0_0_0_0.5px_rgb(0_0_0/0.2),0_2px_6px_rgb(0_0_0/0.12),0_30px_90px_-10px_rgb(0_0_0/0.55)]"
+        className="ui-light absolute bg-white shadow-[0_0_0_0.5px_rgb(0_0_0/0.2),0_2px_6px_rgb(0_0_0/0.12),0_30px_90px_-10px_rgb(0_0_0/0.55)]"
         style={{
           left: frame.x,
           top: frame.y,

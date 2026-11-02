@@ -58,7 +58,7 @@ export function FocusPill({ session }: { session: FocusSession }) {
             type="button"
             aria-label="Done"
             onClick={() => void window.orbit.invoke('focus:end', { complete: true })}
-            className="press grid size-6 shrink-0 place-items-center rounded-full bg-[#5b5bd6] text-white hover:brightness-110"
+            className="press grid size-6 shrink-0 place-items-center rounded-full bg-[#5b5bd6] text-on-accent hover:brightness-110"
             data-testid="focus-done"
           >
             <Check size={13} strokeWidth={3} />

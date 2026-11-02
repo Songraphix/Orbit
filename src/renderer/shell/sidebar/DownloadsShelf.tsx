@@ -46,7 +46,7 @@ function ProgressBadge({ progress }: { progress: number | null }) {
           className={`transition-[stroke-dashoffset] duration-500 ease-out ${progress === null ? 'origin-center animate-spin' : ''}`}
         />
       </svg>
-      <span className="grid size-[26px] place-items-center rounded-full bg-[#0a84ff] text-white shadow-[0_2px_6px_-1px_rgb(10_132_255/0.6)]">
+      <span className="grid size-[26px] place-items-center rounded-full bg-[#0a84ff] text-on-accent shadow-[0_2px_6px_-1px_rgb(10_132_255/0.6)]">
         <ArrowDown size={15} strokeWidth={2.6} />
       </span>
     </span>

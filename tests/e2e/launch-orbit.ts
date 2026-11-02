@@ -29,7 +29,13 @@ async function shellPage(app: ElectronApplication): Promise<Page> {
 
 /** Launches the built app with a throwaway profile, so tests never touch real data. */
 export async function launchOrbit(
-  options: { userData?: string; env?: Record<string, string> } = {},
+  options: {
+    userData?: string;
+    env?: Record<string, string>;
+    /** Playwright emulates a light `prefers-color-scheme` by default; null shows Orbit's own
+     *  (Settings → Appearance), for testing appearance. */
+    colorScheme?: null;
+  } = {},
 ): Promise<Orbit> {
   const userData = options.userData ?? mkdtempSync(join(tmpdir(), 'orbit-e2e-'));
   // Editors built on Electron (VS Code) export ELECTRON_RUN_AS_NODE, which would start
@@ -37,6 +43,7 @@ export async function launchOrbit(
   const { ELECTRON_RUN_AS_NODE: _, ...env } = process.env;
   const app = await electron.launch({
     args: ['.'],
+    ...(options.colorScheme === null ? { colorScheme: null } : {}),
     env: {
       ...(env as Record<string, string>),
       ORBIT_USER_DATA_DIR: userData,

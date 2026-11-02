@@ -109,7 +109,7 @@ export function BoostEditor({ id }: { id: string }) {
   return (
     <main className="mx-auto max-w-2xl px-6 py-6 text-neutral-800" data-testid="boost-editor">
       <header className="flex items-center gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#5b5bd6] text-white">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#5b5bd6] text-on-accent">
           <Wand2 size={18} />
         </span>
         <input
@@ -414,7 +414,7 @@ function Switch(props: {
       data-testid={props.testId}
     >
       <span
-        className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-[left] ${props.checked ? 'left-[18px]' : 'left-0.5'}`}
+        className={`absolute top-0.5 size-4 rounded-full bg-on-accent shadow transition-[left] ${props.checked ? 'left-[18px]' : 'left-0.5'}`}
       />
     </button>
   );

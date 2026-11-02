@@ -14,7 +14,8 @@ function layoutOrigin(el: HTMLElement): { x: number; y: number } {
 }
 
 /**
- * A glass surface (Arc-like): a blurred, saturated copy of the page behind it under a dark tint,
+ * A glass surface (Arc-like): a blurred, saturated copy of the page behind it under a tint (dark,
+ * or light when the app is — see .ui-dark),
  * a lit hairline rim and layered shadows. Native web pages can't be blurred by CSS, so the copy
  * is a snapshot main takes when the surface opens; until it arrives the tint is a little denser.
  */
@@ -68,7 +69,7 @@ export function Glass(props: {
             top: backdrop.rect.y - origin.y,
             width: backdrop.rect.width,
             height: backdrop.rect.height,
-            filter: 'blur(30px) saturate(1.8) brightness(0.8)',
+            filter: 'blur(30px) saturate(1.8) var(--glass-backdrop, brightness(0.8))',
           }}
           data-testid="glass-backdrop"
         />
@@ -76,7 +77,7 @@ export function Glass(props: {
       {/* The tint goes over the page copy, so text stays readable on white pages too. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[rgb(26_25_32/0.72)]"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[var(--glass-tint,rgb(26_25_32/0.72))]"
       />
       {children}
     </div>

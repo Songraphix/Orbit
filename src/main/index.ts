@@ -6,6 +6,7 @@ import {
   dialog,
   globalShortcut,
   ipcMain,
+  nativeTheme,
   net,
   Notification,
   safeStorage,
@@ -159,6 +160,12 @@ let lastEmptyLittle = 0;
 /** Tabs on top (the strip) or in the sidebar, in every window. */
 function applyTabLayout(layout: 'sidebar' | 'top'): void {
   for (const controller of windows?.all() ?? []) controller.layout.setTopTabs(layout === 'top');
+}
+
+/** Settings → Appearance: every window, Orbit page and web page follows it (prefers-color-scheme),
+ *  and so do macOS's own materials and menus. */
+function applyAppearance(appearance: 'system' | 'light' | 'dark'): void {
+  nativeTheme.themeSource = appearance;
 }
 
 /** The menu accelerator and the global shortcut can both fire for one press; open one window. */
@@ -612,6 +619,7 @@ void app.whenReady().then(() => {
   // A backup staged for restoring (roadmap P4.7) takes the current data's place first.
   if (applyPendingRestore(app.getPath('userData'))) console.log('[orbit] restored from backup');
   persistence = openPersistence(app.getPath('userData'));
+  applyAppearance(persistence.settings.get('appearance')); // before any window is drawn
   const store = new SidebarStore(persistence.sidebar);
   sidebarStore = store;
   arcImporter = new ArcImporter(store, persistence.history);
@@ -906,6 +914,7 @@ void app.whenReady().then(() => {
     },
     revealData: () => void shell.openPath(app.getPath('userData')),
     applyTabLayout,
+    applyAppearance,
     templates: persistence.templates,
     projectTemplates: persistence.projectTemplates,
     github: {

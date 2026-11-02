@@ -98,9 +98,15 @@ export const toolkitStateSchema = z.object({
     })
     .nullable(),
   servers: z.array(localServerSchema).nullable(),
-  /** The page you're on: what the page tools work with. */
+  /** The tab you're on: what the page tools work with (null: no tab open). */
   page: z
-    .object({ title: z.string(), host: z.string(), viewport: viewportSchema.nullable() })
+    .object({
+      title: z.string(),
+      host: z.string(),
+      /** A site (not one of Orbit's pages): responsive mode works on sites only. */
+      web: z.boolean(),
+      viewport: viewportSchema.nullable(),
+    })
     .nullable(),
 });
 export type ToolkitState = z.output<typeof toolkitStateSchema>;

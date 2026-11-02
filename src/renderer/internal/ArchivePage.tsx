@@ -11,10 +11,10 @@ type Entry = Result['entries'][number];
 const REASON = { auto: 'Auto-archived', closed: 'Closed', cleared: 'Cleared' } as const;
 
 // Theme colours in the Library; plain ones on the standalone orbit://archive page.
-const FG = 'text-[var(--sidebar-fg,#262626)]';
-const MUTED = 'text-[var(--sidebar-muted,#a3a3a3)]';
-const TILE = 'bg-[var(--tile-bg,#f5f5f5)]';
-const HOVER = 'hover:bg-[var(--hover,#f0f0f0)]';
+const FG = 'text-[var(--sidebar-fg,var(--color-neutral-800))]';
+const MUTED = 'text-[var(--sidebar-muted,var(--color-neutral-400))]';
+const TILE = 'bg-[var(--tile-bg,var(--color-neutral-100))]';
+const HOVER = 'hover:bg-[var(--hover,var(--color-neutral-100))]';
 
 /**
  * Archived Tabs (F-20): closed, cleared and auto-archived tabs by day, searchable, filterable by
@@ -192,7 +192,7 @@ function Chip(props: { on: boolean; onClick: () => void; testId: string; childre
       aria-pressed={props.on}
       onClick={props.onClick}
       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium ${
-        props.on ? 'bg-[var(--accent,#5b5bd6)] text-white' : `${TILE} ${HOVER}`
+        props.on ? 'bg-[var(--accent,#5b5bd6)] text-on-accent' : `${TILE} ${HOVER}`
       }`}
       data-testid={props.testId}
     >

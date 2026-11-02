@@ -37,6 +37,8 @@ export const settingsSchema = {
     z.string(),
     z.object({ ids: z.tuple([z.string(), z.string()]), ratio: z.number().min(0.2).max(0.8) }),
   ),
+  /** Light or dark for the whole app (and pages that offer both), or follow the Mac. */
+  appearance: z.enum(['system', 'light', 'dark']),
   /** Where tabs go: the sidebar (Arc) or a strip across the top (owner request). */
   'tabs.layout': z.enum(['sidebar', 'top']),
   /** Live pages beyond this many are put to sleep, least recently used first (F-25). */
@@ -90,6 +92,7 @@ export const settingsDefaults: Settings = {
   'newtab.home': DEFAULT_HOME,
   'window.activeSpace': null,
   'archive.after': '12h',
+  appearance: 'system',
   'tabs.layout': 'sidebar',
   'tabs.splits': {},
   'tabs.maxLive': 8,
@@ -123,6 +126,7 @@ export const userSettingsSchema = z.object({
   archiveAfter: settingsSchema['archive.after'],
   maxLive: settingsSchema['tabs.maxLive'],
   tabLayout: settingsSchema['tabs.layout'],
+  appearance: settingsSchema.appearance,
   sleepAfterMinutes: settingsSchema['tabs.sleepAfterMinutes'],
   searchEngine: settingsSchema['search.engine'],
   peek: settingsSchema['peek.enabled'],

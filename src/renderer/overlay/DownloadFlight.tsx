@@ -39,7 +39,7 @@ export function DownloadFlight({ flight }: { flight: Flight }) {
     <div className="pointer-events-none fixed inset-0" data-testid="download-flight">
       <div
         ref={badge}
-        className="absolute top-0 left-0 grid place-items-center rounded-full bg-[#0a84ff] text-white opacity-0 shadow-[0_0_0_3px_rgb(255_255_255/0.9),0_10px_26px_-4px_rgb(10_132_255/0.6)]"
+        className="absolute top-0 left-0 grid place-items-center rounded-full bg-[#0a84ff] text-on-accent opacity-0 shadow-[0_0_0_3px_rgb(255_255_255/0.9),0_10px_26px_-4px_rgb(10_132_255/0.6)]"
         style={{ width: SIZE, height: SIZE, marginLeft: -SIZE / 2, marginTop: -SIZE / 2 }}
       >
         <ArrowDown size={18} strokeWidth={2.6} />

@@ -134,7 +134,7 @@ export function Toolbar({
         // Arc-style confirmation: a small dark pill by the toolbar's right edge.
         <div
           key={toast}
-          className="animate-pop pointer-events-none absolute right-11 z-10 flex h-[26px] origin-right items-center gap-1.5 rounded-[9px] bg-[rgb(28_27_34/0.92)] pr-2.5 pl-2 text-[12.5px] font-medium text-white shadow-[inset_0_0.5px_0_rgb(255_255_255/0.14),0_0_0_0.5px_rgb(0_0_0/0.3),0_6px_18px_-4px_rgb(0_0_0/0.35)]"
+          className="animate-pop pointer-events-none absolute right-11 z-10 flex h-[26px] origin-right items-center gap-1.5 rounded-[9px] bg-[rgb(28_27_34/0.92)] pr-2.5 pl-2 text-[12.5px] font-medium text-on-accent shadow-[inset_0_0.5px_0_rgb(255_255_255/0.14),0_0_0_0.5px_rgb(0_0_0/0.3),0_6px_18px_-4px_rgb(0_0_0/0.35)]"
           style={{ top: Math.max(0, (height - 26) / 2) }}
           role="status"
           data-testid="toolbar-toast"
@@ -199,7 +199,7 @@ export function Toolbar({
               <Bug size={14} />
               {tab.consoleErrors > 0 && (
                 <span
-                  className="absolute -top-1.5 -right-2 min-w-3.5 rounded-full bg-red-500 px-1 text-[9px] leading-3.5 font-semibold text-white"
+                  className="absolute -top-1.5 -right-2 min-w-3.5 rounded-full bg-red-500 px-1 text-[9px] leading-3.5 font-semibold text-on-accent"
                   data-testid="toolbar-errors"
                 >
                   {tab.consoleErrors > 99 ? '99+' : tab.consoleErrors}

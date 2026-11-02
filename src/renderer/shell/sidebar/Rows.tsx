@@ -83,7 +83,7 @@ export function RenameInput({
         if (e.key === 'Enter') onDone(value);
         if (e.key === 'Escape') onDone(null);
       }}
-      className="min-w-0 flex-1 rounded bg-white/15 px-1 text-[13px] outline-none ring-1 ring-[var(--accent)]"
+      className="min-w-0 flex-1 rounded bg-[var(--tile-bg)] px-1 text-[13px] outline-none ring-1 ring-[var(--accent)]"
       data-testid="rename-input"
       onClick={(e) => e.stopPropagation()}
     />
@@ -190,7 +190,7 @@ export function TabRow({
             type="button"
             aria-label="Back to pinned URL"
             title="Back to pinned URL"
-            className="grid size-5 shrink-0 place-items-center rounded opacity-60 hover:bg-white/10 hover:opacity-100"
+            className="grid size-5 shrink-0 place-items-center rounded opacity-60 hover:bg-[var(--hover)] hover:opacity-100"
             onClick={(e) => {
               e.stopPropagation();
               void invoke('sidebar:goHome', { itemId: row.id });
@@ -203,7 +203,7 @@ export function TabRow({
         <button
           type="button"
           aria-label={`Close ${row.title}`}
-          className="grid size-5 shrink-0 place-items-center rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-white/10"
+          className="grid size-5 shrink-0 place-items-center rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-[var(--hover)]"
           onClick={close}
           data-testid="tab-close"
         >

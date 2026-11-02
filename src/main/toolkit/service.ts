@@ -104,13 +104,22 @@ export class ToolkitService {
 
   constructor(private readonly deps: ToolkitDeps) {}
 
+  /** The web page you're on (responsive mode is for sites). */
   private webTab(controller: WindowController) {
     const tab = controller.tabs.active;
     return tab && tab.state.kind === 'web' && /^https?:/i.test(tab.state.url) ? tab : null;
   }
 
+  /** Whatever the tab you're on shows — a site or one of Orbit's pages (New Tab, Library…):
+   *  colors and fonts can be picked and read from any of them. */
+  private shownTab(controller: WindowController) {
+    const tab = controller.tabs.active;
+    return tab && !tab.view.webContents.isDestroyed() ? tab : null;
+  }
+
   state(controller: WindowController): ToolkitState {
-    const tab = this.webTab(controller);
+    const tab = this.shownTab(controller);
+    const web = this.webTab(controller);
     return {
       colors: this.deps.settings.get('toolkit.colors'),
       image: this.images.get(controller) ?? null,
@@ -121,8 +130,10 @@ export class ToolkitService {
         ? {
             title: tab.state.title || hostOf(tab.state.url),
             host: hostOf(tab.state.url),
-            viewport:
-              controller.tabs.snapshot().tabs.find((t) => t.id === tab.id)?.viewport ?? null,
+            web: web !== null,
+            viewport: web
+              ? (controller.tabs.snapshot().tabs.find((t) => t.id === tab.id)?.viewport ?? null)
+              : null,
           }
         : null,
     };
@@ -152,9 +163,9 @@ export class ToolkitService {
 
   /** Pick Color: the page, frozen, under a loupe in the overlay. */
   async pickColor(controller: WindowController): Promise<void> {
-    const tab = this.webTab(controller);
+    const tab = this.shownTab(controller);
     if (!tab) {
-      this.deps.toast(controller, 'Open a web page to pick a color from');
+      this.deps.toast(controller, 'Open a page to pick a color from');
       return;
     }
     const image = await tab.view.webContents.capturePage();
@@ -183,8 +194,11 @@ export class ToolkitService {
 
   /** The colors the page uses, most used first. */
   async palette(controller: WindowController): Promise<void> {
-    const tab = this.webTab(controller);
-    if (!tab) return;
+    const tab = this.shownTab(controller);
+    if (!tab) {
+      this.deps.toast(controller, 'Open a page to see its colors');
+      return;
+    }
     let found: unknown;
     try {
       found = await tab.view.webContents.executeJavaScriptInIsolatedWorld(PALETTE_WORLD, [
@@ -213,8 +227,11 @@ export class ToolkitService {
 
   /** The fonts the page uses, most used first (roadmap P4.6). */
   async fonts(controller: WindowController): Promise<void> {
-    const tab = this.webTab(controller);
-    if (!tab) return;
+    const tab = this.shownTab(controller);
+    if (!tab) {
+      this.deps.toast(controller, 'Open a page to see its fonts');
+      return;
+    }
     let found: unknown;
     try {
       found = await tab.view.webContents.executeJavaScriptInIsolatedWorld(PALETTE_WORLD, [
@@ -335,9 +352,9 @@ export class ToolkitService {
 
   /** Annotate Screenshot: drag over the page; the picture opens on a new Easel to draw on. */
   async annotate(controller: WindowController): Promise<void> {
-    const tab = this.webTab(controller);
+    const tab = this.shownTab(controller);
     if (!tab) {
-      this.deps.toast(controller, 'Open a web page to annotate a screenshot of');
+      this.deps.toast(controller, 'Open a page to annotate a screenshot of');
       return;
     }
     const result = this.deps.captures.wait(controller);

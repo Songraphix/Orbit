@@ -1,6 +1,9 @@
 import {
   Info,
   Keyboard,
+  Monitor,
+  Moon,
+  Sun,
   Archive,
   DatabaseBackup,
   LayoutTemplate,
@@ -58,11 +61,25 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
 
   if (!settings) return null;
   return (
-    <div className="flex min-h-screen bg-[#f6f6f8] text-neutral-800" data-testid="settings-page">
+    <div
+      className="ui-light flex min-h-screen bg-[var(--surface-page)] text-neutral-800"
+      data-testid="settings-page"
+    >
       <SettingsNav />
       <main className="min-w-0 flex-1 px-5 pt-9 pb-24 md:px-10">
         <div className="mx-auto max-w-2xl">
           <Section id="general" title="General">
+            <Group title="Appearance">
+              <Row label="Appearance" hint="Light, dark, or the same as your Mac.">
+                <AppearancePicker
+                  value={settings.appearance}
+                  onChange={(appearance) => {
+                    setSettings({ ...settings, appearance }); // at once; main's answer follows
+                    update({ appearance });
+                  }}
+                />
+              </Row>
+            </Group>
             <Group title="Tabs">
               <Row
                 label="Tab layout"
@@ -283,6 +300,46 @@ function Section({ id, title, children }: { id: string; title: string; children:
       <h2 className="text-[22px] font-semibold tracking-[-0.01em]">{title}</h2>
       {children}
     </section>
+  );
+}
+
+const APPEARANCES: { value: UserSettings['appearance']; label: string; icon: ReactNode }[] = [
+  { value: 'system', label: 'System', icon: <Monitor size={14} /> },
+  { value: 'light', label: 'Light', icon: <Sun size={14} /> },
+  { value: 'dark', label: 'Dark', icon: <Moon size={14} /> },
+];
+
+/** Settings → Appearance: a segmented control (System, Light, Dark). */
+function AppearancePicker(props: {
+  value: UserSettings['appearance'];
+  onChange: (value: UserSettings['appearance']) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Appearance"
+      className="flex rounded-[10px] bg-neutral-100 p-0.5"
+      data-testid="setting-appearance"
+    >
+      {APPEARANCES.map((a) => (
+        <button
+          key={a.value}
+          type="button"
+          role="radio"
+          aria-checked={props.value === a.value}
+          onClick={() => props.onChange(a.value)}
+          className={`flex items-center gap-1.5 rounded-[8px] px-3 py-1 text-sm transition-colors ${
+            props.value === a.value
+              ? 'bg-white font-medium text-neutral-900 shadow-[0_1px_2px_rgb(0_0_0/0.12)]'
+              : 'text-neutral-500 hover:text-neutral-800'
+          }`}
+          data-value={a.value}
+        >
+          {a.icon}
+          {a.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -625,7 +682,7 @@ function SettingsNav() {
           title={item.label}
           className={`press flex h-9 items-center gap-2.5 rounded-[9px] px-2.5 text-left text-[13.5px] ${
             active === item.id
-              ? 'bg-[#5b5bd6] font-medium text-white shadow-[0_1px_2px_rgb(0_0_0/0.15)]'
+              ? 'bg-[#5b5bd6] font-medium text-on-accent shadow-[0_1px_2px_rgb(0_0_0/0.15)]'
               : 'text-neutral-600 hover:bg-black/[0.05]'
           }`}
           data-testid="settings-nav"
@@ -667,7 +724,7 @@ function ProfilesSection() {
         {data.profiles.map((p) => (
           <div key={p.id} className="flex items-center gap-3 px-4 py-2.5" data-testid="profile-row">
             <span
-              className="grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold text-white shadow-[inset_0_0.5px_0_rgb(255_255_255/0.4)]"
+              className="grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold text-on-accent shadow-[inset_0_0.5px_0_rgb(255_255_255/0.4)]"
               style={{ background: `hsl(${profileHue(p.id)} 62% 52%)` }}
               aria-hidden
             >
@@ -736,7 +793,7 @@ function ProfilesSection() {
           <button
             type="submit"
             disabled={!name.trim()}
-            className="rounded-lg bg-[#5b5bd6] px-3 py-1.5 text-sm font-medium text-white hover:brightness-110 disabled:opacity-40"
+            className="rounded-lg bg-[#5b5bd6] px-3 py-1.5 text-sm font-medium text-on-accent hover:brightness-110 disabled:opacity-40"
             data-testid="profile-add"
           >
             Add Profile
@@ -823,7 +880,7 @@ function AboutSection() {
   return (
     <Group title="Orbit">
       <div className="flex items-center gap-4 px-4 py-4">
-        <div className="grid size-12 place-items-center rounded-[13px] bg-gradient-to-br from-[#22164f] via-[#5b3be8] to-[#ff7aa8] text-white shadow-[0_4px_12px_-2px_rgb(91_59_232/0.5)]">
+        <div className="grid size-12 place-items-center rounded-[13px] bg-gradient-to-br from-[#22164f] via-[#5b3be8] to-[#ff7aa8] text-on-accent shadow-[0_4px_12px_-2px_rgb(91_59_232/0.5)]">
           <Sparkles size={20} />
         </div>
         <div className="flex-1">

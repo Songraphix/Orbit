@@ -4,6 +4,7 @@ import type { ProfileView } from '@shared/profile';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { themeToVars } from '@shared/theme';
+import { useColorMode } from './use-color-mode';
 import { DEFAULT_THEME } from '@shared/types/space';
 import type { SidebarSnapshot } from '@shared/types/space';
 import type { Layout, Rect } from '@shared/types/layout';
@@ -42,7 +43,8 @@ function MainShell() {
 
   // ThemeEngine: the active space's theme becomes CSS variables for the whole shell.
   const theme = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId)?.theme ?? DEFAULT_THEME;
-  const vars = useMemo(() => themeToVars(theme), [theme]);
+  const mode = useColorMode();
+  const vars = useMemo(() => themeToVars(theme, mode), [theme, mode]);
 
   return (
     <div
@@ -209,7 +211,7 @@ function ContentCard(props: {
   const webViewTop = pane.webView.y - pane.card.y;
   return (
     <div
-      className="card-depth absolute overflow-hidden bg-white transition-[box-shadow] duration-200"
+      className="card-depth ui-light absolute overflow-hidden bg-white transition-[box-shadow] duration-200"
       style={{
         ...toStyle(pane.card),
         borderRadius: props.radius,
@@ -265,7 +267,7 @@ function ContentCard(props: {
           This page crashed.
           <button
             type="button"
-            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-white hover:brightness-110"
+            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-on-accent hover:brightness-110"
             onClick={() =>
               void window.orbit.invoke('tabs:navigate', { tabId: tab.id, action: 'reload' })
             }

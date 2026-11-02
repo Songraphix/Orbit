@@ -215,7 +215,7 @@ export function CaptureCard() {
             <label className="flex flex-1 cursor-pointer items-center gap-2 text-[13px] text-white/75">
               <span
                 className={`grid size-[18px] place-items-center rounded-[5px] border-[1.5px] ${
-                  makeTask ? 'border-[#7c6cff] bg-[#7c6cff]' : 'border-white/40'
+                  makeTask ? 'border-[#7c6cff] bg-[#7c6cff] text-on-accent' : 'border-white/40'
                 }`}
               >
                 {makeTask && <Check size={12} strokeWidth={3} />}
@@ -239,7 +239,7 @@ export function CaptureCard() {
             <button
               type="submit"
               disabled={saving}
-              className="press h-9 rounded-[11px] bg-[#7c6cff] px-4 text-[13.5px] font-semibold shadow-[0_6px_16px_-6px_#7c6cff] disabled:opacity-50"
+              className="press h-9 rounded-[11px] bg-[#7c6cff] px-4 text-on-accent text-[13.5px] font-semibold shadow-[0_6px_16px_-6px_#7c6cff] disabled:opacity-50"
               data-testid="capture-save"
             >
               Save

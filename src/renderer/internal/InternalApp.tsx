@@ -49,13 +49,12 @@ export function InternalApp() {
 
   useEffect(() => {
     document.title = TITLES[page] ?? 'Not Found';
-    // Internal pages use the normal light page background, except the new tab page (wallpaper)
-    // and the Library (transparent, over the space's colours).
-    // Notes pages paint their own.
+    // Internal pages use the normal page background — white, or dark in dark appearance
+    // (.ui-light, tokens.css) — except the new tab page (wallpaper) and the Library
+    // (transparent, over the space's colours). Notes pages paint their own.
     if (!['newtab', 'library', 'note', 'notes'].includes(page)) {
-      document.documentElement.style.background = '#fff';
-      // A light page keeps light form controls when macOS is in dark mode.
-      document.documentElement.style.colorScheme = 'light';
+      document.documentElement.classList.add('ui-light');
+      document.documentElement.style.background = 'var(--color-white)';
     }
   }, [page]);
 

@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { dialog } from 'electron';
+import { dialog, nativeTheme } from 'electron';
 import type { IpcRouter } from '../router';
 import type { BoostService } from '../../boosts/service';
 import type { DownloadService } from '../../downloads/service';
@@ -159,9 +159,9 @@ export function registerLibraryHandlers(
       windows.notesPanelFor(sender.webContentsId) ??
       windows.tabForContents(sender.webContentsId)?.window;
     if (!controller) throw new Error(`Sender ${sender.webContentsId} has no window`);
-    const theme = controller.tabs.space.theme;
-    // Same reading as the sidebar's: only an explicitly light theme is light.
-    return { mode: theme.mode === 'light' ? 'light' : 'dark', vars: themeToVars(theme) };
+    // The app's appearance (Settings → Appearance, or the Mac's), in the Space's colours.
+    const mode = nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
+    return { mode, vars: themeToVars(controller.tabs.space.theme, mode) };
   });
 
   router.handle('library:boosts', (_input, { sender }) => {

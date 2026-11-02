@@ -37,7 +37,7 @@ export function LibraryNav({ section }: { section: LibrarySection }) {
               onClick={() => void window.orbit.invoke('library:open', { section: s.id })}
               className={`press flex flex-col items-center gap-2 rounded-[16px] pt-3.5 pb-3 text-[11.5px] font-bold tracking-[0.005em] transition-colors duration-150 ${
                 active
-                  ? 'bg-white/[0.09] text-[var(--sidebar-fg)] shadow-[inset_0_0.5px_0_rgb(255_255_255/0.1),0_4px_14px_-6px_rgb(0_0_0/0.35)]'
+                  ? 'bg-[var(--row-active)] text-[var(--sidebar-fg)] shadow-[inset_0_0.5px_0_rgb(255_255_255/0.1),0_4px_14px_-6px_rgb(0_0_0/0.35)]'
                   : 'text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]'
               }`}
               data-testid="library-section"

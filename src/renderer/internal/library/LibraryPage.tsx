@@ -519,7 +519,7 @@ function BoostsSection() {
               data-testid="boost-entry-toggle"
             >
               <span
-                className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-[left] ${boost.enabled ? 'left-[18px]' : 'left-0.5'}`}
+                className={`absolute top-0.5 size-4 rounded-full bg-on-accent shadow transition-[left] ${boost.enabled ? 'left-[18px]' : 'left-0.5'}`}
               />
             </button>
             <IconButton onClick={() => act(boost, 'edit')} label="Edit" testId="boost-entry-edit">

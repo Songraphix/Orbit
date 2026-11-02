@@ -88,6 +88,24 @@ export function ToolkitView({ section }: { section: string }) {
           );
         })}
       </nav>
+      {state && ['colors', 'type', 'dev'].includes(current) && (
+        // What the page tools work on: the tab you're on (it follows as you switch tabs).
+        <div
+          className="mx-4 mb-1 flex min-w-0 items-center gap-1.5 text-[11.5px] text-[var(--note-muted)]"
+          data-testid="toolkit-target"
+        >
+          <span className="size-1.5 shrink-0 rounded-full bg-[var(--work-accent)]" aria-hidden />
+          <span className="truncate">
+            {state.page ? (
+              <>
+                Working on <span className="text-[var(--note-fg)]">{state.page.title}</span>
+              </>
+            ) : (
+              'No page open — open a tab to use the page tools'
+            )}
+          </span>
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6" data-testid="toolkit-body">
         {state &&
           (current === 'colors' ? (
@@ -119,7 +137,6 @@ function ColorsSection({ state }: { state: ToolkitState }) {
         <SmallButton
           primary
           onClick={() => void invoke('toolkit:pickColor', {})}
-          disabled={!state.page}
           testId="toolkit-pick"
         >
           <Pipette size={14} /> Pick from Page
@@ -188,7 +205,6 @@ function ColorsSection({ state }: { state: ToolkitState }) {
         action={
           <button
             type="button"
-            disabled={!state.page}
             className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--work-accent-text)] disabled:opacity-40"
             onClick={() => void invoke('toolkit:palette', {})}
             data-testid="toolkit-scan-palette"
@@ -215,9 +231,7 @@ function ColorsSection({ state }: { state: ToolkitState }) {
           )
         ) : (
           <p className="text-[12.5px] text-[var(--note-muted)]">
-            {state.page
-              ? 'See the colors this page uses, most used first.'
-              : 'Open a web page first.'}
+            {state.page ? 'See the colors this page uses, most used first.' : 'Open a page first.'}
           </p>
         )}
       </Group>

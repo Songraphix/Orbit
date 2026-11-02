@@ -72,7 +72,7 @@ function PermissionPrompt({ prompt }: { prompt: Extract<Prompt, { kind: 'permiss
         <button
           ref={allowButton}
           type="button"
-          className="press rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-white shadow-[inset_0_0.5px_0_rgb(255_255_255/0.3)] hover:brightness-110"
+          className="press rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-on-accent shadow-[inset_0_0.5px_0_rgb(255_255_255/0.3)] hover:brightness-110"
           onClick={() => answer({ id: prompt.id, allow: true, remember })}
           data-testid="prompt-allow"
         >
@@ -128,7 +128,7 @@ function LoginPrompt({ prompt }: { prompt: Extract<Prompt, { kind: 'login' }> })
         </button>
         <button
           type="submit"
-          className="press rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-white shadow-[inset_0_0.5px_0_rgb(255_255_255/0.3)] hover:brightness-110"
+          className="press rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-on-accent shadow-[inset_0_0.5px_0_rgb(255_255_255/0.3)] hover:brightness-110"
           data-testid="login-submit"
         >
           Sign In
@@ -177,7 +177,7 @@ function InputPrompt({ prompt }: { prompt: Extract<Prompt, { kind: 'input' }> })
         <button
           type="submit"
           disabled={!value.trim()}
-          className="press rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-white shadow-[inset_0_0.5px_0_rgb(255_255_255/0.3)] hover:brightness-110 disabled:opacity-50"
+          className="press rounded-lg bg-[var(--accent)] px-3 py-1.5 font-medium text-on-accent shadow-[inset_0_0.5px_0_rgb(255_255_255/0.3)] hover:brightness-110 disabled:opacity-50"
           data-testid="prompt-confirm"
         >
           {prompt.confirm}

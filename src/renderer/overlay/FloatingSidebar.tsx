@@ -4,6 +4,7 @@ import { themeToVars } from '@shared/theme';
 import { DEFAULT_THEME } from '@shared/types/space';
 import { Sidebar } from '../shell/Sidebar';
 import { useMainState } from '../shell/use-main-state';
+import { useColorMode } from '../shell/use-color-mode';
 
 const close = () => void window.orbit.invoke('sidebar:peek', { open: false });
 const noop = () => undefined;
@@ -21,7 +22,8 @@ export function FloatingSidebar({ width }: { width: number }) {
   const tabs = useMainState('state:tabs');
   const activeTab = tabs?.tabs.find((t) => t.id === tabs.activeTabId) ?? null;
   const theme = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId)?.theme ?? DEFAULT_THEME;
-  const vars = useMemo(() => themeToVars(theme), [theme]);
+  const mode = useColorMode();
+  const vars = useMemo(() => themeToVars(theme, mode), [theme, mode]);
 
   // Leaving the strip (onto the page) slides it back in.
   useEffect(() => {
@@ -39,7 +41,7 @@ export function FloatingSidebar({ width }: { width: number }) {
       {/* Opaque base: the shell's sidebar is translucent over macOS vibrancy, which isn't here. */}
       <div
         className="absolute inset-0"
-        style={{ background: theme.mode === 'light' ? 'rgb(245 245 247)' : 'rgb(24 24 28)' }}
+        style={{ background: mode === 'light' ? 'rgb(245 245 247)' : 'rgb(24 24 28)' }}
       />
       <div className="absolute inset-0" style={{ background: 'var(--sidebar-bg)' }} />
       <Sidebar

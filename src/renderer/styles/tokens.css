@@ -68,6 +68,101 @@ body {
   }
 }
 
+/* Text on an accent or coloured fill: white in light and dark alike (never remapped below). */
+@theme {
+  --color-on-accent: #fff;
+}
+
+/* ── Appearance (Settings → Appearance) ──────────────────────────────────────
+   Main sets nativeTheme.themeSource, which `prefers-color-scheme` reports here. Orbit's surfaces
+   were each drawn for one mode, so each declares which, and in the other mode the palette its
+   classes use (white, black, the neutral ramp) is mirrored — `bg-white` stays "the surface",
+   `text-neutral-800` stays "body text", `bg-black/5` stays "a faint fill" — instead of every
+   class carrying a dark: twin. Both scopes set every value, so one can sit inside the other.
+   - .ui-light: drawn light (the page card's toolbar, Settings, Peek); dark when the app is.
+   - .ui-dark: drawn dark (the overlay's glass: command bar, menus, prompts); light when the app is.
+   Colours that must not move use their own tokens (on-accent) or literal values. */
+.ui-light {
+  --color-white: #fff;
+  --color-black: #000;
+  --color-neutral-50: oklch(98.5% 0 none);
+  --color-neutral-100: oklch(97% 0 none);
+  --color-neutral-200: oklch(92.2% 0 none);
+  --color-neutral-300: oklch(87% 0 none);
+  --color-neutral-400: oklch(70.8% 0 none);
+  --color-neutral-500: oklch(55.6% 0 none);
+  --color-neutral-600: oklch(43.9% 0 none);
+  --color-neutral-700: oklch(37.1% 0 none);
+  --color-neutral-800: oklch(26.9% 0 none);
+  --color-neutral-900: oklch(20.5% 0 none);
+  --color-neutral-950: oklch(14.5% 0 none);
+  /* Behind grouped cards (Settings), a step darker than the cards. */
+  --surface-page: #f6f6f8;
+  color-scheme: light;
+}
+.ui-dark {
+  --color-white: #fff;
+  --color-black: #000;
+  --color-neutral-50: oklch(98.5% 0 none);
+  --color-neutral-100: oklch(97% 0 none);
+  --color-neutral-200: oklch(92.2% 0 none);
+  --color-neutral-300: oklch(87% 0 none);
+  --color-neutral-400: oklch(70.8% 0 none);
+  --color-neutral-500: oklch(55.6% 0 none);
+  --color-neutral-600: oklch(43.9% 0 none);
+  --color-neutral-700: oklch(37.1% 0 none);
+  --color-neutral-800: oklch(26.9% 0 none);
+  --color-neutral-900: oklch(20.5% 0 none);
+  --color-neutral-950: oklch(14.5% 0 none);
+  --glass-tint: rgb(26 25 32 / 0.72);
+  --glass-solid: rgb(26 25 32 / 0.6);
+  --glass-rim: rgb(255 255 255 / 0.14);
+  --glass-backdrop: brightness(0.8);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  .ui-light {
+    --color-white: #1f1f23;
+    --color-black: #fff;
+    --color-neutral-50: #26262b;
+    --color-neutral-100: #2c2c31;
+    --color-neutral-200: #3a3a40;
+    --color-neutral-300: #4e4e55;
+    --color-neutral-400: #8d8d95;
+    --color-neutral-500: #a3a3aa;
+    --color-neutral-600: #bcbcc2;
+    --color-neutral-700: #d2d2d7;
+    --color-neutral-800: #e6e6ea;
+    --color-neutral-900: #f2f2f5;
+    --color-neutral-950: #fafafa;
+    --surface-page: #161619;
+    color-scheme: dark;
+  }
+}
+@media (prefers-color-scheme: light) {
+  .ui-dark {
+    /* "White" text and fills on dark glass become near-black ones on light glass; black stays
+       black (scrims and shadows). */
+    --color-white: #0b0b0d;
+    --color-neutral-50: #1c1c1f;
+    --color-neutral-100: #2c2c2e;
+    --color-neutral-200: #3a3a3c;
+    --color-neutral-300: #48484a;
+    --color-neutral-400: #5f5f64;
+    --color-neutral-500: #6e6e73;
+    --color-neutral-600: #8e8e93;
+    --color-neutral-700: #aeaeb2;
+    --color-neutral-800: #e5e5ea;
+    --color-neutral-900: #f2f2f7;
+    --color-neutral-950: #fafafa;
+    --glass-tint: rgb(248 248 251 / 0.8);
+    --glass-solid: rgb(248 248 251 / 0.72);
+    --glass-rim: rgb(0 0 0 / 0.1);
+    --glass-backdrop: brightness(1.15);
+    color-scheme: light;
+  }
+}
+
 /* ── Materials ───────────────────────────────────────────────────────────────
    Glass for floating UI: a dark tint over a blurred copy of the page (GlassBackdrop), a hairline
    rim with a lit top edge, and layered shadows for real depth. */
@@ -75,7 +170,7 @@ body {
   /* Positioning comes from the component (absolute popovers, relative otherwise). */
   isolation: isolate;
   /* The tint itself is a layer inside (see Glass.tsx), above the blurred page copy. */
-  border: 0.5px solid rgb(255 255 255 / 0.14);
+  border: 0.5px solid var(--glass-rim, rgb(255 255 255 / 0.14));
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.1),
     inset 0 0 0 0.5px rgb(255 255 255 / 0.04),
@@ -83,11 +178,12 @@ body {
     0 2px 6px rgb(0 0 0 / 0.18),
     0 22px 60px -12px rgb(0 0 0 / 0.55);
   backdrop-filter: blur(24px) saturate(160%);
-  color: rgb(245 245 247);
+  /* Glass text: near-white on dark glass, near-black on light (via .ui-dark). */
+  color: color-mix(in oklab, var(--color-white) 96%, transparent);
 }
 /* Where there's no page copy to blur yet, a denser tint keeps it readable. */
 .glass-solid {
-  background: rgb(26 25 32 / 0.6);
+  background: var(--glass-solid, rgb(26 25 32 / 0.6));
 }
 
 /* The page card's edge: a hairline and a soft lift off the sidebar (F-01). */

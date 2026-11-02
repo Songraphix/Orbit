@@ -8,7 +8,14 @@ const THEME = EditorView.theme({
   '&': { height: '100%', fontSize: '12.5px' },
   '&.cm-focused': { outline: 'none' },
   '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' },
-  '.cm-gutters': { background: '#fafafa', borderRight: '1px solid #eee', color: '#aaa' },
+  // Palette colours, so the editor follows light and dark (.ui-light).
+  '.cm-gutters': {
+    background: 'var(--color-neutral-50)',
+    borderRight: '1px solid var(--color-neutral-200)',
+    color: 'var(--color-neutral-400)',
+  },
+  '.cm-activeLine, .cm-activeLineGutter': { background: 'var(--color-neutral-50)' },
+  '.cm-content': { caretColor: 'var(--color-neutral-800)' },
 });
 
 /**

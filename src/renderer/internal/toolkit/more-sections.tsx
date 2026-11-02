@@ -37,7 +37,6 @@ export function TypeSection({ state }: { state: ToolkitState }) {
         action={
           <button
             type="button"
-            disabled={!state.page}
             className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--work-accent-text)] disabled:opacity-40"
             onClick={() => void invoke('toolkit:fonts', {})}
             data-testid="toolkit-scan-fonts"
@@ -80,7 +79,7 @@ export function TypeSection({ state }: { state: ToolkitState }) {
           <p className="text-[12.5px] text-[var(--note-muted)]">
             {state.page
               ? 'See which fonts, sizes and weights this page uses.'
-              : 'Open a web page first.'}
+              : 'Open a page first.'}
           </p>
         )}
       </Group>

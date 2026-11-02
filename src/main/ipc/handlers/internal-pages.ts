@@ -29,6 +29,8 @@ export function registerInternalPageHandlers(
     revealData: () => void;
     /** Tabs on top or in the sidebar, in every window. */
     applyTabLayout: (layout: 'sidebar' | 'top') => void;
+    /** Settings → Appearance: light, dark or the Mac's (nativeTheme.themeSource). */
+    applyAppearance: (appearance: 'system' | 'light' | 'dark') => void;
     /** Workspace templates (roadmap P2.5). */
     templates: TemplateRepository;
     /** The Anthropic API key (F-29). */
@@ -103,6 +105,7 @@ export function registerInternalPageHandlers(
     archiveAfter: deps.settings.get('archive.after'),
     maxLive: deps.settings.get('tabs.maxLive'),
     tabLayout: deps.settings.get('tabs.layout'),
+    appearance: deps.settings.get('appearance'),
     sleepAfterMinutes: deps.settings.get('tabs.sleepAfterMinutes'),
     searchEngine: deps.settings.get('search.engine'),
     peek: deps.settings.get('peek.enabled'),
@@ -122,6 +125,10 @@ export function registerInternalPageHandlers(
     if (patch.tabLayout) {
       deps.settings.set('tabs.layout', patch.tabLayout);
       deps.applyTabLayout(patch.tabLayout);
+    }
+    if (patch.appearance) {
+      deps.settings.set('appearance', patch.appearance);
+      deps.applyAppearance(patch.appearance);
     }
     if (patch.sleepAfterMinutes !== undefined) {
       deps.settings.set('tabs.sleepAfterMinutes', patch.sleepAfterMinutes);

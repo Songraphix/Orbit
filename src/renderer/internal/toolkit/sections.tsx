@@ -95,7 +95,6 @@ export function ImageSection({ state }: { state: ToolkitState }) {
           </p>
           <SmallButton
             onClick={() => void invoke('toolkit:annotate', {})}
-            disabled={!state.page}
             testId="toolkit-annotate"
           >
             Capture
@@ -419,7 +418,7 @@ export function DevSection({ state }: { state: ToolkitState }) {
           )
         }
       >
-        {state.page ? (
+        {state.page?.web ? (
           <div className="grid grid-cols-2 gap-1.5" data-testid="toolkit-presets">
             {VIEWPORT_PRESETS.map((p) => {
               const on =
