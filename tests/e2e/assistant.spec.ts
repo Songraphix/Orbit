@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import { launchOrbit } from './launch-orbit';
+import { closeSettings } from './settings-window';
 import type { Orbit } from './launch-orbit';
 import { startTestServer } from './test-server';
 import type { TestServer } from './test-server';
@@ -41,7 +42,7 @@ async function addKey(app: ElectronApplication) {
   await clickMenu(app, 'settings');
   const settings = await pageWith(app, '#/settings');
   await invoke(settings, 'ai:setKey', { key: KEY });
-  await clickMenu(app, 'close-tab');
+  await closeSettings(app);
 }
 
 const sentText = (body: Record<string, unknown>) => JSON.stringify(body['messages']);
@@ -182,7 +183,7 @@ test('Tasks from a page, Stop, research questions, and AI off', async () => {
   await settings.locator('[data-testid="settings-nav"][data-section="ai"]').click();
   await settings.getByTestId('ai-enabled').uncheck();
   await expect(win.getByTestId('toolbar-assistant')).toHaveCount(0);
-  await clickMenu(app, 'close-tab');
+  await closeSettings(app);
   await panel.getByTestId('assistant-clear').click();
   await expect(panel.getByTestId('assistant-blocked')).toContainText('turned off');
   await expect(panel.getByTestId('assistant-input')).toBeDisabled();
@@ -238,7 +239,7 @@ test('Orbit AI as a coworker: it looks at today’s tasks, adds one, and says wh
   const settings = await pageWith(app, '#/settings');
   await settings.locator('[data-testid="settings-nav"][data-section="ai"]').click();
   await settings.getByTestId('ai-work-access').uncheck();
-  await clickMenu(app, 'close-tab');
+  await closeSettings(app);
   await panel.getByTestId('assistant-input').fill('anything else?');
   await panel.getByTestId('assistant-input').press('Enter');
   await expect(panel.getByTestId('assistant-answer').last()).toHaveAttribute('data-status', 'done');

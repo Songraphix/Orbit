@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import { launchOrbit } from './launch-orbit';
+import { closeSettings } from './settings-window';
 
 type Invoke = (channel: string, input: unknown) => Promise<unknown>;
 const invoke = (page: Page, channel: string, input: unknown = {}) =>
@@ -75,7 +76,7 @@ test('back up, change things, restore: the backup comes back at the next start (
     await expect(settings.getByTestId('backup-restore')).toBeVisible();
 
     // A new project after the backup…
-    await clickMenu(app, 'close-tab');
+    await closeSettings(app);
     await panel.getByTestId('new-project').click();
     await panel.getByTestId('project-name').fill('After the Backup');
     await panel.getByTestId('form-save').click();

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import { launchOrbit } from './launch-orbit';
+import { closeSettings } from './settings-window';
 import { startTestServer } from './test-server';
 
 /**
@@ -36,7 +37,7 @@ test('Phase 3: ask about a page with sources, keep the answer and its tasks, acr
     await clickMenu(app, 'settings');
     const settings = await pageWith(app, '#/settings');
     await invoke(settings, 'ai:setKey', { key: KEY });
-    await clickMenu(app, 'close-tab');
+    await closeSettings(app);
 
     // Explicit: the page goes only when asked — here, "Summarize Page" from the View menu.
     await invoke(win, 'tabs:create', { url: server.url('/article') });

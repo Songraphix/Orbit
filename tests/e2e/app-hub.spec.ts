@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import { launchOrbit } from './launch-orbit';
+import { closeSettings } from './settings-window';
 import { startTestServer } from './test-server';
 
 type Invoke = (channel: string, input: unknown) => Promise<unknown>;
@@ -44,7 +45,7 @@ test('App Hub: add apps, open one docked beside the page, in a tab or its own wi
 
     // Open in the side panel: it docks beside the page with its own header.
     await settings.getByTestId('app-open-in').selectOption('panel');
-    await clickMenu(app, 'close-tab');
+    await closeSettings(app);
     await win.getByTestId('favorite-tile').click();
     await expect(win.getByTestId('app-panel-header')).toBeVisible();
     await expect(win.getByTestId('app-panel-title')).toHaveText('Page One');
@@ -74,7 +75,7 @@ test('App Hub: add apps, open one docked beside the page, in a tab or its own wi
       .nth(1)
       .getAttribute('value');
     await settings2.getByTestId('app-spaces').selectOption(spaceId!);
-    await clickMenu(app, 'close-tab');
+    await closeSettings(app);
     await clickMenu(app, 'new-space');
     await expect(win.getByTestId('favorite-tile')).toHaveCount(0);
   } finally {
@@ -95,7 +96,7 @@ test('App Hub: add apps, open one docked beside the page, in a tab or its own wi
     const settings = await pageWith(app, '#/settings');
     await settings.locator('[data-testid="settings-nav"][data-section="apps"]').click();
     await settings.getByTestId('app-open-in').selectOption('window');
-    await clickMenu(app, 'close-tab');
+    await closeSettings(app);
     const windows = () =>
       app.evaluate(
         ({ BrowserWindow }) => BrowserWindow.getAllWindows().filter((w) => w.isVisible()).length,

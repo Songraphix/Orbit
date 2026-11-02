@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import { launchOrbit } from './launch-orbit';
+import { closeSettings } from './settings-window';
 import type { Orbit } from './launch-orbit';
 import { startTestServer } from './test-server';
 import type { TestServer } from './test-server';
@@ -54,7 +55,7 @@ test('Tidy: key in Settings, groups Today’s tabs with Claude (titles and sites
   await settings.getByTestId('ai-key-save').click();
   await expect(settings.getByTestId('ai-key-remove')).toBeVisible();
   await expect(settings.locator(`text=${KEY}`)).toHaveCount(0);
-  await clickMenu(app, 'close-tab'); // Settings
+  await closeSettings(app);
 
   // Tidy groups the three "Page" tabs into a folder named by Claude.
   const tidyButton = win.getByTestId('tidy');

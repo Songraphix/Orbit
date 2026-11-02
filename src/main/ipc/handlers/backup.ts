@@ -27,11 +27,9 @@ export function registerBackupHandlers(
   },
 ): void {
   const settingsWindow = (webContentsId: number) => {
-    const owner = windows.tabForContents(webContentsId);
-    if (!owner || !owner.tab.state.url.startsWith('orbit://settings')) {
-      throw new Error(`Sender ${webContentsId} is not orbit://settings`);
-    }
-    return owner.window;
+    const window = windows.settingsFor(webContentsId);
+    if (!window) throw new Error(`Sender ${webContentsId} is not orbit://settings`);
+    return window;
   };
   /** The backup chosen for restoring, kept while its passphrase is asked for. */
   let restoreFile: string | null = null;

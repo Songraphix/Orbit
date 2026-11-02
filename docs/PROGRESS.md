@@ -147,6 +147,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — **Brief M9: per-Space customization.** A Space can keep **its own Homepage layout** (edit mode: All Spaces / Only ‹Space›; switching back to All Spaces shares again); apps already show per Space (M5) and the accent can follow each Space's colours (M2). **The brief's milestones M1–M9 are done** (docs/BRIEF-AUDIT.md); deferred: app groups in the sidebar, several Spaces per app in Settings, Move Tab to New Window, AI memory and other providers, workflow suggestions (P3)
 
+- 2026-11-02 — Owner request: **Settings opens in a window of its own** (⌘,, the profile menu's links, ⌘T “Manage Apps”, the assistant's “Open Settings”), one at a time, brought forward on the section asked for; it acts on the browser window used last; ⌘W closes it when it's in front; a strip along the top drags it. `orbit://settings` typed into a tab still works. All Settings sender checks go through WindowManager.settingsFor
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0

@@ -74,7 +74,6 @@ export function registerProfileHandlers(
     controller.overlay.closeProfileMenu();
     if (page === 'library') controller.library.open('media');
     else if (page === 'import') deps.runCommand(controller, 'import-arc');
-    else
-      controller.tabs.create(page === 'settings' ? 'orbit://settings' : `orbit://settings/${page}`);
+    else windows.openSettings(page === 'settings' ? undefined : page);
   });
 }

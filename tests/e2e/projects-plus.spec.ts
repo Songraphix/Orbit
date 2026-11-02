@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import { launchOrbit } from './launch-orbit';
+import { closeSettings } from './settings-window';
 import type { Orbit } from './launch-orbit';
 import { startTestServer } from './test-server';
 import type { TestServer } from './test-server';
@@ -101,7 +102,7 @@ test('a project from a template follows its GitHub repo; its pull requests becom
   await expect(settings.getByTestId('github-token-remove')).toBeVisible();
 
   // With a token, GitHub requests carry it.
-  await clickMenu(app, 'close-tab');
+  await closeSettings(app);
   await panel.getByTestId('project-card').filter({ hasText: 'Launch site' }).click();
   await panel.getByTestId('github-refresh').click();
   await expect.poll(() => server.lastGithubAuth()).toBe(`Bearer ${token}`);

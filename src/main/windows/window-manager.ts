@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, screen } from 'electron';
+import { BrowserWindow, nativeTheme, dialog, screen } from 'electron';
 import type { WebContents, WebContentsView } from 'electron';
 import { APP_NAME } from '@shared/constants';
 import type { RendererEntry } from '@shared/constants';
@@ -145,7 +145,91 @@ export class WindowManager {
   focused(): WindowController | undefined {
     const win = BrowserWindow.getFocusedWindow();
     const match = [...this.controllers.values()].find((c) => c.win === win);
-    return match ?? this.controllers.values().next().value;
+    // With Settings (or another of Orbit's own windows) in front: the browser window last used.
+    const last = this.lastMain && this.all().includes(this.lastMain) ? this.lastMain : undefined;
+    return match ?? last ?? this.controllers.values().next().value;
+  }
+
+  // ── Settings window (owner request): Settings opens in a window of its own, like a Mac app's.
+
+  private settingsWin: BrowserWindow | null = null;
+  private lastMain: WindowController | null = null;
+
+  /** Opens Settings in its window (or brings it forward), on a section if given. */
+  openSettings(section?: string): void {
+    const url = section ? `orbit://settings/${section}` : 'orbit://settings';
+    const open = this.settingsWin;
+    if (open && !open.isDestroyed()) {
+      if (section) this.deps.loadInternal(open, url);
+      if (open.isMinimized()) open.restore();
+      open.show();
+      open.focus();
+      return;
+    }
+    const win = new BrowserWindow({
+      width: 980,
+      height: 720,
+      minWidth: 620,
+      minHeight: 460,
+      title: 'Orbit Settings',
+      titleBarStyle: 'hiddenInset',
+      trafficLightPosition: { x: 16, y: 16 },
+      backgroundColor: nativeTheme.shouldUseDarkColors ? '#161619' : '#f6f6f8',
+      show: false,
+      webPreferences: {
+        preload: this.deps.internalPreloadPath,
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+    this.settingsWin = win;
+    const contents = win.webContents;
+    const id = contents.id;
+    this.deps.senders.add(id, 'internal');
+    contents.on('will-navigate', (event) => event.preventDefault());
+    contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    // Its own window: a strip along the top to drag it by (no title bar), and room for the
+    // traffic lights above the nav. (Settings in a tab must not move the browser window.)
+    contents.on('dom-ready', () => {
+      void contents.insertCSS(
+        `body::before { content: ''; position: fixed; inset: 0 0 auto 0; height: 34px;
+           -webkit-app-region: drag; z-index: 50; }
+         nav[aria-label='Settings'] { padding-top: 52px !important; }
+         button, input, select, a { -webkit-app-region: no-drag; }`,
+      );
+    });
+    win.once('ready-to-show', () => {
+      // Test runs stay in the background (ORBIT_QUIET), like every other window.
+      if (process.env['ORBIT_QUIET'] === '1') win.showInactive();
+      else win.show();
+    });
+    win.on('closed', () => {
+      this.deps.senders.remove(id);
+      if (this.settingsWin === win) this.settingsWin = null;
+    });
+    this.deps.loadInternal(win, url);
+  }
+
+  /** Closes the Settings window if it's the one in front (⌘W there). */
+  closeSettingsIfFocused(): boolean {
+    const win = this.settingsWin;
+    if (!win || win.isDestroyed() || BrowserWindow.getFocusedWindow() !== win) return false;
+    win.close();
+    return true;
+  }
+
+  /**
+   * The browser window Settings acts for: when it's the Settings window, the window last used;
+   * when it's Settings in a tab (orbit://settings typed in), that tab's window. Null otherwise.
+   */
+  settingsFor(webContentsId: number): WindowController | null {
+    const win = this.settingsWin;
+    if (win && !win.isDestroyed() && win.webContents.id === webContentsId) {
+      return this.focused() ?? null;
+    }
+    const owner = this.tabForContents(webContentsId);
+    return owner?.tab.state.url.startsWith('orbit://settings') ? owner.window : null;
   }
 
   createMainWindow(): BrowserWindow {
@@ -466,6 +550,10 @@ export class WindowManager {
     });
     this.controllers.set(id, controller);
     this.controllers.set(overlayId, controller);
+    this.lastMain = controller;
+    win.on('focus', () => {
+      this.lastMain = controller;
+    });
     senders.add(id, 'shell');
     broadcaster.add(contents);
     contents.once('destroyed', () => {

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import { launchOrbit } from './launch-orbit';
+import { closeSettings } from './settings-window';
 import { startTestServer } from './test-server';
 
 type Invoke = (channel: string, input: unknown) => Promise<unknown>;
@@ -109,7 +110,7 @@ test('menus: Explain and Translate with Orbit AI, Open in Split View, tab action
     await clickMenu(app, 'settings');
     const settings = await pageWith(app, '#/settings');
     await invoke(settings, 'ai:setKey', { key: 'sk-ant-test-0123456789abcdefghijklmnop' });
-    await clickMenu(app, 'close-tab');
+    await closeSettings(app);
     await invoke(win, 'tabs:create', { url: server.url('/article') });
     await expect(win.getByTestId('toolbar-address')).toContainText('Grid Systems');
     expect(

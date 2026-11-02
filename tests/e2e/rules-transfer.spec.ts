@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import { launchOrbit } from './launch-orbit';
+import { closeSettings } from './settings-window';
 import type { Orbit } from './launch-orbit';
 import { startTestServer } from './test-server';
 import type { TestServer } from './test-server';
@@ -109,7 +110,7 @@ test('rules: links from other apps go to the Space you choose', async () => {
   await settings.getByTestId('rule-target').selectOption({ label: 'in Design' });
   await settings.getByTestId('rule-add').click();
   await expect(settings.getByTestId('rule-text')).toHaveText(['Links to 127.0.0.1 open in Design']);
-  await clickMenu(app, 'close-tab');
+  await closeSettings(app);
 
   // A matching link from another app opens in Design, in the main window.
   await openUrlFromAnotherApp(app, server.url('/two'));

@@ -63,6 +63,12 @@ export function registerInternalPageHandlers(
       const library = windows.libraryFor(webContentsId);
       if (library) return { window: library };
     }
+    // Settings: its own window (acting for the browser window last used), or a Settings tab.
+    if (page === 'settings') {
+      const window = windows.settingsFor(webContentsId);
+      if (!window) throw new Error(`Sender ${webContentsId} is not orbit://settings`);
+      return { window };
+    }
     const owner = windows.tabForContents(webContentsId);
     if (!owner || !owner.tab.state.url.startsWith(`orbit://${page}`)) {
       throw new Error(`Sender ${webContentsId} is not orbit://${page}`);

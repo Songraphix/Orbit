@@ -16,11 +16,9 @@ export function registerAppHubHandlers(router: IpcRouter, windows: WindowManager
     return controller;
   };
   const settingsOf = (webContentsId: number) => {
-    const found = windows.tabForContents(webContentsId);
-    if (!found?.tab.state.url.startsWith('orbit://settings')) {
-      throw new Error(`Sender ${webContentsId} is not Settings`);
-    }
-    return found.window;
+    const window = windows.settingsFor(webContentsId);
+    if (!window) throw new Error(`Sender ${webContentsId} is not Settings`);
+    return window;
   };
 
   /** The favourites of the profile this window's Space uses. */

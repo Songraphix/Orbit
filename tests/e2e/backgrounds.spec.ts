@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import { launchOrbit } from './launch-orbit';
+import { closeSettings } from './settings-window';
 import { startTestServer } from './test-server';
 
 async function homepage(app: ElectronApplication): Promise<Page> {
@@ -75,7 +76,7 @@ test('backgrounds: preview and cancel, colours, gradients, adjustments, favourit
     await settings.getByTestId('unsplash-key').fill('test_unsplash_key_0123456789');
     await settings.getByTestId('unsplash-key-save').click();
     await expect(settings.getByTestId('unsplash-key-remove')).toBeVisible();
-    await clickMenu(app, 'close-tab');
+    await closeSettings(app);
 
     // A new Homepage: search, preview, apply; the photographer is credited, Unsplash is told.
     await win.getByTestId('new-tab-row').click();

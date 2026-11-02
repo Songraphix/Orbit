@@ -466,6 +466,8 @@ function runCommand(controller: WindowController, commandId: string): void {
       if (tabs.active) navigateTab(tabs.active, 'reload');
       return;
     case 'close-tab':
+      // ⌘W with Settings in front closes Settings.
+      if (windows?.closeSettingsIfFocused()) return;
       if (tabs.active) tabs.close(tabs.active.id);
       return;
     case 'reopen-tab':
@@ -490,10 +492,10 @@ function runCommand(controller: WindowController, commandId: string): void {
       controller.tabs.create('orbit://archive');
       return;
     case 'settings':
-      controller.tabs.create('orbit://settings');
+      windows?.openSettings();
       return;
     case 'manage-apps':
-      controller.tabs.create('orbit://settings/apps');
+      windows?.openSettings('apps');
       return;
     case 'new-easel':
       if (persistence) newEasel(persistence.easels, controller);
@@ -1328,9 +1330,7 @@ void app.whenReady().then(() => {
   router.handle('ui:get', () => persistence!.settings.get('ui'));
   // Settings → Integrations: the Unsplash access key (Settings only; never sent back).
   const settingsOnly = (id: number) => {
-    if (!windowManager.tabForContents(id)?.tab.state.url.startsWith('orbit://settings')) {
-      throw new Error(`Sender ${id} is not Settings`);
-    }
+    if (!windowManager.settingsFor(id)) throw new Error(`Sender ${id} is not Settings`);
   };
   router.handle('unsplash:status', (_input, { sender }) => {
     settingsOnly(sender.webContentsId);
@@ -1354,8 +1354,7 @@ void app.whenReady().then(() => {
     unsplashKey.clear();
   });
   router.handle('ui:set', (patch, { sender }) => {
-    const settingsPage = windowManager.tabForContents(sender.webContentsId);
-    if (!settingsPage?.tab.state.url.startsWith('orbit://settings')) {
+    if (!windowManager.settingsFor(sender.webContentsId)) {
       throw new Error(`Sender ${sender.webContentsId} is not Settings`);
     }
     const next = { ...persistence!.settings.get('ui'), ...patch };

@@ -174,7 +174,13 @@ export function registerNotesHandlers(
   router.handle('notes:openUrl', ({ url }, { sender }) => {
     const { window } = surfaceOf(sender.webContentsId);
     // Web pages, or Settings (the assistant's "Open Settings → AI").
-    if (!window || !(isWeb(url) || /^orbit:\/\/settings(\/[a-z]+)?$/.test(url))) return;
+    if (!window) return;
+    const settings = /^orbit:\/\/settings(?:\/([a-z]+))?$/.exec(url);
+    if (settings) {
+      windows.openSettings(settings[1]); // Settings has its own window
+      return;
+    }
+    if (!isWeb(url)) return;
     window.tabs.create(url);
     window.win.focus();
   });
