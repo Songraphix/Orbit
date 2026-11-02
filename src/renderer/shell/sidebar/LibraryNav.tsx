@@ -23,7 +23,7 @@ export function LibraryNav({ section }: { section: LibrarySection }) {
         <OrbitMark />
       </div>
       <nav
-        className="animate-panel-in no-drag flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-2"
+        className="animate-panel-in no-drag scrollbar-none flex min-h-0 flex-1 flex-col gap-1.5 overflow-x-hidden overflow-y-auto px-2"
         aria-label="Library"
         data-testid="library-nav"
       >

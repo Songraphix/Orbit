@@ -171,7 +171,7 @@ export function Sidebar({
         <DndContext.Provider value={dnd}>
           <div
             key={space.id}
-            className={`no-drag min-h-0 flex-1 overflow-y-auto pb-2 ${
+            className={`no-drag scrollbar-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-2 ${
               spaceMotion.dir === 'next'
                 ? 'animate-space-next'
                 : spaceMotion.dir === 'prev'

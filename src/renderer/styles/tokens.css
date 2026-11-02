@@ -44,6 +44,44 @@ body {
   user-select: none;
 }
 
+/*
+ * Scrollbars (owner request): thin and quiet across Orbit's own UI — no track, no arrows, a
+ * slim rounded thumb, faint until the pointer is on it (even with macOS set to "always show
+ * scroll bars"). It takes its colour from the text, so it suits light and dark. (Chromium
+ * doesn't restyle a page's main scrollbar on hover, so the faint thumb is always there.)
+ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+::-webkit-scrollbar-thumb {
+  min-height: 28px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+  background-color: color-mix(in srgb, currentColor 16%, transparent);
+}
+:hover::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, currentColor 24%, transparent);
+}
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background-color: color-mix(in srgb, currentColor 42%, transparent);
+}
+
+/* No scrollbar at all (the sidebar, like Arc): it still scrolls with the trackpad or wheel. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
 /* Indeterminate loading bar under the toolbar (F-14). */
 @keyframes orbit-loading {
   0% {

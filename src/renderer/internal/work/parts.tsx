@@ -43,7 +43,7 @@ export function FilterPills<T extends string>(props: {
 }) {
   return (
     <div
-      className="flex gap-1 overflow-x-auto [scrollbar-width:none]"
+      className="flex gap-1 scrollbar-none overflow-x-auto"
       role="tablist"
       data-testid={props.testId}
     >
