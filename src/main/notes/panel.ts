@@ -55,12 +55,7 @@ export class NotesPanelController {
     const sub = id ? `/${id}` : tab && tab !== 'notes' ? `/${tab}` : tab === 'notes' ? '' : null;
     if (sub !== null) this.route = `panel${sub}`;
     if (fresh) this.deps.loadInternal(view, `orbit://notes/${this.route}`);
-    else if (sub !== null) {
-      // Switch inside the loaded page (no reload).
-      void view.webContents
-        .executeJavaScript(`location.hash = ${JSON.stringify(`#/notes/panel${sub}`)}`)
-        .catch(() => undefined);
-    }
+    else if (sub !== null) this.go(view, this.route);
     if (!this.shown) {
       this.shown = true;
       this.deps.setOpen(true, this.wide); // the layout tells the shell (its Notes button lights up)
@@ -99,12 +94,21 @@ export class NotesPanelController {
   openAt(route: string): void {
     if (notesHash(route) === '/not-found') return;
     this.route = route;
-    if (this.view) {
-      void this.view.webContents
-        .executeJavaScript(`location.hash = ${JSON.stringify(`#/notes/${route}`)}`)
-        .catch(() => undefined);
-    }
+    if (this.view) this.go(this.view, route);
     this.open();
+  }
+
+  /** Shows `route` in the page: a hash change once it has loaded (no reload); while it's still
+   *  loading (just opened, or restored at launch), a load at the new route — a hash set now
+   *  would be lost when the first page arrives. */
+  private go(view: WebContentsView, route: string): void {
+    if (view.webContents.isLoading()) {
+      this.deps.loadInternal(view, `orbit://notes/${route}`);
+      return;
+    }
+    void view.webContents
+      .executeJavaScript(`location.hash = ${JSON.stringify(`#/notes/${route}`)}`)
+      .catch(() => undefined);
   }
 
   /** At launch: back where it was. `route` was checked by notesHash. */

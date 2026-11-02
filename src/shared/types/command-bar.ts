@@ -122,6 +122,8 @@ export const overlayStateSchema = z.object({
   siteControls: siteControlsViewSchema.nullable(),
   /** Area screenshot: the page's area in window coordinates, while the user drags. */
   capture: z.object({ area: rectSchema, openedAt: z.number() }).nullable(),
+  /** Pick Color (roadmap P3.5): a still of the page over its area, with a loupe. */
+  colorPick: z.object({ area: rectSchema, image: z.string(), openedAt: z.number() }).nullable(),
   /** The question currently being asked (others wait their turn). */
   prompt: promptSchema.nullable(),
   commandBar: z

@@ -50,6 +50,9 @@ export type ContextAction =
   | 'note-selection'
   | 'ask-page'
   | 'summarize-page'
+  // The Toolkit (roadmap P3.5): what's in an image; a screenshot to draw on.
+  | 'image-info'
+  | 'annotate-page'
   | `spell:${string}`;
 
 export type ContextItem =
@@ -113,6 +116,7 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
       item('copy-image', 'Copy Image'),
       item('copy-image-url', 'Copy Image Address'),
       item('capture-image', 'Save Image to Orbit…', isWeb(params.srcURL)),
+      item('image-info', 'Image Info…', isWeb(params.srcURL) || params.srcURL.startsWith('data:')),
     ]);
   }
 
@@ -138,6 +142,7 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
       item('summarize-page', 'Summarize Page'),
       item('ask-page', 'Ask Orbit About This Page'),
       item('capture-page', 'Save Page to Orbit…'),
+      item('annotate-page', 'Annotate Screenshot…'),
     ]);
   }
 

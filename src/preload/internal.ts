@@ -8,7 +8,7 @@ import type { OrbitInternalApi } from '@shared/types/orbit-api';
 // drive tabs or the sidebar.
 const CHANNEL = /^[a-z]+:[a-z][a-zA-Z]*$/;
 /** Keep in step with INTERNAL_EVENTS in the contract (a unit test checks). */
-const EVENTS = new Set(['assistant:update']);
+const EVENTS = new Set(['assistant:update', 'toolkit:update']);
 
 const api: OrbitInternalApi = {
   async invoke(channel, input) {

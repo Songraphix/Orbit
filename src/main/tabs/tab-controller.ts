@@ -87,6 +87,7 @@ export class TabController {
       crashed: false,
       devMode: false,
       consoleErrors: 0,
+      viewport: null,
     };
     this.view = this.createView(kind);
     this.pendingLoad = options.deferLoad ?? false;

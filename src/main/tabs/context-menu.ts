@@ -20,7 +20,11 @@ export type PageAssistRequest =
   | { kind: 'ask-page' }
   | { kind: 'summarize-page' };
 
-export type PageMenuRequest = PageCaptureRequest | PageAssistRequest;
+/** …or the Toolkit (roadmap P3.5): an image's details, a screenshot to annotate. */
+export type PageToolRequest =
+  { kind: 'image-info'; src: string; alt: string } | { kind: 'annotate-page' };
+
+export type PageMenuRequest = PageCaptureRequest | PageAssistRequest | PageToolRequest;
 
 /**
  * Electron shows no right-click menu in web pages; this builds Chrome's essentials (F-31).
@@ -92,7 +96,10 @@ export function attachContextMenu(
           return capture?.({ kind: action, text: params.selectionText });
         case 'ask-page':
         case 'summarize-page':
+        case 'annotate-page':
           return capture?.({ kind: action });
+        case 'image-info':
+          return capture?.({ kind: 'image-info', src: params.srcURL, alt: params.altText });
         case 'inspect':
           contents.inspectElement(params.x, params.y);
           if (contents.isDevToolsOpened()) contents.devToolsWebContents?.focus();

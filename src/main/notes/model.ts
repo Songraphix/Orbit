@@ -1,4 +1,5 @@
 import type { Rect } from '@shared/types/layout';
+import { TOOLKIT_SECTIONS } from '@shared/toolkit/state';
 
 /**
  * Notes (F-33): titles, previews and search from a note's plain text, and where floating notes
@@ -66,6 +67,13 @@ export function notesHash(param: string): string {
     }
     if (rest.length === 1 && id === 'research' && (sub === 'unsorted' || UUID.test(sub!))) {
       return `/notes/panel/research/${sub}`;
+    }
+    if (
+      rest.length === 1 &&
+      id === 'tools' &&
+      (TOOLKIT_SECTIONS as readonly string[]).includes(sub!)
+    ) {
+      return `/notes/panel/tools/${sub}`;
     }
     return '/not-found';
   }

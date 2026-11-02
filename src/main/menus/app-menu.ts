@@ -217,6 +217,7 @@ export function installAppMenu(actions: AppMenuActions): void {
           label: 'Summarize Page',
           click: () => actions.command('summarize-page'),
         },
+        { id: 'toolkit', label: 'Toolkit', click: () => actions.command('toolkit') },
         { type: 'separator' },
         {
           id: 'reload',
@@ -268,10 +269,29 @@ export function installAppMenu(actions: AppMenuActions): void {
               accelerator: 'Alt+CmdOrCtrl+I',
               click: actions.toggleTabDevTools,
             },
+            // The Toolkit's page tools (roadmap P3.5, P3.6).
+            {
+              id: 'responsive',
+              label: 'Responsive Design Mode',
+              accelerator: 'Alt+CmdOrCtrl+R',
+              click: () => actions.command('responsive'),
+            },
+            {
+              id: 'pick-color',
+              label: 'Pick Color',
+              accelerator: 'Ctrl+Shift+C',
+              click: () => actions.command('pick-color'),
+            },
+            {
+              id: 'annotate-screenshot',
+              label: 'Annotate Screenshot…',
+              click: () => actions.command('annotate-screenshot'),
+            },
             // Orbit's own UI, for debugging Orbit itself; development builds only.
             ...(app.isPackaged
               ? []
               : ([
+                  { type: 'separator' },
                   { label: 'Orbit Shell DevTools', role: 'toggleDevTools', accelerator: '' },
                   {
                     id: 'run-lifecycle',

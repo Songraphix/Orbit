@@ -48,6 +48,7 @@ export default function EaselCanvas({
   theme: 'light' | 'dark';
 }) {
   const api = useRef<ExcalidrawImperativeAPI | null>(null);
+  const pendingChecked = useRef(false);
   const [title, setTitle] = useState(easel.title);
   const [capturing, setCapturing] = useState(false);
   const pending = useRef<Scene | null>(null);
@@ -120,7 +121,15 @@ export default function EaselCanvas({
 
   return (
     <Excalidraw
-      excalidrawAPI={(instance) => (api.current = instance)}
+      excalidrawAPI={(instance) => {
+        api.current = instance;
+        // Started from Annotate Screenshot: the picture is waiting in main (once).
+        if (pendingChecked.current) return;
+        pendingChecked.current = true;
+        void window.orbit.invoke('easels:pending', { id: easel.id }).then((waiting) => {
+          if (waiting && api.current) placeCapture(api.current, waiting);
+        });
+      }}
       initialData={initialData}
       theme={theme}
       onChange={onChange}

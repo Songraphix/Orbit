@@ -35,6 +35,7 @@ describe('buildContextMenu', () => {
       'Summarize Page',
       'Ask Orbit About This Page',
       'Save Page to Orbit…',
+      'Annotate Screenshot…',
       '---',
       'Inspect Element',
     ]);
@@ -72,6 +73,7 @@ describe('buildContextMenu', () => {
       'Copy Image',
       'Copy Image Address',
       'Save Image to Orbit…',
+      'Image Info…',
       '---',
       'Inspect Element',
     ]);

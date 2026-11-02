@@ -42,6 +42,7 @@ export class OverlayController {
   private peek: PeekView | null = null;
   private siteControls: SiteControlsView | null = null;
   private capture: OverlayState['capture'] = null;
+  private colorPick: OverlayState['colorPick'] = null;
   private sidebarPeek: OverlayState['sidebarPeek'] = null;
   private createMenu: OverlayState['createMenu'] = null;
   private quickNote: OverlayState['quickNote'] = null;
@@ -83,6 +84,7 @@ export class OverlayController {
       peek: this.peek,
       siteControls: this.siteControls,
       capture: this.capture,
+      colorPick: this.colorPick,
       sidebarPeek: this.sidebarPeek,
       createMenu: this.createMenu,
       quickNote: this.quickNote,
@@ -101,6 +103,7 @@ export class OverlayController {
       this.peek !== null ||
       this.siteControls !== null ||
       this.capture !== null ||
+      this.colorPick !== null ||
       this.createMenu !== null ||
       this.quickNote !== null ||
       this.profileMenu !== null ||
@@ -150,6 +153,7 @@ export class OverlayController {
       this.peek !== null ||
       this.siteControls !== null ||
       this.capture !== null ||
+      this.colorPick !== null ||
       this.createMenu !== null ||
       this.quickNote !== null ||
       this.profileMenu !== null ||
@@ -285,6 +289,23 @@ export class OverlayController {
     if (!this.capture) return;
     this.capture = null;
     this.sync();
+  }
+
+  /** Pick Color: a still of the page (`image`) laid over its `area`, with a loupe. */
+  startColorPick(area: Rect, image: string): void {
+    this.siteControls = null;
+    this.colorPick = { area, image, openedAt: Date.now() };
+    this.show();
+  }
+
+  endColorPick(): void {
+    if (!this.colorPick) return;
+    this.colorPick = null;
+    this.sync();
+  }
+
+  get colorPicking(): boolean {
+    return this.colorPick !== null;
   }
 
   get siteControlsOpen(): boolean {

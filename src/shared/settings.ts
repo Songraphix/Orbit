@@ -64,6 +64,8 @@ export const settingsSchema = {
   'capture.lastProject': z.string().nullable(),
   /** AI (roadmap P3.7): on or off, the model, a monthly limit, attaching the page. */
   'ai.prefs': aiPrefsSchema,
+  /** The Toolkit's picked colours (roadmap P3.5), newest first. */
+  'toolkit.colors': z.array(z.string().max(32)).max(16),
   /** Search engine URL with %s for the query. */
   'search.engine': z.enum(['google', 'duckduckgo', 'bing', 'kagi', 'ecosia']),
 } as const;
@@ -92,6 +94,7 @@ export const settingsDefaults: Settings = {
   'capture.lastProject': null,
   'focus.session': null,
   'ai.prefs': DEFAULT_AI_PREFS,
+  'toolkit.colors': [],
 };
 
 /** Query URL templates for `search.engine`. */

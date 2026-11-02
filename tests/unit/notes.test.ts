@@ -52,6 +52,9 @@ describe('notesHash', () => {
   const id = '3f2a1c9e-8b7d-4e6f-9a1b-2c3d4e5f6a7b';
   it('routes the panel and floating notes, and nothing else', () => {
     expect(notesHash('panel')).toBe('/notes/panel');
+    expect(notesHash('panel/assistant')).toBe('/notes/panel/assistant');
+    expect(notesHash('panel/tools/json')).toBe('/notes/panel/tools/json');
+    expect(notesHash('panel/tools/nope')).toBe('/not-found');
     expect(notesHash(`panel/${id}`)).toBe(`/notes/panel/${id}`);
     expect(notesHash(`float/${id}`)).toBe(`/notes/float/${id}`);
     expect(notesHash('float')).toBe('/not-found');

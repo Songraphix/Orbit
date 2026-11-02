@@ -46,6 +46,7 @@ import {
 import { tabsSnapshotSchema } from '../types/tabs';
 import { aiActivitySchema, aiPrefsSchema, aiUsageSchema } from '../ai';
 import { ASSISTANT_LIMITS, assistantStateSchema, taskSuggestionSchema } from '../assistant';
+import { TOOLKIT_SECTIONS, toolkitStateSchema, viewportSchema } from '../toolkit/state';
 
 /**
  * Every IPC channel lives here (PLAN.md section 4.4). Names follow `domain:verb`.
@@ -1189,6 +1190,75 @@ export const contract = {
     output: z.void(),
     surfaces: ['internal'],
   },
+  // The Toolkit (roadmap P3.5, P3.6) in the productivity panel: colours, contrast, images, CSS,
+  // JSON and developer tools. Local only.
+  'toolkit:get': {
+    input: z.object({}).strict(),
+    output: toolkitStateSchema,
+    surfaces: ['internal'],
+  },
+  'toolkit:open': {
+    input: z.object({ section: z.enum(TOOLKIT_SECTIONS).optional() }).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'internal'],
+  },
+  /** Pick Color: the page under a loupe in the overlay. */
+  'toolkit:pickColor': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'internal'],
+  },
+  'toolkit:colorPicked': {
+    input: z.object({ hex: z.string().regex(/^#[0-9a-f]{6}$/i) }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'toolkit:cancelPick': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'toolkit:clearColors': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** The colours the page you're on uses. */
+  'toolkit:palette': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Looks for local development servers. */
+  'toolkit:servers': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Responsive mode for the page you're on (null: off). */
+  'toolkit:viewport': {
+    input: z.object({ viewport: viewportSchema.nullable() }).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'internal'],
+  },
+  /** Annotate Screenshot: drag over the page; it opens on a new Easel. */
+  'toolkit:annotate': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'internal'],
+  },
+  /** Opens a (local) address beside the page you're on. */
+  'toolkit:split': {
+    input: z.object({ url: z.string().max(2048) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** An Easel started from Annotate Screenshot asks for its picture once. */
+  'easels:pending': {
+    input: z.object({ id: easelIdSchema }).strict(),
+    output: easelCaptureSchema.nullable(),
+    surfaces: ['internal'],
+  },
 } as const satisfies Record<string, ChannelSpec>;
 
 export const events = {
@@ -1218,6 +1288,8 @@ export const events = {
   'toast:show': z.object({ message: z.string().max(200), at: z.number() }),
   /** The assistant's conversation, sent to its window's productivity panel. */
   'assistant:update': assistantStateSchema,
+  /** The Toolkit's state, sent to its window's productivity panel. */
+  'toolkit:update': toolkitStateSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type Contract = typeof contract;
@@ -1232,5 +1304,5 @@ export type EventPayload<E extends EventChannel> = z.output<Events[E]>;
 export const CHANNEL_NAME_PATTERN = /^[a-z]+:[a-z][a-zA-Z]*$/;
 
 /** The events internal orbit:// pages may listen to (main sends them to one page only). */
-export const INTERNAL_EVENTS = ['assistant:update'] as const;
+export const INTERNAL_EVENTS = ['assistant:update', 'toolkit:update'] as const;
 export type InternalEventChannel = (typeof INTERNAL_EVENTS)[number];

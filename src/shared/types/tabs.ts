@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { viewportSchema } from '../toolkit/state';
 
 /** What the shell needs to draw one tab (PLAN.md sections 4.7 and F-04). */
 export const tabStateSchema = z.object({
@@ -19,6 +20,8 @@ export const tabStateSchema = z.object({
   devMode: z.boolean(),
   /** Console errors since the page loaded (shown in Developer Mode). */
   consoleErrors: z.number(),
+  /** Responsive mode (roadmap P3.6): the device size the page is shown at, or null. */
+  viewport: viewportSchema.nullable(),
 });
 export type TabState = z.output<typeof tabStateSchema>;
 

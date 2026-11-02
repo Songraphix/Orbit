@@ -73,6 +73,19 @@ const ROUTES: Record<string, string> = {
      </script>`,
   ),
   '/three': page('Page Three'),
+  // The Toolkit (roadmap P3.5): known colours to pick and scan, and an image to inspect.
+  '/colors': page(
+    'Colours',
+    '<style>html, body { margin: 0; background: #5b5bd6; color: #222222; min-height: 100vh; }</style>' +
+      '<p>Plain text in a known colour.</p><img id="dot" src="/icon.png" alt="A dot">',
+  ),
+  // A responsive page (width=device-width), for responsive mode (roadmap P3.6).
+  '/mobile':
+    '<!doctype html><html><head><title>Mobile</title>' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1"></head>' +
+    '<body><h1>Mobile</h1></body></html>',
+  // A stand-in for a local development server (its page title is what Orbit shows).
+  '/': page('Test Dev Server'),
   // The assistant (roadmap Phase 3): an article to summarize, ask about and make tasks from.
   '/article': page(
     'Grid Systems',
@@ -371,6 +384,17 @@ export async function startTestServer(): Promise<TestServer> {
           'content-disposition': 'attachment; filename="report.txt"',
         })
         .end('Orbit download test\n');
+      return;
+    }
+    if (path === '/data.json') {
+      // JSON responses show as a tree (roadmap P3.6).
+      res.writeHead(200, { 'content-type': 'application/json' }).end(
+        JSON.stringify({
+          name: 'Orbit',
+          tags: ['browser', 'notes'],
+          site: 'https://example.com/',
+        }),
+      );
       return;
     }
     if (path === '/icon.png') {

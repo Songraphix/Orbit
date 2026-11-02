@@ -33,7 +33,14 @@ export type ResultInput = {
   work?: WorkHits;
   /** Archived tabs that match (roadmap P2.2). */
   archived?: readonly ArchivedHit[];
+  /** Development servers running on this Mac, when the query asks for them (roadmap P3.6). */
+  local?: readonly { port: number; url: string; title: string }[];
 };
+
+/** "localhost", "local", "127.0.0.1", ":5173", "dev server": the query wants local servers. */
+export function wantsLocalServers(query: string): boolean {
+  return /^(local|localhost|127\.0\.0\.1|:\d|dev\s*serv|server)/i.test(query.trim());
+}
 
 export type WorkHits = {
   projects: readonly { id: string; name: string; description: string }[];
@@ -159,6 +166,20 @@ export function buildResults(input: ResultInput): CommandItem[] {
       subtitle: input.mode === 'edit' ? 'Go to address' : 'Open address',
       favicon: null,
       url: input.classified.url,
+    });
+  }
+
+  // 1b. Local development servers (roadmap P3.6), narrowed by any port digits typed.
+  const digits = /\d{2,5}/.exec(query.replace(/127\.0\.0\.1/, ''))?.[0];
+  for (const server of input.local ?? []) {
+    if (digits && !String(server.port).startsWith(digits)) continue;
+    add({
+      id: `local:${server.port}`,
+      kind: 'navigate',
+      title: server.title,
+      subtitle: `Local server · localhost:${server.port}`,
+      favicon: null,
+      url: server.url,
     });
   }
 

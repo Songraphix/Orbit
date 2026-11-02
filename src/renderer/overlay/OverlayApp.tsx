@@ -4,6 +4,7 @@ import { CommandBar } from './CommandBar';
 import { PeekFrame } from './PeekFrame';
 import { SiteControls } from './SiteControls';
 import { CaptureLayer } from './CaptureLayer';
+import { ColorPickLayer } from './ColorPickLayer';
 import { PromptView } from './PromptView';
 import { FloatingSidebar } from './FloatingSidebar';
 import { CreateMenu } from './CreateMenu';
@@ -27,6 +28,7 @@ export function OverlayApp() {
     peek: null,
     siteControls: null,
     capture: null,
+    colorPick: null,
     sidebarPeek: null,
     createMenu: null,
     quickNote: null,
@@ -51,6 +53,12 @@ export function OverlayApp() {
     <CommandBar key={state.commandBar.openedAt} {...state.commandBar} />
   ) : state.capture ? (
     <CaptureLayer key={state.capture.openedAt} area={state.capture.area} />
+  ) : state.colorPick ? (
+    <ColorPickLayer
+      key={state.colorPick.openedAt}
+      area={state.colorPick.area}
+      image={state.colorPick.image}
+    />
   ) : state.siteControls ? (
     <SiteControls view={state.siteControls} />
   ) : state.createMenu ? (

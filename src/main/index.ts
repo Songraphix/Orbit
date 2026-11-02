@@ -29,7 +29,12 @@ import { domainForPage } from './boosts/model';
 import { boostIdSchema } from '@shared/types/boosts';
 import { librarySectionSchema } from '@shared/types/library';
 import { easelIdSchema } from '@shared/types/easels';
-import { newEasel, registerEaselHandlers } from './ipc/handlers/easels';
+import { easelUrl, newEasel, registerEaselHandlers } from './ipc/handlers/easels';
+import { ToolkitService } from './toolkit/service';
+import { attachJsonViewer } from './toolkit/json-viewer';
+import { registerToolkitHandlers } from './ipc/handlers/toolkit';
+import { VIEWPORT_PRESETS } from '@shared/toolkit/state';
+import type { EaselCapture } from '@shared/types/easels';
 import { CaptureRequests } from './easels/capture-requests';
 import { registerLibraryHandlers } from './ipc/handlers/library';
 import { MediaLibrary } from './library/media';
@@ -131,6 +136,7 @@ let floatingNotes: FloatingNotes | null = null;
 let captureService: CaptureService | null = null;
 let focusService: FocusService | null = null;
 let assistantService: AssistantService | null = null;
+let toolkitService: ToolkitService | null = null;
 
 function loadRenderer(win: BrowserWindow, entry: RendererEntry, query?: string): void {
   if (devServer) void win.loadURL(`${devServer}/${entry}/index.html${query ? `?${query}` : ''}`);
@@ -367,6 +373,19 @@ function pageMenuRequest(
     case 'summarize-page':
       assistantService?.open(controller, { summarize: true });
       return;
+    case 'image-info':
+      if (tab) {
+        void toolkitService?.inspectImage(
+          controller,
+          tab.view.webContents,
+          request.src,
+          request.alt,
+        );
+      }
+      return;
+    case 'annotate-page':
+      void toolkitService?.annotate(controller);
+      return;
     default:
       void captureService?.begin(controller, tab, request);
   }
@@ -448,6 +467,29 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'summarize-page':
       assistantService?.open(controller, { summarize: true });
       return;
+    case 'toolkit':
+      toolkitService?.open(controller);
+      return;
+    case 'format-json':
+      toolkitService?.open(controller, 'json');
+      return;
+    case 'pick-color':
+      void toolkitService?.pickColor(controller);
+      return;
+    case 'annotate-screenshot':
+      void toolkitService?.annotate(controller);
+      return;
+    case 'responsive': {
+      // Toggles: on at a phone's size, or back to normal.
+      const active = controller.tabs.active?.id;
+      const on = controller.tabs.snapshot().tabs.find((t) => t.id === active)?.viewport;
+      const phone = VIEWPORT_PRESETS.find((p) => p.name === 'iPhone 15')!;
+      toolkitService?.setViewport(
+        controller,
+        on ? null : { width: phone.width, height: phone.height, mobile: true },
+      );
+      return;
+    }
     case 'float-note':
       if (persistence) floatingNotes?.show(persistence.notes.create());
       return;
@@ -571,7 +613,10 @@ void app.whenReady().then(() => {
   });
   const refreshSidebars = () => windows?.all().forEach((c) => c.tabs.refresh());
   const tidy = new TidyService({ store, ai, onChange: refreshSidebars });
-  app.on('web-contents-created', (_event, contents) => boosts.attach(contents));
+  app.on('web-contents-created', (_event, contents) => {
+    boosts.attach(contents);
+    attachJsonViewer(contents); // JSON responses show as a tree (roadmap P3.6)
+  });
   /** One session per profile (F-17). The default profile keeps Electron's default session, so
    *  logins from before profiles existed carry over. */
   // Downloads go straight to ~/Downloads (tests use their own folder) and show on the shelf.
@@ -618,6 +663,33 @@ void app.whenReady().then(() => {
     changed: (controller) => controller.notes.refresh(),
   });
   const captureFlow = captureService;
+  // The Toolkit (roadmap P3.5, P3.6): Annotate Screenshot opens the picture on a new Easel.
+  const pendingAnnotations = new Map<string, EaselCapture>();
+  const toolkit = new ToolkitService({
+    settings: persistence.settings,
+    push: (controller, state) => {
+      const contents = controller.notes.contents;
+      if (contents) broadcaster.sendTo(contents, 'toolkit:update', state);
+    },
+    toast,
+    captures,
+    annotate: (controller, capture) => {
+      const easel = persistence!.easels.create({
+        title: `Notes on ${capture.sourceTitle || hostOf(capture.sourceUrl) || 'a page'}`.slice(
+          0,
+          120,
+        ),
+        spaceId: controller.tabs.space.id,
+      });
+      pendingAnnotations.set(easel.id, capture);
+      controller.tabs.create(easelUrl(easel.id));
+    },
+    ports: devOnly('ORBIT_TEST_DEV_PORTS')
+      ?.split(',')
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n > 0),
+  });
+  toolkitService = toolkit;
   const media = new MediaLibrary(join(app.getPath('userData'), 'Captures'), downloads);
 
   // Site permissions: ask in the window's overlay, remember per site (F-31).
@@ -701,7 +773,10 @@ void app.whenReady().then(() => {
     },
     capture: (controller, tabId, request) => pageMenuRequest(controller, tabId, request),
     tidyState: (spaceId) => tidy.state(spaceId),
-    onTabsChange: (controller) => assistantService?.pageChanged(controller),
+    onTabsChange: (controller) => {
+      assistantService?.pageChanged(controller);
+      toolkitService?.pageChanged(controller);
+    },
     liveFolders: {
       add: (controller, kind, spaceId) => void addLiveFolder(controller, kind, spaceId),
       refresh: (folderId) => void (folderId ? live.refresh(folderId) : live.refreshAll()),
@@ -907,6 +982,7 @@ void app.whenReady().then(() => {
   });
   assistantService = assistant;
   registerAssistantHandlers(router, windowManager, assistant);
+  registerToolkitHandlers(router, windowManager, toolkit, pendingAnnotations);
   registerTooltipHandlers(router, windowManager);
   const focus = new FocusService({
     settings: persistence.settings,
@@ -971,6 +1047,7 @@ void app.whenReady().then(() => {
         persistence!.archive
           .list(query, 2)
           .map(({ id, title, url, favicon }) => ({ id, title, url, favicon })),
+      () => toolkit.localServers(),
     ),
   );
   router.assertComplete();

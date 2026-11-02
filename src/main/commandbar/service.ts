@@ -3,7 +3,7 @@ import type { CommandBarMode, CommandItem } from '@shared/types/command-bar';
 import { classifyInput, searchUrl } from '../omnibox/classify';
 import type { HistoryRepository } from '../persistence/repositories/history';
 import type { WindowController } from '../windows/window-manager';
-import { buildResults, parseSuggestions, sameUrl } from './model';
+import { buildResults, parseSuggestions, sameUrl, wantsLocalServers } from './model';
 import type { ArchivedHit, CommandDef, OpenTab, WorkHits } from './model';
 
 /** Commands the bar can run (F-21). Each also has a menu shortcut, shown as the subtitle. */
@@ -94,6 +94,33 @@ export const COMMANDS: readonly CommandDef[] = [
     title: 'Summarize Page',
     keywords: ['ai', 'summary', 'tldr', 'claude', 'read', 'digest'],
   },
+  {
+    id: 'toolkit',
+    title: 'Toolkit',
+    keywords: ['colors', 'colours', 'contrast', 'css', 'json', 'developer', 'design', 'tools'],
+  },
+  {
+    id: 'pick-color',
+    title: 'Pick Color',
+    keywords: ['eyedropper', 'colour', 'hex', 'picker', 'design'],
+    shortcut: '⌃⇧C',
+  },
+  {
+    id: 'responsive',
+    title: 'Responsive Design Mode',
+    keywords: ['mobile', 'device', 'viewport', 'iphone', 'ipad', 'responsive', 'developer'],
+    shortcut: '⌥⌘R',
+  },
+  {
+    id: 'annotate-screenshot',
+    title: 'Annotate Screenshot',
+    keywords: ['markup', 'draw', 'arrow', 'screenshot', 'easel', 'annotate'],
+  },
+  {
+    id: 'format-json',
+    title: 'Format JSON',
+    keywords: ['json', 'prettify', 'minify', 'validate', 'developer'],
+  },
   { id: 'new-boost', title: 'New Boost', keywords: ['css', 'customise', 'customize', 'style'] },
   { id: 'archived-tabs', title: 'Archived Tabs', keywords: ['archive', 'closed', 'history'] },
   { id: 'settings', title: 'Settings', keywords: ['preferences', 'options'], shortcut: '⌘,' },
@@ -114,6 +141,8 @@ export class CommandBarService {
     private readonly work?: (query: string) => WorkHits,
     /** Archived tabs matching a query (roadmap P2.2). */
     private readonly archived?: (query: string) => ArchivedHit[],
+    /** Development servers on this Mac (roadmap P3.6), when the query asks for them. */
+    private readonly local?: () => Promise<{ port: number; url: string; title: string }[]>,
   ) {}
 
   /** Universal search: typing also finds tabs in your other Spaces (picking one goes there). */
@@ -145,9 +174,10 @@ export class CommandBarService {
     const mode: CommandBarMode = controller.overlay.mode ?? 'new';
     const trimmed = query.trim();
     const snapshot = controller.tabs.snapshot();
-    const [history, suggestions] = await Promise.all([
+    const [history, suggestions, local] = await Promise.all([
       Promise.resolve(trimmed ? this.history.search(trimmed, 10) : []),
       this.suggest(trimmed),
+      this.local && wantsLocalServers(trimmed) ? this.local().catch(() => []) : Promise.resolve([]),
     ]);
     return buildResults({
       query: trimmed,
@@ -169,6 +199,7 @@ export class CommandBarService {
       searchUrl,
       ...(trimmed && this.work ? { work: this.work(trimmed) } : {}),
       ...(trimmed && this.archived ? { archived: this.archived(trimmed) } : {}),
+      local,
     });
   }
 

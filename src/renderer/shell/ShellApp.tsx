@@ -1,3 +1,4 @@
+import { ResponsiveFrame } from './ResponsiveFrame';
 import type { FocusSession } from '@shared/focus';
 import type { ProfileView } from '@shared/profile';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -242,6 +243,9 @@ function ContentCard(props: {
           profile={props.profile}
           focus={props.focus}
         />
+      )}
+      {tab?.viewport && (
+        <ResponsiveFrame area={pane.webView} origin={pane.card} viewport={tab.viewport} />
       )}
       {props.snapshot && (
         <img

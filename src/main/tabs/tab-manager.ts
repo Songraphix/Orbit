@@ -20,6 +20,8 @@ import type { TabEnv } from './tab-controller';
 import { randomUUID } from 'node:crypto';
 import { profileView } from '../sidebar/profiles';
 import type { PageMenuRequest } from './context-menu';
+import { fitViewport } from '@shared/toolkit/viewport';
+import type { Viewport } from '@shared/toolkit/state';
 
 /** A pre-drag snapshot older than this is stale (the page may have changed). */
 const SNAPSHOT_MAX_AGE_MS = 10_000;
@@ -100,6 +102,11 @@ export class TabManager {
 
   /** Each Space's split, kept while you're on another tab (roadmap P2.4, saved layouts). */
   private readonly parked: Map<string, Split>;
+
+  /** Responsive mode: each tab's device size, and what was last sent to its page. */
+  private readonly viewports = new Map<string, Viewport>();
+  private readonly emulated = new Map<string, string>();
+  private readonly emulationWatch = new Set<number>();
 
   constructor(private readonly deps: TabManagerDeps) {
     this.spaceId = deps.store.space(deps.initialSpaceId)
@@ -274,6 +281,8 @@ export class TabManager {
     for (const [space, saved] of this.parked) {
       if (saved.ids.includes(id)) this.parked.delete(space);
     }
+    this.viewports.delete(id);
+    this.emulated.delete(id);
     this.saveSplits();
     const order = this.deps.store.tabsInOrder(this.space).map((i) => i.id);
     // Closing a split pane leaves its partner on screen, full width.
@@ -309,6 +318,7 @@ export class TabManager {
 
   /** Destroys a tab's live page but keeps the sidebar item (pinned close, space deletion…). */
   unload(id: string): void {
+    this.emulated.delete(id); // a woken page needs its device emulation again
     const tab = this.live.get(id);
     if (!tab) return;
     const partner = partnerOf(this.split, id);
@@ -712,7 +722,11 @@ export class TabManager {
   private tabState(item: SidebarItem): TabState {
     const tab = this.live.get(item.id);
     if (tab) {
-      const state = { ...tab.state, devMode: this.devModeFor(tab.state.url) };
+      const state = {
+        ...tab.state,
+        devMode: this.devModeFor(tab.state.url),
+        viewport: tab.state.kind === 'web' ? (this.viewports.get(item.id) ?? null) : null,
+      };
       return item.titleOverride ? { ...state, title: item.titleOverride } : state;
     }
     const url = item.url ?? NEW_TAB_URL;
@@ -728,6 +742,7 @@ export class TabManager {
       crashed: false,
       devMode: this.devModeFor(url),
       consoleErrors: 0,
+      viewport: null,
     };
   }
 
@@ -765,10 +780,64 @@ export class TabManager {
         tab.view.setVisible(false);
         return;
       }
-      tab.view.setBounds(bounds);
-      tab.view.setBorderRadius(layout.radius);
+      const viewport = tab.state.kind === 'web' ? this.viewports.get(id) : undefined;
+      if (viewport) {
+        // Responsive mode: the page at the device's size, under the shell's device bar.
+        const fit = fitViewport(bounds, viewport);
+        tab.view.setBounds(fit.bounds);
+        tab.view.setBorderRadius(viewport.mobile ? 22 : 10);
+        this.emulate(id, tab, viewport, fit.scale);
+      } else {
+        tab.view.setBounds(bounds);
+        tab.view.setBorderRadius(layout.radius);
+      }
       tab.view.setVisible(!this.frozen && !tab.state.crashed);
     });
+  }
+
+  /** Device emulation for responsive mode, sent only when it changes. */
+  private emulate(id: string, tab: TabController, viewport: Viewport, scale: number): void {
+    const key = `${viewport.width}x${viewport.height}:${viewport.mobile}:${scale}`;
+    if (this.emulated.get(id) === key) return;
+    this.emulated.set(id, key);
+    const size = { width: viewport.width, height: viewport.height };
+    // 'desktop' positioning at the device's size: the page lays out at exactly that width and
+    // its media queries match (Chromium's 'mobile' here ignores <meta name="viewport">).
+    tab.view.webContents.enableDeviceEmulation({
+      screenPosition: 'desktop',
+      screenSize: size,
+      viewSize: size,
+      viewPosition: { x: 0, y: 0 },
+      deviceScaleFactor: 0,
+      scale,
+    });
+  }
+
+  /**
+   * Responsive mode (roadmap P3.6): shows a web tab at a device's size (null: back to normal).
+   * Kept for the tab until it's turned off; a navigation keeps it.
+   */
+  setViewport(id: string, viewport: Viewport | null): void {
+    const tab = this.live.get(id);
+    if (!tab || tab.state.kind !== 'web') return;
+    const contents = tab.view.webContents;
+    if (viewport) {
+      this.viewports.set(id, viewport);
+      if (!this.emulationWatch.has(contents.id)) {
+        this.emulationWatch.add(contents.id);
+        // A new document (or renderer) needs the emulation again.
+        contents.on('did-navigate', () => {
+          this.emulated.delete(id);
+          if (this.viewports.has(id)) this.place();
+        });
+      }
+    } else {
+      this.viewports.delete(id);
+      this.emulated.delete(id);
+      if (!contents.isDestroyed()) contents.disableDeviceEmulation();
+    }
+    this.place();
+    this.scheduleNotify();
   }
 
   private attach(view: WebContentsView): void {
@@ -782,6 +851,7 @@ export class TabManager {
   }
 
   private replaceView(id: string, oldView: WebContentsView, newView: WebContentsView): void {
+    this.emulated.delete(id);
     this.detach(oldView);
     this.attach(newView);
     if (this.shownIds().includes(id)) this.place();

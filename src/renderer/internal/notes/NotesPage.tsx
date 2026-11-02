@@ -4,6 +4,7 @@ import {
   FolderClosed,
   NotebookPen,
   PanelRight,
+  PencilRuler,
   PictureInPicture2,
   Pin,
   PinOff,
@@ -30,6 +31,7 @@ import { WorkProvider } from '../work/WorkProvider';
 import { saveOpenNotes } from '../../notes/save-notes';
 import { useAppearance } from '../appearance';
 import { AssistantView } from '../assistant/AssistantView';
+import { ToolkitView } from '../toolkit/ToolkitView';
 
 const invoke = window.orbit.invoke;
 /** Moves (or deletes) a note — after saving every keystroke, so the next place has it all. */
@@ -134,7 +136,9 @@ export function NotesPanelPage() {
         ? 'tasks'
         : a === 'assistant'
           ? 'assistant'
-          : 'notes';
+          : a === 'tools'
+            ? 'tools'
+            : 'notes';
   // The board's Back returns to whichever list opened it.
   const lastList = useRef<PanelTab>('projects');
   useEffect(() => {
@@ -154,6 +158,7 @@ export function NotesPanelPage() {
   else if (a === 'research') body = <ResearchView filter={b} />;
   else if (a === 'board') body = <BoardView onBack={() => showPanelView(lastList.current)} />;
   else if (a === 'assistant') body = <AssistantView />;
+  else if (a === 'tools') body = <ToolkitView section={b} />;
   else body = a ? <PanelNote key={a} id={a} /> : <NotesList />;
   // Lists get the Quick Actions at their foot; a note, a project's page and the board don't.
   const lists = (a === 'projects' && !b) || a === 'tasks';
@@ -178,10 +183,10 @@ export function NotesPanelPage() {
   );
 }
 
-type PanelTab = 'notes' | 'projects' | 'tasks' | 'assistant';
+type PanelTab = 'notes' | 'projects' | 'tasks' | 'assistant' | 'tools';
 
 /**
- * Notes · Projects · Tasks · Assistant across the top of the panel (and Close). The open one
+ * Notes · Projects · Tasks · Assistant · Toolkit across the top of the panel (and Close). The open one
  * shows its name; the others are icons (named on hover), so all fit in the narrow column.
  */
 function PanelTabs({ current }: { current: PanelTab }) {
@@ -190,6 +195,7 @@ function PanelTabs({ current }: { current: PanelTab }) {
     { id: 'projects', label: 'Projects', icon: <FolderClosed size={15} /> },
     { id: 'tasks', label: 'Tasks', icon: <SquareCheck size={15} /> },
     { id: 'assistant', label: 'Assistant', icon: <Sparkles size={15} />, keys: '⌘J' },
+    { id: 'tools', label: 'Toolkit', icon: <PencilRuler size={15} /> },
   ];
   return (
     <nav

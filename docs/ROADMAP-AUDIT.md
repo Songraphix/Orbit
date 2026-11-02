@@ -28,8 +28,8 @@ database in the main process (`node:sqlite`, migrations in `src/main/persistence
 | Orbit Capture                | **Build** (Phase 2)   | Area capture exists for Easels                                                                                   | Capture page, selection or snippet into a project.                   | High     |
 | Universal search             | **Build** (Phase 2)   | Command bar groundwork in P1.3                                                                                   | After data models settle.                                            | High     |
 | Focus mode                   | **Build** (Phase 2)   | —                                                                                                                | Needs project/task context first (done in P1.1).                     | High     |
-| AI page assistant            | **Build** (Phase 3)   | Anthropic key handling (Keychain) and Tidy already exist                                                         | Explicit, permissioned page access.                                  | High     |
-| Creative / Developer toolkit | **Build** (Phase 3)   | Boosts, Developer Mode, area capture                                                                             | Small local utilities.                                               | Medium   |
+| AI page assistant            | **Done** (Phase 3)    | Anthropic key handling (Keychain) and Tidy already exist                                                         | Explicit, permissioned page access.                                  | High     |
+| Creative / Developer toolkit | **Done** (Phase 3)    | Boosts, Developer Mode, area capture                                                                             | Small local utilities.                                               | Medium   |
 | Project templates            | **Defer** (Phase 4)   | —                                                                                                                | After the basic workflow is validated.                               | Medium   |
 | GitHub integration           | **Keep** (partial)    | Live Folders show PRs and issues                                                                                 | Deeper links in Phase 4.                                             | Later    |
 | Automation engine, Sync      | **Defer**             | —                                                                                                                | Not validated; local data first.                                     | Later    |
@@ -81,3 +81,23 @@ into a task, and resume the work from a saved workspace._
 - 2026-11-01 — **Phase 2 done.** Acceptance passes end to end with a restart (`roadmap-phase2.spec.ts`).
   Next: Phase 3 (AI page assistant, summaries with sources, selection → notes/tasks, creative and
   developer toolkits), after the owner has used Phase 2.
+
+## Phase 3 — "Make Orbit intelligent"
+
+The owner asked (2026-11-01) to run Phases 3 and 4 without stopping, then audit the whole app.
+
+| Roadmap item                                 | Status    | Built on                                     | What was done                                                                                                                                                                          |
+| -------------------------------------------- | --------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AI side panel with explicit page access      | **Build** | Productivity panel; Tidy's key store and SDK | P3.1: Assistant tab (⌘J, ✦): the page, a selection or research go only when attached; pages are read in an isolated world when the question is sent                                    |
+| Summaries with source references             | **Build** | Anthropic citations                          | P3.2: Summarize Page; answers carry numbered sources that scroll the page to the cited passage (or open a finding at the quoted words)                                                 |
+| Selected text → notes and tasks              | **Build** | Notes, Tasks, Capture's right-click menu     | P3.3: Ask About Selection, Make Tasks from Selection (structured output → pick → add), New Note from Selection; Save to Notes for any answer                                           |
+| Questions across selected research           | **Build** | Captures (P2.1)                              | P3.4: attach a project's findings; answers cite them                                                                                                                                   |
+| Creative Toolkit                             | **Build** | Area capture, Easels                         | P3.5: Pick Color (loupe), page palette, WCAG contrast with the nearest passing color, Image Info (format, size, EXIF, alt), CSS units/shadow/gradient, Annotate Screenshot on an Easel |
+| Developer utilities                          | **Build** | Developer Mode                               | P3.6: JSON pages as a tree, a JSON formatter, Responsive Design Mode (device sizes via emulation), local dev servers in ⌘T and the Toolkit                                             |
+| AI provider configuration, usage and privacy | **Build** | Settings → AI                                | P3.7: on/off, model, page-attach default, privacy note, monthly limit, activity log of what was sent (metadata only, migration 017)                                                    |
+
+- 2026-11-02 — **P3.1–P3.4, P3.7 done**: the assistant (`assistant.spec.ts`).
+- 2026-11-02 — **P3.5, P3.6 done**: the Toolkit (`toolkit.spec.ts`).
+- 2026-11-02 — **Phase 3 done.** Acceptance — summary with sources, kept as a note and tasks,
+  local tools, then a restart (the conversation is gone, the log and what you kept remain) — passes
+  (`roadmap-phase3.spec.ts`).
