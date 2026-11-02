@@ -1,6 +1,6 @@
 # Progress log
 
-## Current phase: Expert audit (UI/UX, function, speed) after roadmap Phases 1–4
+## Current phase: Roadmap Phases 1–4 and the audit done — owner dogfooding, then v0.1.0
 
 Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0.0.1/Orbit-0.0.1-arm64.dmg` (built 2026-11-01 with icon and fuses, launch-verified)
 
@@ -14,6 +14,11 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 - [ ] Look at the translucent sidebar / theme colours (can't be screenshotted from here)
 - [ ] Tidy: paste your Anthropic API key in Settings → AI, then press Tidy in a space with several Today tabs (only titles and sites are sent)
 - [ ] Remaining Arc exports from PLAN.md "Do this first": passwords, Easels (no Boosts to move: the owner had none)
+- [ ] Assistant (⌘J): with your Anthropic key, Summarize a real article and click a source number (it should scroll to the passage); Settings → AI shows what was sent and the month's cost
+- [ ] Toolkit: Pick Color (⌃⇧C) on a real site; Responsive Design Mode (⌥⌘R) on a site you build; type "localhost" in ⌘T while a dev server runs
+- [ ] A project that follows one of your GitHub repositories (Edit Project → GitHub repository); add a token in Settings → Integrations for private ones
+- [ ] Settings → Rules: with Orbit as the default browser, a link from Slack or Mail to a site you route opens in its Space
+- [ ] Settings → Backup: choose a folder (iCloud Drive keeps a copy off the Mac) and, if you like, a passphrase
 - [ ] Add your extensions: open each Web Store page in Orbit → site controls (sliders button) → Add to Orbit; then fill "Usage" / "Blocker?" in docs/reference/extensions.md
 
 ## Done
@@ -109,10 +114,11 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 - 2026-11-02 — **Roadmap P4.6: more creative and developer tools.** The Toolkit gains **Type** — the fonts a page uses (family, sizes, weights, how often; read in an isolated world) and a modular type scale (base size, ratio) as copyable CSS custom properties — and **Code**, which gathers the JSON tools with **encode/decode** (Base64 with UTF-8, URL, HTML entities; a JWT's header and payload), **timestamps** (Unix seconds/ms, ISO, local), **UUIDs** and a **regular expression tester** (matches and groups). Seven sections, as icons with the open one named
 - 2026-11-02 — **Roadmap P4.7: backup and restore.** **Settings → Backup**: **Back Up…** writes one `.orbitbackup` file where you choose (the database — projects, tasks, notes, research, Spaces, tabs, settings — and the Library's screenshots; never the Anthropic or GitHub keys); **back up every day** to a folder you choose (keep 5/10/30; a folder that syncs keeps a copy off the Mac); **encrypt backups** with a passphrase (AES-256-GCM, key by scrypt; stored in the Keychain; Orbit can't recover a forgotten one); **Restore…** asks for an encrypted backup's passphrase, stages it, and Orbit swaps it in at the next start, keeping what was there in `before-restore/<time>` (never deleted; "Don't Restore" cancels). The privacy model and sync limits are spelled out on the page: nothing is uploaded; no merging between Macs
 - 2026-11-02 — **Roadmap Phase 4 complete.** Acceptance — a templated project following its GitHub repository and a link rule, kept and working after a restart — passes (`roadmap-phase4.spec.ts`)
+- 2026-11-02 — **Expert audit** (docs/AUDIT.md): measured speed, bundles, dependencies, contrast, layouts and security. Fixed: renderers now minified (bundles ~halve); the productivity panel draws its first content in ~250 ms instead of ~550 ms (no Suspense throttle; the note editor loads only for notes); `adm-zip` pinned to 0.6.1 (npm audit clean); Arc-style tooltips on Orbit's own pages; one spelling of "Color"; a see-through-sheet regression caught and guarded by a test; Settings fits beside the panel (icon sidebar, wrapping rows); ⌘T opens the panel's views; secondary and accent text meet WCAG AA
 
 ## In progress
 
-- M1 buffer: owner dogfooding, then v0.1.0
+- Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0
 
 ## Decisions made
 

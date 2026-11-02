@@ -125,6 +125,8 @@ test('commands run from the bar; ⇧⌘T reopens the last closed tab', async () 
   // Copy URL puts the active page's address on the clipboard.
   await clickMenu(app, 'new-tab');
   await bar.getByTestId('command-input').fill(server.url('/two'));
+  // (Under a busy full run, wait for the address's own result before pressing Enter.)
+  await expect(bar.getByTestId('command-item').first()).toHaveAttribute('data-kind', 'navigate');
   await bar.getByTestId('command-input').press('Enter');
   await expect(win.getByTestId('toolbar-address')).toContainText('Page Two');
   await clickMenu(app, 'copy-url');
