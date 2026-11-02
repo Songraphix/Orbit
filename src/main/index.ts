@@ -34,6 +34,8 @@ import { ToolkitService } from './toolkit/service';
 import { attachJsonViewer } from './toolkit/json-viewer';
 import { registerToolkitHandlers } from './ipc/handlers/toolkit';
 import { GithubService, cleanGithubToken } from './github/service';
+import { applyPendingRestore, BackupService } from './backup/service';
+import { registerBackupHandlers } from './ipc/handlers/backup';
 import { VIEWPORT_PRESETS } from '@shared/toolkit/state';
 import type { EaselCapture } from '@shared/types/easels';
 import { CaptureRequests } from './easels/capture-requests';
@@ -592,6 +594,8 @@ app.on('will-quit', () => {
 void app.whenReady().then(() => {
   // The packaged app gets its icon from the bundle; in development, show it in the Dock too.
   if (!app.isPackaged) app.dock?.setIcon(join(import.meta.dirname, '../../resources/icon.png'));
+  // A backup staged for restoring (roadmap P4.7) takes the current data's place first.
+  if (applyPendingRestore(app.getPath('userData'))) console.log('[orbit] restored from backup');
   persistence = openPersistence(app.getPath('userData'));
   const store = new SidebarStore(persistence.sidebar);
   sidebarStore = store;
@@ -1043,6 +1047,43 @@ void app.whenReady().then(() => {
   assistantService = assistant;
   registerAssistantHandlers(router, windowManager, assistant);
   registerToolkitHandlers(router, windowManager, toolkit, pendingAnnotations);
+  // Backups (roadmap P4.7): to a folder you choose; optionally daily, optionally encrypted.
+  const backupKey = new AiKeyStore(
+    join(app.getPath('userData'), 'backup-passphrase.bin'),
+    testCipher ?? safeStorage,
+  );
+  const backups = new BackupService({
+    db: persistence.db,
+    userData: app.getPath('userData'),
+    appVersion: app.getVersion(),
+    passphrase: () => backupKey.get(),
+  });
+  let backupError: string | null = null;
+  const runAutoBackup = async (force: boolean) => {
+    const auto = persistence!.settings.get('backup.auto');
+    if (!auto) return;
+    try {
+      const file = await backups.autoBackup(
+        auto.folder,
+        auto.keep,
+        force ? null : persistence!.settings.get('backup.last'),
+      );
+      if (file) persistence!.settings.set('backup.last', Date.now());
+      backupError = null;
+    } catch (error) {
+      backupError = error instanceof Error ? error.message : String(error);
+      console.error('[orbit] automatic backup failed', error);
+    }
+  };
+  setTimeout(() => void runAutoBackup(false), 30_000).unref();
+  setInterval(() => void runAutoBackup(false), 6 * 3_600_000).unref();
+  registerBackupHandlers(router, windowManager, {
+    backups,
+    settings: persistence.settings,
+    passphrase: backupKey,
+    lastError: () => backupError,
+    runAuto: runAutoBackup,
+  });
   registerTooltipHandlers(router, windowManager);
   const focus = new FocusService({
     settings: persistence.settings,

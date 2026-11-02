@@ -2,6 +2,7 @@ import {
   Info,
   Keyboard,
   Archive,
+  DatabaseBackup,
   LayoutTemplate,
   Plug,
   Route,
@@ -221,6 +222,10 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
 
           <Section id="integrations" title="Integrations">
             <IntegrationsSection />
+          </Section>
+
+          <Section id="backup" title="Backup">
+            <BackupSection />
           </Section>
 
           <Section id="shortcuts" title="Shortcuts">
@@ -574,6 +579,7 @@ const NAV = [
   { id: 'workspaces', label: 'Workspaces', icon: <LayoutTemplate size={16} /> },
   { id: 'rules', label: 'Rules', icon: <Route size={16} /> },
   { id: 'integrations', label: 'Integrations', icon: <Plug size={16} /> },
+  { id: 'backup', label: 'Backup', icon: <DatabaseBackup size={16} /> },
   { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard size={16} /> },
   { id: 'ai', label: 'AI', icon: <Sparkles size={16} /> },
   { id: 'privacy', label: 'Privacy', icon: <Shield size={16} /> },
@@ -853,7 +859,7 @@ function WorkspacesSection() {
         {templates?.length === 0 && (
           <p className="px-4 py-5 text-sm text-neutral-500" data-testid="templates-empty">
             Right-click a Space and choose <b>Save as Workspace Template</b>. New Spaces — and new
-            projects’ workspaces — can then start with its tabs, icon and colours.
+            projects’ workspaces — can then start with its tabs, icon and colors.
           </p>
         )}
         {templates?.map((t) => (
@@ -1131,6 +1137,250 @@ function AddRule(props: { spaces: { id: string; name: string }[]; onAdded: () =>
         </div>
       </div>
     </Group>
+  );
+}
+
+/**
+ * Settings → Backup (roadmap P4.7): one-file backups to a folder you choose (by hand or daily),
+ * optionally encrypted, and restoring one — with what that means for your privacy, in words.
+ */
+function BackupSection() {
+  const [status, setStatus] = useState<InvokeOutput<'backup:status'> | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [passphrase, setPassphrase] = useState('');
+  const [passError, setPassError] = useState<string | null>(null);
+  const [restorePass, setRestorePass] = useState<string | null>(null);
+  const load = () =>
+    void window.orbit.invoke('backup:status', {}).then((next) => {
+      setStatus(next);
+      setNow(Date.now());
+    });
+  useEffect(load, []);
+  if (!status) return null;
+  const BUTTON =
+    'rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50 disabled:opacity-40';
+  const restore = (pass?: string) => {
+    setBusy(true);
+    void window.orbit
+      .invoke('backup:restore', pass === undefined ? {} : { passphrase: pass })
+      .then((r) => {
+        setBusy(false);
+        setMessage(r.message);
+        setRestorePass(r.status === 'passphrase' ? '' : null);
+        load();
+      });
+  };
+  return (
+    <>
+      <Group title="Back up">
+        <Row
+          label="Back Up Now"
+          hint={
+            status.last
+              ? `Last backup ${relativeTime(status.last, now)}.`
+              : 'Your projects, tasks, notes, research, Spaces, tabs and settings, in one file.'
+          }
+        >
+          <button
+            type="button"
+            disabled={busy}
+            className={BUTTON}
+            onClick={() => {
+              setBusy(true);
+              void window.orbit.invoke('backup:now', {}).then((r) => {
+                setBusy(false);
+                if (r.file) setMessage(`Backed up to ${r.file}`);
+                load();
+              });
+            }}
+            data-testid="backup-now"
+          >
+            Back Up…
+          </button>
+        </Row>
+        <Row
+          label="Back up every day"
+          hint={
+            status.auto
+              ? `To ${status.auto.folder}, keeping the newest ${status.auto.keep}.`
+              : 'Choose a folder — one that syncs (iCloud Drive, Dropbox) keeps a copy off this Mac.'
+          }
+        >
+          <div className="flex items-center gap-2">
+            {status.auto && (
+              <select
+                value={status.auto.keep}
+                onChange={(e) =>
+                  void window.orbit
+                    .invoke('backup:auto', { action: 'keep', keep: Number(e.target.value) })
+                    .then(load)
+                }
+                className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                aria-label="Backups to keep"
+                data-testid="backup-keep"
+              >
+                {[5, 10, 30].map((n) => (
+                  <option key={n} value={n}>
+                    Keep {n}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              type="button"
+              className={BUTTON}
+              onClick={() =>
+                void window.orbit.invoke('backup:auto', { action: 'choose' }).then(load)
+              }
+              data-testid="backup-choose-folder"
+            >
+              {status.auto ? 'Change…' : 'Choose Folder…'}
+            </button>
+            {status.auto && (
+              <button
+                type="button"
+                className={BUTTON}
+                onClick={() =>
+                  void window.orbit.invoke('backup:auto', { action: 'off' }).then(load)
+                }
+                data-testid="backup-auto-off"
+              >
+                Turn Off
+              </button>
+            )}
+          </div>
+        </Row>
+        {status.error && (
+          <p className="px-4 py-2 text-xs text-red-600" data-testid="backup-error">
+            The last automatic backup failed: {status.error}
+          </p>
+        )}
+        <Row
+          label="Encrypt backups"
+          hint={
+            status.encrypted
+              ? 'On. Backups need the passphrase to restore — Orbit can’t recover a forgotten one.'
+              : 'Off. Anyone with a backup file can read it. Set a passphrase to encrypt (AES-256).'
+          }
+        >
+          {status.encrypted ? (
+            <button
+              type="button"
+              className={BUTTON}
+              onClick={() =>
+                void window.orbit.invoke('backup:passphrase', { passphrase: null }).then(load)
+              }
+              data-testid="backup-passphrase-remove"
+            >
+              Turn Off
+            </button>
+          ) : (
+            <form
+              className="flex flex-col items-end gap-1"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void window.orbit.invoke('backup:passphrase', { passphrase }).then((r) => {
+                  setPassError(r.error);
+                  if (r.ok) {
+                    setPassphrase('');
+                    load();
+                  }
+                });
+              }}
+            >
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={passphrase}
+                  onChange={(e) => setPassphrase(e.target.value)}
+                  placeholder="Passphrase"
+                  autoComplete="new-password"
+                  disabled={!status.canStore}
+                  className="w-40 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                  data-testid="backup-passphrase"
+                />
+                <button type="submit" disabled={!passphrase} className={BUTTON}>
+                  Set
+                </button>
+              </div>
+              {passError && <span className="text-xs text-red-600">{passError}</span>}
+            </form>
+          )}
+        </Row>
+      </Group>
+
+      <Group title="Restore">
+        <Row
+          label="Restore from Backup"
+          hint={
+            status.restorePending
+              ? 'A backup is ready: Orbit restores it the next time it starts.'
+              : 'Replaces what’s in Orbit now with a backup. What you have now is kept aside.'
+          }
+        >
+          {status.restorePending ? (
+            <button
+              type="button"
+              className={BUTTON}
+              onClick={() => void window.orbit.invoke('backup:cancelRestore', {}).then(load)}
+              data-testid="backup-cancel-restore"
+            >
+              Don’t Restore
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              className={BUTTON}
+              onClick={() => restore()}
+              data-testid="backup-restore"
+            >
+              Restore…
+            </button>
+          )}
+        </Row>
+        {restorePass !== null && (
+          <form
+            className="flex items-center gap-2 px-4 py-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              restore(restorePass);
+            }}
+          >
+            <input
+              type="password"
+              value={restorePass}
+              onChange={(e) => setRestorePass(e.target.value)}
+              placeholder="The backup’s passphrase"
+              className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+              data-testid="backup-restore-passphrase"
+            />
+            <button type="submit" disabled={!restorePass} className={BUTTON}>
+              Open Backup
+            </button>
+          </form>
+        )}
+        {message && (
+          <p className="px-4 py-2 text-xs text-neutral-600" data-testid="backup-message">
+            {message}
+          </p>
+        )}
+      </Group>
+
+      <Group title="Privacy and sync">
+        <div
+          className="px-4 py-3 text-xs leading-relaxed text-neutral-500"
+          data-testid="backup-privacy"
+        >
+          Backups go only to the folder you choose — Orbit never uploads them anywhere. If that
+          folder syncs (iCloud Drive, Dropbox), that service stores a copy; encrypt your backups to
+          keep it private. Your Anthropic and GitHub keys are never in a backup. To move to another
+          Mac, restore a backup there: Orbit doesn’t merge changes made on two Macs.
+        </div>
+      </Group>
+    </>
   );
 }
 

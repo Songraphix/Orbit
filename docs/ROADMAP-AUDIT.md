@@ -101,3 +101,17 @@ The owner asked (2026-11-01) to run Phases 3 and 4 without stopping, then audit 
 - 2026-11-02 — **Phase 3 done.** Acceptance — summary with sources, kept as a note and tasks,
   local tools, then a restart (the conversation is gone, the log and what you kept remain) — passes
   (`roadmap-phase3.spec.ts`).
+
+## Phase 4 — "Build the Orbit ecosystem"
+
+| Roadmap item                                      | Status    | Built on                         | What was done                                                                                                                                                            |
+| ------------------------------------------------- | --------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Project templates (design, development, research) | **Build** | Projects, workspace templates    | P4.1: three built-in templates with starter tasks (due relative to the start); Save as Template from any project; Settings lists them                                    |
+| Optional GitHub integration                       | **Build** | Live Folders' GitHub fetch       | P4.2: a project follows a repository — open PRs and issues on its page, each a task away; optional token (Keychain) for private repos                                    |
+| Cloud storage and task services                   | **Build** | Research (captures), tasks       | P4.3: recognised service links (Figma, Google Docs, Notion, Linear, Jira…) open in split; tasks export to CSV/Markdown and import from other services' CSV or checklists |
+| User-defined automation rules                     | **Build** | Little Orbit, archive policy     | P4.4: link routing for links from other apps (Space / Little Orbit / where you are); a Space's own archive time                                                          |
+| Advanced tab and workspace management             | **Build** | Sidebar store                    | P4.5: Sort Today, Close Duplicate Tabs, Archive Tabs from Before Today (multi-select deferred to the backlog)                                                            |
+| More creative and developer extensions            | **Build** | Toolkit (P3.5, P3.6)             | P4.6: fonts on the page, type scale; encode/decode, JWT, timestamps, UUIDs, regex tester                                                                                 |
+| Optional sync and backup, clear privacy model     | **Build** | Daily database backup (PLAN 5.3) | P4.7: one-file backups to a chosen folder, daily option, passphrase encryption, restore at next start; sync = backups in a synced folder (no merging)                    |
+
+- 2026-11-02 — **Phase 4 done.** Acceptance passes with a restart (`roadmap-phase4.spec.ts`). Next: an expert audit of the whole app.

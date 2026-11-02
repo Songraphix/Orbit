@@ -69,6 +69,12 @@ export const settingsSchema = {
   'toolkit.colors': z.array(z.string().max(32)).max(16),
   /** Your rules (roadmap P4.4): where links from other apps go; a Space's own archive time. */
   rules: rulesSchema,
+  /** Automatic backups (roadmap P4.7): a folder you chose and how many to keep (null = off). */
+  'backup.auto': z
+    .object({ folder: z.string().max(1024), keep: z.number().int().min(1).max(60) })
+    .nullable(),
+  /** When the last backup was written (automatic or by hand). */
+  'backup.last': z.number().nullable(),
   /** Search engine URL with %s for the query. */
   'search.engine': z.enum(['google', 'duckduckgo', 'bing', 'kagi', 'ecosia']),
 } as const;
@@ -99,6 +105,8 @@ export const settingsDefaults: Settings = {
   'ai.prefs': DEFAULT_AI_PREFS,
   'toolkit.colors': [],
   rules: [],
+  'backup.auto': null,
+  'backup.last': null,
 };
 
 /** Query URL templates for `search.engine`. */

@@ -1353,6 +1353,58 @@ export const contract = {
     output: z.void(),
     surfaces: ['internal'],
   },
+  // Settings → Backup (roadmap P4.7): one-file backups to a folder you choose, and restoring.
+  'backup:status': {
+    input: z.object({}).strict(),
+    output: z.object({
+      auto: z.object({ folder: z.string(), keep: z.number() }).nullable(),
+      last: z.number().nullable(),
+      encrypted: z.boolean(),
+      canStore: z.boolean(),
+      error: z.string().nullable(),
+      restorePending: z.boolean(),
+    }),
+    surfaces: ['internal'],
+  },
+  /** A save dialog, then the backup. */
+  'backup:now': {
+    input: z.object({}).strict(),
+    output: z.object({ file: z.string().nullable(), bytes: z.number() }),
+    surfaces: ['internal'],
+  },
+  /** Automatic backups: choose the folder (an open dialog), or change how many, or turn off. */
+  'backup:auto': {
+    input: z
+      .object({
+        action: z.enum(['choose', 'keep', 'off']),
+        keep: z.number().int().min(1).max(60).optional(),
+      })
+      .strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'backup:passphrase': {
+    input: z.object({ passphrase: z.string().max(200).nullable() }).strict(),
+    output: z.object({ ok: z.boolean(), error: z.string().nullable() }),
+    surfaces: ['internal'],
+  },
+  /**
+   * Restore: an open dialog (the first time), then the backup is staged for the next start —
+   * or, for an encrypted one, `passphrase` is asked for and sent back here.
+   */
+  'backup:restore': {
+    input: z.object({ passphrase: z.string().max(200).optional() }).strict(),
+    output: z.object({
+      status: z.enum(['cancelled', 'passphrase', 'ready', 'error']),
+      message: z.string().nullable(),
+    }),
+    surfaces: ['internal'],
+  },
+  'backup:cancelRestore': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
 } as const satisfies Record<string, ChannelSpec>;
 
 export const events = {
