@@ -4,23 +4,17 @@ import type { FormEvent, ReactNode } from 'react';
 import { greetingFor } from '@shared/profile';
 import { quoteFor } from '@shared/quotes';
 import type { NewTabState, WallpaperChoice } from '@shared/types/newtab';
-import type { Shortcut } from '@shared/types/home';
 import { BackgroundSection, UnsplashCredit, Wallpaper } from './backgrounds';
 import { DEFAULT_LOOK } from '@shared/backgrounds';
 import type { BackgroundLook } from '@shared/backgrounds';
 import { WidgetGrid } from './widgets';
+import { Dock } from './Dock';
 import { HomeMenu } from './HomeMenu';
 import { BUILTIN_WALLPAPERS } from '@shared/types/newtab';
 import { layoutFromShow, newWidget } from '@shared/home-widgets';
 import type { HomeLayout } from '@shared/home-widgets';
 
 const invoke = window.orbit.invoke;
-
-/** Main's error text without Electron's "Error invoking remote method…" prefix. */
-const messageOf = (e: unknown) =>
-  (e instanceof Error ? e.message : String(e))
-    .replace(/^Error invoking remote method '[^']+': /, '')
-    .replace(/^Error: /, '');
 
 /**
  * orbit://newtab (owner request, 2026-11-01): the time, a greeting by name, your tagline, a
@@ -94,7 +88,9 @@ export function NewTabPage() {
 
       {state && (
         <div
-          className={`relative flex min-h-full flex-col px-8 pb-6 ${compact ? 'pt-[3vh]' : 'pt-[6vh]'}`}
+          className={`relative flex min-h-full flex-col px-8 ${
+            state.home.show.shortcuts ? 'pb-28' : 'pb-6'
+          } ${compact ? 'pt-[3vh]' : 'pt-[6vh]'}`}
         >
           <section className="flex flex-col items-center text-center">
             <Clock compact={compact} />
@@ -105,9 +101,6 @@ export function NewTabPage() {
               </p>
             )}
             <SearchBox light={light} />
-            {state.home.show.shortcuts && (
-              <Shortcuts shortcuts={state.shortcuts} light={light} onChange={setState} />
-            )}
           </section>
           <div className="min-h-8 flex-1" />
           <WidgetGrid
@@ -129,6 +122,10 @@ export function NewTabPage() {
             }
           />
         </div>
+      )}
+
+      {state?.home.show.shortcuts && (
+        <Dock shortcuts={state.shortcuts} light={light} glass={glass(light)} onChange={setState} />
       )}
 
       {menuAt && state && (
@@ -327,203 +324,39 @@ function SearchBox({ light }: { light: boolean }) {
   };
 
   return (
-    <form onSubmit={submit} className="mt-[4vh] w-full max-w-[880px]" role="search">
+    <form onSubmit={submit} className="mt-[3.5vh] w-full max-w-[600px]" role="search">
       <label
-        className={`flex h-[62px] items-center gap-4 rounded-full px-7 transition focus-within:ring-2 ${
+        className={`flex h-[46px] items-center gap-3 rounded-full px-5 transition focus-within:ring-2 ${
           light ? 'focus-within:ring-black/10' : 'focus-within:ring-white/25'
         } ${glass(light)}`}
       >
-        <Search size={22} className="shrink-0 opacity-80" />
+        <Search size={17} className="shrink-0 opacity-80" />
         <input
           ref={input}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Search the web"
           aria-label="Search or enter an address"
-          className={`h-full min-w-0 flex-1 bg-transparent text-[18px] outline-none ${
+          className={`h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none ${
             light ? 'placeholder:text-neutral-500' : 'placeholder:text-white/65'
           }`}
           spellCheck={false}
           autoComplete="off"
           data-testid="newtab-search"
         />
-        <span className="flex shrink-0 gap-1 text-[13px] font-medium opacity-70" aria-hidden>
-          <kbd className={`rounded-[7px] px-2 py-0.5 ${light ? 'bg-black/[0.07]' : 'bg-white/15'}`}>
+        <span className="flex shrink-0 gap-1 text-[11px] font-medium opacity-70" aria-hidden>
+          <kbd
+            className={`rounded-[6px] px-1.5 py-0.5 ${light ? 'bg-black/[0.07]' : 'bg-white/15'}`}
+          >
             ⌘
           </kbd>
-          <kbd className={`rounded-[7px] px-2 py-0.5 ${light ? 'bg-black/[0.07]' : 'bg-white/15'}`}>
+          <kbd
+            className={`rounded-[6px] px-1.5 py-0.5 ${light ? 'bg-black/[0.07]' : 'bg-white/15'}`}
+          >
             K
           </kbd>
         </span>
       </label>
-    </form>
-  );
-}
-
-const LETTER_COLORS = ['#5b5bd6', '#0a84ff', '#30a46c', '#e5484d', '#f76b15', '#d6409f'];
-
-function ShortcutIcon({ shortcut }: { shortcut: Shortcut }) {
-  if (shortcut.icon) {
-    return <img src={shortcut.icon} alt="" className="size-9 rounded-[9px] object-contain" />;
-  }
-  const letter = shortcut.title.charAt(0).toUpperCase() || '?';
-  const color = LETTER_COLORS[letter.charCodeAt(0) % LETTER_COLORS.length];
-  return (
-    <span
-      className="grid size-9 place-items-center rounded-[10px] text-[17px] font-bold text-white"
-      style={{ background: color }}
-    >
-      {letter}
-    </span>
-  );
-}
-
-function Shortcuts({
-  shortcuts,
-  light,
-  onChange,
-}: {
-  shortcuts: Shortcut[];
-  light: boolean;
-  onChange: (s: NewTabState) => void;
-}) {
-  const [adding, setAdding] = useState(false);
-  const tile = `grid size-[78px] place-items-center rounded-[22px] ${glass(light)}`;
-  return (
-    <ul
-      className="mt-[4.5vh] flex flex-wrap justify-center gap-x-6 gap-y-4"
-      data-testid="shortcuts"
-    >
-      {shortcuts.map((s) => (
-        <li key={s.id} className="group relative animate-row-in">
-          <button
-            type="button"
-            onClick={() => void invoke('newtab:navigate', { input: s.url })}
-            className="press flex w-[86px] flex-col items-center gap-2"
-            title={s.url}
-            data-testid="shortcut"
-          >
-            <span className={`${tile} transition group-hover:-translate-y-0.5`}>
-              <ShortcutIcon shortcut={s} />
-            </span>
-            <span
-              className="max-w-full truncate text-[14px] font-medium [text-shadow:0_1px_8px_rgb(0_0_0/0.2)]"
-              data-testid="shortcut-name"
-            >
-              {s.title}
-            </span>
-          </button>
-          <button
-            type="button"
-            aria-label={`Remove ${s.title}`}
-            onClick={() =>
-              void invoke('newtab:shortcut', { action: 'remove', id: s.id }).then(onChange)
-            }
-            className="absolute -top-1.5 right-0.5 grid size-6 place-items-center rounded-full bg-neutral-900/80 text-white opacity-0 shadow transition group-hover:opacity-100 hover:bg-neutral-900"
-            data-testid="shortcut-remove"
-          >
-            <X size={12} strokeWidth={2.5} />
-          </button>
-        </li>
-      ))}
-      {shortcuts.length < 10 && (
-        <li className="relative">
-          <button
-            type="button"
-            onClick={() => setAdding((open) => !open)}
-            className="press flex w-[86px] flex-col items-center gap-2"
-            data-testid="shortcut-add"
-          >
-            <span className={tile}>
-              <Plus size={26} strokeWidth={1.75} className="opacity-85" />
-            </span>
-            <span className="text-[14px] font-medium">Add</span>
-          </button>
-          {adding && (
-            <AddShortcut light={light} onClose={() => setAdding(false)} onChange={onChange} />
-          )}
-        </li>
-      )}
-    </ul>
-  );
-}
-
-function AddShortcut({
-  light,
-  onClose,
-  onChange,
-}: {
-  light: boolean;
-  onClose: () => void;
-  onChange: (s: NewTabState) => void;
-}) {
-  const [title, setTitle] = useState('');
-  const [url, setUrl] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const field = `h-9 w-full rounded-[11px] px-3 text-[14px] outline-none ${
-    light ? 'bg-black/[0.06] placeholder:text-neutral-500' : 'bg-white/10 placeholder:text-white/45'
-  }`;
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!url.trim()) return;
-    setBusy(true);
-    invoke('newtab:shortcut', { action: 'add', title, url }).then(
-      (next) => {
-        onChange(next);
-        onClose();
-      },
-      (err: unknown) => {
-        setBusy(false);
-        setError(messageOf(err));
-      },
-    );
-  };
-  return (
-    <form
-      onSubmit={submit}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
-      className={`animate-pop absolute top-full left-1/2 z-20 mt-3 w-64 -translate-x-1/2 rounded-[18px] p-3 text-left ${glass(light)}`}
-      data-testid="shortcut-form"
-    >
-      <input
-        ref={(el) => el?.focus()}
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        placeholder="Address (figma.com)"
-        className={field}
-        data-testid="shortcut-url"
-      />
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Name (optional)"
-        maxLength={40}
-        className={`${field} mt-2`}
-        data-testid="shortcut-title"
-      />
-      {error && (
-        <p className="mt-2 text-[12px] text-red-400" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="mt-3 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full px-3 py-1.5 text-[13px] opacity-75"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={busy || !url.trim()}
-          className="press rounded-full bg-[#0a84ff] px-4 py-1.5 text-[13px] font-semibold text-white disabled:opacity-50"
-          data-testid="shortcut-save"
-        >
-          Add
-        </button>
-      </div>
     </form>
   );
 }

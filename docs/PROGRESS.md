@@ -159,6 +159,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — Owner request: **the video pop-out's − docks it in the sidebar**, like a music player: the window shrinks and fades into the sidebar's foot, the video goes home still playing, and the **mini player** takes over — now laid out like Arc's (title, Pop Out Video, ×; then **previous, play/pause, next, mute**). Previous / next press the site's own media session controls (a small shim records the handlers a site sets; dimmed when it offers none — sites that set them before the page finishes loading aren't caught). The mini player's pop-out button floats the video again
 
+- 2026-11-02 — Owner request: **Homepage — a Mac Dock, a smaller search bar, blur as a switch.** Shortcuts now sit in a **Dock** along the bottom: a glass shelf of app-like tiles (the site's icon on white, or a coloured letter) that grow under the pointer and rise out of the shelf, the name above the one you point at, × to remove, + after a divider. The search bar is about two-thirds its old size. Customize → Background has a plain **Blur background** switch (the amount slider appears when it's on), and photos no longer get the film grain, which made them look soft
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0

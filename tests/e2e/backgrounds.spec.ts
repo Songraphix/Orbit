@@ -57,6 +57,9 @@ test('backgrounds: preview and cancel, colours, gradients, adjustments, favourit
     // Adjustments: darker and blurred, kept.
     await page.getByTestId('background-adjust').locator('summary').click();
     await page.getByTestId('look-brightness').fill('70');
+    // Blur is a plain switch (owner request); its amount shows once it's on.
+    await expect(page.getByTestId('look-blur')).toHaveCount(0);
+    await page.getByTestId('look-blur-toggle').check();
     await page.getByTestId('look-blur').fill('8');
     await expect(page.getByTestId('wallpaper-image')).toHaveCSS(
       'filter',

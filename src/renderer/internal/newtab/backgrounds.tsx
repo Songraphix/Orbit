@@ -56,11 +56,13 @@ export function Wallpaper(props: {
         />
       )}
       {/* Grain plus a soft vignette keeps text readable on any wallpaper; light glass adds a
-          pale veil instead. */}
-      <div
-        className="absolute inset-0 opacity-[0.12] mix-blend-overlay"
-        style={{ background: GRAIN }}
-      />
+          pale veil instead. Photos stay crisp: no grain over them. */}
+      {!image && (
+        <div
+          className="absolute inset-0 opacity-[0.12] mix-blend-overlay"
+          style={{ background: GRAIN }}
+        />
+      )}
       <div
         className={`absolute inset-0 transition-colors duration-500 ${
           props.light
@@ -515,59 +517,75 @@ function Adjustments(props: {
     timer.current = window.setTimeout(() => void invoke('newtab:setLook', { look: next }), 350);
   };
   return (
-    <details
-      className="mt-3 rounded-[12px] bg-white/[0.06] px-3 py-2"
-      data-testid="background-adjust"
-    >
-      <summary className="cursor-pointer text-[13px] font-medium">Adjust</summary>
-      <div className="mt-2 flex flex-col gap-2">
-        {SLIDERS.filter((s) => !s.imageOnly || props.image).map((s) => (
-          <label key={s.key} className="flex items-center gap-2 text-[12.5px]">
-            <span className="w-24 shrink-0 opacity-80">{s.label}</span>
-            <input
-              type="range"
-              min={s.min}
-              max={s.max}
-              value={look[s.key]}
-              onChange={(e) => set({ [s.key]: Number(e.target.value) })}
-              className="flex-1 accent-white"
-              data-testid={`look-${s.key}`}
-            />
-          </label>
-        ))}
-        {props.image && (
-          <div className="flex gap-2 text-[12.5px]">
-            <select
-              value={look.fit}
-              onChange={(e) => set({ fit: e.target.value as BackgroundLook['fit'] })}
-              className="h-7 flex-1 rounded-full bg-white/10 px-2 outline-none"
-              aria-label="Fit"
-            >
-              <option value="cover">Fill the page</option>
-              <option value="contain">Show it all</option>
-            </select>
-            <select
-              value={look.position}
-              onChange={(e) => set({ position: e.target.value as BackgroundLook['position'] })}
-              className="h-7 flex-1 rounded-full bg-white/10 px-2 outline-none"
-              aria-label="Position"
-            >
-              <option value="center">Centre</option>
-              <option value="top">Top</option>
-              <option value="bottom">Bottom</option>
-            </select>
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={() => set(DEFAULT_LOOK)}
-          className="flex items-center gap-1.5 self-start text-[12.5px] opacity-75 hover:opacity-100"
-          data-testid="look-reset"
-        >
-          <RotateCcw size={12} /> Reset adjustments
-        </button>
-      </div>
-    </details>
+    <>
+      {/* Owner request: blur is a plain choice, not hidden in the sliders. */}
+      <label className="mt-3 flex items-center justify-between gap-3 rounded-[12px] bg-white/[0.06] px-3 py-2 text-[13px] font-medium">
+        Blur background
+        <input
+          type="checkbox"
+          role="switch"
+          checked={look.blur > 0}
+          onChange={(e) => set({ blur: e.target.checked ? 8 : 0 })}
+          className="orbit-switch"
+          data-testid="look-blur-toggle"
+        />
+      </label>
+      <details
+        className="mt-2 rounded-[12px] bg-white/[0.06] px-3 py-2"
+        data-testid="background-adjust"
+      >
+        <summary className="cursor-pointer text-[13px] font-medium">Adjust</summary>
+        <div className="mt-2 flex flex-col gap-2">
+          {SLIDERS.filter(
+            (s) => (!s.imageOnly || props.image) && (s.key !== 'blur' || look.blur > 0),
+          ).map((s) => (
+            <label key={s.key} className="flex items-center gap-2 text-[12.5px]">
+              <span className="w-24 shrink-0 opacity-80">{s.label}</span>
+              <input
+                type="range"
+                min={s.min}
+                max={s.max}
+                value={look[s.key]}
+                onChange={(e) => set({ [s.key]: Number(e.target.value) })}
+                className="flex-1 accent-white"
+                data-testid={`look-${s.key}`}
+              />
+            </label>
+          ))}
+          {props.image && (
+            <div className="flex gap-2 text-[12.5px]">
+              <select
+                value={look.fit}
+                onChange={(e) => set({ fit: e.target.value as BackgroundLook['fit'] })}
+                className="h-7 flex-1 rounded-full bg-white/10 px-2 outline-none"
+                aria-label="Fit"
+              >
+                <option value="cover">Fill the page</option>
+                <option value="contain">Show it all</option>
+              </select>
+              <select
+                value={look.position}
+                onChange={(e) => set({ position: e.target.value as BackgroundLook['position'] })}
+                className="h-7 flex-1 rounded-full bg-white/10 px-2 outline-none"
+                aria-label="Position"
+              >
+                <option value="center">Centre</option>
+                <option value="top">Top</option>
+                <option value="bottom">Bottom</option>
+              </select>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => set(DEFAULT_LOOK)}
+            className="flex items-center gap-1.5 self-start text-[12.5px] opacity-75 hover:opacity-100"
+            data-testid="look-reset"
+          >
+            <RotateCcw size={12} /> Reset adjustments
+          </button>
+        </div>
+      </details>
+    </>
   );
 }
 
