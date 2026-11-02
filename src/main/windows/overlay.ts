@@ -48,6 +48,7 @@ export class OverlayController {
   private quickNote: OverlayState['quickNote'] = null;
   private profileMenu: OverlayState['profileMenu'] = null;
   private captureCard: OverlayState['captureCard'] = null;
+  private shot: OverlayState['shot'] = null;
   private tooltip: Omit<NonNullable<OverlayState['tooltip']>, 'alone'> | null = null;
   private flight: OverlayState['flight'] = null;
   private flightTimer: ReturnType<typeof setTimeout> | null = null;
@@ -95,6 +96,7 @@ export class OverlayController {
       quickNote: this.quickNote,
       profileMenu: this.profileMenu,
       captureCard: this.captureCard,
+      shot: this.shot,
       tooltip: this.tooltip && { ...this.tooltip, alone: this.onlyTooltip },
       flight: this.flight,
       backdrop: this.backdrop,
@@ -113,6 +115,7 @@ export class OverlayController {
       this.quickNote !== null ||
       this.profileMenu !== null ||
       this.captureCard !== null ||
+      this.shot !== null ||
       this.flight !== null ||
       this.sidebarPeek !== null
     );
@@ -130,7 +133,8 @@ export class OverlayController {
       this.createMenu !== null ||
       this.quickNote !== null ||
       this.profileMenu !== null ||
-      this.captureCard !== null
+      this.captureCard !== null ||
+      this.shot !== null
     );
   }
 
@@ -309,6 +313,19 @@ export class OverlayController {
   endCapture(): void {
     if (!this.capture) return;
     this.capture = null;
+    this.sync();
+  }
+
+  /** The screenshot card: a preview of the shot just taken and what to do with it. */
+  showShot(shot: Omit<NonNullable<OverlayState['shot']>, 'at'>): void {
+    this.siteControls = null;
+    this.shot = { ...shot, at: Date.now() };
+    this.show();
+  }
+
+  closeShot(): void {
+    if (!this.shot) return;
+    this.shot = null;
     this.sync();
   }
 

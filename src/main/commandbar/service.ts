@@ -155,6 +155,12 @@ export const COMMANDS: readonly CommandDef[] = [
     shortcut: '⌥⌘R',
   },
   {
+    id: 'screenshot',
+    title: 'Take Screenshot',
+    keywords: ['screenshot', 'capture', 'snap', 'grab', 'picture', 'copy'],
+    shortcut: '⇧⌘2',
+  },
+  {
     id: 'annotate-screenshot',
     title: 'Annotate Screenshot',
     keywords: ['markup', 'draw', 'arrow', 'screenshot', 'easel', 'annotate'],

@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   ArrowRight,
   BookmarkPlus,
+  Camera,
   Bug,
   Check,
   Lock,
@@ -88,6 +89,7 @@ export function Toolbar({
   const prefs = useUiPrefs();
   const shown = {
     capture: isShown(prefs, 'capture'),
+    screenshot: isShown(prefs, 'screenshot'),
     focus: isShown(prefs, 'focus'),
     assistant: isShown(prefs, 'assistant'),
     notes: isShown(prefs, 'notes'),
@@ -234,6 +236,17 @@ export function Toolbar({
             testId="toolbar-site-controls"
           >
             <SlidersHorizontal size={14} />
+          </ToolbarButton>
+        )}
+        {tab?.kind === 'web' && shown.screenshot && (
+          <ToolbarButton
+            label="Take Screenshot"
+            keys="⇧⌘2"
+            anim="pop"
+            onClick={() => void window.orbit.invoke('shot:start', {})}
+            testId="toolbar-screenshot"
+          >
+            <Camera size={14} />
           </ToolbarButton>
         )}
         {tab?.kind === 'web' && shown.capture && (

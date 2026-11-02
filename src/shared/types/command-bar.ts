@@ -117,6 +117,18 @@ export const overlayStateSchema = z.object({
       at: z.number(),
     })
     .nullable(),
+  /** A screenshot just taken (owner request): a preview and what to do with it. */
+  shot: z
+    .object({
+      preview: z.string(),
+      width: z.number(),
+      height: z.number(),
+      /** Under the toolbar, at the page's top-right corner (window coordinates). */
+      anchor: rectSchema,
+      at: z.number(),
+    })
+    .nullable()
+    .default(null),
   /** Orbit Capture (roadmap P2.1): the card that saves a finding to a project. */
   captureCard: z.object({ openedAt: z.number() }).nullable(),
   /** A quick note (F-33): a glass card over the page; it writes into note `id`. */

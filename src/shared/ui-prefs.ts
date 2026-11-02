@@ -18,6 +18,7 @@ export const FEATURES = [
   'library',
   'capture',
   'easels',
+  'screenshot',
 ] as const;
 export type Feature = (typeof FEATURES)[number];
 
@@ -31,6 +32,7 @@ export const FEATURE_LABEL: Record<Feature, { label: string; hint: string }> = {
   library: { label: 'Library', hint: 'The button at the bottom of the sidebar' },
   capture: { label: 'Save to Orbit', hint: 'The toolbar button' },
   easels: { label: 'Easels', hint: 'The sidebar row' },
+  screenshot: { label: 'Screenshot', hint: 'The toolbar button (⇧⌘2 still works)' },
 };
 
 export const TEXT_SIZES = ['small', 'default', 'large', 'larger'] as const;

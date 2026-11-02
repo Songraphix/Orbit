@@ -92,6 +92,12 @@ export function installAppMenu(actions: AppMenuActions): void {
           click: () => actions.command('new-easel'),
         },
         {
+          id: 'screenshot',
+          label: 'Take Screenshot',
+          accelerator: 'Shift+CmdOrCtrl+2',
+          click: () => actions.command('screenshot'),
+        },
+        {
           id: 'capture',
           label: 'Save to Orbit…',
           accelerator: 'Shift+CmdOrCtrl+S',

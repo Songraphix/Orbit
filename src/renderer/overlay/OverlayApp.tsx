@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { OverlayState } from '@shared/types/command-bar';
 import { CommandBar } from './CommandBar';
+import { ShotCard } from './ShotCard';
 import { PeekFrame } from './PeekFrame';
 import { SiteControls } from './SiteControls';
 import { CaptureLayer } from './CaptureLayer';
@@ -35,6 +36,7 @@ export function OverlayApp() {
     quickNote: null,
     profileMenu: null,
     captureCard: null,
+    shot: null,
     tooltip: null,
     flight: null,
     backdrop: null,
@@ -66,6 +68,8 @@ export function OverlayApp() {
     <CreateMenu key={state.createMenu.openedAt} anchor={state.createMenu.anchor} />
   ) : state.profileMenu ? (
     <ProfileMenu key={state.profileMenu.openedAt} anchor={state.profileMenu.anchor} />
+  ) : state.shot ? (
+    <ShotCard key={state.shot.at} shot={state.shot} />
   ) : state.captureCard ? (
     <CaptureCard key={state.captureCard.openedAt} />
   ) : state.quickNote ? (

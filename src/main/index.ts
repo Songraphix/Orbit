@@ -586,6 +586,14 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'annotate-screenshot':
       void toolkitService?.annotate(controller);
       return;
+    case 'screenshot': {
+      // ⇧⌘2: drag an area of the page (a click takes all of it), then choose what to do.
+      const tab = controller.tabs.active;
+      if (tab?.state.kind !== 'web') return;
+      controller.overlay.closeShot();
+      controller.overlay.startCapture(tab.view.getBounds());
+      return;
+    }
     case 'responsive': {
       // Toggles: on at a phone's size, or back to normal.
       const active = controller.tabs.active?.id;
@@ -802,6 +810,18 @@ void app.whenReady().then(() => {
   const captureFlow = captureService;
   // The Toolkit (roadmap P3.5, P3.6): Annotate Screenshot opens the picture on a new Easel.
   const pendingAnnotations = new Map<string, EaselCapture>();
+  /** A picture on a new Easel, to mark up (Annotate Screenshot; the screenshot card). */
+  const annotateCapture = (controller: WindowController, capture: EaselCapture) => {
+    const easel = persistence!.easels.create({
+      title: `Notes on ${capture.sourceTitle || hostOf(capture.sourceUrl) || 'a page'}`.slice(
+        0,
+        120,
+      ),
+      spaceId: controller.tabs.space.id,
+    });
+    pendingAnnotations.set(easel.id, capture);
+    controller.tabs.create(easelUrl(easel.id));
+  };
   const toolkit = new ToolkitService({
     settings: persistence.settings,
     push: (controller, state) => {
@@ -810,17 +830,7 @@ void app.whenReady().then(() => {
     },
     toast,
     captures,
-    annotate: (controller, capture) => {
-      const easel = persistence!.easels.create({
-        title: `Notes on ${capture.sourceTitle || hostOf(capture.sourceUrl) || 'a page'}`.slice(
-          0,
-          120,
-        ),
-        spaceId: controller.tabs.space.id,
-      });
-      pendingAnnotations.set(easel.id, capture);
-      controller.tabs.create(easelUrl(easel.id));
-    },
+    annotate: annotateCapture,
     ports: devOnly('ORBIT_TEST_DEV_PORTS')
       ?.split(',')
       .map(Number)
@@ -1110,6 +1120,7 @@ void app.whenReady().then(() => {
     resetZoom: (controller) => zoom(controller, 'reset'),
     saveCapture: (png) => media.saveCapture(png),
     captures,
+    openInEasel: annotateCapture,
   });
   registerEaselHandlers(router, windowManager, { easels: persistence.easels, captures, toast });
   const notesRepo = persistence.notes;

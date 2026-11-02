@@ -473,6 +473,18 @@ export const contract = {
     output: z.void(),
     surfaces: ['overlay'],
   },
+  /** The toolbar's screenshot button (⇧⌘2): drag an area of the page, or click for all of it. */
+  'shot:start': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell'],
+  },
+  /** What to do with the screenshot just taken (its card in the overlay). */
+  'shot:action': {
+    input: z.object({ action: z.enum(['copy', 'save', 'saveAs', 'easel', 'dismiss']) }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
   /** Developer Mode's toolbar button (F-30). */
   /** The sidebar address pill's link icon (Arc): copies the active page's address. */
   'tabs:copyUrl': {

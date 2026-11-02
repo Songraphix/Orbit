@@ -1,4 +1,7 @@
-import { clipboard, ClipboardItem, dialog, Menu, ShareMenu } from 'electron';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { app, clipboard, ClipboardItem, dialog, Menu, ShareMenu } from 'electron';
+import type { EaselCapture } from '@shared/types/easels';
 import type { MenuItemConstructorOptions } from 'electron';
 import type { Rect } from '@shared/types/layout';
 import type { SiteControlsView } from '@shared/types/site-controls';
@@ -25,7 +28,17 @@ export type SiteControlsDeps = {
   saveCapture: (png: Buffer) => void;
   /** Captures an Easel is waiting for. */
   captures: CaptureRequests;
+  /** The screenshot card's "Open in Easel": a new Easel with the picture on it. */
+  openInEasel: (controller: WindowController, capture: EaselCapture) => void;
 };
+
+/** A screenshot's file name: "Screenshot 2026-11-02 at 17.40.12.png", like macOS. */
+export function screenshotName(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const day = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  const time = `${pad(date.getHours())}.${pad(date.getMinutes())}.${pad(date.getSeconds())}`;
+  return `Screenshot ${day} at ${time}.png`;
+}
 
 /**
  * The site controls popover (F-12, Img 3): quick actions, settings for this site, and the
@@ -236,6 +249,43 @@ export function registerSiteControlsHandlers(
     }
   });
 
+  /** The screenshot each window's card is offering (owner request: choose what to do with it). */
+  const shots = new WeakMap<WindowController, { png: Buffer; capture: EaselCapture }>();
+
+  router.handle('shot:start', (_input, { sender }) => {
+    const controller = windowFor(sender.webContentsId);
+    const site = activeSite(controller);
+    if (!site) return;
+    controller.overlay.closeShot();
+    controller.overlay.startCapture(site.tab.view.getBounds());
+  });
+
+  router.handle('shot:action', async ({ action }, { sender }) => {
+    const controller = windowFor(sender.webContentsId);
+    const shot = shots.get(controller);
+    controller.overlay.closeShot();
+    shots.delete(controller);
+    if (!shot || action === 'dismiss') return;
+    if (action === 'copy') {
+      const png = new Blob([new Uint8Array(shot.png)], { type: 'image/png' });
+      await clipboard.write([new ClipboardItem({ 'image/png': png })]);
+      deps.toast(controller, 'Screenshot copied');
+    } else if (action === 'save') {
+      deps.saveCapture(shot.png);
+      deps.toast(controller, 'Saved to Library');
+    } else if (action === 'saveAs') {
+      const { canceled, filePath } = await dialog.showSaveDialog(controller.win, {
+        defaultPath: join(app.getPath('downloads'), screenshotName(new Date())),
+        filters: [{ name: 'PNG Image', extensions: ['png'] }],
+      });
+      if (canceled || !filePath) return;
+      await writeFile(filePath, shot.png);
+      deps.toast(controller, 'Screenshot saved');
+    } else {
+      deps.openInEasel(controller, shot.capture);
+    }
+  });
+
   router.handle('capture:take', async ({ rect }, { sender }) => {
     const controller = windowFor(sender.webContentsId);
     const site = activeSite(controller);
@@ -254,18 +304,24 @@ export function registerSiteControlsHandlers(
     const bytes = image.toPNG();
     // An Easel asked for this capture: it goes there, not to the clipboard.
     const size = crop ?? { width: area.width, height: area.height };
-    const forEasel = deps.captures.settle(controller, {
+    const capture: EaselCapture = {
       dataUrl: `data:image/png;base64,${bytes.toString('base64')}`,
       width: size.width,
       height: size.height,
       sourceUrl: site.url,
       sourceTitle: site.tab.state.title,
+    };
+    if (deps.captures.settle(controller, capture)) return; // an Easel asked for it
+    // Nobody asked: a card offers Copy, Save to Library, Save As…, Open in Easel.
+    shots.set(controller, { png: bytes, capture });
+    const pixels = image.getSize();
+    const preview = image.resize({ width: Math.min(560, pixels.width), quality: 'good' });
+    controller.overlay.showShot({
+      preview: preview.toDataURL(),
+      width: size.width,
+      height: size.height,
+      anchor: { x: area.x + area.width, y: area.y, width: 0, height: 0 },
     });
-    if (forEasel) return;
-    deps.saveCapture(bytes);
-    const png = new Blob([new Uint8Array(bytes)], { type: 'image/png' });
-    await clipboard.write([new ClipboardItem({ 'image/png': png })]);
-    deps.toast(controller, 'Screenshot copied');
   });
 
   router.handle('capture:cancel', (_input, { sender }) => {

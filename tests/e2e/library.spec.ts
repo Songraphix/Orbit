@@ -60,7 +60,8 @@ test('Library: sections in the sidebar, media from screenshots, downloads, back 
   const bar = await overlay(app);
   await bar.getByTestId('site-screenshot').click();
   await invoke(bar, 'capture:take', { rect: null });
-  await expect(win.getByTestId('toolbar-toast')).toContainText('Screenshot copied');
+  await bar.getByTestId('shot-save').click();
+  await expect(win.getByTestId('toolbar-toast')).toContainText('Saved to Library');
 
   // A download for Library → Downloads.
   await invoke(win, 'tabs:create', { url: server.url('/report.txt') });

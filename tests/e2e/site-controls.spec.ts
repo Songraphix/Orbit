@@ -112,6 +112,10 @@ test('Screenshot: drag an area over the page, it lands on the clipboard at that 
   await bar.mouse.move(page.x + 120, page.y + 70, { steps: 4 });
   await bar.mouse.up();
 
+  // A card asks what to do with it (owner request): Copy.
+  await expect(bar.getByTestId('shot-card')).toBeVisible();
+  await bar.getByTestId('shot-copy').click();
+  await expect(bar.getByTestId('shot-card')).toHaveCount(0);
   await expect(win.getByTestId('toolbar-toast')).toContainText('Screenshot copied');
   await expect(bar.getByTestId('capture-layer')).toHaveCount(0);
   const size = await app.evaluate(async ({ clipboard, nativeImage }) => {
