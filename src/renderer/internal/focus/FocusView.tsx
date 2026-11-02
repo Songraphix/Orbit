@@ -35,6 +35,7 @@ import type { FocusView as FocusState } from '@shared/focus';
 import { SOUND_GROUPS, SOUNDS } from '@shared/sounds';
 import type { SoundId } from '@shared/sounds';
 import { useWork } from '../work/context';
+import { Toggle } from '../../ui/Toggle';
 
 const invoke = window.orbit.invoke;
 
@@ -307,12 +308,11 @@ function Setup({ state, setPrefs }: { state: FocusState; setPrefs: SetPrefs }) {
               </button>
             </span>
           </span>
-          <input
-            type="checkbox"
+          <Toggle
             checked={prefs.block}
-            onChange={(e) => setPrefs({ block: e.target.checked })}
-            className="size-4 accent-[var(--work-accent)]"
-            data-testid="focus-block"
+            onChange={(block) => setPrefs({ block })}
+            label="Block distracting sites"
+            testId="focus-block"
           />
         </label>
         {editing && (

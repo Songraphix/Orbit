@@ -17,6 +17,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { SpaceIcon } from '../shell/sidebar/SpaceIcon';
+import { buttonClass, FIELD } from '../ui/controls';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { UserSettings } from '@shared/settings';
@@ -68,7 +69,11 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
       <SettingsNav />
       <main className="min-w-0 flex-1 px-5 pt-9 pb-24 md:px-10">
         <div className="mx-auto max-w-2xl">
-          <Section id="general" title="General">
+          <Section
+            id="general"
+            title="General"
+            description="How Orbit looks and behaves day to day."
+          >
             <Group title="Appearance">
               <Row label="Appearance" hint="Light, dark, or the same as your Mac.">
                 <AppearancePicker
@@ -90,7 +95,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
                   onChange={(e) =>
                     update({ tabLayout: e.target.value as UserSettings['tabLayout'] })
                   }
-                  className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                  className={`${FIELD}`}
                   data-testid="setting-tab-layout"
                 >
                   <option value="sidebar">Sidebar</option>
@@ -106,7 +111,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
                   onChange={(e) =>
                     update({ archiveAfter: e.target.value as UserSettings['archiveAfter'] })
                   }
-                  className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                  className={`${FIELD}`}
                   data-testid="setting-archive-after"
                 >
                   {ARCHIVE_AFTER.map((o) => (
@@ -123,7 +128,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
                 <select
                   value={settings.sleepAfterMinutes}
                   onChange={(e) => update({ sleepAfterMinutes: Number(e.target.value) })}
-                  className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                  className={`${FIELD}`}
                   data-testid="setting-sleep-after"
                 >
                   {[5, 15, 30, 60, 120, 0].map((m) => (
@@ -150,7 +155,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
                     const n = Number(e.target.value);
                     if (n >= 1 && n <= 50) update({ maxLive: n });
                   }}
-                  className="w-20 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                  className={`${FIELD} w-20`}
                   data-testid="setting-max-live"
                 />
               </Row>
@@ -166,7 +171,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
                   onChange={(e) =>
                     update({ searchEngine: e.target.value as UserSettings['searchEngine'] })
                   }
-                  className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                  className={`${FIELD}`}
                   data-testid="setting-search-engine"
                 >
                   {ENGINES.map((o) => (
@@ -185,9 +190,10 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
               >
                 <input
                   type="checkbox"
+                  role="switch"
                   checked={settings.littleShortcut}
                   onChange={(e) => update({ littleShortcut: e.target.checked })}
-                  className="size-4 accent-[var(--accent,#5b5bd6)]"
+                  className="orbit-switch"
                   data-testid="setting-little-shortcut"
                 />
               </Row>
@@ -200,9 +206,10 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
               >
                 <input
                   type="checkbox"
+                  role="switch"
                   checked={settings.peek}
                   onChange={(e) => update({ peek: e.target.checked })}
-                  className="size-4 accent-[var(--accent,#5b5bd6)]"
+                  className="orbit-switch"
                   data-testid="setting-peek"
                 />
               </Row>
@@ -211,7 +218,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
                   value={settings.peekScope}
                   disabled={!settings.peek}
                   onChange={(e) => update({ peekScope: e.target.value as 'all' | 'pinned' })}
-                  className="rounded-lg border border-neutral-200 px-2 py-1 text-sm disabled:opacity-40"
+                  className={`${FIELD}`}
                   data-testid="setting-peek-scope"
                 >
                   <option value="all">Any tab</option>
@@ -225,35 +232,63 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
             </Group>
           </Section>
 
-          <Section id="profiles" title="Profiles">
+          <Section
+            id="profiles"
+            title="Profiles"
+            description="Separate logins and site data. Each Space uses one profile."
+          >
             <ProfilesSection />
           </Section>
 
-          <Section id="workspaces" title="Workspaces">
+          <Section
+            id="workspaces"
+            title="Workspaces"
+            description="Saved sets of tabs to start a new Space from."
+          >
             <WorkspacesSection />
           </Section>
 
-          <Section id="rules" title="Rules">
+          <Section
+            id="rules"
+            title="Rules"
+            description="Where links from other apps open, and how long each Space keeps tabs."
+          >
             <RulesSection />
           </Section>
 
-          <Section id="integrations" title="Integrations">
+          <Section
+            id="integrations"
+            title="Integrations"
+            description="Services Orbit connects to for your projects."
+          >
             <IntegrationsSection />
           </Section>
 
-          <Section id="backup" title="Backup">
+          <Section
+            id="backup"
+            title="Backup"
+            description="Copies of your Orbit data, kept where you choose."
+          >
             <BackupSection />
           </Section>
 
-          <Section id="shortcuts" title="Shortcuts">
+          <Section id="shortcuts" title="Shortcuts" description="Every keyboard shortcut in Orbit.">
             <ShortcutsSection />
           </Section>
 
-          <Section id="ai" title="AI">
+          <Section
+            id="ai"
+            title="AI"
+            description="Claude in Orbit: your key, the model, a monthly limit and what’s shared."
+          >
             <AiSection />
           </Section>
 
-          <Section id="privacy" title="Privacy">
+          <Section
+            id="privacy"
+            title="Privacy"
+            description="Your browsing data, and what leaves your Mac."
+          >
             <Group title="History">
               <Row
                 label="Browsing history"
@@ -261,7 +296,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
               >
                 <button
                   type="button"
-                  className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+                  className={buttonClass()}
                   onClick={() =>
                     void window.orbit.invoke('history:clear', {}).then(() => setCleared(true))
                   }
@@ -285,31 +320,73 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-6">
-      <h3 className="mb-2 px-1 text-[12px] font-semibold text-neutral-500">{title}</h3>
-      <div className="divide-y divide-neutral-100 rounded-[18px] border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
+      <h3 className="mb-2 px-1 text-subheading text-neutral-500">{title}</h3>
+      <div className="divide-y divide-neutral-100 rounded-[var(--radius-card)] border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
         {children}
       </div>
     </section>
   );
 }
 
-/** A page of Settings (its heading is what the nav jumps to). */
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+/** A page of Settings (its heading is what the nav jumps to), with a line saying what's in it. */
+function Section({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
   return (
     <section id={id} className="scroll-mt-8 pb-10" data-settings-section={id}>
-      <h2 className="text-[22px] font-semibold tracking-[-0.01em]">{title}</h2>
+      <h2 className="text-title">{title}</h2>
+      {description && (
+        <p className="mt-1 text-label text-neutral-500" data-testid="settings-section-description">
+          {description}
+        </p>
+      )}
       {children}
     </section>
   );
 }
 
 const APPEARANCES: { value: UserSettings['appearance']; label: string; icon: ReactNode }[] = [
-  { value: 'system', label: 'System', icon: <Monitor size={14} /> },
-  { value: 'light', label: 'Light', icon: <Sun size={14} /> },
-  { value: 'dark', label: 'Dark', icon: <Moon size={14} /> },
+  { value: 'system', label: 'System', icon: <Monitor size={11} /> },
+  { value: 'light', label: 'Light', icon: <Sun size={11} /> },
+  { value: 'dark', label: 'Dark', icon: <Moon size={11} /> },
 ];
 
-/** Settings → Appearance: a segmented control (System, Light, Dark). */
+/** A tiny Orbit window in a mode: sidebar, page card (Settings → Appearance's picture cards). */
+function WindowPreview({ mode }: { mode: 'light' | 'dark' }) {
+  const dark = mode === 'dark';
+  return (
+    <span
+      className="flex h-full w-full gap-[3px] p-[4px]"
+      style={{ background: dark ? '#221b33' : '#e6e1f3' }}
+    >
+      <span className="flex w-[30%] flex-col gap-[3px] pt-[6px]">
+        {[0.9, 0.6, 0.6].map((o, i) => (
+          <span
+            key={i}
+            className="h-[3px] rounded-full"
+            style={{
+              background: dark ? `rgb(255 255 255 / ${o * 0.5})` : `rgb(0 0 0 / ${o * 0.3})`,
+            }}
+          />
+        ))}
+      </span>
+      <span
+        className="flex-1 rounded-[3px] shadow-[0_1px_2px_rgb(0_0_0/0.2)]"
+        style={{ background: dark ? '#2a2a31' : '#ffffff' }}
+      />
+    </span>
+  );
+}
+
+/** Settings → Appearance: System, Light or Dark, as small pictures of Orbit. */
 function AppearancePicker(props: {
   value: UserSettings['appearance'];
   onChange: (value: UserSettings['appearance']) => void;
@@ -318,27 +395,50 @@ function AppearancePicker(props: {
     <div
       role="radiogroup"
       aria-label="Appearance"
-      className="flex rounded-[10px] bg-neutral-100 p-0.5"
+      className="flex gap-3"
       data-testid="setting-appearance"
     >
-      {APPEARANCES.map((a) => (
-        <button
-          key={a.value}
-          type="button"
-          role="radio"
-          aria-checked={props.value === a.value}
-          onClick={() => props.onChange(a.value)}
-          className={`flex items-center gap-1.5 rounded-[8px] px-3 py-1 text-sm transition-colors ${
-            props.value === a.value
-              ? 'bg-white font-medium text-neutral-900 shadow-[0_1px_2px_rgb(0_0_0/0.12)]'
-              : 'text-neutral-500 hover:text-neutral-800'
-          }`}
-          data-value={a.value}
-        >
-          {a.icon}
-          {a.label}
-        </button>
-      ))}
+      {APPEARANCES.map((a) => {
+        const on = props.value === a.value;
+        return (
+          <button
+            key={a.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => props.onChange(a.value)}
+            className="group flex flex-col items-center gap-1.5"
+            data-value={a.value}
+          >
+            <span
+              className={`relative block h-[46px] w-[68px] overflow-hidden rounded-[9px] transition-shadow ${
+                on
+                  ? 'shadow-[0_0_0_2px_var(--accent-fill)]'
+                  : 'shadow-[0_0_0_1px_rgb(0_0_0/0.1)] group-hover:shadow-[0_0_0_1px_rgb(0_0_0/0.25)]'
+              }`}
+            >
+              {a.value === 'system' ? (
+                <>
+                  <span className="absolute inset-0">
+                    <WindowPreview mode="light" />
+                  </span>
+                  <span className="absolute inset-0 [clip-path:polygon(100%_0,100%_100%,0_100%)]">
+                    <WindowPreview mode="dark" />
+                  </span>
+                </>
+              ) : (
+                <WindowPreview mode={a.value} />
+              )}
+            </span>
+            <span
+              className={`flex items-center gap-1 text-meta ${on ? 'font-semibold text-neutral-900' : 'text-neutral-500'}`}
+            >
+              {a.icon}
+              {a.label}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -349,8 +449,8 @@ function Row({ label, hint, children }: { label: string; hint: string; children:
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
       <div className="min-w-[180px] flex-[1_1_220px]">
-        <div className="text-sm">{label}</div>
-        <div className="text-xs text-neutral-500">{hint}</div>
+        <div className="text-label">{label}</div>
+        <div className="mt-0.5 text-meta text-neutral-500">{hint}</div>
       </div>
       <div className="max-w-full min-w-0 shrink-0">{children}</div>
     </div>
@@ -374,7 +474,7 @@ function DefaultBrowserRow() {
       ) : (
         <button
           type="button"
-          className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+          className={buttonClass()}
           onClick={() =>
             void window.orbit
               .invoke('browser:makeDefault', {})
@@ -425,9 +525,10 @@ function AiSection() {
         >
           <input
             type="checkbox"
+            role="switch"
             checked={prefs.enabled}
             onChange={(e) => set({ enabled: e.target.checked })}
-            className="size-4 accent-[var(--accent,#5b5bd6)]"
+            className="orbit-switch"
             data-testid="ai-enabled"
           />
         </Row>
@@ -438,7 +539,7 @@ function AiSection() {
           <select
             value={prefs.model}
             onChange={(e) => set({ model: e.target.value as AiPrefs['model'] })}
-            className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+            className={`${FIELD}`}
             data-testid="ai-model"
           >
             {AI_MODELS.map((m) => (
@@ -457,9 +558,10 @@ function AiSection() {
         >
           <input
             type="checkbox"
+            role="switch"
             checked={prefs.attachPage}
             onChange={(e) => set({ attachPage: e.target.checked })}
-            className="size-4 accent-[var(--accent,#5b5bd6)]"
+            className="orbit-switch"
             data-testid="ai-attach-page"
           />
         </Row>
@@ -469,21 +571,20 @@ function AiSection() {
         >
           <input
             type="checkbox"
+            role="switch"
             checked={prefs.workAccess}
             onChange={(e) => set({ workAccess: e.target.checked })}
-            className="size-4 accent-[var(--accent,#5b5bd6)]"
+            className="orbit-switch"
             data-testid="ai-work-access"
           />
         </Row>
-        <div
-          className="px-4 py-3 text-xs leading-relaxed text-neutral-500"
-          data-testid="ai-privacy"
-        >
+        <div className="px-4 py-3 text-meta text-neutral-500" data-testid="ai-privacy">
           What you attach (a page’s text, a selection, saved findings) and your question go to
-          Anthropic’s API with your key, and nothing else — no history, no other tabs. Anthropic
-          doesn’t train on API data. Conversations stay in memory until Orbit quits; answers you
-          save become notes. Orbit keeps a log of each request below (when, what kind, tokens and
-          cost — not the words).
+          Anthropic’s API with your key — and, with Projects and tasks on, the projects and tasks
+          Claude looks at to answer. Never your history or other tabs. Anthropic doesn’t train on
+          API data. Conversations stay in memory until Orbit quits; answers you save become notes.
+          Orbit keeps a log of each request below (when, what kind, tokens and cost — not the
+          words).
         </div>
       </Group>
 
@@ -508,7 +609,7 @@ function AiSection() {
             onChange={(e) =>
               set({ monthlyBudget: e.target.value === 'none' ? null : Number(e.target.value) })
             }
-            className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+            className={`${FIELD}`}
             data-testid="ai-budget"
           >
             {[1, 5, 10, 25, 50, 100].map((n) => (
@@ -560,7 +661,7 @@ function AiSection() {
             <div className="flex justify-end px-4 py-2.5">
               <button
                 type="button"
-                className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+                className={buttonClass()}
                 onClick={() => void window.orbit.invoke('ai:clearActivity', {}).then(load)}
                 data-testid="ai-activity-clear"
               >
@@ -590,7 +691,7 @@ function AiKeyRow(props: { hasKey: boolean; canStore: boolean; onChange: () => v
       {props.hasKey ? (
         <button
           type="button"
-          className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+          className={buttonClass()}
           onClick={() => void window.orbit.invoke('ai:clearKey', {}).then(props.onChange)}
           data-testid="ai-key-remove"
         >
@@ -618,13 +719,13 @@ function AiKeyRow(props: { hasKey: boolean; canStore: boolean; onChange: () => v
               placeholder="sk-ant-…"
               autoComplete="off"
               disabled={!props.canStore}
-              className="w-44 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+              className={`${FIELD} w-44`}
               data-testid="ai-key"
             />
             <button
               type="submit"
               disabled={!key.trim()}
-              className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50 disabled:opacity-40"
+              className={buttonClass()}
               data-testid="ai-key-save"
             >
               Save
@@ -799,13 +900,13 @@ function ProfilesSection() {
             onChange={(e) => setName(e.target.value)}
             placeholder="New profile name (e.g. Work)"
             maxLength={40}
-            className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-sm"
+            className={`${FIELD} min-w-0 flex-1`}
             data-testid="profile-new-name"
           />
           <button
             type="submit"
             disabled={!name.trim()}
-            className="rounded-lg bg-[#5b5bd6] px-3 py-1.5 text-sm font-medium text-on-accent hover:brightness-110 disabled:opacity-40"
+            className={buttonClass('primary')}
             data-testid="profile-add"
           >
             Add Profile
@@ -830,7 +931,7 @@ function ProfilesSection() {
                   .invoke('profiles:assign', { spaceId: space.id, profileId: e.target.value })
                   .then(load)
               }
-              className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+              className={`${FIELD}`}
               aria-label={`Profile for ${space.name}`}
               data-testid="space-profile"
             >
@@ -908,7 +1009,7 @@ function AboutSection() {
       >
         <button
           type="button"
-          className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+          className={buttonClass()}
           onClick={() => void window.orbit.invoke('app:revealData', {})}
           data-testid="reveal-data"
         >
@@ -1054,6 +1155,7 @@ function RulesSection() {
             </span>
             <input
               type="checkbox"
+              role="switch"
               checked={rule.enabled}
               aria-label="On"
               onChange={(e) => {
@@ -1068,7 +1170,7 @@ function RulesSection() {
                 );
                 void window.orbit.invoke('rules:toggle', { id: rule.id, enabled }).then(load);
               }}
-              className="size-4 accent-[var(--accent,#5b5bd6)]"
+              className="orbit-switch"
               data-testid="rule-toggle"
             />
             <button
@@ -1115,7 +1217,7 @@ function AddRule(props: { spaces: { id: string; name: string }[]; onAdded: () =>
       }
     });
   };
-  const SELECT = 'max-w-full min-w-0 rounded-lg border border-neutral-200 px-2 py-1 text-sm';
+  const SELECT = `${FIELD} max-w-full min-w-0`;
   return (
     <Group title="Add a rule">
       <div className="flex flex-col gap-3 px-4 py-3 text-sm">
@@ -1142,7 +1244,7 @@ function AddRule(props: { spaces: { id: string; name: string }[]; onAdded: () =>
                   setError(null);
                 }}
                 placeholder="figma.com, *.atlassian.net, github.com/my-org"
-                className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                className={`${FIELD} min-w-0 flex-1`}
                 data-testid="rule-pattern"
               />
             </div>
@@ -1200,12 +1302,7 @@ function AddRule(props: { spaces: { id: string; name: string }[]; onAdded: () =>
               {error}
             </span>
           )}
-          <button
-            type="button"
-            onClick={add}
-            className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
-            data-testid="rule-add"
-          >
+          <button type="button" onClick={add} className={buttonClass()} data-testid="rule-add">
             Add Rule
           </button>
         </div>
@@ -1233,8 +1330,7 @@ function BackupSection() {
     });
   useEffect(load, []);
   if (!status) return null;
-  const BUTTON =
-    'rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50 disabled:opacity-40';
+  const BUTTON = buttonClass();
   const restore = (pass?: string) => {
     setBusy(true);
     void window.orbit
@@ -1291,7 +1387,7 @@ function BackupSection() {
                     .invoke('backup:auto', { action: 'keep', keep: Number(e.target.value) })
                     .then(load)
                 }
-                className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                className={`${FIELD}`}
                 aria-label="Backups to keep"
                 data-testid="backup-keep"
               >
@@ -1372,7 +1468,7 @@ function BackupSection() {
                   placeholder="Passphrase"
                   autoComplete="new-password"
                   disabled={!status.canStore}
-                  className="w-40 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                  className={`${FIELD} w-40`}
                   data-testid="backup-passphrase"
                 />
                 <button type="submit" disabled={!passphrase} className={BUTTON}>
@@ -1428,7 +1524,7 @@ function BackupSection() {
               value={restorePass}
               onChange={(e) => setRestorePass(e.target.value)}
               placeholder="The backup’s passphrase"
-              className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+              className={`${FIELD} min-w-0 flex-1`}
               data-testid="backup-restore-passphrase"
             />
             <button type="submit" disabled={!restorePass} className={BUTTON}>
@@ -1479,7 +1575,7 @@ function IntegrationsSection() {
         {status.hasToken ? (
           <button
             type="button"
-            className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+            className={buttonClass()}
             onClick={() => void window.orbit.invoke('github:clearToken', {}).then(load)}
             data-testid="github-token-remove"
           >
@@ -1507,13 +1603,13 @@ function IntegrationsSection() {
                 placeholder="github_pat_…"
                 autoComplete="off"
                 disabled={!status.canStore}
-                className="w-44 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                className={`${FIELD} w-44`}
                 data-testid="github-token"
               />
               <button
                 type="submit"
                 disabled={!token.trim()}
-                className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50 disabled:opacity-40"
+                className={buttonClass()}
                 data-testid="github-token-save"
               >
                 Save
