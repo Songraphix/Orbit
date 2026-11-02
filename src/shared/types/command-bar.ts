@@ -81,6 +81,8 @@ export const peekViewSchema = z.object({
   canGoBack: z.boolean().default(false),
   canGoForward: z.boolean().default(false),
   frame: rectSchema,
+  /** The part of the window the Peek dims (the page area, not the sidebar, which stays usable). */
+  cover: rectSchema,
   headerHeight: z.number(),
   radius: z.number(),
 });
@@ -88,6 +90,8 @@ export type PeekView = z.output<typeof peekViewSchema>;
 
 export const overlayStateSchema = z.object({
   peek: peekViewSchema.nullable(),
+  /** Where the overlay's top-left corner sits in the window (it can cover just part of it). */
+  origin: z.object({ x: z.number(), y: z.number() }).default({ x: 0, y: 0 }),
   /** A small copy of the page under the overlay, which glass surfaces blur behind themselves
    *  (native web views can't be blurred by CSS). `rect` is where the page sits in the window. */
   backdrop: z.object({ image: z.string(), rect: rectSchema }).nullable(),

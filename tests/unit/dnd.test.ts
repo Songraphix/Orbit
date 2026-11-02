@@ -25,6 +25,7 @@ const row = (
   liveError: null,
   unread: false,
   openIn: 'tab',
+  peek: null,
 });
 
 // Pinned: [a, F(folder) > [f1, f2], b]; Today: [t1, t2]

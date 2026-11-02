@@ -65,6 +65,8 @@ export type TabManagerDeps = Pick<
   siteSetting?: (url: string, key: string) => string | null;
   /** Offered every link that wants a new tab; returns true if Peek took it (F-23). */
   peek?: (fromTabId: string, url: string, activate: boolean) => boolean;
+  /** The Peek a tab keeps open, if any (its badge in the sidebar). */
+  peekOf?: (tabId: string) => { favicon: string | null; title: string } | null;
   /** Split view started, resized or ended (null): the layout needs the new ratio. */
   onSplitChange?: (ratio: number | null) => void;
   /** Each Space's saved split (roadmap P2.4), from the last session… */
@@ -189,6 +191,7 @@ export class TabManager {
           liveError: item.data?.live?.error ?? null,
           unread: Boolean(item.data?.feed?.unread),
           openIn: item.data?.app?.openIn ?? 'tab',
+          peek: this.deps.peekOf?.(item.id) ?? null,
         };
       });
     return {

@@ -53,6 +53,10 @@ export class OverlayController {
   private flightTimer: ReturnType<typeof setTimeout> | null = null;
   private backdrop: OverlayState['backdrop'] = null;
   private snapshotting = false;
+  private wasBusy = false;
+  /** Told when something other than the Peek (the command bar, a prompt…) comes up or goes:
+   *  the Peek's page, which sits above the overlay, steps aside meanwhile. */
+  onBusyChange: ((busy: boolean) => void) | null = null;
 
   constructor(private readonly deps: OverlayDeps) {
     this.view = new WebContentsView({
@@ -82,6 +86,7 @@ export class OverlayController {
       commandBar: this.commandBar,
       prompt: this.prompts[0]?.prompt ?? null,
       peek: this.peek,
+      origin: this.onlyPeek ? { x: this.peek!.cover.x, y: this.peek!.cover.y } : { x: 0, y: 0 },
       siteControls: this.siteControls,
       capture: this.capture,
       colorPick: this.colorPick,
@@ -113,6 +118,33 @@ export class OverlayController {
     );
   }
 
+  /** Something that needs the page area is showing — besides the Peek itself, the slid-out
+   *  sidebar, tooltips and the download badge's flight. */
+  private get othersOpenBesidesPeek(): boolean {
+    return (
+      this.commandBar !== null ||
+      this.prompts.length > 0 ||
+      this.siteControls !== null ||
+      this.capture !== null ||
+      this.colorPick !== null ||
+      this.createMenu !== null ||
+      this.quickNote !== null ||
+      this.profileMenu !== null ||
+      this.captureCard !== null
+    );
+  }
+
+  /** Only the Peek is showing: the overlay covers just the page area, so the sidebar stays
+   *  usable (Arc). */
+  private get onlyPeek(): boolean {
+    return (
+      this.peek !== null &&
+      !this.othersOpenBesidesPeek &&
+      this.flight === null &&
+      this.sidebarPeek === null
+    );
+  }
+
   /** Only a tooltip is showing: the overlay is just its box (no clicks taken anywhere else). */
   private get onlyTooltip(): boolean {
     return this.tooltip !== null && !this.othersOpen && this.sidebarPeek === null;
@@ -123,7 +155,8 @@ export class OverlayController {
    * or clicks: alone, the overlay shrinks to the tooltip's own box.
    */
   showTooltip(tip: { label: string; keys: string[]; anchor: Rect; side: TooltipSide }): void {
-    if (this.deps.win.isDestroyed()) return;
+    // The Peek's page covers the window's middle, and the overlay just the page area.
+    if (this.deps.win.isDestroyed() || this.peek !== null) return;
     const [width = 0, height = 0] = this.deps.win.getContentSize();
     const box = tooltipBox(tip.anchor, tip.side, tipWidth(tip.label, tip.keys), { width, height });
     this.tooltip = { label: tip.label, keys: tip.keys, box, side: tip.side, at: Date.now() };
@@ -147,19 +180,7 @@ export class OverlayController {
   }
 
   private get othersOpen(): boolean {
-    return (
-      this.commandBar !== null ||
-      this.prompts.length > 0 ||
-      this.peek !== null ||
-      this.siteControls !== null ||
-      this.capture !== null ||
-      this.colorPick !== null ||
-      this.createMenu !== null ||
-      this.quickNote !== null ||
-      this.profileMenu !== null ||
-      this.captureCard !== null ||
-      this.flight !== null
-    );
+    return this.othersOpenBesidesPeek || this.peek !== null || this.flight !== null;
   }
 
   get captureCardOpen(): boolean {
@@ -332,10 +353,8 @@ export class OverlayController {
       this.sync();
       return;
     }
-    if (opening) {
-      this.fit();
-      this.view.setVisible(true);
-    }
+    this.fit();
+    if (opening) this.view.setVisible(true);
     this.send();
   }
 
@@ -378,6 +397,10 @@ export class OverlayController {
     const [width = 0, height = 0] = this.deps.win.getContentSize();
     if (this.onlyTooltip) {
       this.view.setBounds(this.tooltip!.box);
+      return;
+    }
+    if (this.onlyPeek) {
+      this.view.setBounds(this.peek!.cover);
       return;
     }
     // Room for the sidebar's shadow when it's the only thing showing (and its tooltips).
@@ -434,5 +457,11 @@ export class OverlayController {
 
   private send(): void {
     if (!this.view.webContents.isDestroyed()) this.deps.send(this.view.webContents, this.current);
+    // The slid-out sidebar too: the Peek's page would sit on top of it.
+    const busy = this.othersOpenBesidesPeek || this.sidebarPeek !== null;
+    if (busy !== this.wasBusy) {
+      this.wasBusy = busy;
+      this.onBusyChange?.(busy);
+    }
   }
 }

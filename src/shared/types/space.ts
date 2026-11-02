@@ -59,6 +59,8 @@ export const sidebarRowSchema = z.object({
   unread: z.boolean(),
   /** A favourite's App Hub opening mode (tab, the docked panel, its own window). */
   openIn: z.enum(OPEN_IN).default('tab'),
+  /** A Peek kept open from this tab (Arc): its page's icon sits on the tab's icon. */
+  peek: z.object({ favicon: z.string().nullable(), title: z.string() }).nullable().default(null),
 });
 export type SidebarRow = z.output<typeof sidebarRowSchema>;
 

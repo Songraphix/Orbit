@@ -137,7 +137,6 @@ export class WindowManager {
   openCommandBar(controller: WindowController, mode: 'new' | 'edit'): void {
     const active = controller.tabs.active?.state;
     const initial = mode === 'edit' && active?.kind === 'web' ? active.url : '';
-    controller.peek.close(); // the bar would sit under the Peek page
     controller.overlay.openCommandBar(mode, initial);
   }
 
@@ -349,6 +348,7 @@ export class WindowManager {
           find.close();
         }
         media?.refresh(); // the mini player shows only while its tab is off screen
+        peek?.refresh(); // a Peek shows over its own tab only (Arc)
         if (controllerRef) this.deps.onTabsChange?.(controllerRef);
       },
       onHtmlFullscreen: (enter) => setHtmlFullscreen(enter),
@@ -378,6 +378,7 @@ export class WindowManager {
         if (open) peek?.open(fromTabId, url);
         return open && peek !== null;
       },
+      peekOf: (tabId) => peek?.badge(tabId) ?? null,
     });
     const tabManager = tabs;
     const media = new MediaController(tabManager, (state) => {
@@ -465,8 +466,13 @@ export class WindowManager {
       tabs: tabManager,
       overlay,
       getLayout: () => layout.current(),
+      activeTabId: () => tabManager.activeItemId,
+      exists: (tabId) => this.deps.store.item(tabId) !== undefined,
+      onBadgesChange: () => tabManager.refresh(),
     });
     const peekController = peek;
+    // The command bar, a prompt, Site Controls…: the Peek steps aside, then comes back.
+    overlay.onBusyChange = (busy) => peekController.hold('overlay', busy);
     library = new LibraryController({
       win,
       getLayout: () => layout.current(),
@@ -476,7 +482,7 @@ export class WindowManager {
       registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
       unregisterInternal: (webContentsId) => senders.remove(webContentsId),
       onChange: (section) => {
-        peek?.close();
+        peek?.hold('library', section !== null);
         broadcaster.sendTo(contents, 'state:library', { section });
         toOverlay('state:library', { section });
       },
@@ -572,7 +578,7 @@ export class WindowManager {
       this.deps.store.flushLive(); // the sidebar store saves structure at once; live details now
     });
     win.on('closed', () => {
-      peekController.close();
+      peekController.closeAll();
       libraryController.destroy();
       notesPanel.destroy();
       appPanelController.destroy();

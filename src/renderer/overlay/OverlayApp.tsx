@@ -26,6 +26,7 @@ export function OverlayApp() {
     commandBar: null,
     prompt: null,
     peek: null,
+    origin: { x: 0, y: 0 },
     siteControls: null,
     capture: null,
     colorPick: null,
@@ -72,15 +73,18 @@ export function OverlayApp() {
       <QuickNote key={state.quickNote.id} id={state.quickNote.id} />
     </Suspense>
   ) : null;
-  // Anything else opening takes over the overlay: the slid-out sidebar goes back in.
-  const busy = top !== null || state.peek !== null;
+  // Anything else opening takes over the overlay: the slid-out sidebar goes back in. (A Peek
+  // steps aside for the slid-out sidebar instead, so its tab can be left for another.)
+  const busy = top !== null;
   useEffect(() => {
     if (busy && state.sidebarPeek) void window.orbit.invoke('sidebar:peek', { open: false });
   }, [busy, state.sidebarPeek]);
   return (
     <BackdropContext.Provider value={state.backdrop}>
       {state.sidebarPeek && !busy && <FloatingSidebar width={state.sidebarPeek.width} />}
-      {state.peek && <PeekFrame peek={state.peek} interactive={top === null} />}
+      {state.peek && (
+        <PeekFrame peek={state.peek} origin={state.origin} interactive={top === null} />
+      )}
       {top}
       {state.flight && <DownloadFlight key={state.flight.at} flight={state.flight} />}
       {state.tooltip && (

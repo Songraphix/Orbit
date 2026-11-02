@@ -9,10 +9,23 @@ import { Tip } from '../tooltip/Tip';
  * Peek (F-23), Arc-style: a link that wanted a new tab pops out as a card over the page. Main
  * places the page itself just under the card's slim bar (back, forward, reload, the address);
  * beside the card sit round buttons — Close, Open as Tab and Open in Split View. Esc or a click
- * on the dimmed page closes it.
+ * on the dimmed page closes it. Only the page area dims: the sidebar stays usable, and leaving
+ * the tab keeps its Peek waiting there.
  */
-export function PeekFrame({ peek, interactive }: { peek: PeekView; interactive: boolean }) {
-  const { frame, headerHeight, radius } = peek;
+export function PeekFrame({
+  peek,
+  origin,
+  interactive,
+}: {
+  peek: PeekView;
+  /** Where the overlay sits in the window: alone with the Peek, it covers only the page area. */
+  origin: { x: number; y: number };
+  interactive: boolean;
+}) {
+  const { headerHeight, radius } = peek;
+  // The dimmed area sits in the overlay; the card and its buttons sit in the dimmed area.
+  const cover = { ...peek.cover, x: peek.cover.x - origin.x, y: peek.cover.y - origin.y };
+  const frame = { ...peek.frame, x: peek.frame.x - peek.cover.x, y: peek.frame.y - peek.cover.y };
   const address = formatAddress(peek.url, peek.title);
   const close = () => void window.orbit.invoke('peek:close', {});
   const navigate = (action: 'back' | 'forward' | 'reload') =>
@@ -29,7 +42,8 @@ export function PeekFrame({ peek, interactive }: { peek: PeekView; interactive: 
 
   return (
     <div
-      className="fixed inset-0 bg-black/35 animate-[orbit-fade-in_var(--dur)_var(--ease-out)]"
+      className="fixed bg-black/35 animate-[orbit-fade-in_var(--dur)_var(--ease-out)]"
+      style={{ left: cover.x, top: cover.y, width: cover.width, height: cover.height }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}

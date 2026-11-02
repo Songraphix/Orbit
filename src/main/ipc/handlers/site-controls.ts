@@ -163,7 +163,6 @@ export function registerSiteControlsHandlers(
       controller.overlay.closeSiteControls(); // the button toggles
       return;
     }
-    controller.peek.close();
     const view = build(controller, anchor);
     if (view) controller.overlay.showSiteControls(view);
   });

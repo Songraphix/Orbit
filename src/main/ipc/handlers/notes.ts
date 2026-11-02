@@ -28,7 +28,6 @@ export function toggleQuickNote(notes: NotesRepository, controller: WindowContro
     closeQuickNote(controller);
     return;
   }
-  controller.peek.close();
   controller.overlay.openQuickNote(notes.create());
 }
 

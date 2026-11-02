@@ -151,6 +151,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — Owner request: **Peek, Arc-style (F-23).** A link that wants a new tab **grows out smoothly** as a card over the dimmed window (the page view and its frame scale in together). Beside the card: round **Close (Esc)**, **Open as Tab** and **Open in Split View** buttons. Inside it: a slim bar with **Back, Forward, Reload** and the address. Links from **pinned tabs and favourites peek even on the same site** (a design from the Canva favourite); Today tabs still peek only links to other sites. Clicking the dimmed page closes it
 
+- 2026-11-02 — Owner request: **Peek waits on its tab, like Arc.** While a Peek is open only the page area dims — **the sidebar stays usable** (favourites, pinned tabs, New Tab). Leave the tab and its Peek steps aside but stays alive, with **its page's icon on the tab's icon** (a corner badge on favourites, a small one on rows); come back and it's there, not reloaded. Several tabs can each keep one. The command bar, prompts, Site Controls, the quick note, the Library and the slid-out sidebar set it aside and it returns after; closing its tab closes it. Shell tooltips don't show while a Peek is up (the overlay covers only the page area)
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0

@@ -147,3 +147,57 @@ test("Arc-style: a pinned tab's same-site link peeks; Back, then Open in Split V
     await orbit.close();
   }
 });
+
+test('like Arc, the sidebar stays usable: leave the tab and its Peek waits, badged; come back to it', async () => {
+  const orbit = await launchOrbit();
+  try {
+    const { app, win } = orbit;
+    const pinned = win.locator('[data-testid="pinned-list"] [data-testid="tab-row"]');
+    const today = win.locator('[data-testid="tab-list"] [data-testid="tab-row"]');
+    await invoke(win, 'tabs:create', { url: server.url('/peek') });
+    await clickMenu(app, 'toggle-pin');
+    await expect(pinned).toHaveText(['Peek Source']);
+
+    await inPage(app, '/peek', 'document.getElementById("out").click()');
+    const bar = await overlay(app);
+    await expect(bar.getByTestId('peek')).toBeVisible();
+    await expect(pinned.getByTestId('peek-badge')).toHaveCount(1);
+    // The overlay covers the page area only: the sidebar keeps taking clicks.
+    const overlayX = await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) => w.contentView.children.length > 0)!;
+      const view = win.contentView.children.find(
+        (v) =>
+          'webContents' in v &&
+          (v as Electron.WebContentsView).webContents.getURL().includes('/overlay/'),
+      )!;
+      return view.getBounds().x;
+    });
+    expect(overlayX).toBeGreaterThan(200);
+
+    // Another tab: the Peek steps aside but stays alive, its icon on the pinned tab.
+    await today.first().click();
+    await expect(bar.getByTestId('peek')).toHaveCount(0);
+    await expect.poll(() => pageCount(app, 'localhost')).toBe(1);
+    await expect(pinned.getByTestId('peek-badge')).toHaveCount(1);
+
+    // Back to the pinned tab: the same Peek again (not reloaded).
+    await inPage(app, 'localhost', 'window.__peekMark = 7');
+    await pinned.first().click();
+    await expect(bar.getByTestId('peek')).toBeVisible();
+    expect(await inPage(app, 'localhost', 'window.__peekMark')).toBe(7);
+
+    // The command bar sets it aside too, and Escape there brings it back.
+    await clickMenu(app, 'new-tab');
+    await expect(bar.getByTestId('peek')).toHaveCount(0);
+    await bar.keyboard.press('Escape');
+    await expect(bar.getByTestId('peek')).toBeVisible();
+
+    // Closed: the badge goes with it.
+    await bar.getByTestId('peek-close').click();
+    await expect(bar.getByTestId('peek')).toHaveCount(0);
+    await expect(pinned.getByTestId('peek-badge')).toHaveCount(0);
+    await expect.poll(() => pageCount(app, 'localhost')).toBe(0);
+  } finally {
+    await orbit.close();
+  }
+});

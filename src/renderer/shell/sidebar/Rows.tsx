@@ -103,6 +103,31 @@ export function TabIcon({ row }: { row: SidebarRow }) {
   return <Globe className={`${className} opacity-60`} strokeWidth={1.75} />;
 }
 
+/**
+ * A Peek this tab keeps open (Arc): the Peek page's icon, small, on the tab's own icon — so a tab
+ * you left with a Peek showing says so. `tile`: the bigger corner badge of a favourite.
+ */
+export function PeekBadge({ row, tile = false }: { row: SidebarRow; tile?: boolean }) {
+  if (!row.peek) return null;
+  const size = tile
+    ? 'size-[18px] rounded-[6px] -top-1 -right-1'
+    : 'size-3 rounded-[4px] -right-1.5 -bottom-1';
+  return (
+    <span
+      className={`pointer-events-none absolute grid place-items-center bg-white shadow-[0_0_0_1.5px_var(--tile-bg,white),0_1px_3px_rgb(0_0_0/0.3)] ${size}`}
+      title={row.peek.title}
+      aria-label={`Peek: ${row.peek.title}`}
+      data-testid="peek-badge"
+    >
+      {row.peek.favicon ? (
+        <img src={row.peek.favicon} alt="" className={tile ? 'size-3' : 'size-2.5'} />
+      ) : (
+        <Globe className={`${tile ? 'size-3' : 'size-2.5'} text-neutral-500`} strokeWidth={2} />
+      )}
+    </span>
+  );
+}
+
 /** A tab in the Pinned or Today list (F-04). */
 export function TabRow({
   row,
@@ -151,7 +176,10 @@ export function TabRow({
         data-tab-id={row.id}
         data-live={row.live}
       >
-        <TabIcon row={row} />
+        <span className="relative grid shrink-0 place-items-center">
+          <TabIcon row={row} />
+          <PeekBadge row={row} />
+        </span>
         {renaming ? (
           <RenameInput
             initial={row.title}

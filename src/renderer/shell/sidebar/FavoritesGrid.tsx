@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { SidebarRow } from '@shared/types/space';
-import { TabIcon } from './Rows';
+import { PeekBadge, TabIcon } from './Rows';
 import { Tip } from '../../tooltip/Tip';
 
 const invoke = window.orbit.invoke;
@@ -142,6 +142,7 @@ function FavoriteTile({
           <span className="grid size-[18px] place-items-center [&>*]:size-[18px]">
             <TabIcon row={row} />
           </span>
+          <PeekBadge row={row} tile />
           {hasCount(row.title) && (
             <span
               className="absolute right-2.5 bottom-2 size-[7px] rounded-full bg-[#ff453a] shadow-[0_0_0_1.5px_var(--tile-bg)]"
