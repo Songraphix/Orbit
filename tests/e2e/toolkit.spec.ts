@@ -131,7 +131,7 @@ test('Toolkit: pick a colour, the page’s palette, contrast, JSON and image inf
   await expect(panel.getByTestId('contrast-aa')).toHaveAttribute('data-pass', 'true');
 
   // JSON: where it's broken; sorted when it isn't.
-  await panel.locator('[data-testid="toolkit-section"][data-section="json"]').click();
+  await panel.locator('[data-testid="toolkit-section"][data-section="code"]').click();
   await panel.getByTestId('json-input').fill('{"a": 1,\n "b": }');
   await panel.getByTestId('json-format').click();
   await expect(panel.getByTestId('json-error')).toContainText('Line 2, column 7');
@@ -196,4 +196,30 @@ test('Developer tools: JSON pages as a tree, responsive mode, local servers', as
   await panel.locator('[data-testid="toolkit-section"][data-section="dev"]').click();
   await panel.getByTestId('toolkit-scan-servers').click();
   await expect(panel.getByTestId('toolkit-server')).toContainText('Test Dev Server');
+});
+
+test('Type and Code: fonts on the page, a type scale, encode/decode, regex (roadmap P4.6)', async () => {
+  const { app, win } = orbit;
+  await invoke(win, 'tabs:create', { url: server.url('/colors') });
+  await pageWith(app, '/colors');
+  await clickMenu(app, 'toolkit');
+  const panel = await pageWith(app, '#/notes/panel/tools');
+
+  await panel.locator('[data-testid="toolkit-section"][data-section="type"]').click();
+  await panel.getByTestId('toolkit-scan-fonts').click();
+  await expect(panel.getByTestId('toolkit-font').first()).toContainText('element');
+  await panel.getByTestId('scale-base').fill('20');
+  await expect(panel.getByTestId('scale-steps')).toContainText('20px');
+
+  await panel.locator('[data-testid="toolkit-section"][data-section="code"]').click();
+  await panel.getByTestId('codec-input').fill('héllo');
+  await expect(panel.getByTestId('codec-output')).toHaveText('aMOpbGxv');
+  await panel.getByTestId('codec-mode').selectOption('decode');
+  await panel.getByTestId('codec-input').fill('aMOpbGxv');
+  await expect(panel.getByTestId('codec-output')).toHaveText('héllo');
+  await panel.getByTestId('regex-pattern').fill('(\\d+)px');
+  await panel.getByTestId('regex-text').fill('12px and 40px');
+  await expect(panel.getByTestId('regex-match')).toHaveCount(2);
+  await panel.getByTestId('uuid-make').click();
+  await expect(panel.getByTestId('uuid-list').locator('li')).toHaveCount(5);
 });

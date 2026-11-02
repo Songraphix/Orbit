@@ -1251,6 +1251,12 @@ export const contract = {
     output: z.void(),
     surfaces: ['internal'],
   },
+  /** The fonts the page you're on uses (roadmap P4.6). */
+  'toolkit:fonts': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
   /** Looks for local development servers. */
   'toolkit:servers': {
     input: z.object({}).strict(),

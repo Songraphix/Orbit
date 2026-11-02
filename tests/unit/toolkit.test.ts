@@ -16,6 +16,15 @@ import { fitViewport } from '@shared/toolkit/viewport';
 import { presetName } from '@shared/toolkit/state';
 import { wantsLocalServers } from '../../src/main/commandbar/model';
 import { aspect, pageTitle } from '../../src/main/toolkit/model';
+import {
+  decode,
+  decodeJwt,
+  encode,
+  readTime,
+  testRegex,
+  timeViews,
+  typeScale,
+} from '@shared/toolkit/text';
 
 describe('colours', () => {
   it('reads the usual ways of writing a colour', () => {
@@ -255,5 +264,54 @@ describe('responsive mode and local servers', () => {
     expect(pageTitle('<p>no title</p>')).toBe('');
     expect(aspect(1920, 1080)).toBe('16:9');
     expect(aspect(1000, 997)).toBeNull();
+  });
+});
+
+describe('text tools', () => {
+  it('encodes and decodes Base64 (UTF-8), URLs and HTML entities', () => {
+    expect(encode('héllo ✓', 'base64')).toBe('aMOpbGxvIOKckw==');
+    expect(decode('aMOpbGxvIOKckw==', 'base64')).toEqual({ ok: true, text: 'héllo ✓' });
+    expect(decode('aMOpbGxvIOKckw', 'base64')).toEqual({ ok: true, text: 'héllo ✓' }); // no padding
+    expect(decode('%%%', 'base64').ok).toBe(false);
+    expect(encode('a b&c', 'url')).toBe('a%20b%26c');
+    expect(decode('a+b%26c', 'url')).toEqual({ ok: true, text: 'a b&c' });
+    expect(encode('<a href="x">', 'html')).toBe('&lt;a href=&quot;x&quot;&gt;');
+    expect(decode('&lt;b&gt; &#169; &#x2713; &unknown;', 'html')).toEqual({
+      ok: true,
+      text: '<b> © ✓ &unknown;',
+    });
+  });
+
+  it('reads JWTs without verifying them', () => {
+    const jwt = `${encode('{"alg":"HS256"}', 'base64')}.${encode('{"sub":"42"}', 'base64')}.sig`;
+    expect(decodeJwt(jwt)).toEqual({ header: { alg: 'HS256' }, payload: { sub: '42' } });
+    expect(decodeJwt('not.a.jwt')).toBeNull();
+  });
+
+  it('reads timestamps as people paste them', () => {
+    expect(readTime('1700000000')).toBe(1_700_000_000_000);
+    expect(readTime('1700000000123')).toBe(1_700_000_000_123);
+    expect(readTime('2026-11-02T10:00:00Z')).toBe(Date.UTC(2026, 10, 2, 10));
+    expect(readTime('soon')).toBeNull();
+    expect(timeViews(0)[2]).toEqual({ label: 'ISO 8601 (UTC)', value: '1970-01-01T00:00:00.000Z' });
+  });
+
+  it('tests regular expressions safely', () => {
+    expect(testRegex('(\\d+)-(\\d+)', '', 'a 1-2 b 30-40')).toEqual({
+      ok: true,
+      matches: [
+        { index: 2, text: '1-2', groups: ['1', '2'] },
+        { index: 8, text: '30-40', groups: ['30', '40'] },
+      ],
+    });
+    expect(testRegex('(', '', 'x').ok).toBe(false);
+    const empty = testRegex('x*', 'g', 'aaa');
+    expect(empty.ok && empty.matches.length).toBe(4);
+  });
+
+  it('builds a type scale', () => {
+    const scale = typeScale(16, 1.25, 1, 2);
+    expect(scale.map((s) => s.px)).toEqual([25, 20, 16, 12.8]);
+    expect(scale[0]).toEqual({ step: 2, px: 25, rem: '1.563rem' });
   });
 });

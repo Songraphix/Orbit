@@ -6,7 +6,15 @@ import { z } from 'zod';
  * servers, and the active tab's responsive viewport.
  */
 
-export const TOOLKIT_SECTIONS = ['colors', 'contrast', 'image', 'css', 'json', 'dev'] as const;
+export const TOOLKIT_SECTIONS = [
+  'colors',
+  'contrast',
+  'type',
+  'image',
+  'css',
+  'code',
+  'dev',
+] as const;
 export type ToolkitSection = (typeof TOOLKIT_SECTIONS)[number];
 
 export const imageReportSchema = z.object({
@@ -75,6 +83,20 @@ export const toolkitStateSchema = z.object({
   colors: z.array(z.string()).max(16),
   image: imageReportSchema.nullable(),
   palette: z.object({ page: z.string(), swatches: z.array(swatchSchema) }).nullable(),
+  /** The fonts the page uses (roadmap P4.6), most used first. */
+  fonts: z
+    .object({
+      page: z.string(),
+      families: z.array(
+        z.object({
+          family: z.string(),
+          count: z.number().int(),
+          sizes: z.array(z.number()),
+          weights: z.array(z.number()),
+        }),
+      ),
+    })
+    .nullable(),
   servers: z.array(localServerSchema).nullable(),
   /** The page you're on: what the page tools work with. */
   page: z

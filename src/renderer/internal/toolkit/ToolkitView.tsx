@@ -8,6 +8,7 @@ import {
   Pipette,
   ScanSearch,
   TerminalSquare,
+  Type,
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -17,7 +18,8 @@ import type { Rgb } from '@shared/toolkit/color';
 import { TOOLKIT_SECTIONS } from '@shared/toolkit/state';
 import type { ToolkitSection, ToolkitState } from '@shared/toolkit/state';
 import { CopyButton, Group, SmallButton } from './parts';
-import { CssSection, DevSection, ImageSection, JsonSection } from './sections';
+import { CssSection, DevSection, ImageSection } from './sections';
+import { CodeSection, TypeSection } from './more-sections';
 import './toolkit.css';
 
 const invoke = window.orbit.invoke;
@@ -26,8 +28,9 @@ const SECTIONS: Record<ToolkitSection, { label: string; icon: ReactNode }> = {
   colors: { label: 'Colors', icon: <Pipette size={14} /> },
   contrast: { label: 'Contrast', icon: <Contrast size={14} /> },
   image: { label: 'Image', icon: <ImageIcon size={14} /> },
+  type: { label: 'Type', icon: <Type size={14} /> },
   css: { label: 'CSS', icon: <Paintbrush size={14} /> },
-  json: { label: 'JSON', icon: <Braces size={14} /> },
+  code: { label: 'Code', icon: <Braces size={14} /> },
   dev: { label: 'Dev', icon: <TerminalSquare size={14} /> },
 };
 
@@ -94,8 +97,10 @@ export function ToolkitView({ section }: { section: string }) {
             <ImageSection state={state} />
           ) : current === 'css' ? (
             <CssSection />
-          ) : current === 'json' ? (
-            <JsonSection />
+          ) : current === 'type' ? (
+            <TypeSection state={state} />
+          ) : current === 'code' ? (
+            <CodeSection />
           ) : (
             <DevSection state={state} />
           ))}

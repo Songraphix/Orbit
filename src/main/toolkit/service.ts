@@ -45,6 +45,34 @@ const READ_PALETTE = `(() => {
   return [...counts.values()].sort((a, b) => b.count - a.count).slice(0, 18);
 })()`;
 
+/** The fonts a page uses: the first family of each text element, with sizes and weights. */
+const READ_FONTS = `(() => {
+  const families = new Map();
+  const all = document.querySelectorAll('body *');
+  for (let i = 0; i < all.length && i < 5000; i++) {
+    const el = all[i];
+    if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+    if (el.checkVisibility && !el.checkVisibility()) continue;
+    const style = getComputedStyle(el);
+    const family = (style.fontFamily.split(',')[0] || '').trim().replace(/^["']|["']$/g, '');
+    if (!family) continue;
+    const entry = families.get(family) || { family, count: 0, sizes: new Set(), weights: new Set() };
+    entry.count++;
+    entry.sizes.add(Math.round(parseFloat(style.fontSize) * 10) / 10);
+    entry.weights.add(Number(style.fontWeight) || 400);
+    families.set(family, entry);
+  }
+  return [...families.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+    .map((f) => ({
+      family: f.family.slice(0, 80),
+      count: f.count,
+      sizes: [...f.sizes].sort((a, b) => b - a).slice(0, 12),
+      weights: [...f.weights].sort((a, b) => a - b).slice(0, 9),
+    }));
+})()`;
+
 const IMAGE_LIMIT = 25 * 1024 * 1024;
 
 export type ToolkitDeps = {
@@ -67,6 +95,10 @@ export class ToolkitService {
   private readonly images = new WeakMap<WindowController, ImageReport>();
   private readonly palettes = new WeakMap<WindowController, NonNullable<ToolkitState['palette']>>();
   private readonly pageKeys = new WeakMap<WindowController, string>();
+  private readonly fontsByWindow = new WeakMap<
+    WindowController,
+    NonNullable<ToolkitState['fonts']>
+  >();
   private servers: LocalServer[] | null = null;
   private serversAt = 0;
 
@@ -83,6 +115,7 @@ export class ToolkitService {
       colors: this.deps.settings.get('toolkit.colors'),
       image: this.images.get(controller) ?? null,
       palette: this.palettes.get(controller) ?? null,
+      fonts: this.fontsByWindow.get(controller) ?? null,
       servers: this.servers,
       page: tab
         ? {
@@ -175,6 +208,38 @@ export class ToolkitService {
         background: s.background === true,
       }));
     this.palettes.set(controller, { page: tab.state.title || hostOf(tab.state.url), swatches });
+    this.push(controller);
+  }
+
+  /** The fonts the page uses, most used first (roadmap P4.6). */
+  async fonts(controller: WindowController): Promise<void> {
+    const tab = this.webTab(controller);
+    if (!tab) return;
+    let found: unknown;
+    try {
+      found = await tab.view.webContents.executeJavaScriptInIsolatedWorld(PALETTE_WORLD, [
+        { code: READ_FONTS },
+      ]);
+    } catch {
+      found = [];
+    }
+    const families = (Array.isArray(found) ? found : [])
+      .filter(
+        (f): f is NonNullable<ToolkitState['fonts']>['families'][number] =>
+          !!f &&
+          typeof (f as { family?: unknown }).family === 'string' &&
+          Number.isInteger((f as { count?: unknown }).count),
+      )
+      .map((f) => ({
+        family: f.family,
+        count: f.count,
+        sizes: (Array.isArray(f.sizes) ? f.sizes : []).filter((n) => typeof n === 'number'),
+        weights: (Array.isArray(f.weights) ? f.weights : []).filter((n) => typeof n === 'number'),
+      }));
+    this.fontsByWindow.set(controller, {
+      page: tab.state.title || hostOf(tab.state.url),
+      families,
+    });
     this.push(controller);
   }
 

@@ -494,7 +494,7 @@ function runCommand(controller: WindowController, commandId: string): void {
       controller.sidebar.archiveBeforeToday();
       return;
     case 'format-json':
-      toolkitService?.open(controller, 'json');
+      toolkitService?.open(controller, 'code');
       return;
     case 'pick-color':
       void toolkitService?.pickColor(controller);

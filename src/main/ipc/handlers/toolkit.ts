@@ -47,6 +47,9 @@ export function registerToolkitHandlers(
   router.handle('toolkit:palette', (_input, { sender }) =>
     toolkit.palette(panelWindow(sender.webContentsId)),
   );
+  router.handle('toolkit:fonts', (_input, { sender }) =>
+    toolkit.fonts(panelWindow(sender.webContentsId)),
+  );
   router.handle('toolkit:servers', (_input, { sender }) =>
     toolkit.scanServers(panelWindow(sender.webContentsId)),
   );
