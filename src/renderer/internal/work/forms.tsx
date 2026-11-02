@@ -258,7 +258,7 @@ export function ProjectForm({ project, onClose }: { project?: Project; onClose: 
             testId="project-status"
           />
         </Field>
-        <Field label="Colour">
+        <Field label="Color">
           <div className="flex flex-wrap gap-2" data-testid="project-color">
             {PROJECT_COLORS.map((c) => (
               <button

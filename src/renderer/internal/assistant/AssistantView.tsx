@@ -20,6 +20,7 @@ import type { AssistantReply, AssistantState, TaskSuggestion } from '@shared/ass
 import { citeMarker, parseMarkdown } from '@shared/markdown';
 import { useWork } from '../work/context';
 import { Markdown } from './Markdown';
+import { Tip } from '../../tooltip/Tip';
 import './assistant.css';
 
 const invoke = window.orbit.invoke;
@@ -60,16 +61,17 @@ export function AssistantView() {
         </span>
         <span className="flex-1" />
         {!empty && (
-          <button
-            type="button"
-            className="press grid size-7 place-items-center rounded-[9px] text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]"
-            title="New Chat"
-            aria-label="New Chat"
-            onClick={() => void invoke('assistant:clear', {})}
-            data-testid="assistant-clear"
-          >
-            <SquarePen size={15} />
-          </button>
+          <Tip label="New Chat">
+            <button
+              type="button"
+              className="press grid size-7 place-items-center rounded-[9px] text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]"
+              aria-label="New Chat"
+              onClick={() => void invoke('assistant:clear', {})}
+              data-testid="assistant-clear"
+            >
+              <SquarePen size={15} />
+            </button>
+          </Tip>
         )}
       </header>
       <Conversation state={state} />

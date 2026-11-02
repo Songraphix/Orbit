@@ -103,3 +103,26 @@ test('the Library: coloured, moving icons; Downloads filter and where files came
     await server.close();
   }
 });
+
+test('Orbit’s own pages get the same tooltips: the panel’s tabs, placed over the panel', async () => {
+  const orbit = await launchOrbit();
+  try {
+    const { app, win } = orbit;
+    await invoke(win, 'notes:panel', { view: 'projects' });
+    const panel = await pageWith(app, '#/notes/panel');
+    const bar = await pageWith(app, '/overlay/');
+    await panel.locator('[data-testid="panel-tab"][data-tab="assistant"]').hover();
+    const tip = bar.getByTestId('tooltip');
+    await expect(tip).toBeVisible();
+    await expect(tip).toContainText('Assistant');
+    await expect(tip.locator('kbd')).toHaveText(['⌘', 'J']);
+    // It sits over the panel (on the right of the window), not at the window's left edge.
+    const bounds = await overlayBounds(app);
+    const width = await app.evaluate(
+      ({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getContentSize()[0]!,
+    );
+    expect(bounds.x).toBeGreaterThan(width / 2);
+  } finally {
+    await orbit.close();
+  }
+});

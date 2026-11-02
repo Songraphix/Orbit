@@ -31,6 +31,11 @@ export class LibraryController {
   }
 
   /** True when this webContents is this window's Library page. */
+  /** Where the Library sits in the window (for tooltips over it), or null. */
+  get bounds(): { x: number; y: number; width: number; height: number } | null {
+    return this.view ? this.view.getBounds() : null;
+  }
+
   owns(webContentsId: number): boolean {
     return this.view !== null && this.view.webContents.id === webContentsId;
   }

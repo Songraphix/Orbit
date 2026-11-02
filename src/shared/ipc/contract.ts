@@ -1077,8 +1077,10 @@ export const contract = {
       })
       .strict(),
     output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
   },
   'tooltip:hide': {
+    surfaces: ['shell', 'overlay', 'internal'],
     input: z.object({}).strict(),
     output: z.void(),
   },

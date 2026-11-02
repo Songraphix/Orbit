@@ -156,7 +156,7 @@ describe('image facts', () => {
       format: 'PNG',
       width: 640,
       height: 480,
-      details: [{ label: 'Colour', value: 'RGBA, 8-bit' }],
+      details: [{ label: 'Color', value: 'RGBA, 8-bit' }],
     });
   });
 

@@ -15,12 +15,22 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { noteTitle } from '@shared/note-text';
 import { relativeTime } from '@shared/time';
 import type { NoteAction, NoteEntry } from '@shared/types/notes';
-import { NoteEditor } from '../../notes/NoteEditor';
+// The editor (Tiptap) is the heaviest part of the panel: its code starts loading at once, but
+// the panel's other views (Projects, Tasks, the assistant, the Toolkit) don't wait for it.
+const loadEditor = () => import('../../notes/NoteEditor');
+const LazyEditor = lazy(() => loadEditor().then((m) => ({ default: m.NoteEditor })));
+function NoteEditor(props: ComponentProps<typeof LazyEditor>) {
+  return (
+    <Suspense fallback={<div className="min-h-[50vh] flex-1" />}>
+      <LazyEditor {...props} />
+    </Suspense>
+  );
+}
 import { showPanelView, useWork } from '../work/context';
 import { BoardView } from '../work/BoardView';
 import { ProjectDetail, ProjectsView } from '../work/ProjectsView';
@@ -31,6 +41,7 @@ import { WorkProvider } from '../work/WorkProvider';
 import { saveOpenNotes } from '../../notes/save-notes';
 import { useAppearance } from '../appearance';
 import { AssistantView } from '../assistant/AssistantView';
+import { Tip } from '../../tooltip/Tip';
 import { ToolkitView } from '../toolkit/ToolkitView';
 
 const invoke = window.orbit.invoke;
@@ -43,27 +54,29 @@ const act = async (id: string, action: NoteAction) => {
 /** A button in a notes header: an icon with a tooltip. */
 function IconButton(props: {
   label: string;
+  keys?: string;
   onClick: () => void;
   testId: string;
   active?: boolean;
   children: ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      aria-label={props.label}
-      aria-pressed={props.active}
-      title={props.label}
-      onClick={props.onClick}
-      className={`press no-drag grid size-7 place-items-center rounded-[10px] ${
-        props.active
-          ? 'bg-[var(--note-hover)] text-[var(--note-accent)]'
-          : 'text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
-      }`}
-      data-testid={props.testId}
-    >
-      {props.children}
-    </button>
+    <Tip label={props.label} keys={props.keys}>
+      <button
+        type="button"
+        aria-label={props.label}
+        aria-pressed={props.active}
+        onClick={props.onClick}
+        className={`press no-drag grid size-7 place-items-center rounded-[10px] ${
+          props.active
+            ? 'bg-[var(--note-hover)] text-[var(--note-accent)]'
+            : 'text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
+        }`}
+        data-testid={props.testId}
+      >
+        {props.children}
+      </button>
+    </Tip>
   );
 }
 
@@ -206,27 +219,27 @@ function PanelTabs({ current }: { current: PanelTab }) {
       {tabs.map((t) => {
         const on = t.id === current;
         return (
-          <button
-            key={t.id}
-            type="button"
-            aria-current={on ? 'page' : undefined}
-            aria-label={t.label}
-            title={on ? undefined : t.keys ? `${t.label} (${t.keys})` : t.label}
-            onClick={() => showPanelView(t.id)}
-            className={`press panel-tab flex h-9 items-center justify-center gap-1.5 rounded-[11px] text-[13px] font-medium ${
-              on
-                ? 'flex-1 bg-[var(--work-accent)] text-white shadow-[0_6px_16px_-8px_var(--work-accent)]'
-                : 'w-10 text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
-            }`}
-            data-testid="panel-tab"
-            data-tab={t.id}
-          >
-            {t.icon}
-            {on && <span className="panel-tab-label">{t.label}</span>}
-          </button>
+          <Tip key={t.id} label={t.label} keys={t.keys}>
+            <button
+              type="button"
+              aria-current={on ? 'page' : undefined}
+              aria-label={t.label}
+              onClick={() => showPanelView(t.id)}
+              className={`press panel-tab flex h-9 items-center justify-center gap-1.5 rounded-[11px] text-[13px] font-medium ${
+                on
+                  ? 'flex-1 bg-[var(--work-accent)] text-white shadow-[0_6px_16px_-8px_var(--work-accent)]'
+                  : 'w-10 text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
+              }`}
+              data-testid="panel-tab"
+              data-tab={t.id}
+            >
+              {t.icon}
+              {on && <span className="panel-tab-label">{t.label}</span>}
+            </button>
+          </Tip>
         );
       })}
-      <IconButton label="Close Panel (⇧⌘N)" onClick={closePanel} testId="notes-close">
+      <IconButton label="Close Panel" keys="⇧⌘N" onClick={closePanel} testId="notes-close">
         <X size={15} />
       </IconButton>
     </nav>

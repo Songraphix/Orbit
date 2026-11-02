@@ -295,13 +295,13 @@ function CustomiseView({
           ))}
         </div>
       </Field>
-      <Field label="Colour">
+      <Field label="Color">
         <div className="flex gap-2">
           {PROFILE_COLORS.map((color) => (
             <button
               key={color}
               type="button"
-              aria-label={`Colour ${color}`}
+              aria-label={`Color ${color}`}
               aria-pressed={profile.color === color}
               onClick={() => save({ color })}
               className={`press size-6 rounded-full transition ${

@@ -64,7 +64,7 @@ function png(bytes: Uint8Array, view: DataView): ImageFacts {
   const depth = bytes[24];
   const colour = bytes[25];
   if (depth !== undefined && colour !== undefined) {
-    details.push({ label: 'Colour', value: `${PNG_COLOUR[colour] ?? 'Other'}, ${depth}-bit` });
+    details.push({ label: 'Color', value: `${PNG_COLOUR[colour] ?? 'Other'}, ${depth}-bit` });
   }
   // Chunks: animated (acTL) or not.
   let at = 8;

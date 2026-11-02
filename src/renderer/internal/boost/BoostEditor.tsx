@@ -168,7 +168,7 @@ export function BoostEditor({ id }: { id: string }) {
       )}
 
       <Section
-        title="Colours"
+        title="Colors"
         action={
           color && (
             <TextButton onClick={() => setColor(null)} testId="boost-color-reset">

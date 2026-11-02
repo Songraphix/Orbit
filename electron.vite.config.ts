@@ -78,6 +78,9 @@ export default defineConfig({
     resolve: { alias },
     plugins: [react(), tailwindcss(), excalidrawFonts()],
     build: {
+      // electron-vite leaves renderers unminified by default; minified, every Orbit page (the
+      // shell, overlay, panel, new tab page) has far less JavaScript to parse at startup.
+      minify: true,
       rolldownOptions: {
         input: {
           shell: resolve(import.meta.dirname, 'src/renderer/shell/index.html'),

@@ -18,6 +18,7 @@ import type { Rgb } from '@shared/toolkit/color';
 import { TOOLKIT_SECTIONS } from '@shared/toolkit/state';
 import type { ToolkitSection, ToolkitState } from '@shared/toolkit/state';
 import { CopyButton, Group, SmallButton } from './parts';
+import { Tip } from '../../tooltip/Tip';
 import { CssSection, DevSection, ImageSection } from './sections';
 import { CodeSection, TypeSection } from './more-sections';
 import './toolkit.css';
@@ -66,24 +67,24 @@ export function ToolkitView({ section }: { section: string }) {
         {TOOLKIT_SECTIONS.map((id) => {
           const on = id === current;
           return (
-            <button
-              key={id}
-              type="button"
-              aria-current={on ? 'page' : undefined}
-              aria-label={SECTIONS[id].label}
-              title={on ? undefined : SECTIONS[id].label}
-              onClick={() => (window.location.hash = `#/notes/panel/tools/${id}`)}
-              className={`press panel-tab flex h-8 items-center justify-center gap-1.5 rounded-full text-[12.5px] font-medium ${
-                on
-                  ? 'flex-1 bg-[var(--work-accent-soft)] text-[var(--work-accent)]'
-                  : 'w-9 text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
-              }`}
-              data-testid="toolkit-section"
-              data-section={id}
-            >
-              {SECTIONS[id].icon}
-              {on && <span className="panel-tab-label">{SECTIONS[id].label}</span>}
-            </button>
+            <Tip key={id} label={SECTIONS[id].label}>
+              <button
+                type="button"
+                aria-current={on ? 'page' : undefined}
+                aria-label={SECTIONS[id].label}
+                onClick={() => (window.location.hash = `#/notes/panel/tools/${id}`)}
+                className={`press panel-tab flex h-8 items-center justify-center gap-1.5 rounded-full text-[12.5px] font-medium ${
+                  on
+                    ? 'flex-1 bg-[var(--work-accent-soft)] text-[var(--work-accent)]'
+                    : 'w-9 text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
+                }`}
+                data-testid="toolkit-section"
+                data-section={id}
+              >
+                {SECTIONS[id].icon}
+                {on && <span className="panel-tab-label">{SECTIONS[id].label}</span>}
+              </button>
+            </Tip>
           );
         })}
       </nav>

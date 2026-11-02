@@ -5,6 +5,7 @@ import { EaselPage } from './easel/EaselPage';
 import { LibraryPage } from './library/LibraryPage';
 import { NewTabPage } from './newtab/NewTabPage';
 import { SettingsPage } from './SettingsPage';
+import { preloaded } from './preload-routes';
 
 // The Boost editor brings CodeMirror; load it only on orbit://boost pages (the new tab page
 // shares this bundle and should stay light).
@@ -68,20 +69,27 @@ export function InternalApp() {
       </Suspense>
     );
   if (page === 'easel' && param) return <EaselPage id={param} />;
+  const notes = preloaded.notes;
   if (page === 'note' && param)
-    return (
+    return notes ? (
+      <notes.NoteTabPage key={param} id={param} />
+    ) : (
       <Suspense fallback={null}>
         <NoteTabPage key={param} id={param} />
       </Suspense>
     );
   if (page === 'notes' && param === 'panel')
-    return (
+    return notes ? (
+      <notes.NotesPanelPage />
+    ) : (
       <Suspense fallback={null}>
         <NotesPanelPage />
       </Suspense>
     );
   if (page === 'notes' && param === 'float' && sub)
-    return (
+    return notes ? (
+      <notes.FloatingNotePage key={sub} id={sub} />
+    ) : (
       <Suspense fallback={null}>
         <FloatingNotePage key={sub} id={sub} />
       </Suspense>
