@@ -1107,6 +1107,10 @@ void app.whenReady().then(() => {
       }
       windowManager.all().forEach((c) => c.notes.refresh());
     },
+    // Orbit AI as a coworker: your projects and tasks (Settings → AI → Projects and tasks).
+    work: persistence.work,
+    startFocus: (controller, input) => focusService?.start(controller, input),
+    workChanged: () => windowManager.all().forEach((c) => c.notes.refresh()),
     saveNote: (doc, text, projectId) => {
       const id = persistence!.notes.create(Date.now(), projectId);
       persistence!.notes.save(id, doc, text);

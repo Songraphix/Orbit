@@ -161,8 +161,12 @@ export type Turn = {
   prompt: string;
   /** Documents attached with this question, by index in the conversation's list. */
   docs: number[];
-  /** The answer's text so far (empty while thinking or after an error). */
+  /** The answer's text so far (empty while thinking or after an error): after any tool rounds,
+   *  the last message's text. */
   answer: string;
+  /** Tool rounds within this answer (Claude's tool calls and their results), replayed in later
+   *  requests so Claude remembers what it looked at and did. */
+  exchange?: BetaMessageParam[];
 };
 
 /**
@@ -179,7 +183,12 @@ export function apiMessages(turns: readonly Turn[], docs: readonly ConversationD
         { type: 'text', text: turn.prompt },
       ],
     });
-    if (turn.answer.trim()) messages.push({ role: 'assistant', content: turn.answer });
+    // Tool rounds go back only with the answer that followed them (a call must have its result,
+    // and the conversation must end each turn with Claude).
+    if (turn.answer.trim()) {
+      if (turn.exchange) messages.push(...turn.exchange);
+      messages.push({ role: 'assistant', content: turn.answer });
+    }
   }
   return messages;
 }

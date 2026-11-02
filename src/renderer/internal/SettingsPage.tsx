@@ -463,6 +463,18 @@ function AiSection() {
             data-testid="ai-attach-page"
           />
         </Row>
+        <Row
+          label="Projects and tasks"
+          hint="Orbit AI can look at your projects and tasks when a question needs them, and add, update or tick them off when you ask. Each thing it does shows in its reply. It never deletes anything."
+        >
+          <input
+            type="checkbox"
+            checked={prefs.workAccess}
+            onChange={(e) => set({ workAccess: e.target.checked })}
+            className="size-4 accent-[var(--accent,#5b5bd6)]"
+            data-testid="ai-work-access"
+          />
+        </Row>
         <div
           className="px-4 py-3 text-xs leading-relaxed text-neutral-500"
           data-testid="ai-privacy"

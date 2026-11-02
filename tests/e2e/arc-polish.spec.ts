@@ -28,10 +28,18 @@ test('Arc-style tooltips: label and key caps, quick to follow, never in the way'
     const { app, win } = orbit;
     await invoke(win, 'tabs:create', { url: server.url('/one') });
     const bar = await pageWith(app, '/overlay/');
+    // Once the page has loaded (the address pill re-renders while it loads).
+    await expect(win.getByTestId('toolbar-address')).toContainText('Page One');
+    await expect(win.getByTestId('toolbar-loading')).toHaveCount(0);
 
-    await win.getByTestId('address-copy').hover();
     const tip = bar.getByTestId('tooltip');
-    await expect(tip).toBeVisible();
+    // Quiet test runs keep Orbit in the background, where focus can move while a page settles
+    // (a blur hides tooltips, as it should); hover again if the first one was swallowed.
+    await expect(async () => {
+      await win.getByTestId('toolbar-address').hover();
+      await win.getByTestId('address-copy').hover();
+      await expect(tip).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 12_000 });
     await expect(tip).toContainText('Copy Link');
     await expect(tip.locator('kbd')).toHaveText(['⇧', '⌘', 'C']);
     // Alone, the overlay is only the tooltip's box (the page keeps its clicks).

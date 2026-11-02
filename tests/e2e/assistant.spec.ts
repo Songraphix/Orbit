@@ -187,3 +187,61 @@ test('Tasks from a page, Stop, research questions, and AI off', async () => {
   await expect(panel.getByTestId('assistant-blocked')).toContainText('turned off');
   await expect(panel.getByTestId('assistant-input')).toBeDisabled();
 });
+
+test('Orbit AI as a coworker: it looks at today’s tasks, adds one, and says what it did', async () => {
+  const { app, win } = orbit;
+  await addKey(app);
+  await win.getByTestId('toolbar-assistant').click();
+  const panel = await pageWith(app, '#/notes/panel/assistant');
+  await expect(panel.getByTestId('assistant-work-access')).toBeVisible();
+  const today = await panel.evaluate(() => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  });
+  await invoke(panel, 'work:saveTask', {
+    projectId: null,
+    title: 'Send the invoice',
+    description: '',
+    priority: 'medium',
+    status: 'todo',
+    dueDate: today,
+  });
+
+  await panel.getByTestId('assistant-input').fill('COWORKER what do I have today? add a call');
+  await panel.getByTestId('assistant-input').press('Enter');
+  const answer = panel.getByTestId('assistant-answer').last();
+  await expect(answer).toHaveAttribute('data-status', 'done');
+  // What it did, in order, then its answer from the real results.
+  await expect(answer.getByTestId('assistant-action')).toHaveText([
+    /Looked at today’s tasks \(\d+\)/,
+    'Added “Call the printer”',
+  ]);
+  await expect(answer.getByTestId('assistant-answer-text')).toContainText('Send the invoice');
+  await expect(answer.getByTestId('assistant-answer-text')).toContainText('Let me check.');
+
+  // Two requests: the question with tools, then the tool results (validated and run here).
+  const requests = server.aiRequests();
+  expect(requests).toHaveLength(2);
+  const tools = (requests[0]!.body['tools'] as { name: string }[]).map((t) => t.name);
+  expect(tools).toContain('create_task');
+  expect(tools).not.toContain('delete_task');
+  const second = requests[1]!.body['messages'] as { role: string }[];
+  expect(second.map((m) => m.role)).toEqual(['user', 'assistant', 'user']);
+  const work = (await invoke(panel, 'work:get')) as {
+    tasks: { title: string; priority: string }[];
+  };
+  expect(work.tasks.find((t) => t.title === 'Call the printer')?.priority).toBe('high');
+
+  // Off in Settings → AI: no tools are offered, and the panel says so.
+  await clickMenu(app, 'settings');
+  const settings = await pageWith(app, '#/settings');
+  await settings.locator('[data-testid="settings-nav"][data-section="ai"]').click();
+  await settings.getByTestId('ai-work-access').uncheck();
+  await clickMenu(app, 'close-tab');
+  await panel.getByTestId('assistant-input').fill('anything else?');
+  await panel.getByTestId('assistant-input').press('Enter');
+  await expect(panel.getByTestId('assistant-answer').last()).toHaveAttribute('data-status', 'done');
+  expect(server.lastAiRequest()!.body['tools']).toBeUndefined();
+  await expect(panel.getByTestId('assistant-work-access')).toHaveCount(0);
+});

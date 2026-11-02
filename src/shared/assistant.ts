@@ -1,9 +1,10 @@
 import { z } from 'zod';
 
 /**
- * The Orbit assistant (roadmap P3.1–P3.4): a conversation in the productivity panel. Claude only
- * sees what you attach — the page you're on, text you selected, or saved research you picked —
- * and answers cite it. The conversation lives in memory (it's gone when Orbit quits); answers
+ * The Orbit assistant (roadmap P3.1–P3.4): a conversation in the productivity panel. Claude sees
+ * what you attach — the page you're on, text you selected, or saved research you picked — and
+ * answers cite it. With "Projects and tasks" on (Settings → AI), it can also look at and change
+ * your projects and tasks when a question needs it; each thing it does shows in the reply. The conversation lives in memory (it's gone when Orbit quits); answers
  * you want to keep go to Notes.
  */
 
@@ -38,6 +39,13 @@ export const assistantContextSchema = z.object({
 });
 export type AssistantContext = z.output<typeof assistantContextSchema>;
 
+/** Something Orbit AI did with your projects and tasks while answering (shown in the reply). */
+export const assistantActionSchema = z.object({
+  kind: z.enum(['read', 'create', 'update', 'focus']),
+  label: z.string(),
+});
+export type AssistantAction = z.output<typeof assistantActionSchema>;
+
 export const ASSISTANT_STATUSES = ['thinking', 'writing', 'done', 'stopped', 'error'] as const;
 
 export const assistantMessageSchema = z.discriminatedUnion('role', [
@@ -56,6 +64,8 @@ export const assistantMessageSchema = z.discriminatedUnion('role', [
     error: z.string().nullable(),
     /** The model that answered. */
     model: z.string().nullable(),
+    /** What it looked at or changed in your projects and tasks, in order. */
+    actions: z.array(assistantActionSchema).default([]),
   }),
 ]);
 export type AssistantMessage = z.output<typeof assistantMessageSchema>;
@@ -92,6 +102,8 @@ export const assistantStateSchema = z.object({
   blocked: z.string().nullable(),
   /** The model that will answer. */
   model: z.string(),
+  /** Orbit AI may look at and change your projects and tasks (Settings → AI). */
+  workAccess: z.boolean().default(false),
   /** Tasks Claude suggested, waiting for you to pick and add them. */
   tasks: z
     .object({

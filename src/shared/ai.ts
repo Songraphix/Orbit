@@ -48,6 +48,8 @@ export const aiPrefsSchema = z.object({
   monthlyBudget: z.number().min(0.5).max(1000).nullable(),
   /** Attach the page you're on whenever the assistant opens (otherwise you add it yourself). */
   attachPage: z.boolean(),
+  /** Orbit AI may look at and change your projects and tasks when a question needs it. */
+  workAccess: z.boolean().default(true),
 });
 export type AiPrefs = z.output<typeof aiPrefsSchema>;
 
@@ -56,6 +58,7 @@ export const DEFAULT_AI_PREFS: AiPrefs = {
   model: 'claude-opus-5-5',
   monthlyBudget: 10,
   attachPage: false,
+  workAccess: true,
 };
 
 /** What each request was for, in the activity log. */

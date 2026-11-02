@@ -3,6 +3,8 @@ import {
   BookMarked,
   Check,
   ClipboardCopy,
+  Eye,
+  FolderKanban,
   FileText,
   ListChecks,
   NotebookPen,
@@ -10,6 +12,7 @@ import {
   Quote,
   Sparkles,
   Square,
+  Target,
   SquarePen,
   X,
 } from 'lucide-react';
@@ -167,6 +170,39 @@ function Reply({ reply }: { reply: AssistantReply }) {
           <Sparkles size={14} className="spin-slow text-[var(--work-accent-text)]" />
           <span>Thinking…</span>
         </div>
+      )}
+      {reply.actions.length > 0 && (
+        // What it looked at and changed in your projects and tasks, in order.
+        <ul className="mb-2 flex flex-col gap-1" data-testid="assistant-actions">
+          {reply.actions.map((a, i) => (
+            <li
+              key={i}
+              className={`flex items-center gap-1.5 text-[12px] ${
+                a.kind === 'read' ? 'text-[var(--note-muted)]' : 'font-medium'
+              }`}
+              data-testid="assistant-action"
+              data-kind={a.kind}
+            >
+              <span
+                className={`grid size-4 shrink-0 place-items-center rounded-full ${
+                  a.kind === 'read'
+                    ? 'bg-[var(--note-hover)]'
+                    : 'bg-[var(--work-accent-soft)] text-[var(--work-accent-text)]'
+                }`}
+                aria-hidden
+              >
+                {a.kind === 'read' ? (
+                  <Eye size={10} />
+                ) : a.kind === 'focus' ? (
+                  <Target size={10} />
+                ) : (
+                  <Check size={10} strokeWidth={3} />
+                )}
+              </span>
+              <span className="min-w-0 truncate">{a.label}</span>
+            </li>
+          ))}
+        </ul>
       )}
       {blocks.length > 0 && (
         <div
@@ -513,6 +549,16 @@ function Composer({ state }: { state: AssistantState }) {
             testId="assistant-selection-chip"
             attached
           />
+        )}
+        {state.workAccess && (
+          <span
+            className="flex h-6 items-center gap-1 rounded-full bg-[var(--work-accent-soft)] px-2 text-[11.5px] font-medium text-[var(--work-accent-text)]"
+            title="Orbit AI can look at and change your projects and tasks when you ask. Turn it off in Settings → AI."
+            data-testid="assistant-work-access"
+          >
+            <FolderKanban size={12} />
+            Projects & tasks
+          </span>
         )}
         {state.research ? (
           <Chip

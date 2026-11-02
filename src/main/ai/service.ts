@@ -5,6 +5,7 @@ import type {
   BetaMessage,
   BetaMessageParam,
   BetaRawMessageStreamEvent,
+  BetaToolUnion,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages';
 import type { z } from 'zod';
 import { estimateCost, formatCost, inputTokens, withinBudget } from '@shared/ai';
@@ -38,6 +39,9 @@ export type AiDeps = {
 
 /** A request that never left: no key, AI turned off, or the monthly limit reached. */
 export class AiBlocked extends Error {}
+
+/** A tool call's input arrived unreadable (inputs stream as written); asking again is right. */
+export class ToolInputError extends Error {}
 
 /**
  * Orbit's AI features (F-29, roadmap Phase 3) with the user's own Anthropic API key. Every
@@ -128,6 +132,8 @@ export class AIService {
     sent: string;
     signal: AbortSignal;
     onEvent: (event: BetaRawMessageStreamEvent) => void;
+    /** Tools Claude may call (the caller runs them and continues the conversation). */
+    tools?: BetaToolUnion[];
   }): Promise<BetaMessage> {
     const client = this.client(120_000);
     const { model } = this.deps.prefs();
@@ -137,6 +143,7 @@ export class AIService {
         max_tokens: 64_000,
         system: request.system,
         messages: request.messages,
+        ...(request.tools?.length ? { tools: request.tools } : {}),
         output_config: { effort: request.effort },
         // The conversation so far (a page, research) is resent each turn: cache it.
         cache_control: { type: 'ephemeral' },
@@ -153,6 +160,15 @@ export class AIService {
       // Stopped by the user: what arrived still cost tokens, if the stream got that far.
       const partial = stream.currentMessage;
       if (partial) this.record(request.feature, partial.model, partial.usage, request.sent);
+      // The SDK's own (non-API) error here is a tool input it couldn't parse.
+      if (
+        request.tools?.length &&
+        error instanceof Anthropic.AnthropicError &&
+        !(error instanceof Anthropic.APIError) &&
+        !(error instanceof Anthropic.APIUserAbortError)
+      ) {
+        throw new ToolInputError('A tool call arrived incomplete', { cause: error });
+      }
       throw friendlyError(error);
     }
   }

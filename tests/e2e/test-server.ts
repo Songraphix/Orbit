@@ -131,6 +131,7 @@ type FakeBlock =
 type FakeRequest = {
   model: string;
   stream?: boolean;
+  tools?: { name: string }[];
   output_config?: { format?: unknown };
   messages: { role: string; content: string | FakeBlock[] }[];
 };
@@ -167,6 +168,7 @@ function fakeTasks(body: FakeRequest) {
  * A question containing SLOW streams slowly (for Stop).
  */
 function streamAnswer(body: FakeRequest, res: ServerResponse) {
+  if (coworkerAnswer(body, res)) return;
   const docs = blocksOf(body).filter(
     (b): b is Extract<FakeBlock, { type: 'document' }> => b.type === 'document',
   );
@@ -273,6 +275,98 @@ function streamAnswer(body: FakeRequest, res: ServerResponse) {
     else next();
   };
   next();
+}
+
+/**
+ * Orbit AI as a coworker: a question containing COWORKER (with tools offered) first calls
+ * list_tasks and create_task — inputs streamed in pieces, as the API streams them — then, given
+ * the results, answers with what it found.
+ */
+function coworkerAnswer(body: FakeRequest, res: ServerResponse): boolean {
+  const asked = JSON.stringify(body.messages);
+  if (!asked.includes('COWORKER') || !body.tools?.length) return false;
+  const last = body.messages.at(-1)?.content;
+  const results =
+    typeof last === 'string'
+      ? []
+      : (last ?? []).filter((b) => b.type === ('tool_result' as string));
+  const events: Record<string, unknown>[] = [
+    {
+      type: 'message_start',
+      message: {
+        id: 'msg_tools',
+        type: 'message',
+        role: 'assistant',
+        model: body.model,
+        content: [],
+        stop_reason: null,
+        stop_sequence: null,
+        usage: { input_tokens: 900, output_tokens: 1 },
+      },
+    },
+  ];
+  if (results.length === 0) {
+    events.push(
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      {
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'text_delta', text: 'Let me check. ' },
+      },
+      { type: 'content_block_stop', index: 0 },
+    );
+    const calls = [
+      { id: 'toolu_list', name: 'list_tasks', json: ['{"filter":', '"today"}'] },
+      {
+        id: 'toolu_add',
+        name: 'create_task',
+        json: ['{"title":"Call the ', 'printer","priority":"high"}'],
+      },
+    ];
+    calls.forEach((call, i) => {
+      const index = i + 1;
+      events.push({
+        type: 'content_block_start',
+        index,
+        content_block: { type: 'tool_use', id: call.id, name: call.name, input: {} },
+      });
+      for (const part of call.json) {
+        events.push({
+          type: 'content_block_delta',
+          index,
+          delta: { type: 'input_json_delta', partial_json: part },
+        });
+      }
+      events.push({ type: 'content_block_stop', index });
+    });
+    events.push({
+      type: 'message_delta',
+      delta: { stop_reason: 'tool_use', stop_sequence: null },
+      usage: { output_tokens: 60 },
+    });
+  } else {
+    // Proof the results came back: the titles of today's tasks it was given.
+    const listed = JSON.stringify(results);
+    const titles = [...listed.matchAll(/\\"title\\":\\"([^\\]+)\\"/g)].map((m) => m[1]);
+    const text = `Today you have: ${titles.join(', ') || 'nothing'}. I added “Call the printer”.`;
+    events.push(
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } },
+      { type: 'content_block_stop', index: 0 },
+      {
+        type: 'message_delta',
+        delta: { stop_reason: 'end_turn', stop_sequence: null },
+        usage: { output_tokens: 30 },
+      },
+    );
+  }
+  events.push({ type: 'message_stop' });
+  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
+  for (const event of events) {
+    res.write(`event: ${String(event['type'])}\ndata: ${JSON.stringify(event)}\n\n`);
+  }
+  res.end();
+  return true;
 }
 
 /** Serves a few static pages on 127.0.0.1 so tests never depend on the internet. */
