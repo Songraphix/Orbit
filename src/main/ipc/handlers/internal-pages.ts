@@ -117,6 +117,7 @@ export function registerInternalPageHandlers(
     peek: deps.settings.get('peek.enabled'),
     peekScope: deps.settings.get('peek.scope'),
     littleShortcut: deps.settings.get('little.globalShortcut'),
+    autoPopout: deps.settings.get('media.autoPopout'),
   });
 
   router.handle('settings:get', (_input, { sender }) => {
@@ -145,6 +146,7 @@ export function registerInternalPageHandlers(
     }
     if (patch.peek !== undefined) deps.settings.set('peek.enabled', patch.peek);
     if (patch.peekScope) deps.settings.set('peek.scope', patch.peekScope);
+    if (patch.autoPopout !== undefined) deps.settings.set('media.autoPopout', patch.autoPopout);
     if (patch.littleShortcut !== undefined) {
       deps.settings.set('little.globalShortcut', patch.littleShortcut);
       deps.applyLittleShortcut(patch.littleShortcut);

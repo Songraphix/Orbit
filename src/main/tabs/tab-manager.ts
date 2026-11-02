@@ -65,6 +65,9 @@ export type TabManagerDeps = Pick<
   siteSetting?: (url: string, key: string) => string | null;
   /** Offered every link that wants a new tab; returns true if Peek took it (F-23). */
   peek?: (fromTabId: string, url: string, activate: boolean) => boolean;
+  /** A tab whose page is lent to the video pop-out is about to show here: take it back (the
+   *  pop-out lets go of it, then calls takeBack). */
+  onReclaim?: (tabId: string) => void;
   /** The Peek a tab keeps open, if any (its badge in the sidebar). */
   peekOf?: (tabId: string) => { favicon: string | null; title: string } | null;
   /** Split view started, resized or ended (null): the layout needs the new ratio. */
@@ -99,6 +102,8 @@ export class TabManager {
   private readonly announced = new WeakSet<WebContents>();
   private notifyScheduled = false;
   private frozen = false;
+  /** Tabs whose page is lent to the video pop-out (playing in its own small window). */
+  private readonly lent = new Set<string>();
   private prepared: { tabId: string; at: number; dataUrl: string } | null = null;
   private readonly unsubscribe: () => void;
   /** Set once the window closes; late page events (pages unloading) are then ignored. */
@@ -145,6 +150,29 @@ export class TabManager {
 
   get(id: string): TabController | undefined {
     return this.live.get(id);
+  }
+
+  /** The video pop-out borrows a tab's page (one not on screen here); takeBack returns it. */
+  lend(id: string): WebContentsView | null {
+    const tab = this.live.get(id);
+    if (!tab || this.lent.has(id) || this.isOnScreen(id)) return null;
+    if (tab.view.webContents.isDestroyed()) return null;
+    this.detach(tab.view);
+    this.lent.add(id);
+    return tab.view;
+  }
+
+  /** The pop-out gives a page back (it has already taken it out of its own window). */
+  takeBack(id: string): void {
+    if (!this.lent.delete(id)) return;
+    const tab = this.live.get(id);
+    if (!tab || tab.view.webContents.isDestroyed()) return;
+    this.attach(tab.view);
+    if (this.isOnScreen(id)) this.place();
+  }
+
+  isLent(id: string): boolean {
+    return this.lent.has(id);
   }
 
   /** The tab currently showing this webContents, if any. */
@@ -800,6 +828,12 @@ export class TabManager {
 
   /** Puts every on-screen view where the layout says (split panes, or the one web view). */
   private place(): void {
+    // A page playing in the video pop-out comes home before it's shown here.
+    for (const id of this.shownIds()) {
+      if (!this.lent.has(id)) continue;
+      this.deps.onReclaim?.(id);
+      this.takeBack(id);
+    }
     const layout = this.deps.getLayout();
     const panes = this.split && layout.panes.length === 2 ? layout.panes : null;
     this.shownIds().forEach((id, i) => {
@@ -882,6 +916,10 @@ export class TabManager {
   }
 
   private replaceView(id: string, oldView: WebContentsView, newView: WebContentsView): void {
+    if (this.lent.has(id)) {
+      this.deps.onReclaim?.(id); // a new page (after a crash) starts at home
+      this.lent.delete(id);
+    }
     this.emulated.delete(id);
     this.detach(oldView);
     this.attach(newView);

@@ -34,7 +34,7 @@ import {
 } from '../types/command-bar';
 import { downloadsSnapshotSchema, recentDownloadSchema } from '../types/downloads';
 import { findStateSchema } from '../types/find';
-import { mediaStateSchema } from '../types/media';
+import { mediaStateSchema, POPOUT_ACTIONS, popoutViewSchema } from '../types/media';
 import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
 import { sidebarSnapshotSchema, spaceThemeSchema } from '../types/space';
 import { userSettingsSchema } from '../settings';
@@ -305,6 +305,17 @@ export const contract = {
   'media:control': {
     input: z.object({ action: z.enum(['toggle', 'mute', 'pip', 'focus', 'close']) }).strict(),
     output: z.void(),
+  },
+  /** The video pop-out's buttons: minimize, back to the video's tab, close, play/pause. */
+  'popout:action': {
+    input: z.object({ action: z.enum(POPOUT_ACTIONS) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'popout:get': {
+    input: z.object({}).strict(),
+    output: popoutViewSchema.nullable(),
+    surfaces: ['internal'],
   },
 
   // Little Orbit (F-24) and default browser.
@@ -1691,6 +1702,8 @@ export const events = {
   'focus:update': focusViewSchema,
   /** What to play, sent to the hidden page that plays Orbit's sounds. */
   'sounds:update': soundStateSchema,
+  /** The video pop-out's state, sent to its controls page. */
+  'popout:update': popoutViewSchema,
   /** What's playing, sent to every shell (the toolbar's Focus button). */
   'state:sounds': soundStateSchema,
   /** The docked app panel (null: closed), sent to its window's shell. */
@@ -1719,5 +1732,6 @@ export const INTERNAL_EVENTS = [
   'focus:update',
   'sounds:update',
   'ui:update',
+  'popout:update',
 ] as const;
 export type InternalEventChannel = (typeof INTERNAL_EVENTS)[number];

@@ -961,6 +961,16 @@ void app.whenReady().then(() => {
   router.handle('media:control', async ({ action }, { sender }) => {
     await windowManager.forSender(sender.webContentsId)?.media.control(action);
   });
+  // The video pop-out's own page (its buttons): only that page may drive it.
+  const popoutOf = (webContentsId: number) => {
+    const owner = windowManager.all().find((c) => c.popout.isControls(webContentsId));
+    if (!owner) throw new Error(`Sender ${webContentsId} is not the video pop-out`);
+    return owner.popout;
+  };
+  router.handle('popout:get', (_i, { sender }) => popoutOf(sender.webContentsId).view());
+  router.handle('popout:action', ({ action }, { sender }) => {
+    popoutOf(sender.webContentsId).act(action);
+  });
   router.handle('little:get', (_i, { sender }) => {
     const little = littleWindows.get(sender.webContentsId);
     return { url: little?.url ?? '', title: little?.title ?? '' };

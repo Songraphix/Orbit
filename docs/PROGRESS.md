@@ -155,6 +155,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — Owner request: **quiet scrollbars everywhere.** Orbit's own pages, panels and overlay cards get a slim (8 px) rounded thumb with no track or arrows, faint until pointed at, coloured from the text so it suits light and dark — even with macOS set to always show scroll bars. The sidebar shows none at all, like Arc, and no longer scrolls sideways (the source of the stray horizontal bar). Web pages keep their own
 
+- 2026-11-02 — Owner request: **video pop-out, Arc-style** (replaces Chromium's square picture-in-picture window). Switch away from a tab playing a video (with sound) and it **pops out on its own** into a small **rounded**, shadowed window that floats above other apps (and over fullscreen Spaces), sized to the video, in the bottom-right corner. Its buttons show while the pointer is over it (or it's paused): **Close** (the video pauses and goes home), **Minimize (−)**, **Back to Video** (the tab, in front), and play/pause in the middle; drag anywhere else to move it; it remembers where you put it this session. It's the tab's own page (nothing reloads): main lends the page to the window and lifts the video into the page's top layer (the popover API — the site sees no fullscreen change); clicking the tab brings it home. The mini player's picture-in-picture button uses it too, and hides while the video is out. **Settings → General → Video** turns the automatic pop-out off. Muted feed previews don't pop out
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0

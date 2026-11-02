@@ -18,6 +18,8 @@ export const INTERNAL_PAGES = [
   'blocked',
   /** The hidden page that plays focus sounds. */
   'sounds',
+  /** The video pop-out's buttons, over the video in its floating window. */
+  'popout',
 ] as const;
 export type InternalPage = (typeof INTERNAL_PAGES)[number];
 

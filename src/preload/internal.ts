@@ -14,6 +14,7 @@ const EVENTS = new Set([
   'focus:update',
   'sounds:update',
   'ui:update',
+  'popout:update',
 ]);
 
 const api: OrbitInternalApi = {

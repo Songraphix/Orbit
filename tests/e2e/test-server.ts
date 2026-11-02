@@ -28,6 +28,21 @@ const ROUTES: Record<string, string> = {
          location.href.replace('127.0.0.1', 'localhost').replace('/peek', '/two');
      </script>`,
   ),
+  // A video that plays at once (a canvas stream, no files or network), with sound allowed.
+  '/clip': page(
+    'Clip',
+    `<div style="transform: translateZ(0); width: 320px"><video id="v" playsinline></video></div>
+     <script>
+       const c = document.createElement('canvas');
+       c.width = 320; c.height = 180;
+       const g = c.getContext('2d');
+       let n = 0;
+       setInterval(() => { g.fillStyle = 'hsl(' + (n++ * 7) % 360 + ' 70% 50%)'; g.fillRect(0, 0, 320, 180); }, 33);
+       const v = document.getElementById('v');
+       v.srcObject = c.captureStream(30);
+       v.play().catch((e) => { window.__playError = String(e); });
+     </script>`,
+  ),
   '/notify': page(
     'Notify',
     `<button id="ask" onclick="Notification.requestPermission().then((p) => { document.title = 'perm:' + p; })">Ask</button>`,

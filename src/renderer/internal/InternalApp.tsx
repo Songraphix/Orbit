@@ -7,6 +7,7 @@ import { NewTabPage } from './newtab/NewTabPage';
 import { SettingsPage } from './SettingsPage';
 import { BlockedPage } from './focus/BlockedPage';
 import { SoundHost } from './sounds/SoundHost';
+import { PopoutControls } from './popout/PopoutControls';
 import { preloaded } from './preload-routes';
 
 // The Boost editor brings CodeMirror; load it only on orbit://boost pages (the new tab page
@@ -37,6 +38,7 @@ const TITLES: Record<string, string> = {
   notes: 'Notes',
   blocked: 'Blocked',
   sounds: 'Orbit Sounds',
+  popout: 'Video',
 };
 
 /** The hash main loaded; the Library changes it when switching sections. */
@@ -56,7 +58,7 @@ export function InternalApp() {
     // Internal pages use the normal page background — white, or dark in dark appearance
     // (.ui-light, tokens.css) — except the new tab page (wallpaper) and the Library
     // (transparent, over the space's colours). Notes pages paint their own.
-    if (!['newtab', 'library', 'note', 'notes'].includes(page)) {
+    if (!['newtab', 'library', 'note', 'notes', 'popout'].includes(page)) {
       document.documentElement.classList.add('ui-light');
       document.documentElement.style.background = 'var(--color-white)';
     }
@@ -66,6 +68,7 @@ export function InternalApp() {
   if (page === 'archive') return <ArchivePage />;
   if (page === 'blocked' && param) return <BlockedPage encoded={param} />;
   if (page === 'sounds') return <SoundHost />;
+  if (page === 'popout') return <PopoutControls />;
   if (page === 'settings') return <SettingsPage section={param || null} />;
   if (page === 'boost' && param)
     return (

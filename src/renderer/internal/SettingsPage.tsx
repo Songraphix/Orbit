@@ -217,6 +217,22 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
               </Row>
             </Group>
 
+            <Group title="Video">
+              <Row
+                label="Pop out playing videos"
+                hint="Switch away from a tab playing a video and it keeps playing in a small floating window, with buttons to minimize it, go back to it or close it."
+              >
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={settings.autoPopout}
+                  onChange={(e) => update({ autoPopout: e.target.checked })}
+                  className="orbit-switch"
+                  data-testid="setting-auto-popout"
+                />
+              </Row>
+            </Group>
+
             <Group title="Default browser">
               <DefaultBrowserRow />
             </Group>

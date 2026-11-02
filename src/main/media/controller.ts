@@ -11,13 +11,6 @@ const SCRIPTS = {
     return true;
   })()`,
   pause: `document.querySelectorAll('video, audio').forEach((m) => m.pause())`,
-  pip: `(() => {
-    const v = [...document.querySelectorAll('video')].find((x) => !x.paused) ?? document.querySelector('video');
-    if (!v) return false;
-    if (document.pictureInPictureElement) { document.exitPictureInPicture(); return true; }
-    v.requestPictureInPicture();
-    return true;
-  })()`,
   info: `(() => ({
     title: navigator.mediaSession?.metadata?.title || '',
     artist: navigator.mediaSession?.metadata?.artist || '',
@@ -40,7 +33,14 @@ export class MediaController {
   constructor(
     private readonly tabs: TabManager,
     private readonly onChange: (state: MediaState) => void,
+    /** The picture-in-picture button: Orbit's own video pop-out. */
+    private readonly popOut: (tabId: string) => void = () => undefined,
   ) {}
+
+  /** Tab `tabId` is the one playing media now. */
+  isPlaying(tabId: string): boolean {
+    return this.playing && this.tabId === tabId;
+  }
 
   /** Media events from a tab's page. */
   onMedia(tabId: string, event: 'playing' | 'paused'): void {
@@ -65,7 +65,8 @@ export class MediaController {
 
   current(): MediaState {
     const tab = this.tabId ? this.tabs.get(this.tabId) : undefined;
-    if (!tab || this.tabs.isOnScreen(tab.id)) return null;
+    // Off screen only — and not while it plays in the pop-out (that has its own buttons).
+    if (!tab || this.tabs.isOnScreen(tab.id) || this.tabs.isLent(tab.id)) return null;
     const contents = tab.view.webContents;
     return {
       tabId: tab.id,
@@ -90,8 +91,7 @@ export class MediaController {
         this.emit();
         return;
       case 'pip':
-        // The second argument marks it as a user gesture, which Picture-in-Picture requires.
-        await contents.executeJavaScript(SCRIPTS.pip, true).catch(() => undefined);
+        this.popOut(tab.id);
         return;
       case 'focus':
         this.tabs.activate(tab.id);

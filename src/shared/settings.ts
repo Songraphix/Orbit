@@ -71,6 +71,8 @@ export const settingsSchema = {
   'peek.scope': z.enum(['all', 'pinned']),
   /** ⌥⌘N opens an empty Little Orbit from any app (F-24). */
   'little.globalShortcut': z.boolean(),
+  /** A playing video pops out into a small floating window when you switch away from its tab. */
+  'media.autoPopout': z.boolean(),
   /** Floating notes (F-33) open when Orbit quit, reopened at launch. */
   'notes.floating': z
     .array(z.object({ id: z.string(), bounds: rectSchema, onTop: z.boolean() }))
@@ -127,6 +129,7 @@ export const settingsDefaults: Settings = {
   'peek.enabled': true,
   'peek.scope': 'all',
   'little.globalShortcut': true,
+  'media.autoPopout': true,
   'notes.floating': [],
   'panel.state': { open: false, route: 'panel' },
   'capture.lastProject': null,
@@ -160,5 +163,6 @@ export const userSettingsSchema = z.object({
   peek: settingsSchema['peek.enabled'],
   peekScope: settingsSchema['peek.scope'],
   littleShortcut: settingsSchema['little.globalShortcut'],
+  autoPopout: settingsSchema['media.autoPopout'],
 });
 export type UserSettings = z.output<typeof userSettingsSchema>;

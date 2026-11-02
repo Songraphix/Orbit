@@ -17,6 +17,7 @@ import { TabManager } from '../tabs/tab-manager';
 import type { TabManagerDeps } from '../tabs/tab-manager';
 import { MediaController } from '../media/controller';
 import { PeekController } from '../peek/controller';
+import { VideoPopout } from '../media/popout';
 import { LibraryController } from '../library/controller';
 import { NotesPanelController } from '../notes/panel';
 import { AppPanelController } from '../apps/panel';
@@ -85,6 +86,8 @@ export type WindowController = {
   overlay: OverlayController;
   find: FindController;
   media: MediaController;
+  /** A playing video in its own small floating window (owner request, like Arc). */
+  popout: VideoPopout;
   peek: PeekController;
   library: LibraryController;
   /** The Notes panel on the right (F-33). */
@@ -274,6 +277,7 @@ export class WindowManager {
       pendingSplits = null;
     };
     let peek: PeekController | null = null;
+    let popout: VideoPopout | null = null;
     let library: LibraryController | null = null;
     let notes: NotesPanelController | null = null;
     let appPanel: AppPanelController | null = null;
@@ -344,8 +348,13 @@ export class WindowManager {
         toOverlay('state:sidebar', sidebar);
         // Find belongs to the page it searched; switching tabs closes it.
         if (snapshot.activeTabId !== lastActiveTabId) {
+          const left = lastActiveTabId;
           lastActiveTabId = snapshot.activeTabId;
           find.close();
+          // Leaving a tab that plays a video: it carries on in the pop-out (like Arc).
+          if (left && settings.get('media.autoPopout') && media?.isPlaying(left)) {
+            void popout?.popOut(left, { auto: true });
+          }
         }
         media?.refresh(); // the mini player shows only while its tab is off screen
         peek?.refresh(); // a Peek shows over its own tab only (Arc)
@@ -379,12 +388,28 @@ export class WindowManager {
         return open && peek !== null;
       },
       peekOf: (tabId) => peek?.badge(tabId) ?? null,
+      onReclaim: (tabId) => popout?.reclaim(tabId),
     });
     const tabManager = tabs;
-    const media = new MediaController(tabManager, (state) => {
-      broadcaster.sendTo(contents, 'state:media', state);
-      toOverlay('state:media', state);
+    const media = new MediaController(
+      tabManager,
+      (state) => {
+        broadcaster.sendTo(contents, 'state:media', state);
+        toOverlay('state:media', state);
+      },
+      (tabId) => void popout?.popOut(tabId, { auto: false }),
+    );
+    const videoPopout = new VideoPopout({
+      tabs: tabManager,
+      main: win,
+      internalPreload: this.deps.internalPreloadPath,
+      loadInternal: this.deps.loadInternal,
+      registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
+      unregisterInternal: (webContentsId) => senders.remove(webContentsId),
+      send: (target, view) => broadcaster.sendTo(target, 'popout:update', view),
+      onChange: () => media.refresh(),
     });
+    popout = videoPopout;
 
     // HTML fullscreen (section 4.6): Electron doesn't do this for us. The page takes the whole
     // window, and the window goes fullscreen unless it already was (then we leave it as is).
@@ -546,6 +571,7 @@ export class WindowManager {
       overlay,
       find,
       media,
+      popout: videoPopout,
       peek: peekController,
       library: libraryController,
       notes: notesPanel,
@@ -579,6 +605,7 @@ export class WindowManager {
     });
     win.on('closed', () => {
       peekController.closeAll();
+      videoPopout.close();
       libraryController.destroy();
       notesPanel.destroy();
       appPanelController.destroy();
