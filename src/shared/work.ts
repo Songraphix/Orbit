@@ -62,6 +62,8 @@ export const projectSchema = z.object({
   spaceId: z.string().nullable(),
   /** When its page was last opened ("Continue where you left off"). */
   lastOpenedAt: z.number().nullable(),
+  /** A GitHub repository it follows, "owner/repo" (roadmap P4.2). */
+  githubRepo: z.string().nullable(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
@@ -91,6 +93,17 @@ export const workDataSchema = z.object({
   templates: z.array(z.object({ id: z.string(), name: z.string() })),
   /** Findings saved with Orbit Capture (research), newest first. */
   captures: z.array(captureSchema),
+  /** Project templates (roadmap P4.1): built in, then yours. */
+  projectTemplates: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      description: z.string(),
+      color: z.string(),
+      tasks: z.number().int(),
+      builtIn: z.boolean(),
+    }),
+  ),
   /** Notes that belong to a project. */
   notes: z.array(
     z.object({ id: z.string(), title: z.string(), projectId: z.string(), updatedAt: z.number() }),
@@ -112,6 +125,10 @@ export const projectInputSchema = z
     newSpace: z.boolean().optional(),
     /** …from this workspace template (roadmap P2.5). */
     templateId: z.string().max(64).optional(),
+    /** A GitHub repository to follow, "owner/repo" (roadmap P4.2). */
+    githubRepo: z.string().max(140).nullable().optional(),
+    /** A new project's starting tasks: a built-in or saved project template (roadmap P4.1). */
+    projectTemplate: z.string().max(64).optional(),
   })
   .strict();
 export type ProjectInput = z.output<typeof projectInputSchema>;

@@ -115,6 +115,8 @@ export type TestServer = {
   lastAiRequest: () => { headers: Record<string, unknown>; body: Record<string, unknown> } | null;
   /** Every request the stand-in API received, oldest first. */
   aiRequests: () => { headers: Record<string, unknown>; body: Record<string, unknown> }[];
+  /** The Authorization header of the last request to the stand-in GitHub API ('' = none). */
+  lastGithubAuth: () => string;
 };
 
 type FakeBlock =
@@ -286,6 +288,7 @@ export async function startTestServer(): Promise<TestServer> {
     ).join('')}</channel></rss>`;
   let lastAiRequest: ReturnType<TestServer['lastAiRequest']> = null;
   const aiRequests: NonNullable<ReturnType<TestServer['lastAiRequest']>>[] = [];
+  let lastGithubAuth = '';
   const server = createServer((req, res) => {
     const path = (req.url ?? '/').split('?')[0]!;
     if (path === '/v1/messages' && req.method === 'POST') {
@@ -386,6 +389,35 @@ export async function startTestServer(): Promise<TestServer> {
         .end('Orbit download test\n');
       return;
     }
+    // A stand-in for GitHub's REST API (roadmap P4.2): acme/site has two open pull requests and
+    // one issue (its issues list also holds a pull request, as GitHub's does).
+    const github = /^\/repos\/([^/]+\/[^/]+)\/(pulls|issues)$/.exec(path);
+    if (github) {
+      lastGithubAuth = String(req.headers.authorization ?? '');
+      if (github[1] !== 'acme/site') {
+        res.writeHead(404, { 'content-type': 'application/json' }).end('{"message":"Not Found"}');
+        return;
+      }
+      const item = (n: number, title: string, kind: 'pull' | 'issues', extra = {}) => ({
+        number: n,
+        title,
+        html_url: `https://github.com/acme/site/${kind}/${n}`,
+        user: { login: 'sam' },
+        labels: [{ name: kind === 'pull' ? 'feature' : 'bug' }],
+        updated_at: '2026-11-01T10:00:00Z',
+        comments: 1,
+        ...extra,
+      });
+      const body =
+        github[2] === 'pulls'
+          ? [item(7, 'Add dark mode', 'pull'), item(8, 'Faster images', 'pull', { draft: true })]
+          : [
+              item(9, 'Footer overlaps on mobile', 'issues'),
+              item(7, 'Add dark mode', 'pull', { pull_request: {} }),
+            ];
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+      return;
+    }
     if (path === '/data.json') {
       // JSON responses show as a tree (roadmap P3.6).
       res.writeHead(200, { 'content-type': 'application/json' }).end(
@@ -415,5 +447,6 @@ export async function startTestServer(): Promise<TestServer> {
     close: () => new Promise((resolve) => server.close(() => resolve())),
     lastAiRequest: () => lastAiRequest,
     aiRequests: () => aiRequests,
+    lastGithubAuth: () => lastGithubAuth,
   };
 }

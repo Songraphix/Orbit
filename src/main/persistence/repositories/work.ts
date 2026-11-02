@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { githubRepo } from '@shared/github';
 import {
   PRIORITIES,
   PROJECT_COLORS,
@@ -24,6 +25,7 @@ type ProjectRow = {
   due_date: string | null;
   space_id: string | null;
   last_opened_at: number | null;
+  github_repo: string | null;
   created_at: number;
   updated_at: number;
 };
@@ -60,6 +62,7 @@ const toProject = (r: ProjectRow): Project => ({
   dueDate: date(r.due_date),
   spaceId: r.space_id,
   lastOpenedAt: r.last_opened_at,
+  githubRepo: r.github_repo,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
 });
@@ -102,6 +105,8 @@ export class WorkRepository {
   saveProject(input: ProjectInput, now = Date.now()): string {
     const problem = projectProblem(input);
     if (problem) throw new WorkError(problem);
+    const repo = input.githubRepo ? githubRepo(input.githubRepo) : null;
+    if (input.githubRepo && !repo) throw new WorkError('Use owner/repository for GitHub');
     const fields = [
       input.name.trim(),
       input.description.trim(),
@@ -112,12 +117,15 @@ export class WorkRepository {
       input.spaceId,
     ];
     if (input.id) {
+      // An edit without the field (older callers) keeps the repository as it was.
+      const keep = input.githubRepo === undefined;
       const result = this.db
         .prepare(
           `UPDATE projects SET name = ?, description = ?, status = ?, color = ?, start_date = ?,
-             due_date = ?, space_id = ?, updated_at = ? WHERE profile_id = ? AND id = ?`,
+             due_date = ?, space_id = ?, github_repo = CASE WHEN ? THEN github_repo ELSE ? END,
+             updated_at = ? WHERE profile_id = ? AND id = ?`,
         )
-        .run(...fields, now, PROFILE, input.id);
+        .run(...fields, keep ? 1 : 0, repo, now, PROFILE, input.id);
       if (Number(result.changes) === 0) throw new WorkError('That project no longer exists');
       return input.id;
     }
@@ -125,9 +133,10 @@ export class WorkRepository {
     this.db
       .prepare(
         `INSERT INTO projects (id, profile_id, name, description, status, color, start_date,
-           due_date, space_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           due_date, space_id, github_repo, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(id, PROFILE, ...fields, now, now);
+      .run(id, PROFILE, ...fields, repo, now, now);
     return id;
   }
 

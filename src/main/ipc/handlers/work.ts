@@ -3,6 +3,10 @@ import type { IpcRouter } from '../router';
 import type { WorkData } from '@shared/work';
 import type { CaptureRepository } from '../../persistence/repositories/captures';
 import type { TemplateRepository } from '../../persistence/repositories/templates';
+import type { ProjectTemplateRepository } from '../../persistence/repositories/project-templates';
+import { addDays, tasksAsTemplate } from '@shared/project-templates';
+import { dateKey } from '@shared/work';
+import type { GithubService } from '../../github/service';
 import { spaceFromTemplate } from '../../sidebar/templates';
 import type { NotesRepository } from '../../persistence/repositories/notes';
 import type { WorkRepository } from '../../persistence/repositories/work';
@@ -19,6 +23,8 @@ export function registerWorkHandlers(
   notes: NotesRepository,
   captures: CaptureRepository,
   templates: TemplateRepository,
+  projectTemplates: ProjectTemplateRepository,
+  github: GithubService,
 ): void {
   const panelOf = (webContentsId: number) => {
     const window = windows.notesPanelFor(webContentsId);
@@ -41,6 +47,16 @@ export function registerWorkHandlers(
       templates: templates.list().map(({ id, name }) => ({ id, name })),
       captures: captures.list(),
       notes: notes.linked(),
+      projectTemplates: projectTemplates
+        .list()
+        .map(({ id, name, description, color, tasks, builtIn }) => ({
+          id,
+          name,
+          description,
+          color,
+          tasks: tasks.length,
+          builtIn,
+        })),
     };
   };
 
@@ -73,8 +89,47 @@ export function registerWorkHandlers(
     } else if (spaceId && !window.store.space(spaceId)) {
       spaceId = null;
     }
-    const id = work.saveProject({ ...input, spaceId });
+    const { projectTemplate, ...fields } = input;
+    const id = work.saveProject({ ...fields, spaceId });
+    // A new project from a template starts with its tasks, due relative to the start date.
+    const template = !input.id && projectTemplate ? projectTemplates.get(projectTemplate) : null;
+    if (template) {
+      const start = input.startDate ?? dateKey(Date.now());
+      for (const task of template.tasks) {
+        work.saveTask({
+          projectId: id,
+          title: task.title,
+          description: task.description,
+          priority: task.priority,
+          status: 'todo',
+          dueDate: task.dueIn === null ? null : addDays(start, task.dueIn),
+        });
+      }
+    }
     return { id, data: everything(window) };
+  });
+
+  /** The project's GitHub repository: open pull requests and issues (roadmap P4.2). */
+  router.handle('github:repo', async ({ projectId, refresh }, { sender }) => {
+    panelOf(sender.webContentsId);
+    const repo = work.project(projectId)?.githubRepo;
+    return repo ? github.repo(repo, refresh === true) : null;
+  });
+
+  /** Save as Template (roadmap P4.1): a project's tasks become a template for new projects. */
+  router.handle('work:saveProjectTemplate', ({ projectId, name }, { sender }) => {
+    const window = panelOf(sender.webContentsId);
+    const project = work.project(projectId);
+    if (!project) return everything(window);
+    const start = project.startDate ?? dateKey(project.createdAt);
+    const tasks = work.all().tasks.filter((t) => t.projectId === projectId);
+    projectTemplates.create({
+      name: name.trim() || project.name,
+      description: project.description,
+      color: project.color,
+      tasks: tasksAsTemplate(tasks, start),
+    });
+    return everything(window);
   });
 
   router.handle('work:projectStatus', ({ id, status }, { sender }) => {

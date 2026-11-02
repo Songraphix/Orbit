@@ -47,6 +47,7 @@ import { tabsSnapshotSchema } from '../types/tabs';
 import { aiActivitySchema, aiPrefsSchema, aiUsageSchema } from '../ai';
 import { ASSISTANT_LIMITS, assistantStateSchema, taskSuggestionSchema } from '../assistant';
 import { TOOLKIT_SECTIONS, toolkitStateSchema, viewportSchema } from '../toolkit/state';
+import { githubRepoViewSchema } from '../github';
 
 /**
  * Every IPC channel lives here (PLAN.md section 4.4). Names follow `domain:verb`.
@@ -934,6 +935,12 @@ export const contract = {
     output: z.object({ id: z.string(), data: workDataSchema }),
     surfaces: ['internal'],
   },
+  /** Save as Template (roadmap P4.1): the project's tasks become a template for new projects. */
+  'work:saveProjectTemplate': {
+    input: z.object({ projectId: z.string().max(64), name: z.string().max(60) }).strict(),
+    output: workDataSchema,
+    surfaces: ['internal'],
+  },
   'work:projectStatus': {
     input: z.object({ id: z.string().max(64), status: z.enum(PROJECT_STATUSES) }).strict(),
     output: workDataSchema,
@@ -1257,6 +1264,48 @@ export const contract = {
   'easels:pending': {
     input: z.object({ id: easelIdSchema }).strict(),
     output: easelCaptureSchema.nullable(),
+    surfaces: ['internal'],
+  },
+  // Settings → Workspaces: your project templates (roadmap P4.1).
+  'templates:projects': {
+    input: z.object({}).strict(),
+    output: z.object({
+      templates: z.array(
+        z.object({ id: z.string(), name: z.string(), tasks: z.number(), builtIn: z.boolean() }),
+      ),
+    }),
+    surfaces: ['internal'],
+  },
+  'templates:renameProject': {
+    input: z.object({ id: z.string().max(64), name: z.string().min(1).max(60) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** Asks first. */
+  'templates:deleteProject': {
+    input: z.object({ id: z.string().max(64) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  // GitHub (roadmap P4.2): a project's repository, and an optional token in Settings.
+  'github:repo': {
+    input: z.object({ projectId: z.string().max(64), refresh: z.boolean().optional() }).strict(),
+    output: githubRepoViewSchema.nullable(),
+    surfaces: ['internal'],
+  },
+  'github:status': {
+    input: z.object({}).strict(),
+    output: z.object({ hasToken: z.boolean(), canStore: z.boolean() }),
+    surfaces: ['internal'],
+  },
+  'github:setToken': {
+    input: z.object({ token: z.string().min(1).max(400) }).strict(),
+    output: z.object({ ok: z.boolean(), error: z.string().nullable() }),
+    surfaces: ['internal'],
+  },
+  'github:clearToken': {
+    input: z.object({}).strict(),
+    output: z.void(),
     surfaces: ['internal'],
   },
 } as const satisfies Record<string, ChannelSpec>;

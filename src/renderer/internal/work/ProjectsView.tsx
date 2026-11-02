@@ -38,10 +38,17 @@ import type { MenuItem } from './parts';
 import { TaskRow } from './TaskRow';
 import { ProjectResearch, UnsortedResearch } from './research';
 
+import { ProjectGithub, SaveTemplateSheet } from './github';
+
 const invoke = window.orbit.invoke;
 
 /** Edit, change status, delete — the ⋯ menu on a card and on a project's page. */
-function projectMenu(work: Work, project: Project, onDeleted?: () => void): MenuItem[] {
+function projectMenu(
+  work: Work,
+  project: Project,
+  onDeleted?: () => void,
+  onSaveTemplate?: () => void,
+): MenuItem[] {
   const status = (next: ProjectStatus) => async () => {
     const data = await work.run(
       invoke('work:projectStatus', { id: project.id, status: next }),
@@ -51,6 +58,9 @@ function projectMenu(work: Work, project: Project, onDeleted?: () => void): Menu
   };
   return [
     { label: 'Edit Project', onSelect: () => work.editProject(project), testId: 'menu-edit' },
+    ...(onSaveTemplate
+      ? [{ label: 'Save as Template…', onSelect: onSaveTemplate, testId: 'menu-save-template' }]
+      : []),
     { divider: true },
     ...PROJECT_STATUSES.map((s) => ({
       label: PROJECT_STATUS_LABEL[s],
@@ -278,6 +288,7 @@ export function ProjectDetail({ id }: { id: string }) {
   const work = useWork();
   const openWorkspace = useOpenWorkspace();
   const { set } = work;
+  const [savingTemplate, setSavingTemplate] = useState(false);
   // Opening the page counts as working on it ("Continue where you left off").
   useEffect(() => {
     void invoke('work:openProject', { id, workspace: false }).then(set, () => undefined);
@@ -314,7 +325,12 @@ export function ProjectDetail({ id }: { id: string }) {
         </button>
         <MoreMenu
           label={`${project.name} actions`}
-          items={projectMenu(work, project, () => showProject(null))}
+          items={projectMenu(
+            work,
+            project,
+            () => showProject(null),
+            () => setSavingTemplate(true),
+          )}
         />
       </div>
       <div className="flex gap-3">
@@ -410,11 +426,15 @@ export function ProjectDetail({ id }: { id: string }) {
           }}
         />
       )}
+      <ProjectGithub project={project} />
       <ProjectResearch projectId={project.id} />
       <ProjectNotes
         projectId={project.id}
         notes={work.data.notes.filter((n) => n.projectId === project.id)}
       />
+      {savingTemplate && (
+        <SaveTemplateSheet project={project} onClose={() => setSavingTemplate(false)} />
+      )}
     </section>
   );
 }

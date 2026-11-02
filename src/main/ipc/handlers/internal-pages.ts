@@ -9,6 +9,7 @@ import type { ArchiveRepository } from '../../persistence/repositories/archive';
 import type { HistoryRepository } from '../../persistence/repositories/history';
 import type { SettingsRepository } from '../../persistence/repositories/settings';
 import type { TemplateRepository } from '../../persistence/repositories/templates';
+import type { ProjectTemplateRepository } from '../../persistence/repositories/project-templates';
 import type { WindowManager } from '../../windows/window-manager';
 
 /** Handlers for orbit://archive and orbit://settings (internal surface only). */
@@ -29,6 +30,12 @@ export function registerInternalPageHandlers(
     /** Workspace templates (roadmap P2.5). */
     templates: TemplateRepository;
     /** The Anthropic API key (F-29). */
+    projectTemplates: ProjectTemplateRepository;
+    github: {
+      status: () => { hasToken: boolean; canStore: boolean };
+      setToken: (token: string) => { ok: boolean; error: string | null };
+      clearToken: () => void;
+    };
     ai: {
       status: () => {
         hasKey: boolean;
@@ -216,6 +223,50 @@ export function registerInternalPageHandlers(
       cancelId: 1,
     });
     if (response === 0) deps.ai.clearActivity();
+  });
+
+  router.handle('templates:projects', (_input, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    return {
+      templates: deps.projectTemplates
+        .list()
+        .map(({ id, name, tasks, builtIn }) => ({ id, name, tasks: tasks.length, builtIn })),
+    };
+  });
+
+  router.handle('templates:renameProject', ({ id, name }, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    deps.projectTemplates.rename(id, name);
+  });
+
+  router.handle('templates:deleteProject', async ({ id }, { sender }) => {
+    const { window } = ownerOf(sender.webContentsId, 'settings');
+    const template = deps.projectTemplates.get(id);
+    if (!template || template.builtIn) return;
+    const { response } = await dialog.showMessageBox(window.win, {
+      type: 'warning',
+      message: `Delete the project template “${template.name}”?`,
+      detail: 'Projects started from it keep their tasks.',
+      buttons: ['Delete', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    if (response === 0) deps.projectTemplates.delete(id);
+  });
+
+  router.handle('github:status', (_input, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    return deps.github.status();
+  });
+
+  router.handle('github:setToken', ({ token }, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    return deps.github.setToken(token);
+  });
+
+  router.handle('github:clearToken', (_input, { sender }) => {
+    ownerOf(sender.webContentsId, 'settings');
+    deps.github.clearToken();
   });
 
   router.handle('templates:list', (_input, { sender }) => {

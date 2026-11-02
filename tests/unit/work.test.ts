@@ -41,6 +41,7 @@ const project = (id: string, status: Project['status']): Project => ({
   dueDate: null,
   spaceId: null,
   lastOpenedAt: null,
+  githubRepo: null,
   createdAt: 0,
   updatedAt: 0,
 });

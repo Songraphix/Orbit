@@ -16,6 +16,7 @@ import m014 from './014-links.sql?raw';
 import m015 from './015-captures.sql?raw';
 import m016 from './016-templates.sql?raw';
 import m017 from './017-ai-activity.sql?raw';
+import m018 from './018-phase4.sql?raw';
 
 /** Ordered list of schema migrations. Append only — never edit or reorder a shipped entry. */
 export const migrations: readonly Migration[] = [
@@ -36,4 +37,5 @@ export const migrations: readonly Migration[] = [
   { version: 15, name: 'captures', sql: m015 },
   { version: 16, name: 'templates', sql: m016 },
   { version: 17, name: 'ai-activity', sql: m017 },
+  { version: 18, name: 'phase4', sql: m018 },
 ];

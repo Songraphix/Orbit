@@ -33,6 +33,7 @@ import { easelUrl, newEasel, registerEaselHandlers } from './ipc/handlers/easels
 import { ToolkitService } from './toolkit/service';
 import { attachJsonViewer } from './toolkit/json-viewer';
 import { registerToolkitHandlers } from './ipc/handlers/toolkit';
+import { GithubService, cleanGithubToken } from './github/service';
 import { VIEWPORT_PRESETS } from '@shared/toolkit/state';
 import type { EaselCapture } from '@shared/types/easels';
 import { CaptureRequests } from './easels/capture-requests';
@@ -192,7 +193,9 @@ function loadInternal(view: { webContents: Electron.WebContents }, url: string):
   // Settings can open on a section (orbit://settings/profiles).
   if (
     page === 'settings' &&
-    /^(general|profiles|workspaces|shortcuts|ai|privacy|about)$/.test(param)
+    /^(general|profiles|workspaces|integrations|rules|backup|shortcuts|ai|privacy|about)$/.test(
+      param,
+    )
   )
     hash = `/settings/${param}`;
   // A note's tab (note/<id>), the Notes panel (notes/panel[/<id>]), a floating note (notes/float/<id>).
@@ -583,16 +586,9 @@ void app.whenReady().then(() => {
   );
   boostService = boosts;
   // Live Folders (F-28): fetched by main (never by a page), in the default session.
-  const live = new LiveFolderService({
-    store,
-    fetch: (url, init) => net.fetch(url, init),
-    isOpen: (itemId) => windows?.all().some((c) => c.tabs.get(itemId) !== undefined) ?? false,
-  });
-  liveFolders = live;
-  live.start();
-
-  // AI (F-29): the user's Anthropic key, Keychain-encrypted. Development builds can point the
-  // SDK at a stand-in server and skip the Keychain (the e2e tests do; packaged Orbit never).
+  // AI (F-29) and GitHub (roadmap P4.2) secrets: Keychain-encrypted. Development builds can
+  // point the SDKs at stand-in servers and skip the Keychain (the e2e tests do; packaged
+  // Orbit never).
   const devOnly = (name: string) => (app.isPackaged ? undefined : process.env[name]);
   const testCipher: Cipher | null = devOnly('ORBIT_TEST_PLAIN_KEYS')
     ? {
@@ -601,6 +597,25 @@ void app.whenReady().then(() => {
         decryptString: (data) => data.toString('utf8'),
       }
     : null;
+  const githubKey = new AiKeyStore(
+    join(app.getPath('userData'), 'github-token.bin'),
+    testCipher ?? safeStorage,
+  );
+  const github = new GithubService({
+    fetch: (url, init) => net.fetch(url, init),
+    token: () => githubKey.get(),
+    apiUrl: devOnly('ORBIT_GITHUB_API_URL'),
+  });
+  const live = new LiveFolderService({
+    store,
+    fetch: (url, init) => net.fetch(url, init),
+    isOpen: (itemId) => windows?.all().some((c) => c.tabs.get(itemId) !== undefined) ?? false,
+    githubToken: () => githubKey.get(),
+  });
+  liveFolders = live;
+  live.start();
+
+  // AI (F-29): the user's Anthropic key.
   const keyStore = new AiKeyStore(
     join(app.getPath('userData'), 'anthropic-key.bin'),
     testCipher ?? safeStorage,
@@ -853,6 +868,29 @@ void app.whenReady().then(() => {
     revealData: () => void shell.openPath(app.getPath('userData')),
     applyTabLayout,
     templates: persistence.templates,
+    projectTemplates: persistence.projectTemplates,
+    github: {
+      status: () => ({ hasToken: githubKey.has(), canStore: githubKey.canStore }),
+      setToken: (input) => {
+        const token = cleanGithubToken(input);
+        if (!token)
+          return {
+            ok: false,
+            error: 'That doesn’t look like a GitHub token (ghp_… or github_pat_…)',
+          };
+        try {
+          githubKey.set(token);
+        } catch (error) {
+          return { ok: false, error: error instanceof Error ? error.message : String(error) };
+        }
+        github.reset();
+        return { ok: true, error: null };
+      },
+      clearToken: () => {
+        githubKey.clear();
+        github.reset();
+      },
+    },
     ai: {
       status: () => ({
         hasKey: keyStore.has(),
@@ -947,6 +985,8 @@ void app.whenReady().then(() => {
     persistence.notes,
     persistence.captures,
     persistence.templates,
+    persistence.projectTemplates,
+    github,
   );
   registerCaptureHandlers(router, windowManager, captureFlow);
   // The assistant (roadmap Phase 3) in each window's productivity panel.

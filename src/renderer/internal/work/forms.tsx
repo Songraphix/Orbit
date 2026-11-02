@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { githubRepo } from '@shared/github';
 import type { FormEvent, ReactNode } from 'react';
 import {
   PRIORITIES,
@@ -153,6 +154,10 @@ export function ProjectForm({ project, onClose }: { project?: Project; onClose: 
   const [dueDate, setDueDate] = useState(project?.dueDate ?? '');
   /** '' = no workspace, NEW_SPACE = make one, else a Space's id. */
   const [space, setSpace] = useState(project?.spaceId ?? '');
+  /** A new project's starting tasks (roadmap P4.1): '' = blank. */
+  const [startFrom, setStartFrom] = useState('');
+  /** A GitHub repository to follow (roadmap P4.2), as typed. */
+  const [repo, setRepo] = useState(project?.githubRepo ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -170,8 +175,12 @@ export function ProjectForm({ project, onClose }: { project?: Project; onClose: 
       spaceId: space && space !== NEW_SPACE && !space.startsWith(TEMPLATE) ? space : null,
       ...(space === NEW_SPACE ? { newSpace: true } : {}),
       ...(space.startsWith(TEMPLATE) ? { templateId: space.slice(TEMPLATE.length) } : {}),
+      githubRepo: repo.trim() ? repo.trim() : null,
+      ...(!project && startFrom ? { projectTemplate: startFrom } : {}),
     };
-    const problem = projectProblem(input);
+    const problem =
+      projectProblem(input) ??
+      (repo.trim() && !githubRepo(repo) ? 'Use owner/repository for GitHub' : null);
     if (problem) {
       setError(problem);
       return;
@@ -204,6 +213,32 @@ export function ProjectForm({ project, onClose }: { project?: Project; onClose: 
             data-testid="project-name"
           />
         </Field>
+        {!project && (data?.projectTemplates.length ?? 0) > 0 && (
+          <Field label="Start from">
+            <select
+              value={startFrom}
+              onChange={(e) => {
+                const id = e.target.value;
+                setStartFrom(id);
+                const template = data?.projectTemplates.find((t) => t.id === id);
+                // A template suggests its description and colour (yours wins once typed).
+                if (template && !description.trim()) setDescription(template.description);
+                if (template && PROJECT_COLORS.some((c) => c.id === template.color)) {
+                  setColor(template.color as ProjectColor);
+                }
+              }}
+              className={INPUT}
+              data-testid="project-template"
+            >
+              <option value="">Blank project</option>
+              {data?.projectTemplates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} · {t.tasks} task{t.tasks === 1 ? '' : 's'}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label="Description">
           <input
             value={description}
@@ -264,6 +299,23 @@ export function ProjectForm({ project, onClose }: { project?: Project; onClose: 
           </select>
           <span className="mt-1 block text-[11.5px] text-[var(--note-muted)]">
             The Space keeps the project&rsquo;s tabs. Open Workspace takes you back to them.
+          </span>
+        </Field>
+        <Field label="GitHub repository">
+          <input
+            value={repo}
+            onChange={(e) => {
+              setRepo(e.target.value);
+              setError(null);
+            }}
+            maxLength={140}
+            placeholder="owner/repository (optional)"
+            spellCheck={false}
+            className={INPUT}
+            data-testid="project-github"
+          />
+          <span className="mt-1 block text-[11.5px] text-[var(--note-muted)]">
+            Its open pull requests and issues show on the project&rsquo;s page.
           </span>
         </Field>
         <div className="grid grid-cols-2 gap-2">

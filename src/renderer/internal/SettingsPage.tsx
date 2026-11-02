@@ -2,6 +2,7 @@ import {
   Info,
   Keyboard,
   LayoutTemplate,
+  Plug,
   Settings,
   Shield,
   Sparkles,
@@ -209,6 +210,10 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
 
           <Section id="workspaces" title="Workspaces">
             <WorkspacesSection />
+          </Section>
+
+          <Section id="integrations" title="Integrations">
+            <IntegrationsSection />
           </Section>
 
           <Section id="shortcuts" title="Shortcuts">
@@ -560,6 +565,7 @@ const NAV = [
   { id: 'general', label: 'General', icon: <Settings size={16} /> },
   { id: 'profiles', label: 'Profiles', icon: <UsersRound size={16} /> },
   { id: 'workspaces', label: 'Workspaces', icon: <LayoutTemplate size={16} /> },
+  { id: 'integrations', label: 'Integrations', icon: <Plug size={16} /> },
   { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard size={16} /> },
   { id: 'ai', label: 'AI', icon: <Sparkles size={16} /> },
   { id: 'privacy', label: 'Privacy', icon: <Shield size={16} /> },
@@ -834,16 +840,171 @@ function WorkspacesSection() {
     void window.orbit.invoke('templates:list', {}).then((r) => setTemplates(r.templates));
   useEffect(load, []);
   return (
-    <Group title="Workspace templates">
-      {templates?.length === 0 && (
-        <p className="px-4 py-5 text-sm text-neutral-500" data-testid="templates-empty">
-          Right-click a Space and choose <b>Save as Workspace Template</b>. New Spaces — and new
-          projects’ workspaces — can then start with its tabs, icon and colours.
+    <>
+      <Group title="Workspace templates">
+        {templates?.length === 0 && (
+          <p className="px-4 py-5 text-sm text-neutral-500" data-testid="templates-empty">
+            Right-click a Space and choose <b>Save as Workspace Template</b>. New Spaces — and new
+            projects’ workspaces — can then start with its tabs, icon and colours.
+          </p>
+        )}
+        {templates?.map((t) => (
+          <TemplateRow key={t.id} template={t} onChange={load} />
+        ))}
+      </Group>
+      <ProjectTemplatesGroup />
+    </>
+  );
+}
+
+/** Project templates (roadmap P4.1): the built-in ones, and yours to rename or delete. */
+function ProjectTemplatesGroup() {
+  const [templates, setTemplates] = useState<InvokeOutput<'templates:projects'>['templates']>([]);
+  const load = () =>
+    void window.orbit.invoke('templates:projects', {}).then((r) => setTemplates(r.templates));
+  useEffect(load, []);
+  return (
+    <Group title="Project templates">
+      {templates.map((t) => (
+        <ProjectTemplateRow key={t.id} template={t} onChange={load} />
+      ))}
+      {!templates.some((t) => !t.builtIn) && (
+        <p className="px-4 py-3 text-xs text-neutral-500" data-testid="project-templates-hint">
+          On a project’s page, ⋯ → <b>Save as Template…</b> keeps its tasks for new projects.
         </p>
       )}
-      {templates?.map((t) => (
-        <TemplateRow key={t.id} template={t} onChange={load} />
-      ))}
+    </Group>
+  );
+}
+
+function ProjectTemplateRow(props: {
+  template: InvokeOutput<'templates:projects'>['templates'][number];
+  onChange: () => void;
+}) {
+  const { template } = props;
+  const [name, setName] = useState(template.name);
+  return (
+    <div className="flex items-center gap-3 px-4 py-2.5" data-testid="project-template-row">
+      <span className="grid size-8 shrink-0 place-items-center rounded-[10px] bg-neutral-100 text-neutral-600">
+        <LayoutTemplate size={15} />
+      </span>
+      {template.builtIn ? (
+        <span className="min-w-0 flex-1 px-2 text-sm">{template.name}</span>
+      ) : (
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={() =>
+            name.trim() &&
+            name !== template.name &&
+            void window.orbit
+              .invoke('templates:renameProject', { id: template.id, name: name.trim() })
+              .then(props.onChange)
+          }
+          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+          maxLength={60}
+          aria-label="Template name"
+          className="min-w-0 flex-1 rounded-md px-2 py-1 text-sm hover:bg-neutral-50 focus:bg-white focus:ring-1 focus:ring-neutral-300 focus:outline-none"
+          data-testid="project-template-name"
+        />
+      )}
+      <span className="shrink-0 text-xs text-neutral-400">
+        {template.builtIn ? 'Built in · ' : ''}
+        {template.tasks === 1 ? '1 task' : `${template.tasks} tasks`}
+      </span>
+      {!template.builtIn && (
+        <button
+          type="button"
+          aria-label={`Delete ${template.name}`}
+          onClick={() =>
+            void window.orbit
+              .invoke('templates:deleteProject', { id: template.id })
+              .then(props.onChange)
+          }
+          className="grid size-8 shrink-0 place-items-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-600"
+          data-testid="project-template-delete"
+        >
+          <Trash2 size={15} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Settings → Integrations (roadmap P4.2, P4.3): GitHub, and which services Orbit recognises. */
+function IntegrationsSection() {
+  const [status, setStatus] = useState<InvokeOutput<'github:status'> | null>(null);
+  const [token, setToken] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const load = () => void window.orbit.invoke('github:status', {}).then(setStatus);
+  useEffect(load, []);
+  if (!status) return null;
+  return (
+    <Group title="GitHub">
+      <Row
+        label="Personal access token"
+        hint={
+          status.hasToken
+            ? 'Saved in your Keychain. Used to read private repositories and for higher rate limits.'
+            : 'Optional. Public repositories work without one. A fine-grained, read-only token is enough.'
+        }
+      >
+        {status.hasToken ? (
+          <button
+            type="button"
+            className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+            onClick={() => void window.orbit.invoke('github:clearToken', {}).then(load)}
+            data-testid="github-token-remove"
+          >
+            Remove Token
+          </button>
+        ) : (
+          <form
+            className="flex flex-col items-end gap-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void window.orbit.invoke('github:setToken', { token }).then((r) => {
+                setError(r.error);
+                if (r.ok) {
+                  setToken('');
+                  load();
+                }
+              });
+            }}
+          >
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="github_pat_…"
+                autoComplete="off"
+                disabled={!status.canStore}
+                className="w-44 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                data-testid="github-token"
+              />
+              <button
+                type="submit"
+                disabled={!token.trim()}
+                className="rounded-lg border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50 disabled:opacity-40"
+                data-testid="github-token-save"
+              >
+                Save
+              </button>
+            </div>
+            {error && (
+              <span className="text-xs text-red-600" data-testid="github-token-error">
+                {error}
+              </span>
+            )}
+          </form>
+        )}
+      </Row>
+      <div className="px-4 py-3 text-xs leading-relaxed text-neutral-500">
+        A project can follow a repository (Edit Project → GitHub repository): its open pull requests
+        and issues show on its page, and any of them can become a task. Live Folders use the token
+        too. Orbit only reads; it never writes to GitHub.
+      </div>
     </Group>
   );
 }
