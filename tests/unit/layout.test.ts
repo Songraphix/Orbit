@@ -94,14 +94,14 @@ describe('Peek frame', () => {
     const area = contentArea(computeLayout(base));
     expect(area).toEqual({ x: 260, y: 8, width: 1012, height: 804 });
     const peek = computePeek(area);
-    expect(peek.frame).toEqual({ x: 308, y: 36, width: 916, height: 748 });
-    expect(peek.webView).toEqual({ x: 308, y: 76, width: 916, height: 708 });
+    expect(peek.frame).toEqual({ x: 320, y: 30, width: 892, height: 760 });
+    expect(peek.webView).toEqual({ x: 320, y: 66, width: 892, height: 724 });
   });
 
   it('spans both split panes and caps its width on wide windows', () => {
     const area = contentArea(computeLayout({ ...base, windowWidth: 2560, splitRatio: 0.5 }));
     expect(area.width).toBe(2560 - 260 - 8);
-    expect(computePeek(area).frame.width).toBe(1100);
+    expect(computePeek(area).frame.width).toBe(1180);
   });
 });
 

@@ -181,7 +181,8 @@ export function computeLayout(input: LayoutInput): Layout {
 }
 
 /** The Peek preview (F-23): a rounded frame floating over the content area. */
-export const PEEK = { margin: 48, maxWidth: 1100, top: 28, headerHeight: 40, radius: 12 } as const;
+/** Peek's card (Arc-like): room on the right for its round buttons (close, expand, split). */
+export const PEEK = { margin: 60, maxWidth: 1180, top: 22, headerHeight: 36, radius: 14 } as const;
 
 /** The whole content area: the card, or both split panes together. Pure. */
 export function contentArea(layout: Layout): Rect {

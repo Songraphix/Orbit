@@ -30,10 +30,20 @@ describe('shouldPeek', () => {
     expect(shouldPeek({ ...base, section: 'favorite' })).toBe(true);
   });
 
-  it('leaves Today tabs, same-site links and background links alone', () => {
+  it('peeks same-site links from pinned tabs and favorites too, like Arc (Canva → a design)', () => {
+    const canva = {
+      ...base,
+      fromUrl: 'https://www.canva.com/',
+      toUrl: 'https://www.canva.com/design/x',
+    };
+    expect(shouldPeek(canva)).toBe(true);
+    expect(shouldPeek({ ...canva, section: 'favorite' })).toBe(true);
+    expect(shouldPeek({ ...base, toUrl: 'https://accounts.google.com/' })).toBe(true);
+  });
+
+  it('leaves Today tabs and background links alone', () => {
     expect(shouldPeek({ ...base, section: 'today' })).toBe(false);
     expect(shouldPeek({ ...base, section: null })).toBe(false);
-    expect(shouldPeek({ ...base, toUrl: 'https://accounts.google.com/' })).toBe(false);
     expect(shouldPeek({ ...base, activate: false })).toBe(false);
   });
 

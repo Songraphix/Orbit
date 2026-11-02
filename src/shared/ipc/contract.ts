@@ -479,6 +479,18 @@ export const contract = {
     output: z.void(),
     surfaces: ['overlay'],
   },
+  /** Peek's split button: the page beside the one it came from, in split view. */
+  'peek:split': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  /** Back, forward or reload inside the preview. */
+  'peek:navigate': {
+    input: z.object({ action: z.enum(['back', 'forward', 'reload']) }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
   'overlay:get': {
     input: z.object({}).strict(),
     output: overlayStateSchema,

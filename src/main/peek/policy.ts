@@ -32,16 +32,19 @@ export type PeekRequest = {
 };
 
 /**
- * F-23: a link that would open a new tab on another site (an ad on YouTube, a result from a
- * pinned Gmail) opens in a Peek preview over the page instead. With scope 'pinned' only links
- * from pinned tabs and favorites do, like Arc. Same-site links (Gmail → another Gmail view) open
- * as usual. Pure.
+ * F-23: a link that would open a new tab opens in a Peek preview over the page instead — from a
+ * pinned tab or favorite any such link (like Arc), from a Today tab one to another site (an ad
+ * on YouTube). With scope 'pinned' only pinned tabs and favorites peek. Pure.
  */
 export function shouldPeek(r: PeekRequest): boolean {
   if (!r.enabled || !r.activate || r.siteSetting === 'off' || r.devMode) return false;
   if (r.section === null) return false;
-  if (r.scope === 'pinned' && r.section !== 'pinned' && r.section !== 'favorite') return false;
+  const pinned = r.section === 'pinned' || r.section === 'favorite';
+  if (r.scope === 'pinned' && !pinned) return false;
   const from = siteOf(r.fromUrl);
   const to = siteOf(r.toUrl);
-  return from !== null && to !== null && from !== to;
+  if (from === null || to === null) return false;
+  // Like Arc: a pinned tab or favorite keeps its place — any link that wants a new tab peeks
+  // (Canva's "Create a design" too). From Today tabs, only links to other sites do.
+  return pinned || from !== to;
 }

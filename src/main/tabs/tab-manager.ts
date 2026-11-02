@@ -386,6 +386,26 @@ export class TabManager {
     this.activate(tab.id); // announces it to extensions
   }
 
+  /** Peek's split button: the previewed page becomes a tab beside the active one (no reload). */
+  adoptInSplit(tab: TabController): void {
+    const space = this.space;
+    const { url, title, favicon } = tab.state;
+    this.deps.store.insert(
+      { id: tab.id, kind: 'tab', title, url, favicon },
+      {
+        section: 'today',
+        profileId: space.profileId,
+        spaceId: space.id,
+        parentId: null,
+        beforeId: 'first',
+      },
+    );
+    tab.setEnv(this.envFor(tab.id));
+    this.live.set(tab.id, tab);
+    this.attach(tab.view);
+    this.splitWith(tab.id);
+  }
+
   // ── Split view (F-13) ──────────────────────────────────────────────────────
 
   get splitIds(): readonly string[] | null {

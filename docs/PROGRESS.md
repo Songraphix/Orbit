@@ -149,6 +149,8 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-02 — Owner request: **Settings opens in a window of its own** (⌘,, the profile menu's links, ⌘T “Manage Apps”, the assistant's “Open Settings”), one at a time, brought forward on the section asked for; it acts on the browser window used last; ⌘W closes it when it's in front; a strip along the top drags it. `orbit://settings` typed into a tab still works. All Settings sender checks go through WindowManager.settingsFor
 
+- 2026-11-02 — Owner request: **Peek, Arc-style (F-23).** A link that wants a new tab **grows out smoothly** as a card over the dimmed window (the page view and its frame scale in together). Beside the card: round **Close (Esc)**, **Open as Tab** and **Open in Split View** buttons. Inside it: a slim bar with **Back, Forward, Reload** and the address. Links from **pinned tabs and favourites peek even on the same site** (a design from the Canva favourite); Today tabs still peek only links to other sites. Clicking the dimmed page closes it
+
 ## In progress
 
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0

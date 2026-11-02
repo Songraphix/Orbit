@@ -58,6 +58,10 @@ export function registerLayoutHandlers(router: IpcRouter, windows: WindowManager
   router.handle('peek:promote', (_input, { sender }) =>
     windowFor(sender.webContentsId).peek.promote(),
   );
+  router.handle('peek:split', (_input, { sender }) => windowFor(sender.webContentsId).peek.split());
+  router.handle('peek:navigate', ({ action }, { sender }) =>
+    windowFor(sender.webContentsId).peek.navigate(action),
+  );
 
   router.handle('sidebar:endResize', (_input, { sender }) => {
     const { tabs, layout } = windowFor(sender.webContentsId);

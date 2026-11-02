@@ -78,6 +78,8 @@ export const peekViewSchema = z.object({
   title: z.string(),
   favicon: z.string().nullable(),
   isLoading: z.boolean(),
+  canGoBack: z.boolean().default(false),
+  canGoForward: z.boolean().default(false),
   frame: rectSchema,
   headerHeight: z.number(),
   radius: z.number(),

@@ -271,6 +271,13 @@ body {
 }
 
 /* ── Motion ──────────────────────────────────────────────────────────────── */
+/* Peek pops out: grows from a little smaller, in step with the page main grows (200 ms). */
+@keyframes orbit-peek-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
 /* A sound playing: three bars bouncing (the Focus view and the toolbar's Focus button). */
 @keyframes orbit-bars {
   0%,

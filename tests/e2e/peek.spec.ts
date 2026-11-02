@@ -109,3 +109,41 @@ test('Peek closes from the backdrop; links from Today tabs open in Peek too', as
     await orbit.close();
   }
 });
+
+test("Arc-style: a pinned tab's same-site link peeks; Back, then Open in Split View", async () => {
+  const orbit = await launchOrbit();
+  try {
+    const { app, win } = orbit;
+    const today = win.locator('[data-testid="tab-list"] [data-testid="tab-row"]');
+    await invoke(win, 'tabs:create', { url: server.url('/peek') });
+    await clickMenu(app, 'toggle-pin');
+    await expect(win.locator('[data-testid="pinned-list"] [data-testid="tab-row"]')).toHaveText([
+      'Peek Source',
+    ]);
+
+    // Same site as the pinned tab (like a design from the Canva favourite): it still peeks.
+    await inPage(app, '/peek', 'document.getElementById("same").click()');
+    const bar = await overlay(app);
+    await expect(bar.getByTestId('peek')).toBeVisible();
+    await expect(bar.getByTestId('peek-address')).toContainText('127.0.0.1');
+    await expect(bar.getByTestId('peek-actions').getByRole('button')).toHaveCount(3);
+    await expect(bar.getByTestId('peek-back')).toBeDisabled();
+    await expect(today).toHaveText(['New Tab']);
+
+    // Navigate inside the peek, then Back.
+    await expect.poll(() => pageCount(app, '/two')).toBe(1);
+    await inPage(app, '/two', 'location.href = "/peek"');
+    await expect(bar.getByTestId('peek-back')).toBeEnabled();
+    await bar.getByTestId('peek-back').click();
+    await expect(bar.getByTestId('peek-back')).toBeDisabled();
+    await bar.getByTestId('peek-reload').click();
+
+    // Split View: the page joins Today and opens beside the pinned tab.
+    await bar.getByTestId('peek-split').click();
+    await expect(bar.getByTestId('peek')).toHaveCount(0);
+    await expect(today).toHaveText(['Page Two', 'New Tab']);
+    await expect(win.getByTestId('split-divider')).toBeVisible();
+  } finally {
+    await orbit.close();
+  }
+});

@@ -41,10 +41,55 @@ export class PeekController {
     this.tab = tab;
     tab.view.webContents.on('before-input-event', this.onInput);
     this.deps.win.contentView.addChildView(tab.view); // top-most, above the overlay
-    this.fit();
+    tab.view.setBorderRadius(PEEK.radius);
+    this.growIn(tab);
     tab.view.setVisible(true);
     tab.view.webContents.focus();
     this.sync();
+  }
+
+  /** The page pops out smoothly (Arc-like): it grows from a little smaller into place, in
+   *  step with the frame the overlay draws (orbit-peek-in, the same length). */
+  private growIn(tab: TabController): void {
+    const target = this.geometry().webView;
+    const quiet = process.env['ORBIT_QUIET'] === '1';
+    const steps = quiet ? 1 : 12;
+    let step = 0;
+    const place = () => {
+      if (this.tab !== tab || tab.view.webContents.isDestroyed()) return;
+      step++;
+      const t = step / steps;
+      const scale = 0.94 + 0.06 * (1 - (1 - t) ** 3); // ease-out
+      const width = Math.round(target.width * scale);
+      const height = Math.round(target.height * scale);
+      tab.view.setBounds({
+        x: target.x + Math.round((target.width - width) / 2),
+        y: target.y + Math.round((target.height - height) / 2),
+        width,
+        height,
+      });
+      if (step < steps) setTimeout(place, 16);
+      else this.fit();
+    };
+    place();
+  }
+
+  /** Back, forward or reload inside the preview. */
+  navigate(action: 'back' | 'forward' | 'reload'): void {
+    const contents = this.tab?.view.webContents;
+    if (!contents || contents.isDestroyed()) return;
+    const history = contents.navigationHistory;
+    if (action === 'reload') contents.reload();
+    else if (action === 'back' && history.canGoBack()) history.goBack();
+    else if (action === 'forward' && history.canGoForward()) history.goForward();
+  }
+
+  /** The split button: beside the page it came from, in split view. */
+  split(): void {
+    const tab = this.release();
+    if (!tab) return;
+    this.deps.tabs.adoptInSplit(tab);
+    this.deps.overlay.setPeek(null);
   }
 
   close(): void {
@@ -98,12 +143,14 @@ export class PeekController {
     const tab = this.tab;
     if (!tab || this.deps.win.isDestroyed()) return;
     const { frame } = this.geometry();
-    const { url, title, favicon, isLoading } = tab.state;
+    const { url, title, favicon, isLoading, canGoBack, canGoForward } = tab.state;
     this.deps.overlay.setPeek({
       url,
       title,
       favicon,
       isLoading,
+      canGoBack,
+      canGoForward,
       frame,
       headerHeight: PEEK.headerHeight,
       radius: PEEK.radius,

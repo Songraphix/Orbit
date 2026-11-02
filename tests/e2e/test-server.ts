@@ -22,6 +22,7 @@ const ROUTES: Record<string, string> = {
   '/peek': page(
     'Peek Source',
     `<a id="out" target="_blank">elsewhere</a>
+     <a id="same" href="/two" target="_blank">same site</a>
      <script>
        document.getElementById('out').href =
          location.href.replace('127.0.0.1', 'localhost').replace('/peek', '/two');
