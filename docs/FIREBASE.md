@@ -82,8 +82,9 @@ Still to do:
    npx firebase login                 # once, opens your browser
    npm run firebase:deploy-rules
    ```
-2. **Google sign-in from Orbit** needs a _Desktop app_ OAuth client:
-   Google Cloud Console → (project orbit-f4f0c) → APIs & Services → Credentials → Create
+2. **Google sign-in from Orbit** — done 2026-11-04 (the client lives in Google Cloud project
+   `orbit-f4f0c-513713`, safelisted in Firebase). To redo it, it needs a _Desktop app_ OAuth
+   client: Google Cloud Console → APIs & Services → Credentials → Create
    credentials → OAuth client ID → **Desktop app** → copy the Client ID and secret into
    `.env.local` (`MAIN_VITE_GOOGLE_DESKTOP_CLIENT_ID`, `…_SECRET`), then in Firebase →
    Authentication → Sign-in method → Google → _Safelist client IDs from external projects_,
