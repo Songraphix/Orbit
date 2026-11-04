@@ -642,14 +642,14 @@ const NAV = [
 
 /** The left column: jumps to a section, and follows along as you scroll. */
 function SettingsNav() {
-  const [active, setActive] = useState('general');
+  const [active, setActive] = useState(NAV[0]!.id); // the top section, until you scroll
   useEffect(() => {
     const sections = [...document.querySelectorAll<HTMLElement>('[data-settings-section]')];
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries.filter((e) => e.isIntersecting);
         const top = visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (top) setActive((top.target as HTMLElement).dataset['settingsSection'] ?? 'general');
+        if (top) setActive((top.target as HTMLElement).dataset['settingsSection'] ?? NAV[0]!.id);
       },
       { rootMargin: '0px 0px -70% 0px' },
     );

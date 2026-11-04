@@ -24,6 +24,8 @@ emulator-data/
 # Never commit service-account keys
 *service-account*.json
 *-adminsdk-*.json
+# Google OAuth client downloads (the values live in .env.local)
+client_secret_*.json
 
 # macOS
 .DS_Store
