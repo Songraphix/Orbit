@@ -19,6 +19,7 @@ import m017 from './017-ai-activity.sql?raw';
 import m018 from './018-phase4.sql?raw';
 import m019 from './019-easel-background.sql?raw';
 import m020 from './020-focus-log.sql?raw';
+import m021 from './021-sync.sql?raw';
 
 /** Ordered list of schema migrations. Append only — never edit or reorder a shipped entry. */
 export const migrations: readonly Migration[] = [
@@ -42,4 +43,5 @@ export const migrations: readonly Migration[] = [
   { version: 18, name: 'phase4', sql: m018 },
   { version: 19, name: 'easel-background', sql: m019 },
   { version: 20, name: 'focus-log', sql: m020 },
+  { version: 21, name: 'sync', sql: m021 },
 ];

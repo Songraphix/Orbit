@@ -1,0 +1,70 @@
+rules_version = '2';
+
+// Orbit's cloud data (docs/FIREBASE.md). Everything is private to its owner; anything not
+// matched below is denied. Each synced record is one small document whose `body` is the
+// record's JSON; big records (an Easel with pictures) spill into `parts`.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The signed-in owner, with a verified email (Google accounts always are; email accounts
+    // after the link in the verification email) — keeps throwaway sign-ups from writing.
+    function isOwner(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email_verified == true;
+    }
+
+    function syncedKind(kind) {
+      return kind in ['profile', 'space', 'item', 'project', 'task', 'note', 'easel'];
+    }
+
+    // A record: exactly these fields, sensible types and sizes, and the server's own time.
+    function validRecord(recordId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['kind', 'body', 'parts', 'deleted', 'v', 'clientUpdatedAt', 'deviceId', 'updatedAt'])
+        && d.keys().hasAll(['kind', 'body', 'parts', 'deleted', 'v', 'clientUpdatedAt', 'deviceId', 'updatedAt'])
+        && d.kind is string && syncedKind(d.kind)
+        && recordId.matches(d.kind + '_[A-Za-z0-9._-]{1,80}')
+        && d.body is string && d.body.size() <= 900000
+        && d.parts is int && d.parts >= 0 && d.parts <= 40
+        && d.deleted is bool
+        && (!d.deleted || (d.body == '' && d.parts == 0))
+        && d.v is int && d.v >= 1 && d.v <= 100
+        && d.clientUpdatedAt is int
+        && d.deviceId is string && d.deviceId.size() <= 64
+        && d.updatedAt == request.time;
+    }
+
+    function validPart(partId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['record', 'n', 'body'])
+        && d.record is string && partId.matches(d.record + '~[0-9]{1,2}')
+        && d.n is int && d.n >= 1 && d.n <= 40
+        && d.body is string && d.body.size() <= 900000;
+    }
+
+    match /users/{uid} {
+      // The account's own small document (schema version, when it was made).
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['schema', 'createdAt'])
+        && request.resource.data.schema is int;
+
+      match /records/{recordId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validRecord(recordId);
+      }
+
+      match /parts/{partId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validPart(partId);
+      }
+
+      // Paid features (not offered yet). Only Orbit's server may grant them — never the app.
+      match /entitlements/{product} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
+    }
+  }
+}

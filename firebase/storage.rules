@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Orbit doesn't use Cloud Storage yet (docs/FIREBASE.md). If a bucket is ever created, nothing
+// in it is readable or writable until a feature needs it and gets its own owner-only rule.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

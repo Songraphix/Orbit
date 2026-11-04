@@ -14,6 +14,16 @@ playwright-report/
 *.log
 .env
 .env.*
+!.env.example
+# Firebase CLI caches and emulator data
+.firebase/
+firebase-debug*.log
+firestore-debug*.log
+ui-debug*.log
+emulator-data/
+# Never commit service-account keys
+*service-account*.json
+*-adminsdk-*.json
 
 # macOS
 .DS_Store

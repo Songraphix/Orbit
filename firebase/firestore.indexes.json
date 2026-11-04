@@ -1,0 +1,15 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "records",
+      "fieldPath": "body",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "parts",
+      "fieldPath": "body",
+      "indexes": []
+    }
+  ]
+}
