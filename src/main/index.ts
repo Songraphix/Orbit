@@ -8,6 +8,7 @@ import {
   ipcMain,
   nativeTheme,
   net,
+  powerMonitor,
   Notification,
   safeStorage,
   session,
@@ -24,6 +25,12 @@ import { Broadcaster } from './ipc/broadcaster';
 import { CommandBarService, copyActiveUrl } from './commandbar/service';
 import { registerAppHandlers } from './ipc/handlers/app';
 import { ExtensionHost } from './extensions/host';
+import { AccountService } from './cloud/account';
+import { cloudConfig } from './cloud/config';
+import type { CloudEnv } from './cloud/config';
+import { googleSignIn } from './cloud/google-signin';
+import type { Fetch } from './cloud/http';
+import { registerAccountHandlers } from './ipc/handlers/account';
 import { registerSiteControlsHandlers } from './ipc/handlers/site-controls';
 import { openBoostEditor, registerBoostHandlers } from './ipc/handlers/boosts';
 import { BoostService } from './boosts/service';
@@ -226,7 +233,7 @@ function loadInternal(view: { webContents: Electron.WebContents }, url: string):
   // Settings can open on a section (orbit://settings/profiles).
   if (
     page === 'settings' &&
-    /^(general|appearance|apps|profiles|workspaces|integrations|rules|backup|shortcuts|ai|privacy|about)$/.test(
+    /^(account|general|appearance|apps|profiles|workspaces|integrations|rules|backup|shortcuts|ai|privacy|about)$/.test(
       param,
     )
   )
@@ -939,6 +946,68 @@ void app.whenReady().then(() => {
   registerLayoutHandlers(router, windowManager);
   registerTabHandlers(router, windowManager, { openWindow: (url) => openLittle?.(url) });
   registerAppHubHandlers(router, windowManager);
+
+  // Orbit accounts and cloud sync (docs/FIREBASE.md). Optional: without an account everything
+  // stays on this Mac. The session is Keychain-encrypted in its own file; development builds
+  // can point at the Firebase Emulator (packaged Orbit never).
+  const cloud = cloudConfig({ ...import.meta.env } as CloudEnv, {
+    ORBIT_FIREBASE_EMULATOR: devOnly('ORBIT_FIREBASE_EMULATOR'),
+    ORBIT_FIREBASE_PROJECT: devOnly('ORBIT_FIREBASE_PROJECT'),
+  });
+  const cloudFetch: Fetch = (url, init) => net.fetch(url, init);
+  const accountKey = new AiKeyStore(
+    join(app.getPath('userData'), 'account.bin'),
+    testCipher ?? safeStorage,
+  );
+  const google = cloud?.google ?? null;
+  const accounts = new AccountService({
+    config: cloud,
+    db: persistence.db,
+    fetchImpl: cloudFetch,
+    store: {
+      get canStore() {
+        return accountKey.canStore;
+      },
+      get: () => accountKey.get(),
+      set: (value) => accountKey.set(value),
+      clear: () => accountKey.clear(),
+    },
+    googleSignIn: google
+      ? (signal) =>
+          googleSignIn({
+            ...google,
+            fetchImpl: cloudFetch,
+            openExternal: (url) => shell.openExternal(url),
+            signal,
+          })
+      : null,
+    // Settings (a window, or a tab) shows the account and its sync state.
+    onChange: (view) => {
+      for (const id of senders.idsOf('internal')) {
+        const contents = webContents.fromId(id);
+        if (contents && windowManager.settingsFor(id)) {
+          broadcaster.sendTo(contents, 'account:update', view);
+        }
+      }
+    },
+    // Another Mac's changes arrived: the sidebar, the productivity panel and open pages follow.
+    onApplied: (kinds, removed) => {
+      if (kinds.has('profile') || kinds.has('space') || kinds.has('item')) {
+        for (const { kind, id } of removed) {
+          if (kind === 'item') windowManager.all().forEach((c) => c.tabs.unload(id));
+        }
+        store.reload();
+      }
+      if (kinds.has('project') || kinds.has('task') || kinds.has('note')) {
+        windowManager.all().forEach((c) => c.notes.refresh());
+      }
+    },
+  });
+  registerAccountHandlers(router, windowManager, accounts);
+  accounts.restore();
+  // Coming back to Orbit, or the Mac waking: other Macs may have changed something.
+  app.on('browser-window-focus', () => accounts.pullSoon());
+  powerMonitor.on('resume', () => void accounts.syncNow());
   registerNewTabHandlers(
     router,
     windowManager,

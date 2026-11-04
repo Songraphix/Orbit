@@ -133,7 +133,7 @@ export class FirestoreApi {
               },
             };
           case 'delete':
-            return { delete: `${user}/${w.path}` };
+            return { delete: w.path ? `${user}/${w.path}` : user };
           case 'user':
             return {
               update: { name: user, fields: { schema: int(w.schema) } },

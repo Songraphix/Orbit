@@ -15,6 +15,7 @@ const EVENTS = new Set([
   'sounds:update',
   'ui:update',
   'popout:update',
+  'account:update',
 ]);
 
 const api: OrbitInternalApi = {

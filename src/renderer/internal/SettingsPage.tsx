@@ -1,4 +1,5 @@
 import {
+  CircleUserRound,
   Info,
   Keyboard,
   Palette,
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 import { SpaceIcon } from '../shell/sidebar/SpaceIcon';
 import { Group, Row, Section } from './settings/parts';
+import { AccountSection } from './settings/AccountSection';
 import { AppearanceSection } from './settings/AppearanceSection';
 import { AppsSection } from './settings/AppsSection';
 import { buttonClass, FIELD } from '../ui/controls';
@@ -70,6 +72,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
       <SettingsNav />
       <main className="min-w-0 flex-1 px-5 pt-9 pb-24 md:px-10">
         <div className="mx-auto max-w-2xl">
+          <AccountSection />
           <Section
             id="general"
             title="General"
@@ -622,6 +625,7 @@ function AiKeyRow(props: { hasKey: boolean; canStore: boolean; onChange: () => v
 }
 
 const NAV = [
+  { id: 'account', label: 'Account', icon: <CircleUserRound size={16} /> },
   { id: 'general', label: 'General', icon: <Settings size={16} /> },
   { id: 'appearance', label: 'Appearance', icon: <Palette size={16} /> },
   { id: 'apps', label: 'Apps', icon: <AppWindow size={16} /> },

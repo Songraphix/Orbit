@@ -19,6 +19,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cloud": "node scripts/cloud-test.mjs",
+    "test:e2e:cloud": "electron-vite build && node scripts/cloud-test.mjs --e2e",
+    "firebase:deploy-rules": "firebase deploy --only firestore:rules,firestore:indexes",
     "test:e2e": "electron-vite build && playwright test",
     "dist": "electron-vite build && electron-builder --mac --arm64",
     "prepare": "husky",

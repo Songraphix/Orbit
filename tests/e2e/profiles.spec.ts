@@ -63,6 +63,7 @@ test('Settings has sections in a sidebar: About shows the versions', async () =>
   await clickMenu(app, 'settings');
   const settings = await settingsPage(app);
   await expect(settings.getByTestId('settings-nav')).toHaveText([
+    'Account',
     'General',
     'Appearance',
     'Apps',

@@ -34,6 +34,7 @@ import {
 } from '../types/command-bar';
 import { downloadsSnapshotSchema, recentDownloadSchema } from '../types/downloads';
 import { findStateSchema } from '../types/find';
+import { accountViewSchema } from '../types/account';
 import { mediaStateSchema, POPOUT_ACTIONS, popoutViewSchema } from '../types/media';
 import { newTabStateSchema, wallpaperChoiceSchema } from '../types/newtab';
 import { sidebarSnapshotSchema, spaceThemeSchema } from '../types/space';
@@ -309,6 +310,72 @@ export const contract = {
       })
       .strict(),
     output: z.void(),
+  },
+  // Orbit accounts and cloud sync (docs/FIREBASE.md). Settings drives them; main holds the
+  // session — pages only ever get the account's email and sync state, never a token.
+  'account:get': {
+    input: z.object({}).strict(),
+    output: accountViewSchema,
+    surfaces: ['internal', 'overlay'],
+  },
+  'account:signIn': {
+    input: z.object({ email: z.string().trim().max(254), password: z.string().max(200) }).strict(),
+    output: accountViewSchema,
+    surfaces: ['internal'],
+  },
+  'account:signUp': {
+    input: z.object({ email: z.string().trim().max(254), password: z.string().max(200) }).strict(),
+    output: accountViewSchema,
+    surfaces: ['internal'],
+  },
+  /** Opens Google in your browser; answers once you've chosen your account there. */
+  'account:google': {
+    input: z.object({}).strict(),
+    output: accountViewSchema,
+    surfaces: ['internal'],
+  },
+  'account:cancelGoogle': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'account:resetPassword': {
+    input: z.object({ email: z.string().trim().max(254) }).strict(),
+    output: accountViewSchema,
+    surfaces: ['internal'],
+  },
+  'account:resendVerification': {
+    input: z.object({}).strict(),
+    output: accountViewSchema,
+    surfaces: ['internal'],
+  },
+  /** "I've opened the link": checks with Firebase. */
+  'account:checkVerification': {
+    input: z.object({}).strict(),
+    output: accountViewSchema,
+    surfaces: ['internal'],
+  },
+  'account:signOut': {
+    input: z.object({}).strict(),
+    output: accountViewSchema,
+    surfaces: ['internal'],
+  },
+  'account:syncNow': {
+    input: z.object({}).strict(),
+    output: accountViewSchema,
+    surfaces: ['internal'],
+  },
+  /** Asks first (a native dialog); `password` re-confirms an email account if needed. */
+  'account:delete': {
+    input: z.object({ password: z.string().max(200).nullable() }).strict(),
+    output: accountViewSchema,
+    surfaces: ['internal'],
+  },
+  /** Clears the notice (and the "kept both versions" count) once read. */
+  'account:dismiss': {
+    input: z.object({}).strict(),
+    output: accountViewSchema,
+    surfaces: ['internal'],
   },
   /** The video pop-out's buttons: minimize, back to the video's tab, close, play/pause. */
   'popout:action': {
@@ -1719,6 +1786,8 @@ export const events = {
   'focus:update': focusViewSchema,
   /** What to play, sent to the hidden page that plays Orbit's sounds. */
   'sounds:update': soundStateSchema,
+  /** The account and sync state, sent to Settings. */
+  'account:update': accountViewSchema,
   /** The video pop-out's state, sent to its controls page. */
   'popout:update': popoutViewSchema,
   /** What's playing, sent to every shell (the toolbar's Focus button). */
@@ -1750,5 +1819,6 @@ export const INTERNAL_EVENTS = [
   'sounds:update',
   'ui:update',
   'popout:update',
+  'account:update',
 ] as const;
 export type InternalEventChannel = (typeof INTERNAL_EVENTS)[number];

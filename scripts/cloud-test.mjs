@@ -21,18 +21,19 @@ if (!hasJava) {
   env.JAVA_HOME = join(root, jdk, 'Contents', 'Home');
   env.PATH = `${join(env.JAVA_HOME, 'bin')}:${env.PATH}`;
 }
+// `--e2e`: Settings → Account in the app (Playwright) instead of the engine tests (Vitest).
+const e2e = process.argv.includes('--e2e');
+const rest = process.argv
+  .slice(2)
+  .filter((a) => a !== '--e2e')
+  .join(' ');
+const command = e2e
+  ? `playwright test tests/e2e/account.spec.ts ${rest}`
+  : `vitest run --config vitest.cloud.config.ts ${rest}`;
 // A demo- project never touches a real Firebase project.
 const result = spawnSync(
   'npx',
-  [
-    'firebase',
-    'emulators:exec',
-    '--only',
-    'auth,firestore',
-    '--project',
-    'demo-orbit',
-    `vitest run --config vitest.cloud.config.ts ${process.argv.slice(2).join(' ')}`,
-  ],
+  ['firebase', 'emulators:exec', '--only', 'auth,firestore', '--project', 'demo-orbit', command],
   { stdio: 'inherit', env },
 );
 process.exit(result.status ?? 1);

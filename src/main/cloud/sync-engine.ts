@@ -288,9 +288,12 @@ export class SyncEngine {
         await this.reconcile(batch[0]!.row);
         return;
       }
-      if (isTransient(error)) {
+      if (
+        isTransient(error) ||
+        (error instanceof CloudError && error.code === 'PERMISSION_DENIED')
+      ) {
         for (const b of batch) this.retryLater(b.row, error);
-      } else if (!(error instanceof CloudError && error.code === 'PERMISSION_DENIED')) {
+      } else {
         for (const b of batch) this.park(b.row, error instanceof Error ? error.message : 'failed');
       }
       throw error;

@@ -42,6 +42,15 @@ export class SidebarStore {
     this.items = repo.loadItems();
   }
 
+  /** Reads everything again (cloud sync wrote to the database); every window follows. */
+  reload(): void {
+    this.flushLive();
+    this.profilesList = this.repo.loadProfiles();
+    this.spacesList = this.repo.loadSpaces();
+    this.items = this.repo.loadItems();
+    this.notify();
+  }
+
   onChange(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
