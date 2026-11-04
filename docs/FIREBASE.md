@@ -76,7 +76,7 @@ created in production mode.
 
 Still to do:
 
-1. **Deploy the security rules** (production mode denies everything until then):
+1. **Deploy the security rules** — done 2026-11-04. After changing `firebase/firestore.rules`, deploy again:
    ```sh
    export PATH="$HOME/.local/node/bin:$PATH"
    npx firebase login                 # once, opens your browser
