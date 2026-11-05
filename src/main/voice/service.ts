@@ -1,14 +1,19 @@
 import { cleanTranscript, IDLE_VOICE, meterLevel } from '@shared/voice';
-import type { VoiceState } from '@shared/voice';
+import type { VoiceState, VoiceTarget } from '@shared/voice';
+
+export type HostCommand =
+  'start' | 'stop' | 'cancel' | 'wake-on' | 'wake-off' | 'wake-pause' | 'wake-resume';
 
 /** The hidden page that listens and turns speech into text (created when voice is used). */
 export type VoiceHost = {
-  send: (command: 'start' | 'stop' | 'cancel') => void;
+  send: (command: HostCommand) => void;
   close: () => void;
 };
 
 /** What the voice page reports. */
 export type HostEvent =
+  | { kind: 'wake'; rest: string }
+  | { kind: 'wakeState'; listening: boolean }
   | { kind: 'loading' }
   | { kind: 'listening' }
   | { kind: 'level'; rms: number }
@@ -29,6 +34,10 @@ export type VoiceDeps = {
   broadcast: (state: VoiceState) => void;
   /** Close the idle voice page (and free the model's memory) after this long. */
   idleMs?: number;
+  /** What was said, for the popup or the assistant panel (the command bar reads the state). */
+  onTranscript?: (text: string, target: VoiceTarget) => void;
+  /** "Hey Orbit" was heard, with anything said after it. */
+  onWake?: (rest: string) => void;
 };
 
 /**
@@ -52,18 +61,19 @@ export class VoiceService {
     return this.value;
   }
 
-  /** The mic button / ⇧⌘Space: start listening, or (while listening) finish now. */
-  async toggle(): Promise<void> {
+  /** The mic button / ⇧⌘Space / Shift+Space: start listening, or (while listening) finish now. */
+  async toggle(target: VoiceTarget = 'bar'): Promise<void> {
     if (this.value.phase === 'listening') {
       this.stop();
       return;
     }
-    await this.start();
+    await this.start(target);
   }
 
-  async start(): Promise<void> {
+  async start(target: VoiceTarget = 'bar'): Promise<void> {
     const { phase } = this.value;
     if (phase === 'downloading' || phase === 'loading' || phase === 'transcribing') return;
+    this.set({ target });
     if (!this.deps.modelReady()) {
       this.set({ phase: 'needs-model', error: null, micBlocked: false, modelReady: false });
       return;
@@ -113,7 +123,8 @@ export class VoiceService {
       if (abort.signal.aborted) return;
       this.downloading = null;
       this.set({ phase: 'idle', progress: null, modelReady: true });
-      if (this.startAfterDownload) await this.start();
+      // Listening starts where it was asked for (the command bar, the popup, the panel).
+      if (this.startAfterDownload) await this.start(this.value.target);
     } catch (error) {
       if (abort.signal.aborted) return;
       this.downloading = null;
@@ -123,6 +134,40 @@ export class VoiceService {
         error: error instanceof Error ? error.message : 'The speech model couldn’t be downloaded',
       });
     }
+  }
+
+  private wakeOn = false;
+  private wakeHeld = new Set<string>();
+
+  /** Settings → Voice → Listen for "Hey Orbit". Needs the model and the microphone. */
+  async setWake(on: boolean): Promise<boolean> {
+    this.wakeOn = on;
+    if (!on) {
+      this.host?.send('wake-off');
+      this.set({ wakeListening: false, wakeEnabled: false });
+      this.scheduleIdle();
+      return true;
+    }
+    if (!this.deps.modelReady() || !(await this.deps.micAccess())) {
+      this.wakeOn = false;
+      return false;
+    }
+    this.clearIdle();
+    this.host ??= this.deps.createHost();
+    this.set({ wakeEnabled: true });
+    this.host.send('wake-on');
+    if (this.wakeHeld.size) this.host.send('wake-pause');
+    return true;
+  }
+
+  /** Pauses "Hey Orbit" for a reason (Orbit speaking, on battery, the screen locked) until every
+   *  reason is gone. */
+  holdWake(reason: string, held: boolean): void {
+    const before = this.wakeHeld.size > 0;
+    if (held) this.wakeHeld.add(reason);
+    else this.wakeHeld.delete(reason);
+    const after = this.wakeHeld.size > 0;
+    if (before !== after && this.wakeOn) this.host?.send(after ? 'wake-pause' : 'wake-resume');
   }
 
   /** The model was removed (Settings): the page lets go of it too. */
@@ -148,15 +193,24 @@ export class VoiceService {
         return;
       case 'result': {
         const text = cleanTranscript(event.text);
+        const bar = this.value.target === 'bar';
         this.set({
           phase: text ? 'idle' : 'error',
           level: 0,
           error: text ? null : 'Didn’t catch that — try again',
-          transcript: text ? { text, at: Date.now() } : this.value.transcript,
+          // The command bar takes its words from the state; the popup and panel are told.
+          transcript: text && bar ? { text, at: Date.now() } : this.value.transcript,
         });
+        if (text && !bar) this.deps.onTranscript?.(text, this.value.target);
         this.scheduleIdle();
         return;
       }
+      case 'wake':
+        this.deps.onWake?.(event.rest);
+        return;
+      case 'wakeState':
+        this.set({ wakeListening: event.listening });
+        return;
       case 'error':
         this.set({
           phase: 'error',
@@ -171,6 +225,7 @@ export class VoiceService {
   /** The voice page went away (crashed, or Orbit is quitting). */
   hostGone(): void {
     this.host = null;
+    if (this.value.wakeListening) this.set({ wakeListening: false });
     if (this.value.phase !== 'idle' && this.value.phase !== 'needs-model') {
       this.set({ phase: 'error', level: 0, error: 'Voice stopped unexpectedly — try again' });
     }
@@ -190,7 +245,7 @@ export class VoiceService {
 
   private scheduleIdle(): void {
     this.clearIdle();
-    if (!this.host) return;
+    if (!this.host || this.wakeOn) return; // "Hey Orbit" keeps the page
     this.idleTimer = setTimeout(() => this.closeHost(), this.deps.idleMs ?? 3 * 60_000);
   }
 

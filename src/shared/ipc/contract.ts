@@ -61,7 +61,7 @@ import { ASSISTANT_LIMITS, assistantStateSchema, taskSuggestionSchema } from '..
 import { TOOLKIT_SECTIONS, toolkitStateSchema, viewportSchema } from '../toolkit/state';
 import { githubRepoViewSchema } from '../github';
 import { ruleInputSchema, rulesSchema } from '../rules';
-import { voicePrefsSchema, voiceStateSchema } from '../voice';
+import { voicePrefsPatchSchema, voicePrefsSchema, voiceStateSchema } from '../voice';
 import { driveStatusSchema } from '../drive';
 
 /**
@@ -1557,9 +1557,10 @@ export const contract = {
     output: voiceStateSchema,
     surfaces: ['shell', 'overlay', 'internal'],
   },
-  /** Start listening (opening the command bar), or finish now if listening. */
+  /** Start listening (opening the command bar, or the voice popup, or into the assistant), or
+   *  finish now if listening. */
   'voice:toggle': {
-    input: z.object({}).strict(),
+    input: z.object({ target: z.enum(['bar', 'popup', 'panel']).optional() }).strict(),
     output: z.void(),
     surfaces: ['shell', 'overlay', 'internal'],
   },
@@ -1580,6 +1581,22 @@ export const contract = {
     output: z.void(),
     surfaces: ['overlay', 'internal'],
   },
+  /** The voice popup (overlay): close it; continue in the assistant panel; reading aloud. */
+  'voicepop:close': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'voicepop:panel': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'voicepop:speaking': {
+    input: z.object({ speaking: z.boolean() }).strict(),
+    output: z.void(),
+    surfaces: ['overlay', 'internal'],
+  },
   /** Settings → Voice. */
   'voice:settings': {
     input: z.object({}).strict(),
@@ -1589,13 +1606,16 @@ export const contract = {
       modelReady: z.boolean(),
       modelBytes: z.number(),
       quiet: z.boolean(),
+      wakeListening: z.boolean(),
     }),
     surfaces: ['internal'],
   },
   'voice:setPrefs': {
-    input: voicePrefsSchema.partial().strict(),
-    output: voicePrefsSchema,
-    surfaces: ['internal', 'overlay'],
+    input: voicePrefsPatchSchema,
+    /** wakeError: "Hey Orbit" couldn't start (no model yet, or no microphone). */
+    output: voicePrefsSchema.extend({ wakeError: z.string().nullable().optional() }),
+    // The toolbar's "Hey Orbit" indicator turns it off.
+    surfaces: ['internal', 'overlay', 'shell'],
   },
   'voice:removeModel': {
     input: z.object({}).strict(),
@@ -1605,6 +1625,8 @@ export const contract = {
   /** From the hidden voice page only: what it's doing, and what was said. */
   'voice:hostEvent': {
     input: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('wake'), rest: z.string().max(2000) }).strict(),
+      z.object({ kind: z.literal('wakeState'), listening: z.boolean() }).strict(),
       z.object({ kind: z.literal('loading') }).strict(),
       z.object({ kind: z.literal('listening') }).strict(),
       z.object({ kind: z.literal('level'), rms: z.number().min(0).max(2) }).strict(),
@@ -2020,8 +2042,21 @@ export const events = {
   'drive:update': driveStatusSchema,
   /** Voice (listening, transcribing…), sent to every shell and overlay. */
   'state:voice': voiceStateSchema,
+  /** …and to each productivity panel (its assistant has a microphone). */
+  'voice:update': voiceStateSchema,
   /** What the hidden voice page should do. */
-  'voice:command': z.object({ command: z.enum(['start', 'stop', 'cancel']), at: z.number() }),
+  'voice:command': z.object({
+    command: z.enum([
+      'start',
+      'stop',
+      'cancel',
+      'wake-on',
+      'wake-off',
+      'wake-pause',
+      'wake-resume',
+    ]),
+    at: z.number(),
+  }),
   /** …and to every Orbit page (Settings, the Homepage, the panel). */
   'ui:update': uiPrefsSchema,
 } as const satisfies Record<string, z.ZodType>;
@@ -2039,6 +2074,7 @@ export const CHANNEL_NAME_PATTERN = /^[a-z]+:[a-z][a-zA-Z]*$/;
 
 /** The events internal orbit:// pages may listen to (main sends them to one page only). */
 export const INTERNAL_EVENTS = [
+  'voice:update',
   'drive:update',
   'voice:command',
   'assistant:update',

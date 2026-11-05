@@ -15,7 +15,11 @@ window.orbit.on('voice:command', ({ command }) => {
   void ready.then((e) => {
     if (command === 'start') void e.start();
     else if (command === 'stop') e.stop();
-    else e.cancel();
+    else if (command === 'cancel') e.cancel();
+    else if (command === 'wake-on') void e.setWake(true);
+    else if (command === 'wake-off') void e.setWake(false);
+    else if (command === 'wake-pause') void e.pauseWake(true);
+    else void e.pauseWake(false);
   });
 });
 window.addEventListener('pagehide', () => engine?.cancel());

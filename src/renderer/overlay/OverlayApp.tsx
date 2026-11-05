@@ -4,6 +4,7 @@ import { CommandBar } from './CommandBar';
 import { ShotCard } from './ShotCard';
 import { GroupingCard } from './GroupingCard';
 import { AppLibrary } from './AppLibrary';
+import { VoicePopup } from './VoicePopup';
 import { PeekFrame } from './PeekFrame';
 import { SiteControls } from './SiteControls';
 import { CaptureLayer } from './CaptureLayer';
@@ -44,6 +45,7 @@ export function OverlayApp() {
     backdrop: null,
     grouping: null,
     appLibrary: null,
+    voicePopup: null,
   });
 
   useEffect(() => {
@@ -56,6 +58,8 @@ export function OverlayApp() {
   // Peek's frame stays underneath either.
   const top = state.prompt ? (
     <PromptView key={state.prompt.id} prompt={state.prompt} />
+  ) : state.voicePopup ? (
+    <VoicePopup key={state.voicePopup.at} popup={state.voicePopup} />
   ) : state.commandBar ? (
     <CommandBar key={state.commandBar.openedAt} {...state.commandBar} />
   ) : state.capture ? (

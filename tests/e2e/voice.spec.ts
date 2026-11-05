@@ -42,9 +42,11 @@ test('voice without the speech model: the command bar offers the one-time downlo
   const models = mkdtempSync(join(tmpdir(), 'orbit-models-'));
   const { app, win, close } = await launchOrbit({ env: { ORBIT_MODELS_DIR: models } });
   try {
-    await clickMenu(app, 'voice'); // ⇧⌘Space
+    // The command bar's microphone (⇧⌘Space now opens the voice popup).
+    await clickMenu(app, 'new-tab');
     const overlay = await overlayOf(app);
     await expect(overlay.getByTestId('command-bar')).toBeVisible();
+    await overlay.getByTestId('voice-button').click();
     const status = overlay.getByTestId('voice-status');
     await expect(status).toHaveAttribute('data-phase', 'needs-model');
     await expect(status).toContainText('80 MB');
@@ -103,8 +105,9 @@ test('voice end to end: download the model, speak, the words land in the command
       w.voiceLog = [];
       w.orbit.on('state:voice', (p) => w.voiceLog.push(p));
     });
-    await clickMenu(app, 'voice');
+    await clickMenu(app, 'new-tab');
     const overlay = await overlayOf(app);
+    await overlay.getByTestId('voice-button').click();
     const status = overlay.getByTestId('voice-status');
     await expect(status).toHaveAttribute('data-phase', 'needs-model');
     await overlay.getByTestId('voice-download').click();

@@ -51,6 +51,7 @@ export class OverlayController {
   private shot: OverlayState['shot'] = null;
   private grouping: OverlayState['grouping'] = null;
   private appLibrary: OverlayState['appLibrary'] = null;
+  private voicePopup: OverlayState['voicePopup'] = null;
   private tooltip: Omit<NonNullable<OverlayState['tooltip']>, 'alone'> | null = null;
   private flight: OverlayState['flight'] = null;
   private flightTimer: ReturnType<typeof setTimeout> | null = null;
@@ -101,6 +102,7 @@ export class OverlayController {
       shot: this.shot,
       grouping: this.grouping,
       appLibrary: this.appLibrary,
+      voicePopup: this.voicePopup,
       tooltip: this.tooltip && { ...this.tooltip, alone: this.onlyTooltip },
       flight: this.flight,
       backdrop: this.backdrop,
@@ -122,6 +124,7 @@ export class OverlayController {
       this.shot !== null ||
       this.grouping !== null ||
       this.appLibrary !== null ||
+      this.voicePopup !== null ||
       this.flight !== null ||
       this.sidebarPeek !== null
     );
@@ -142,7 +145,8 @@ export class OverlayController {
       this.captureCard !== null ||
       this.shot !== null ||
       this.grouping !== null ||
-      this.appLibrary !== null
+      this.appLibrary !== null ||
+      this.voicePopup !== null
     );
   }
 
@@ -348,6 +352,38 @@ export class OverlayController {
     if (!this.grouping) return;
     this.grouping = null;
     this.sync();
+  }
+
+  /** The voice popup: opened fresh (a new `at`), or updated as the answer arrives. */
+  showVoicePopup(
+    patch: Partial<Omit<NonNullable<OverlayState['voicePopup']>, 'at'>>,
+    fresh = false,
+  ): void {
+    const base: NonNullable<OverlayState['voicePopup']> =
+      fresh || !this.voicePopup
+        ? {
+            at: Date.now(),
+            heard: null,
+            answer: null,
+            ai: false,
+            speak: false,
+            voice: null,
+            quiet: false,
+          }
+        : this.voicePopup;
+    this.voicePopup = { ...base, ...patch };
+    if (fresh) this.siteControls = null;
+    this.show();
+  }
+
+  closeVoicePopup(): void {
+    if (!this.voicePopup) return;
+    this.voicePopup = null;
+    this.sync();
+  }
+
+  get isVoicePopupOpen(): boolean {
+    return this.voicePopup !== null;
   }
 
   /** The App Library: your apps and the catalogue (a fresh view each time it changes). */

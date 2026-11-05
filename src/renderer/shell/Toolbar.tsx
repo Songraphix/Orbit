@@ -16,6 +16,7 @@ import {
   Pause,
   Play,
   X,
+  Mic,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
@@ -260,6 +261,7 @@ export function Toolbar({
             <BookmarkPlus size={14} />
           </ToolbarButton>
         )}
+        {notesOpen !== undefined && <WakeIndicator />}
         {focus && <FocusPill session={focus} />}
         {notesOpen !== undefined && shown.focus && <FocusButton />}
         {assistant && shown.assistant && (
@@ -424,5 +426,40 @@ function FocusButton() {
         )}
       </ToolbarButton>
     </>
+  );
+}
+
+/** "Hey Orbit" is on: a small microphone says so (dimmed while it's paused — Orbit speaking,
+ *  on battery, the screen locked); clicking it turns it off. */
+function WakeIndicator() {
+  const [wake, setWake] = useState({ on: false, listening: false });
+  useEffect(() => {
+    const read = (v: { wakeEnabled: boolean; wakeListening: boolean }) =>
+      setWake({ on: v.wakeEnabled, listening: v.wakeListening });
+    void window.orbit.invoke('voice:get', {}).then(read);
+    return window.orbit.on('state:voice', read);
+  }, []);
+  if (!wake.on) return null;
+  return (
+    <ToolbarButton
+      label={
+        wake.listening
+          ? 'Listening for “Hey Orbit” — click to turn off'
+          : '“Hey Orbit” is paused — click to turn off'
+      }
+      onClick={() => void window.orbit.invoke('voice:setPrefs', { wakeWord: false })}
+      testId="toolbar-wake"
+    >
+      <span
+        className={`relative grid place-items-center ${wake.listening ? '' : 'opacity-45'}`}
+        data-testid="toolbar-wake-state"
+        data-listening={wake.listening}
+      >
+        {wake.listening && (
+          <span className="ambient absolute size-4 rounded-full bg-[var(--accent)] opacity-30 animate-[orbit-breathe_2.4s_var(--ease-in-out)_infinite]" />
+        )}
+        <Mic size={14} className="relative text-[var(--accent)]" />
+      </span>
+    </ToolbarButton>
   );
 }

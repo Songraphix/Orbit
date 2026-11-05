@@ -81,7 +81,14 @@ export const voiceStateSchema = z.object({
   /** The last thing said (consumed by the command bar), and when (so repeats register). */
   transcript: z.object({ text: z.string(), at: z.number() }).nullable(),
   modelReady: z.boolean(),
+  /** "Hey Orbit" is on (the toolbar shows it, with its off switch)… */
+  wakeEnabled: z.boolean().default(false),
+  /** …and listening right now (not paused while Orbit speaks, on battery, or locked). */
+  wakeListening: z.boolean().default(false),
+  /** Where what's said goes: the command bar, the voice popup, or the assistant panel. */
+  target: z.enum(['bar', 'popup', 'panel']).default('bar'),
 });
+export type VoiceTarget = 'bar' | 'popup' | 'panel';
 export type VoiceState = z.output<typeof voiceStateSchema>;
 
 export const IDLE_VOICE: VoiceState = {
@@ -92,6 +99,9 @@ export const IDLE_VOICE: VoiceState = {
   micBlocked: false,
   transcript: null,
   modelReady: false,
+  wakeEnabled: false,
+  wakeListening: false,
+  target: 'bar',
 };
 
 export const voicePrefsSchema = z.object({
@@ -101,9 +111,82 @@ export const voicePrefsSchema = z.object({
   speakAnswers: z.boolean(),
   /** A Mac voice by name, or null for the system's default. */
   voice: z.string().max(200).nullable(),
+  /** "Hey Orbit": listen on this Mac for the phrase (opt-in; the microphone stays on). */
+  wakeWord: z.boolean().default(false),
+  /** …and keep listening on battery power (off: it pauses until the Mac is plugged in). */
+  wakeOnBattery: z.boolean().default(false),
 });
 export type VoicePrefs = z.output<typeof voicePrefsSchema>;
-export const DEFAULT_VOICE_PREFS: VoicePrefs = { autoRun: false, speakAnswers: true, voice: null };
+
+/** A change to some voice settings. (Not voicePrefsSchema.partial(): zod 4 keeps `.default()`
+ *  inside optional fields, so an empty change would turn "Hey Orbit" off.) */
+export const voicePrefsPatchSchema = voicePrefsSchema
+  .extend({ wakeWord: z.boolean(), wakeOnBattery: z.boolean() })
+  .partial()
+  .strict();
+export const DEFAULT_VOICE_PREFS: VoicePrefs = {
+  autoRun: false,
+  speakAnswers: true,
+  voice: null,
+  wakeWord: false,
+  wakeOnBattery: false,
+};
+
+/**
+ * "Hey Orbit" in what Whisper heard (with the ways it tends to spell it), and whatever was said
+ * after it ("Hey Orbit, open Spotify" → "open Spotify"). Null if the phrase isn't there. Pure.
+ */
+export function wakeMatch(text: string): { rest: string } | null {
+  // "Orbit" by its sound, as Whisper writes it: Orbit, Obe, Obi, Orb, Arbit, all bit, our bit…
+  const orbit = String.raw`(?:o|au|aw|oar|ore)r?\s?b\w{0,3}|(?:al|all|ar|our)[\s,.-]?b[eiu]t\w*`;
+  const m = new RegExp(
+    String.raw`\b(?:hey|hay|hi|hey there|ok|okay|yo)[\s,.!-]*(?:${orbit})\b[\s,.!?:-]*(.*)$`,
+    'i',
+  ).exec(text.trim());
+  if (!m) return null;
+  return { rest: cleanTranscript(m[1] ?? '').replace(/^[,.!?\s]+/, '') };
+}
+
+/** Wake listening: speech bursts are cut out of the stream by level, then checked for the phrase. */
+export const WAKE = {
+  /** Speech starts after this much sound above the speech level… */
+  startMs: 120,
+  /** …ends after this much quiet… */
+  endMs: 600,
+  /** …and a burst is never longer than this (the phrase plus a short request). */
+  maxMs: 6000,
+  /** Shorter bursts (a cough, a click) aren't worth transcribing. */
+  minMs: 450,
+} as const;
+
+export type WakeState =
+  | { speaking: false; loudSince: number | null }
+  | { speaking: true; started: number; lastLoud: number };
+
+/**
+ * One step of cutting speech bursts out of the microphone stream (pure): returns the new state
+ * and, when a burst ends, its start and end time (to transcribe that audio).
+ */
+export function wakeStep(
+  state: WakeState,
+  rms: number,
+  now: number,
+): { state: WakeState; burst: { from: number; to: number } | null } {
+  const loud = rms >= SPEECH_RMS;
+  if (!state.speaking) {
+    if (!loud) return { state: { speaking: false, loudSince: null }, burst: null };
+    const since = state.loudSince ?? now;
+    if (now - since >= WAKE.startMs) {
+      return { state: { speaking: true, started: since, lastLoud: now }, burst: null };
+    }
+    return { state: { speaking: false, loudSince: since }, burst: null };
+  }
+  const lastLoud = loud ? now : state.lastLoud;
+  const ended = now - lastLoud >= WAKE.endMs || now - state.started >= WAKE.maxMs;
+  if (!ended) return { state: { ...state, lastLoud }, burst: null };
+  const burst = lastLoud - state.started >= WAKE.minMs ? { from: state.started, to: now } : null;
+  return { state: { speaking: false, loudSince: null }, burst };
+}
 
 /** Listening stops by itself after this long without speech once you've spoken… */
 export const SILENCE_MS = 1300;

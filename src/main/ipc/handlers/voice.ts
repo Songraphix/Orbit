@@ -18,6 +18,18 @@ export function registerVoiceHandlers(
     settings: SettingsRepository;
     openCommandBar: () => void;
     openMicSettings: () => void;
+    /** Start (or finish) voice for the sender's window: the command bar, the popup or the
+     *  assistant panel. */
+    toggle: (target: 'bar' | 'popup' | 'panel', senderId: number) => Promise<void>;
+    /** Turn "Hey Orbit" on or off; false (with why) when it can't start. */
+    setWake: (on: boolean) => Promise<string | null>;
+    /** On battery, the setting to keep listening changed. */
+    wakeOnBatteryChanged: () => void;
+    popup: {
+      close: (senderId: number) => void;
+      toPanel: (senderId: number) => void;
+      speaking: (speaking: boolean) => void;
+    };
   },
 ): void {
   const { voice } = deps;
@@ -27,10 +39,12 @@ export function registerVoiceHandlers(
   };
 
   router.handle('voice:get', () => voice.state);
-  router.handle('voice:toggle', async () => {
-    deps.openCommandBar();
-    await voice.toggle();
-  });
+  router.handle('voice:toggle', ({ target }, { sender }) =>
+    deps.toggle(target ?? 'bar', sender.webContentsId),
+  );
+  router.handle('voicepop:close', (_input, { sender }) => deps.popup.close(sender.webContentsId));
+  router.handle('voicepop:panel', (_input, { sender }) => deps.popup.toPanel(sender.webContentsId));
+  router.handle('voicepop:speaking', ({ speaking }) => deps.popup.speaking(speaking));
   router.handle('voice:cancel', () => voice.cancel());
   router.handle('voice:download', () => {
     deps.openCommandBar();
@@ -42,11 +56,19 @@ export function registerVoiceHandlers(
     modelReady: deps.modelReady(),
     modelBytes: VOICE_MODEL_BYTES,
     quiet: process.env['ORBIT_QUIET'] === '1',
+    wakeListening: voice.state.wakeListening,
   }));
-  router.handle('voice:setPrefs', (patch) => {
-    const next = { ...deps.settings.get('voice.prefs'), ...patch };
+  router.handle('voice:setPrefs', async (patch) => {
+    const before = deps.settings.get('voice.prefs');
+    let next = { ...before, ...patch };
+    let wakeError: string | null = null;
+    if (patch.wakeWord !== undefined && patch.wakeWord !== before.wakeWord) {
+      wakeError = await deps.setWake(patch.wakeWord);
+      if (wakeError) next = { ...next, wakeWord: false };
+    }
     deps.settings.set('voice.prefs', next);
-    return next;
+    if (patch.wakeOnBattery !== undefined) deps.wakeOnBatteryChanged();
+    return { ...next, wakeError };
   });
   router.handle('voice:removeModel', () => deps.removeModel());
 

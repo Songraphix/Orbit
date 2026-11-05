@@ -101,6 +101,7 @@ import { WeatherService } from './newtab/weather';
 import { registerAppHubHandlers } from './ipc/handlers/apps';
 import { browserToolDeps } from './ai/browser-deps';
 import { VoiceService } from './voice/service';
+import type { HostCommand } from './voice/service';
 import { DriveService } from './drive/service';
 import { LocalPdfs, PDF_SCHEME } from './pdf/local-files';
 import { driveKind, editedLabel } from '@shared/drive';
@@ -114,6 +115,7 @@ import {
 import { registerVoiceHandlers } from './ipc/handlers/voice';
 import { openFavorite } from './apps/open';
 import { appLibraryView } from './apps/library';
+import type { AssistantState } from '@shared/assistant';
 import { UnsplashService } from './newtab/unsplash';
 import { SoundService } from './focus/sounds';
 import { soundIdSchema } from '@shared/sounds';
@@ -198,9 +200,14 @@ function openFocusView(controller: WindowController): void {
 }
 let assistantService: AssistantService | null = null;
 let voiceService: VoiceService | null = null;
+let voiceToggle: ((target: 'bar' | 'popup' | 'panel', senderId: number) => Promise<void>) | null =
+  null;
 let driveService: DriveService | null = null;
 /** Orbit AI's service, for pages that only ask whether it can answer. */
 let aiServiceRef: AIService | null = null;
+/** The voice popup follows Orbit AI's answers (set once voice is wired up). */
+let assistantAnswerHook: ((controller: WindowController, state: AssistantState) => void) | null =
+  null;
 let openGrouping: ((controller: WindowController) => void) | null = null;
 let toolkitService: ToolkitService | null = null;
 
@@ -673,9 +680,8 @@ function runCommand(controller: WindowController, commandId: string): void {
         });
       return;
     case 'voice':
-      // Push-to-talk: the command bar opens to show what's heard (again: finish now).
-      if (controller.overlay.mode === null) windows?.openCommandBar(controller, 'new');
-      void voiceService?.toggle();
+      // ⇧⌘Space: the voice popup (again while listening: finish now).
+      void voiceToggle?.('popup', controller.win.webContents.id);
       return;
     case 'toolkit':
       toolkitService?.open(controller);
@@ -1537,6 +1543,7 @@ void app.whenReady().then(() => {
       const contents = controller.notes.contents;
       if (contents) broadcaster.sendTo(contents, 'assistant:update', state);
     },
+    onState: (controller, state) => assistantAnswerHook?.(controller, state),
     toast,
   });
   assistantService = assistant;
@@ -1683,8 +1690,8 @@ void app.whenReady().then(() => {
       contents.on('will-navigate', (event) => event.preventDefault());
       contents.setWindowOpenHandler(() => ({ action: 'deny' }));
       let loaded = false;
-      const pending: ('start' | 'stop' | 'cancel')[] = [];
-      const send = (command: 'start' | 'stop' | 'cancel') =>
+      const pending: HostCommand[] = [];
+      const send = (command: HostCommand) =>
         broadcaster.sendTo(contents, 'voice:command', { command, at: Date.now() });
       contents.once('did-finish-load', () => {
         loaded = true;
@@ -1712,10 +1719,164 @@ void app.whenReady().then(() => {
       broadcaster.send('state:voice', state);
       for (const controller of windowManager.all()) {
         broadcaster.sendTo(controller.overlay.view.webContents, 'state:voice', state);
+        const panel = controller.notes.contents;
+        if (panel) broadcaster.sendTo(panel, 'voice:update', state);
       }
     },
+    onTranscript: (text, target) => voicePopup.heard(text, target),
+    onWake: (rest) => voicePopup.woke(rest),
   });
   voiceService = voice;
+  // The voice popup (Siri-style, owner request): ⇧⌘Space, Shift+Space outside text boxes, or
+  // "Hey Orbit". What you say goes to Orbit AI — its answer shows (and is read) in the popup —
+  // or, without AI, it's searched or opened.
+  const voiceQuiet = process.env['ORBIT_QUIET'] === '1';
+  let voiceWindow: WindowController | null = null;
+  const awaitingAnswer = new WeakSet<WindowController>();
+  const windowOfSender = (id: number) =>
+    windowManager.forSender(id) ??
+    windowManager.notesPanelFor(id) ??
+    windowManager.tabForContents(id)?.window ??
+    windowManager.focused() ??
+    windowManager.all()[0] ??
+    null;
+  const answerFor = (controller: WindowController, text: string) => {
+    const ai = aiServiceRef?.available ?? false;
+    if (!ai) {
+      const target = classifyInput(text);
+      if (target) controller.tabs.create(target.url, { activate: true });
+      const host = target?.kind === 'url' ? new URL(target.url).hostname.replace(/^www\./, '') : '';
+      controller.overlay.showVoicePopup({
+        heard: text,
+        ai: false,
+        answer: {
+          status: 'done',
+          text: host ? `Opened ${host}.` : `Searched the web for “${text}”.`,
+          actions: [],
+          error: null,
+        },
+      });
+      return;
+    }
+    awaitingAnswer.add(controller);
+    controller.overlay.showVoicePopup({
+      heard: text,
+      ai: true,
+      answer: { status: 'thinking', text: '', actions: [], error: null },
+    });
+    // The popup reads the answer itself (not the panel, if it's open too).
+    void assistantService?.ask(controller, text, 'ask', false);
+  };
+  const voicePopup = {
+    open: (controller: WindowController, request?: string) => {
+      const prefs = persistence!.settings.get('voice.prefs');
+      voiceWindow = controller;
+      controller.overlay.showVoicePopup(
+        {
+          ai: aiServiceRef?.available ?? false,
+          speak: prefs.speakAnswers,
+          voice: prefs.voice,
+          quiet: voiceQuiet,
+        },
+        true,
+      );
+      if (request) answerFor(controller, request);
+      else void voice.start('popup');
+    },
+    /** What was said, for the popup or the assistant panel. */
+    heard: (text: string, target: 'bar' | 'popup' | 'panel') => {
+      const controller = voiceWindow ?? windowManager.focused() ?? windowManager.all()[0];
+      if (!controller) return;
+      if (target === 'panel') assistantService?.open(controller, { prompt: text, spoken: true });
+      else if (controller.overlay.isVoicePopupOpen) answerFor(controller, text);
+    },
+    /** "Hey Orbit" (and maybe a request in the same breath): Orbit comes forward and answers. */
+    woke: (rest: string) => {
+      const controller = windowManager.focused() ?? windowManager.all()[0];
+      if (!controller || controller.overlay.isVoicePopupOpen) return;
+      controller.win.show();
+      app.focus({ steal: true });
+      voicePopup.open(controller, rest || undefined);
+    },
+  };
+  assistantAnswerHook = (controller, state) => {
+    if (!awaitingAnswer.has(controller) || !controller.overlay.isVoicePopupOpen) return;
+    const reply = state.messages.at(-1);
+    if (reply?.role !== 'assistant') return;
+    controller.overlay.showVoicePopup({
+      answer: {
+        status: reply.status,
+        text: reply.parts.map((p) => p.text).join(''),
+        actions: reply.actions.map((a) => ({ label: a.label, kind: a.kind })),
+        error: reply.error,
+      },
+    });
+    if (reply.status !== 'thinking' && reply.status !== 'writing')
+      awaitingAnswer.delete(controller);
+  };
+  // "Hey Orbit" pauses while the screen is locked and (unless allowed) on battery.
+  const batteryHold = () =>
+    voice.holdWake(
+      'battery',
+      powerMonitor.isOnBatteryPower() && !persistence!.settings.get('voice.prefs').wakeOnBattery,
+    );
+  batteryHold();
+  powerMonitor.on('on-battery', batteryHold);
+  powerMonitor.on('on-ac', batteryHold);
+  powerMonitor.on('lock-screen', () => voice.holdWake('locked', true));
+  powerMonitor.on('unlock-screen', () => voice.holdWake('locked', false));
+  if (persistence.settings.get('voice.prefs').wakeWord) {
+    void voice.setWake(true).then((ok) => {
+      if (!ok) {
+        persistence!.settings.set('voice.prefs', {
+          ...persistence!.settings.get('voice.prefs'),
+          wakeWord: false,
+        });
+      }
+    });
+  }
+  // Shift+Space starts the voice popup — except in a text box, where it types a space as usual.
+  const EDITABLE = `(() => {
+    let el = document.activeElement;
+    while (el && el.shadowRoot && el.shadowRoot.activeElement) el = el.shadowRoot.activeElement;
+    if (!el || el === document.body) return false;
+    if (el.isContentEditable || el.tagName === 'TEXTAREA' || el.tagName === 'IFRAME') return true;
+    if (el.tagName === 'INPUT') return !['button','checkbox','radio','submit','reset','range','color','file','image'].includes(el.type);
+    const role = el.getAttribute && el.getAttribute('role');
+    return role === 'textbox' || role === 'searchbox' || role === 'combobox';
+  })()`;
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('before-input-event', (event, input) => {
+      if (
+        input.type !== 'keyDown' ||
+        input.key !== ' ' ||
+        !input.shift ||
+        input.meta ||
+        input.control ||
+        input.alt ||
+        contents.id === voiceHostId
+      ) {
+        return;
+      }
+      event.preventDefault();
+      void contents
+        .executeJavaScriptInIsolatedWorld(1004, [{ code: EDITABLE }])
+        .catch(() => true)
+        .then((editable) => {
+          if (editable) {
+            void contents.insertText(' ');
+            return;
+          }
+          if (input.isAutoRepeat) return;
+          const controller = windowOfSender(contents.id);
+          if (!controller) return;
+          if (controller.overlay.isVoicePopupOpen && voice.state.phase === 'listening')
+            voice.stop();
+          else voicePopup.open(controller);
+        });
+    });
+  });
+
   registerVoiceHandlers(router, {
     voice,
     isHost: (webContentsId) => webContentsId === voiceHostId,
@@ -1736,6 +1897,53 @@ void app.whenReady().then(() => {
       void shell.openExternal(
         'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
       ),
+    toggle: (voiceToggle = async (target, senderId) => {
+      const controller = windowOfSender(senderId);
+      if (!controller) return;
+      if (target === 'popup') {
+        if (controller.overlay.isVoicePopupOpen && voice.state.phase === 'listening') voice.stop();
+        else voicePopup.open(controller);
+        return;
+      }
+      voiceWindow = controller;
+      if (target === 'bar' && controller.overlay.mode === null) {
+        windowManager.openCommandBar(controller, 'new');
+      }
+      await voice.toggle(target);
+    }),
+    setWake: async (on) => {
+      if (!on) {
+        await voice.setWake(false);
+        return null;
+      }
+      if (!voiceModelReady(modelsRoot)) {
+        return 'Download the speech model first: press ⇧⌘Space once and choose Download.';
+      }
+      return (await voice.setWake(true))
+        ? null
+        : 'Orbit can’t use the microphone — allow it in System Settings → Privacy & Security.';
+    },
+    wakeOnBatteryChanged: batteryHold,
+    popup: {
+      close: (senderId) => {
+        const controller = windowOfSender(senderId);
+        if (!controller) return;
+        controller.overlay.closeVoicePopup();
+        if (voice.state.target === 'popup') voice.cancel();
+        if (awaitingAnswer.has(controller)) {
+          assistantService?.stop(controller);
+          awaitingAnswer.delete(controller);
+        }
+        voice.holdWake('speaking', false);
+      },
+      toPanel: (senderId) => {
+        const controller = windowOfSender(senderId);
+        if (!controller) return;
+        controller.overlay.closeVoicePopup();
+        assistantService?.open(controller);
+      },
+      speaking: (speaking) => voice.holdWake('speaking', speaking),
+    },
   });
   const pushFocusView = (view: FocusView) => {
     for (const controller of windowManager.all()) {

@@ -17,6 +17,7 @@ import {
   SquarePen,
   X,
   ExternalLink,
+  Mic,
   Volume2,
 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -25,6 +26,7 @@ import { AI_MODELS } from '@shared/ai';
 import type { AssistantReply, AssistantState, TaskSuggestion } from '@shared/assistant';
 import { citeMarker, parseMarkdown } from '@shared/markdown';
 import { speakableText } from '@shared/voice';
+import type { VoiceState } from '@shared/voice';
 import { speak, speakOnce, stopSpeaking, useSpeakingId } from './speech';
 import { useWork } from '../work/context';
 import { Markdown } from './Markdown';
@@ -726,6 +728,7 @@ function Composer({ state }: { state: AssistantState }) {
           aria-label="Ask Orbit"
           data-testid="assistant-input"
         />
+        {!state.busy && !state.blocked && <PanelMic />}
         {state.busy ? (
           <button
             type="button"
@@ -752,6 +755,50 @@ function Composer({ state }: { state: AssistantState }) {
         )}
       </div>
     </div>
+  );
+}
+
+/** Speak to Orbit AI from the panel: what you say is asked here, and the answer read aloud. */
+function PanelMic() {
+  const [voice, setVoice] = useState<VoiceState | null>(null);
+  useEffect(() => {
+    void invoke('voice:get', {}).then(setVoice);
+    return window.orbit.on('voice:update', setVoice);
+  }, []);
+  const mine = voice?.target === 'panel';
+  const listening = mine && (voice?.phase === 'listening' || voice?.phase === 'loading');
+  const busy = mine && voice?.phase === 'transcribing';
+  const level = listening ? (voice?.level ?? 0) : 0;
+  const label = listening ? 'Stop listening' : 'Speak your question';
+  return (
+    <button
+      type="button"
+      className={`press relative grid size-7 shrink-0 place-items-center rounded-full ${
+        listening
+          ? 'bg-[var(--work-accent)] text-white'
+          : 'text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
+      }`}
+      onClick={() => void invoke('voice:toggle', { target: 'panel' })}
+      aria-label={label}
+      title={
+        mine && voice?.phase === 'needs-model'
+          ? 'Voice needs its speech model — press ⇧⌘Space once to download it'
+          : label
+      }
+      data-testid="assistant-mic"
+      data-phase={mine ? voice?.phase : 'idle'}
+    >
+      {listening && (
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-full bg-[var(--work-accent)] opacity-40 transition-transform duration-75"
+          style={{ transform: `scale(${1 + level * 0.6})` }}
+        />
+      )}
+      <span className={`relative ${busy ? 'animate-pulse' : ''}`}>
+        <Mic size={14} />
+      </span>
+    </button>
   );
 }
 

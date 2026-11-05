@@ -96,3 +96,59 @@ describe('the speech model', () => {
     expect(isModelFile('../../secrets.json')).toBe(false);
   });
 });
+
+describe('Hey Orbit', () => {
+  it('finds the phrase however Whisper spells it, and keeps what came after', async () => {
+    const { wakeMatch } = await import('../../src/shared/voice');
+    expect(wakeMatch('Hey Orbit.')).toEqual({ rest: '' });
+    expect(wakeMatch('Hey, Orbit, open Spotify in the sidebar.')).toEqual({
+      rest: 'open Spotify in the sidebar.',
+    });
+    expect(wakeMatch('hey orbits what is on my list today?')?.rest).toBe(
+      'what is on my list today?',
+    );
+    expect(wakeMatch('Okay Orbit')).toEqual({ rest: '' });
+    // How Whisper heard macOS's voice say it.
+    expect(wakeMatch(' Hey, all bit, what is on my list today?')?.rest).toBe(
+      'what is on my list today?',
+    );
+    expect(wakeMatch('Hi or bit open Spotify')?.rest).toBe('open Spotify');
+    expect(wakeMatch('hey arbit')).toEqual({ rest: '' });
+    expect(wakeMatch(' Hey, Obe, what is on my list today?')?.rest).toBe(
+      'what is on my list today?',
+    );
+    expect(wakeMatch('Hey Orb, open Notes')?.rest).toBe('open Notes');
+    expect(wakeMatch('Hey Abby, dinner?')).toBeNull();
+    expect(wakeMatch('Hey all, a bit of news')).toBeNull();
+    expect(wakeMatch('the orbit of the moon')).toBeNull();
+    expect(wakeMatch('Hey, are you there?')).toBeNull();
+  });
+
+  it('cuts speech bursts out of the stream by level', async () => {
+    const { wakeStep } = await import('../../src/shared/voice');
+    let state: Parameters<typeof wakeStep>[0] = { speaking: false, loudSince: null };
+    const step = (rms: number, now: number) => {
+      const r = wakeStep(state, rms, now);
+      state = r.state;
+      return r.burst;
+    };
+    expect(step(0.1, 0)).toBeNull();
+    expect(step(0.1, 150)).toBeNull(); // speaking from 0
+    expect(state.speaking).toBe(true);
+    for (let t = 200; t <= 1200; t += 100) expect(step(0.1, t)).toBeNull();
+    expect(step(0.001, 1500)).toBeNull(); // a pause, not yet the end
+    expect(step(0.001, 1850)).toEqual({ from: 0, to: 1850 });
+    // A click: too short to transcribe.
+    step(0.1, 3000);
+    step(0.1, 3130);
+    expect(step(0.001, 3800)).toBeNull();
+  });
+});
+
+describe('voice settings changes', () => {
+  it('an empty change changes nothing (no defaults sneak in)', async () => {
+    const { voicePrefsPatchSchema } = await import('../../src/shared/voice');
+    expect(voicePrefsPatchSchema.parse({})).toEqual({});
+    expect(voicePrefsPatchSchema.parse({ wakeWord: true })).toEqual({ wakeWord: true });
+  });
+});

@@ -13,6 +13,7 @@ const mb = (bytes: number) => `${Math.round(bytes / 1_000_000)} MB`;
 export function VoiceSection() {
   const [status, setStatus] = useState<InvokeOutput<'voice:settings'> | null>(null);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [wakeError, setWakeError] = useState<string | null>(null);
   const load = () => void window.orbit.invoke('voice:settings', {}).then(setStatus);
   useEffect(() => {
     load();
@@ -25,7 +26,10 @@ export function VoiceSection() {
   const { prefs } = status;
   const set = (patch: Partial<VoicePrefs>) => {
     setStatus({ ...status, prefs: { ...prefs, ...patch } });
-    void window.orbit.invoke('voice:setPrefs', patch).then(load);
+    void window.orbit.invoke('voice:setPrefs', patch).then((r) => {
+      setWakeError(r.wakeError ?? null);
+      load();
+    });
   };
   const language = navigator.language.slice(0, 2);
   const listed = [
@@ -44,7 +48,7 @@ export function VoiceSection() {
     <Section
       id="voice"
       title="Voice"
-      description="Speak instead of typing: ⇧⌘Space, or the microphone in the command bar."
+      description="Talk to Orbit AI: Shift+Space, ⇧⌘Space, “Hey Orbit”, or a microphone (the command bar, the Homepage, the assistant)."
     >
       <Group title="Speech to text">
         <Row
@@ -83,6 +87,49 @@ export function VoiceSection() {
             data-testid="voice-auto-run"
           />
         </Row>
+      </Group>
+
+      <Group title="“Hey Orbit”">
+        <Row
+          label="Listen for “Hey Orbit”"
+          hint="Off until you turn it on. While on, the microphone stays open (macOS shows its orange dot, and Orbit's toolbar a small microphone — click it to stop). Speech is checked on this Mac for the phrase; nothing is recorded, kept or sent. Pauses while Orbit speaks and when the screen is locked."
+        >
+          <input
+            type="checkbox"
+            role="switch"
+            checked={prefs.wakeWord}
+            onChange={(e) => set({ wakeWord: e.target.checked })}
+            className="orbit-switch"
+            data-testid="voice-wake-word"
+          />
+        </Row>
+        <Row
+          label="Keep listening on battery"
+          hint="Off: “Hey Orbit” pauses while your Mac runs on battery (it uses a little power while people talk nearby)."
+        >
+          <input
+            type="checkbox"
+            role="switch"
+            checked={prefs.wakeOnBattery}
+            disabled={!prefs.wakeWord}
+            onChange={(e) => set({ wakeOnBattery: e.target.checked })}
+            className="orbit-switch"
+            data-testid="voice-wake-battery"
+          />
+        </Row>
+        {wakeError && (
+          <p
+            className="px-4 py-3 text-meta text-red-600"
+            role="alert"
+            data-testid="voice-wake-error"
+          >
+            {wakeError}
+          </p>
+        )}
+        <div className="px-4 py-3 text-meta text-neutral-500">
+          Shift+Space (outside a text box) or ⇧⌘Space opens the voice popup too. Say “Hey Orbit,
+          open Spotify” in one go, or just “Hey Orbit” and then your question.
+        </div>
       </Group>
 
       <Group title="Spoken answers">

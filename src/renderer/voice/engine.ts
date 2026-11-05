@@ -2,10 +2,12 @@ import { env, pipeline } from '@huggingface/transformers';
 import type { AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
 import wasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url';
 import mjsUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs?url';
-import { listenStep, VOICE_MODEL } from '@shared/voice';
-import type { ListenState } from '@shared/voice';
+import { listenStep, VOICE_MODEL, wakeMatch, wakeStep } from '@shared/voice';
+import type { ListenState, WakeState } from '@shared/voice';
 
 type HostEvent =
+  | { kind: 'wake'; rest: string }
+  | { kind: 'wakeState'; listening: boolean }
   | { kind: 'loading' }
   | { kind: 'listening' }
   | { kind: 'level'; rms: number }
@@ -56,18 +58,45 @@ function speechLanguage(): string {
 const SAMPLE_RATE = 16_000;
 /** ~64 ms of audio per chunk: the meter and end-of-speech check run at this pace. */
 const CHUNK = 1024;
+/** Wake listening keeps this much recent audio (to transcribe a burst that just ended). */
+const WAKE_KEEP_MS = 8000;
+
+type Mic = { stream: MediaStream; context: AudioContext };
+
+const MIC_ERROR = (error: unknown): HostEvent => {
+  const denied = error instanceof DOMException && error.name === 'NotAllowedError';
+  const missing = error instanceof DOMException && error.name === 'NotFoundError';
+  return {
+    kind: 'error',
+    micDenied: denied,
+    message: missing
+      ? 'No microphone found — connect one and try again'
+      : denied
+        ? 'Orbit can’t use the microphone. Allow it in System Settings → Privacy & Security → Microphone.'
+        : 'The microphone couldn’t start — try again',
+  };
+};
 
 /**
- * Listens to the microphone until you stop speaking (or main says stop), then transcribes it.
- * The microphone is released as soon as listening ends; audio is only ever held in memory.
+ * Push-to-talk listens until you stop speaking (or main says stop), then transcribes it.
+ * "Hey Orbit" (opt-in) keeps the microphone open, cuts out bursts of speech by their level, and
+ * transcribes only those, looking for the phrase. Audio is only ever held in memory (the last
+ * few seconds for wake listening) and never leaves this page. Push-to-talk takes the microphone
+ * from wake listening while it runs.
  */
 export class VoiceEngine {
   private asr: Promise<AutomaticSpeechRecognitionPipeline> | null = null;
-  private stream: MediaStream | null = null;
-  private context: AudioContext | null = null;
+  private mic: Mic | null = null;
   private chunks: Float32Array[] = [];
   private listen: ListenState | null = null;
   private session = 0;
+  /** Wake listening: wanted (Settings), paused (Orbit speaking, battery…), its own microphone. */
+  private wakeWanted = false;
+  private wakePaused = false;
+  private wakeMic: Mic | null = null;
+  private wakeRing: { at: number; samples: Float32Array }[] = [];
+  private wake: WakeState = { speaking: false, loudSince: null };
+  private wakeBusy = false;
 
   constructor(private readonly emit: (event: HostEvent) => void) {}
 
@@ -80,8 +109,36 @@ export class VoiceEngine {
     return this.asr;
   }
 
+  /** Opens the microphone; each ~64 ms chunk goes to `onChunk` with its level. */
+  private async openMic(onChunk: (samples: Float32Array, rms: number) => void): Promise<Mic> {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+    });
+    const context = new AudioContext({ sampleRate: SAMPLE_RATE });
+    await context.resume();
+    const source = context.createMediaStreamSource(stream);
+    // ScriptProcessor is old but needs no extra module (AudioWorklet would); fine for 16 kHz mono.
+    const processor = context.createScriptProcessor(CHUNK, 1, 1);
+    processor.onaudioprocess = (event) => {
+      const samples = new Float32Array(event.inputBuffer.getChannelData(0));
+      let sum = 0;
+      for (const x of samples) sum += x * x;
+      onChunk(samples, Math.sqrt(sum / samples.length));
+    };
+    source.connect(processor);
+    processor.connect(context.destination);
+    return { stream, context };
+  }
+
+  private closeMic(mic: Mic | null): void {
+    mic?.stream.getTracks().forEach((t) => t.stop());
+    void mic?.context.close().catch(() => undefined);
+  }
+
+  // ── Push-to-talk ──────────────────────────────────────────────────────────────
+
   async start(): Promise<void> {
-    if (this.stream) return;
+    if (this.mic) return;
     const session = ++this.session;
     this.emit({ kind: 'loading' });
     // The model is ready before the microphone opens: loading it takes this page's thread for a
@@ -94,65 +151,44 @@ export class VoiceEngine {
       return;
     }
     if (session !== this.session) return;
-    let stream: MediaStream;
+    this.stopWakeMic(); // push-to-talk has the microphone now
+    this.chunks = [];
+    this.listen = { started: performance.now(), spoke: false, lastSpeech: 0 };
+    let mic: Mic;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      mic = await this.openMic((samples, rms) => {
+        if (session !== this.session || !this.listen) return;
+        this.chunks.push(samples);
+        this.emit({ kind: 'level', rms });
+        const step = listenStep(this.listen, rms, performance.now());
+        this.listen = step.state;
+        if (step.stop === 'nothing-said') this.finish(session, false);
+        else if (step.stop) this.finish(session, true);
       });
     } catch (error) {
-      const denied = error instanceof DOMException && error.name === 'NotAllowedError';
-      const missing = error instanceof DOMException && error.name === 'NotFoundError';
-      this.emit({
-        kind: 'error',
-        micDenied: denied,
-        message: missing
-          ? 'No microphone found — connect one and try again'
-          : denied
-            ? 'Orbit can’t use the microphone. Allow it in System Settings → Privacy & Security → Microphone.'
-            : 'The microphone couldn’t start — try again',
-      });
+      this.listen = null;
+      this.emit(MIC_ERROR(error));
+      void this.resumeWake();
       return;
     }
     if (session !== this.session) {
-      stream.getTracks().forEach((t) => t.stop());
+      this.closeMic(mic);
       return;
     }
-    this.stream = stream;
-    const context = new AudioContext({ sampleRate: SAMPLE_RATE });
-    this.context = context;
-    await context.resume();
-    const source = context.createMediaStreamSource(stream);
-    // ScriptProcessor is old but needs no extra module (AudioWorklet would); fine for 16 kHz mono.
-    const processor = context.createScriptProcessor(CHUNK, 1, 1);
-    this.chunks = [];
-    this.listen = { started: performance.now(), spoke: false, lastSpeech: 0 };
-    processor.onaudioprocess = (event) => {
-      if (session !== this.session || !this.listen) return;
-      const samples = new Float32Array(event.inputBuffer.getChannelData(0));
-      this.chunks.push(samples);
-      let sum = 0;
-      for (const s of samples) sum += s * s;
-      const rms = Math.sqrt(sum / samples.length);
-      this.emit({ kind: 'level', rms });
-      const step = listenStep(this.listen, rms, performance.now());
-      this.listen = step.state;
-      if (step.stop === 'nothing-said') this.finish(session, false);
-      else if (step.stop) this.finish(session, true);
-    };
-    source.connect(processor);
-    processor.connect(context.destination);
+    this.mic = mic;
     this.emit({ kind: 'listening' });
   }
 
   /** Finish now and transcribe what was said. */
   stop(): void {
-    if (this.stream) this.finish(this.session, true);
+    if (this.mic) this.finish(this.session, true);
   }
 
   /** Stop without transcribing. */
   cancel(): void {
     this.session++;
     this.release();
+    void this.resumeWake();
   }
 
   private finish(session: number, transcribe: boolean): void {
@@ -162,24 +198,28 @@ export class VoiceEngine {
     this.release();
     if (!transcribe || audio.length < SAMPLE_RATE / 4) {
       this.emit({ kind: 'result', text: '' });
+      void this.resumeWake();
       return;
     }
     this.emit({ kind: 'transcribing' });
-    void this.transcribe(audio);
+    void this.transcribe(audio).finally(() => void this.resumeWake());
+  }
+
+  private async text(audio: Float32Array): Promise<string> {
+    const asr = await this.model();
+    const output = await asr(audio, {
+      chunk_length_s: 30,
+      stride_length_s: 5,
+      // Your Mac's language (Whisper would otherwise assume English).
+      language: speechLanguage(),
+      task: 'transcribe',
+    });
+    return Array.isArray(output) ? output.map((o) => o.text).join(' ') : output.text;
   }
 
   private async transcribe(audio: Float32Array): Promise<void> {
     try {
-      const asr = await this.model();
-      const output = await asr(audio, {
-        chunk_length_s: 30,
-        stride_length_s: 5,
-        // Your Mac's language (Whisper would otherwise assume English).
-        language: speechLanguage(),
-        task: 'transcribe',
-      });
-      const text = Array.isArray(output) ? output.map((o) => o.text).join(' ') : output.text;
-      this.emit({ kind: 'result', text });
+      this.emit({ kind: 'result', text: await this.text(audio) });
     } catch (error) {
       console.error(error);
       this.emit({ kind: 'error', message: 'Voice couldn’t turn that into text — try again' });
@@ -187,22 +227,91 @@ export class VoiceEngine {
   }
 
   private collect(): Float32Array {
-    const length = this.chunks.reduce((n, c) => n + c.length, 0);
-    const audio = new Float32Array(length);
-    let offset = 0;
-    for (const chunk of this.chunks) {
-      audio.set(chunk, offset);
-      offset += chunk.length;
-    }
+    const audio = join(this.chunks);
     this.chunks = [];
     return audio;
   }
 
   private release(): void {
     this.listen = null;
-    this.stream?.getTracks().forEach((t) => t.stop());
-    this.stream = null;
-    void this.context?.close().catch(() => undefined);
-    this.context = null;
+    this.closeMic(this.mic);
+    this.mic = null;
   }
+
+  // ── "Hey Orbit" ───────────────────────────────────────────────────────────────
+
+  /** Settings → Voice → Listen for "Hey Orbit" (on or off). */
+  async setWake(on: boolean): Promise<void> {
+    this.wakeWanted = on;
+    if (on) await this.resumeWake();
+    else this.stopWakeMic();
+  }
+
+  /** Orbit is speaking, or on battery: stop listening for a while (and so not hear itself). */
+  async pauseWake(paused: boolean): Promise<void> {
+    this.wakePaused = paused;
+    if (paused) this.stopWakeMic();
+    else await this.resumeWake();
+  }
+
+  private async resumeWake(): Promise<void> {
+    if (!this.wakeWanted || this.wakePaused || this.wakeMic || this.mic || this.listen) return;
+    try {
+      await this.model();
+    } catch {
+      return;
+    }
+    if (!this.wakeWanted || this.wakePaused || this.wakeMic || this.mic || this.listen) return;
+    this.wakeRing = [];
+    this.wake = { speaking: false, loudSince: null };
+    try {
+      this.wakeMic = await this.openMic((samples, rms) => this.onWakeChunk(samples, rms));
+    } catch (error) {
+      this.emit(MIC_ERROR(error));
+      return;
+    }
+    this.emit({ kind: 'wakeState', listening: true });
+  }
+
+  private stopWakeMic(): void {
+    if (!this.wakeMic) return;
+    this.closeMic(this.wakeMic);
+    this.wakeMic = null;
+    this.wakeRing = [];
+    this.emit({ kind: 'wakeState', listening: false });
+  }
+
+  private onWakeChunk(samples: Float32Array, rms: number): void {
+    const now = performance.now();
+    this.wakeRing.push({ at: now, samples });
+    while (this.wakeRing.length && now - this.wakeRing[0]!.at > WAKE_KEEP_MS) this.wakeRing.shift();
+    const step = wakeStep(this.wake, rms, now);
+    this.wake = step.state;
+    if (!step.burst || this.wakeBusy) return;
+    // The burst, with a little audio before it (the first syllable starts quietly).
+    const { from, to } = step.burst;
+    const audio = join(
+      this.wakeRing.filter((c) => c.at >= from - 250 && c.at <= to).map((c) => c.samples),
+    );
+    this.wakeBusy = true;
+    void this.text(audio)
+      .then((heard) => {
+        const match = wakeMatch(heard);
+        if (match && this.wakeMic) this.emit({ kind: 'wake', rest: match.rest });
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        this.wakeBusy = false;
+      });
+  }
+}
+
+function join(chunks: Float32Array[]): Float32Array {
+  const audio = new Float32Array(chunks.reduce((n, c) => n + c.length, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    audio.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return audio;
 }

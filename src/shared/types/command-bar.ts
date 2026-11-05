@@ -153,6 +153,29 @@ export const overlayStateSchema = z.object({
     })
     .nullable()
     .default(null),
+  /** The voice popup (Siri-style): what you said and Orbit AI's answer, over the window. */
+  voicePopup: z
+    .object({
+      at: z.number(),
+      /** What was heard (null while listening). */
+      heard: z.string().nullable(),
+      answer: z
+        .object({
+          status: z.enum(['thinking', 'writing', 'done', 'stopped', 'error']),
+          text: z.string(),
+          actions: z.array(z.object({ label: z.string(), kind: z.string() })),
+          error: z.string().nullable(),
+        })
+        .nullable(),
+      /** Orbit AI answered (otherwise what you said was searched or opened). */
+      ai: z.boolean(),
+      /** Read the answer aloud (Settings → Voice), with which voice; quiet: tests. */
+      speak: z.boolean(),
+      voice: z.string().nullable(),
+      quiet: z.boolean(),
+    })
+    .nullable()
+    .default(null),
   /** The App Library (redesign brief §7): your apps and the catalogue, searchable. */
   appLibrary: z
     .object({

@@ -111,6 +111,8 @@ export type AssistantDeps = {
   ) => void;
   /** Projects or tasks changed (the panels refresh). */
   workChanged?: () => void;
+  /** Every change to a window's conversation (the voice popup shows the latest answer). */
+  onState?: (controller: WindowController, state: AssistantState) => void;
   /** Orbit AI's browser tools for a window (given the user's words in this question). */
   browser?: (controller: WindowController, userWords: string) => BrowserToolDeps;
   toast: (controller: WindowController, message: string) => void;
@@ -249,7 +251,9 @@ export class AssistantService {
     const timer = this.timers.get(controller);
     if (timer) clearTimeout(timer);
     this.timers.delete(controller);
-    this.deps.push(controller, this.state(controller));
+    const state = this.state(controller);
+    this.deps.push(controller, state);
+    this.deps.onState?.(controller, state);
   }
 
   /** Sends the state soon (streaming: many small changes become one update). */
