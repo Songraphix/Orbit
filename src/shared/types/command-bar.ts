@@ -153,6 +153,31 @@ export const overlayStateSchema = z.object({
     })
     .nullable()
     .default(null),
+  /** The App Library (redesign brief §7): your apps and the catalogue, searchable. */
+  appLibrary: z
+    .object({
+      at: z.number(),
+      apps: z.array(
+        z.object({
+          id: z.string(),
+          title: z.string(),
+          host: z.string(),
+          favicon: z.string().nullable(),
+          openIn: z.enum(['tab', 'panel', 'window']),
+          open: z.boolean(),
+        }),
+      ),
+      catalog: z.array(
+        z.object({
+          group: z.string(),
+          apps: z.array(
+            z.object({ name: z.string(), url: z.string(), host: z.string(), added: z.boolean() }),
+          ),
+        }),
+      ),
+    })
+    .nullable()
+    .default(null),
   /** Orbit Capture (roadmap P2.1): the card that saves a finding to a project. */
   captureCard: z.object({ openedAt: z.number() }).nullable(),
   /** A quick note (F-33): a glass card over the page; it writes into note `id`. */

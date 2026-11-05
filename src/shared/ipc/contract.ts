@@ -839,6 +839,29 @@ export const contract = {
     output: z.void(),
     surfaces: ['shell'],
   },
+  /** The App Library (redesign brief §7): open it; open an app; add one from the catalogue. */
+  'applib:open': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay'],
+  },
+  'applib:launch': {
+    input: z.object({ itemId: z.string().max(64) }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'applib:add': {
+    input: z
+      .object({ url: z.string().min(1).max(2000), title: z.string().max(120).optional() })
+      .strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'applib:close': {
+    input: z.object({ settings: z.boolean().optional() }).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
   /** Settings → Apps: your favourites as apps, and the Spaces they can show in. */
   'apps:list': {
     input: z.object({}).strict(),

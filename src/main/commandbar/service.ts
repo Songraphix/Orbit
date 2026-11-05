@@ -155,6 +155,11 @@ export const COMMANDS: readonly CommandDef[] = [
     shortcut: '⌥⌘R',
   },
   {
+    id: 'app-library',
+    title: 'App Library',
+    keywords: ['apps', 'add app', 'favorites', 'favourites', 'web apps', 'library'],
+  },
+  {
     id: 'open-pdf',
     title: 'Open PDF…',
     keywords: ['pdf', 'file', 'document', 'read', 'open'],

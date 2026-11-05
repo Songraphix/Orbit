@@ -50,6 +50,7 @@ export class OverlayController {
   private captureCard: OverlayState['captureCard'] = null;
   private shot: OverlayState['shot'] = null;
   private grouping: OverlayState['grouping'] = null;
+  private appLibrary: OverlayState['appLibrary'] = null;
   private tooltip: Omit<NonNullable<OverlayState['tooltip']>, 'alone'> | null = null;
   private flight: OverlayState['flight'] = null;
   private flightTimer: ReturnType<typeof setTimeout> | null = null;
@@ -99,6 +100,7 @@ export class OverlayController {
       captureCard: this.captureCard,
       shot: this.shot,
       grouping: this.grouping,
+      appLibrary: this.appLibrary,
       tooltip: this.tooltip && { ...this.tooltip, alone: this.onlyTooltip },
       flight: this.flight,
       backdrop: this.backdrop,
@@ -119,6 +121,7 @@ export class OverlayController {
       this.captureCard !== null ||
       this.shot !== null ||
       this.grouping !== null ||
+      this.appLibrary !== null ||
       this.flight !== null ||
       this.sidebarPeek !== null
     );
@@ -138,7 +141,8 @@ export class OverlayController {
       this.profileMenu !== null ||
       this.captureCard !== null ||
       this.shot !== null ||
-      this.grouping !== null
+      this.grouping !== null ||
+      this.appLibrary !== null
     );
   }
 
@@ -344,6 +348,23 @@ export class OverlayController {
     if (!this.grouping) return;
     this.grouping = null;
     this.sync();
+  }
+
+  /** The App Library: your apps and the catalogue (a fresh view each time it changes). */
+  showAppLibrary(view: Omit<NonNullable<OverlayState['appLibrary']>, 'at'>, keep = false): void {
+    this.siteControls = null;
+    this.appLibrary = { ...view, at: keep && this.appLibrary ? this.appLibrary.at : Date.now() };
+    this.show();
+  }
+
+  closeAppLibrary(): void {
+    if (!this.appLibrary) return;
+    this.appLibrary = null;
+    this.sync();
+  }
+
+  get isAppLibraryOpen(): boolean {
+    return this.appLibrary !== null;
   }
 
   /** Pick Color: a still of the page (`image`) laid over its `area`, with a loupe. */

@@ -113,6 +113,7 @@ import {
 } from './voice/model-files';
 import { registerVoiceHandlers } from './ipc/handlers/voice';
 import { openFavorite } from './apps/open';
+import { appLibraryView } from './apps/library';
 import { UnsplashService } from './newtab/unsplash';
 import { SoundService } from './focus/sounds';
 import { soundIdSchema } from '@shared/sounds';
@@ -655,6 +656,9 @@ function runCommand(controller: WindowController, commandId: string): void {
       return;
     case 'group-tabs':
       openGrouping?.(controller);
+      return;
+    case 'app-library':
+      controller.overlay.showAppLibrary(appLibraryView(controller));
       return;
     case 'open-pdf':
       void dialog

@@ -1,4 +1,6 @@
-import { appUrl, DEFAULT_APP_OPTIONS } from '@shared/apps';
+import { DEFAULT_APP_OPTIONS } from '@shared/apps';
+import { addApp, appLibraryView } from '../../apps/library';
+import { openFavorite } from '../../apps/open';
 import type { AppList, AppOptions } from '@shared/apps';
 import type { IpcRouter } from '../router';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
@@ -55,8 +57,9 @@ export function registerAppHubHandlers(
   );
 
   router.handle('apps:panel', ({ action }, { sender }) => {
-    const { appPanel } = shellOf(sender.webContentsId);
-    if (action === 'manage') windows.openSettings('apps');
+    const controller = shellOf(sender.webContentsId);
+    const { appPanel } = controller;
+    if (action === 'manage') controller.overlay.showAppLibrary(appLibraryView(controller));
     else if (action === 'openInWindow') {
       const url = appPanel.state()?.url;
       appPanel.close();
@@ -66,29 +69,37 @@ export function registerAppHubHandlers(
     else appPanel.navigate(action);
   });
 
+  // The App Library (overlay): search, open, add — Settings → Apps keeps the details.
+  const windowOf = (webContentsId: number) => {
+    const controller = windows.forSender(webContentsId);
+    if (!controller) throw new Error(`No window for sender ${webContentsId}`);
+    return controller;
+  };
+  router.handle('applib:open', (_input, { sender }) => {
+    const controller = windowOf(sender.webContentsId);
+    controller.overlay.showAppLibrary(appLibraryView(controller));
+  });
+  router.handle('applib:launch', ({ itemId }, { sender }) => {
+    const controller = windowOf(sender.webContentsId);
+    controller.overlay.closeAppLibrary();
+    openFavorite(controller, itemId, deps.openWindow);
+  });
+  router.handle('applib:add', ({ url, title }, { sender }) => {
+    const controller = windowOf(sender.webContentsId);
+    addApp(controller, url, title);
+    controller.overlay.showAppLibrary(appLibraryView(controller), true);
+  });
+  router.handle('applib:close', ({ settings }, { sender }) => {
+    const controller = windowOf(sender.webContentsId);
+    controller.overlay.closeAppLibrary();
+    if (settings) windows.openSettings('apps');
+  });
+
   router.handle('apps:list', (_input, { sender }) => list(settingsOf(sender.webContentsId)));
 
   router.handle('apps:add', ({ url, title }, { sender }) => {
     const window = settingsOf(sender.webContentsId);
-    const address = appUrl(url);
-    if (!address) throw new Error('That isn’t a web address');
-    const space = window.tabs.space;
-    const item = window.store.insert(
-      {
-        kind: 'tab',
-        title: title?.trim() || new URL(address).hostname.replace(/^www\./, ''),
-        url: address,
-      },
-      {
-        section: 'favorite',
-        profileId: space.profileId,
-        spaceId: null,
-        parentId: null,
-        beforeId: null,
-      },
-    );
-    window.store.setHome(item.id, address);
-    if (title?.trim()) window.store.rename(item.id, title.trim());
+    addApp(window, url, title);
     return list(window);
   });
 

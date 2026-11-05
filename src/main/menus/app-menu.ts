@@ -230,6 +230,12 @@ export function installAppMenu(actions: AppMenuActions): void {
           click: () => actions.command('summarize-page'),
         },
         {
+          id: 'app-library',
+          label: 'App Library',
+          accelerator: 'Shift+CmdOrCtrl+A',
+          click: () => actions.command('app-library'),
+        },
+        {
           id: 'voice',
           label: 'Voice Command',
           accelerator: 'Shift+CmdOrCtrl+Space',

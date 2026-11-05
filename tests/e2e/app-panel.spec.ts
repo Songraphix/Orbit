@@ -17,6 +17,10 @@ const clickMenu = (app: ElectronApplication, id: string) =>
     ({ Menu }, menuId) => Menu.getApplicationMenu()!.getMenuItemById(menuId)!.click(),
     id,
   );
+async function pageWith(app: ElectronApplication, fragment: string): Promise<Page> {
+  await expect.poll(() => app.windows().some((p) => p.url().includes(fragment))).toBe(true);
+  return app.windows().find((p) => p.url().includes(fragment))!;
+}
 async function openSettings(app: ElectronApplication): Promise<Page> {
   await clickMenu(app, 'settings');
   await expect.poll(() => app.windows().some((p) => p.url().includes('#/settings'))).toBe(true);
@@ -100,7 +104,7 @@ test('the docked panel: drag its edge to resize; the width is kept', async () =>
   }
 });
 
-test('the docked panel switches between this Space’s panel apps; + opens Settings → Apps', async () => {
+test('the docked panel switches between this Space’s panel apps; + opens the App Library', async () => {
   test.setTimeout(90_000);
   const server = await startTestServer();
   const { app, win, close } = await launchOrbit();
@@ -125,11 +129,11 @@ test('the docked panel switches between this Space’s panel apps; + opens Setti
     await switches.first().click();
     await expect(win.getByTestId('app-panel-title')).toHaveText('Page One');
 
-    // +: Settings opens on Apps.
+    // +: the App Library opens over the window.
     await win.getByTestId('app-panel-add').click();
-    await expect.poll(() => app.windows().some((p) => p.url().includes('#/settings'))).toBe(true);
-    const settings = app.windows().find((p) => p.url().includes('#/settings'))!;
-    await expect(settings.getByTestId('app-row')).toHaveCount(2);
+    const overlay = await pageWith(app, '/overlay/');
+    await expect(overlay.getByTestId('app-library')).toBeVisible();
+    await expect(overlay.getByTestId('app-library-app')).toHaveCount(2);
   } finally {
     await close();
     await server.close();
@@ -255,6 +259,61 @@ test('panel apps are marked in Favorites; an app can show in several chosen Spac
     await expect(win.getByTestId('app-panel-header')).toHaveCount(0);
     await invoke(win, 'spaces:cycle', { direction: -1 });
     await expect(tile).toHaveCount(1);
+  } finally {
+    await close();
+    await server.close();
+  }
+});
+
+test('App Library: find apps, open one where it’s set to open, add from the catalogue or by address, keyboard', async () => {
+  test.setTimeout(90_000);
+  const server = await startTestServer();
+  const { app, win, close } = await launchOrbit();
+  try {
+    await addPanelApps(app, [{ url: server.url('/one'), title: 'Desk' }]);
+    await clickMenu(app, 'app-library'); // ⇧⌘A
+    const overlay = await pageWith(app, '/overlay/');
+    const library = overlay.getByTestId('app-library');
+    await expect(library).toBeVisible();
+    const yours = overlay.getByTestId('app-library-app');
+    await expect(yours).toHaveCount(1);
+    await expect(yours).toContainText('Opens beside the page');
+
+    // Search filters at once; a catalogue app is added and shows as yours.
+    await overlay.getByTestId('app-library-search').fill('claude');
+    const claude = overlay.getByTestId('app-library-catalog').filter({ hasText: 'Claude' });
+    await expect(claude).toHaveAttribute('data-added', 'false');
+    await claude.click();
+    await expect(claude).toHaveAttribute('data-added', 'true');
+    await expect(overlay.getByTestId('app-library-app').filter({ hasText: 'Claude' })).toHaveCount(
+      1,
+    );
+    await expect(win.getByTestId('favorite-tile')).toHaveCount(2);
+
+    // A site that isn't listed: add it by its address.
+    await overlay.getByTestId('app-library-search').fill('example.org');
+    await overlay.getByTestId('app-library-add-typed').click();
+    await expect(
+      overlay.getByTestId('app-library-app').filter({ hasText: 'example.org' }),
+    ).toHaveCount(1);
+
+    // Keyboard: ↓ from the search box to the first tile, ⏎ opens it (Desk → the side panel).
+    await overlay.getByTestId('app-library-search').fill('desk');
+    await overlay.getByTestId('app-library-search').press('ArrowDown');
+    await overlay.keyboard.press('Enter');
+    await expect(library).toHaveCount(0);
+    await expect(win.getByTestId('app-panel-title')).toHaveText('Page One');
+
+    // The open app says so next time; Manage in Settings goes to Settings → Apps; Esc closes.
+    await clickMenu(app, 'app-library');
+    await expect(
+      overlay.getByTestId('app-library-app').filter({ hasText: 'Desk' }),
+    ).toHaveAttribute('data-open', 'true');
+    await overlay.keyboard.press('Escape');
+    await expect(library).toHaveCount(0);
+    await clickMenu(app, 'app-library');
+    await overlay.getByTestId('app-library-settings').click();
+    await expect.poll(() => app.windows().some((p) => p.url().includes('#/settings'))).toBe(true);
   } finally {
     await close();
     await server.close();

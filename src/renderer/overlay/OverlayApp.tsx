@@ -3,6 +3,7 @@ import type { OverlayState } from '@shared/types/command-bar';
 import { CommandBar } from './CommandBar';
 import { ShotCard } from './ShotCard';
 import { GroupingCard } from './GroupingCard';
+import { AppLibrary } from './AppLibrary';
 import { PeekFrame } from './PeekFrame';
 import { SiteControls } from './SiteControls';
 import { CaptureLayer } from './CaptureLayer';
@@ -42,6 +43,7 @@ export function OverlayApp() {
     flight: null,
     backdrop: null,
     grouping: null,
+    appLibrary: null,
   });
 
   useEffect(() => {
@@ -74,6 +76,8 @@ export function OverlayApp() {
     <ShotCard key={state.shot.at} shot={state.shot} />
   ) : state.grouping ? (
     <GroupingCard key={state.grouping.at} grouping={state.grouping} />
+  ) : state.appLibrary ? (
+    <AppLibrary key={state.appLibrary.at} library={state.appLibrary} />
   ) : state.captureCard ? (
     <CaptureCard key={state.captureCard.openedAt} />
   ) : state.quickNote ? (
