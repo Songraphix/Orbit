@@ -51,6 +51,29 @@ of Hugging Face (`tests/e2e/test-server.ts`, cached in the system temp folder �
 needs the internet once). Verified in the packaged app (2026-11-05): "What is on my list
 today?" transcribed from inside `app.asar`.
 
+## The voice popup and "Hey Orbit" (owner request, 2026-11-05)
+
+- **Open it:** **Shift+Space** anywhere except in a text box (there it types a space as
+  always — pages that use Shift+Space to scroll up lose that inside Orbit), **⇧⌘Space**, or say
+  **"Hey Orbit"** (when it's on). A glowing orb rises at the foot of the window with a soft light
+  along the edge; both follow the microphone's real level while it listens.
+- **What happens:** what you say goes to **Orbit AI** (the same conversation as the assistant
+  panel — **Open in Panel** carries on); its answer shows in the popup with what it did ("Opened
+  Spotify") and is read aloud. Esc or ✕ stops listening, the answer and the reading. Without an
+  AI key, what you say is searched (or opened, if it's an address).
+- **The assistant panel's microphone** asks there instead (answer read aloud in the panel).
+- **"Hey Orbit"** — Settings → Voice → _Listen for "Hey Orbit"_, **off until you turn it on**.
+  While on, the hidden voice page keeps the microphone open (macOS shows its orange dot; Orbit's
+  toolbar shows a microphone — dimmed while paused — that turns it off). Bursts of speech are cut
+  out by their level and only those are transcribed by the same on-device Whisper; the phrase is
+  matched by its sound (Whisper may write "Hey Obe" or "Hey, all bit"). Say "Hey Orbit, open
+  Spotify" in one breath, or "Hey Orbit" and then your question. Nothing is recorded, kept or
+  sent. It pauses while Orbit speaks (so it doesn't hear itself), when the screen is locked, and
+  on battery unless _Keep listening on battery_ is on.
+- **Limits:** a word that sounds like "Orbit" after "hey" can wake it (rare: "Hey Obi…"); in a
+  noisy room it transcribes more often (more CPU). No pre-trained "Hey Orbit" detector exists —
+  a trained openWakeWord model (docs/WAKE-WORD.md) would be lighter, later.
+
 ## Orbit AI with browser context
 
 Orbit AI (⌘J, or Ask Orbit AI in the command bar) can use a small **allowlist of tools**, each

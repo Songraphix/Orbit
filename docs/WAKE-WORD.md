@@ -44,4 +44,6 @@ existing push-to-talk start (Whisper on the Mac, as today).
    safeguards above, measured for false accepts (target < 1 per 10 hours of normal room audio)
    and CPU before shipping.
 
-**Decision needed from the owner** before any of this is built.
+**Decision (owner, 2026-11-05):** build it — opt-in and on-device. Built with Orbit's own
+Whisper (VAD-gated bursts, phrase matched by sound) since no pre-trained "Hey Orbit" model
+exists; see docs/VOICE-AND-AI.md. A trained openWakeWord model would cut CPU further later.
