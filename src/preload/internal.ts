@@ -9,6 +9,7 @@ import type { OrbitInternalApi } from '@shared/types/orbit-api';
 const CHANNEL = /^[a-z]+:[a-z][a-zA-Z]*$/;
 /** Keep in step with INTERNAL_EVENTS in the contract (a unit test checks). */
 const EVENTS = new Set([
+  'voice:command',
   'assistant:update',
   'toolkit:update',
   'focus:update',

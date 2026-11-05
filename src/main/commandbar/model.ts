@@ -1,5 +1,6 @@
 import type { CommandBarMode, CommandItem } from '@shared/types/command-bar';
 import type { Classified } from '../omnibox/classify';
+import { looksLikeQuestion } from '@shared/voice';
 
 /**
  * Builds and ranks command bar results (PLAN.md F-21). Pure: the inputs are gathered by the
@@ -35,6 +36,8 @@ export type ResultInput = {
   archived?: readonly ArchivedHit[];
   /** Development servers running on this Mac, when the query asks for them (roadmap P3.6). */
   local?: readonly { port: number; url: string; title: string }[];
+  /** Orbit AI is available: offer "Ask Orbit AI" (first for questions). */
+  ask?: boolean;
 };
 
 /** "localhost", "local", "127.0.0.1", ":5173", "dev server": the query wants local servers. */
@@ -191,6 +194,14 @@ export function buildResults(input: ResultInput): CommandItem[] {
     seenUrls.push(t.url);
   }
 
+  // Orbit AI: first for questions and requests ("summarize this page"), else after the search.
+  const askItem: CommandItem | null =
+    input.ask && input.classified?.kind !== 'url'
+      ? { id: `ask:${query}`, kind: 'ask', title: query, subtitle: 'Ask Orbit AI', favicon: null }
+      : null;
+  const question = askItem !== null && looksLikeQuestion(query);
+  if (askItem && question) items.push(askItem);
+
   if (input.classified?.kind === 'search' || !input.classified) {
     const url = input.searchUrl(query);
     items.push({
@@ -202,6 +213,8 @@ export function buildResults(input: ResultInput): CommandItem[] {
       url,
     });
   }
+
+  if (askItem && !question) items.push(askItem);
 
   // 3. Your projects, tasks, notes and research; then archived tabs.
   if (input.work) items.push(...workResults(query, input.work));

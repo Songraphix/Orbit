@@ -17,12 +17,15 @@ import {
   SquarePen,
   X,
   ExternalLink,
+  Volume2,
 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { AI_MODELS } from '@shared/ai';
 import type { AssistantReply, AssistantState, TaskSuggestion } from '@shared/assistant';
 import { citeMarker, parseMarkdown } from '@shared/markdown';
+import { speakableText } from '@shared/voice';
+import { speak, speakOnce, stopSpeaking, useSpeakingId } from './speech';
 import { useWork } from '../work/context';
 import { Markdown } from './Markdown';
 import { Tip } from '../../tooltip/Tip';
@@ -51,6 +54,17 @@ function useAssistant(): AssistantState | null {
 /** orbit://notes/panel/assistant: ask Claude about what you attach (roadmap P3.1–P3.4). */
 export function AssistantView() {
   const state = useAssistant();
+  // Esc stops an answer being read aloud; leaving the assistant does too.
+  useEffect(() => {
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') stopSpeaking();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      stopSpeaking();
+    };
+  }, []);
   if (!state) return <div className="flex-1" />;
   const empty = state.messages.length === 0;
   return (
@@ -155,12 +169,32 @@ function Conversation({ state }: { state: AssistantState }) {
   );
 }
 
+/** Settings → Voice, for reading answers aloud (fetched once per panel). */
+let voicePrefs: Promise<{ speakAnswers: boolean; voice: string | null; quiet: boolean }> | null =
+  null;
+const readVoicePrefs = () =>
+  (voicePrefs ??= invoke('voice:settings', {}).then(({ prefs, quiet }) => ({
+    speakAnswers: prefs.speakAnswers,
+    voice: prefs.voice,
+    quiet,
+  })));
+
 function Reply({ reply }: { reply: AssistantReply }) {
   const [copied, setCopied] = useState(false);
   const markdown = useMemo(
     () => reply.parts.map((p) => p.text + citeMarker(p.cites)).join(''),
     [reply.parts],
   );
+  const speaking = useSpeakingId() === reply.id;
+  // A spoken question's answer is read aloud when it's done (the start of a long one).
+  useEffect(() => {
+    if (!reply.spoken || reply.status !== 'done' || !reply.parts.length) return;
+    void readVoicePrefs().then((prefs) => {
+      if (prefs.speakAnswers) {
+        speakOnce(reply.id, speakableText(markdown).text, prefs);
+      }
+    });
+  }, [reply.spoken, reply.status, reply.id, reply.parts.length, markdown]);
   const blocks = useMemo(() => parseMarkdown(markdown), [markdown]);
   const show = (n: number) => void invoke('assistant:source', { messageId: reply.id, n });
   const finished = reply.status === 'done' || reply.status === 'stopped';
@@ -301,6 +335,23 @@ function Reply({ reply }: { reply: AssistantReply }) {
           >
             <NotebookPen size={13} />
           </SmallAction>
+          <SmallAction
+            label={speaking ? 'Stop Reading' : 'Read Aloud'}
+            onClick={() => {
+              if (speaking) {
+                stopSpeaking();
+                return;
+              }
+              void readVoicePrefs().then((prefs) =>
+                // Read on request: the whole answer (it's what was asked for).
+                speak(reply.id, speakableText(markdown, 20_000).text, prefs),
+              );
+            }}
+            testId="assistant-speak"
+            data-speaking={speaking}
+          >
+            {speaking ? <Square size={11} fill="currentColor" /> : <Volume2 size={13} />}
+          </SmallAction>
         </div>
       )}
     </article>
@@ -312,6 +363,7 @@ function SmallAction(props: {
   onClick: () => void;
   testId: string;
   children: ReactNode;
+  'data-speaking'?: boolean;
 }) {
   return (
     <button
@@ -319,6 +371,7 @@ function SmallAction(props: {
       onClick={props.onClick}
       className="press flex h-7 items-center gap-1.5 rounded-[9px] px-2 text-[12px] text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]"
       data-testid={props.testId}
+      data-speaking={props['data-speaking']}
     >
       {props.children}
       {props.label}
@@ -517,6 +570,7 @@ function Composer({ state }: { state: AssistantState }) {
   useEffect(() => input.current?.focus(), []);
   const send = () => {
     if (!text.trim() || state.busy || state.blocked) return;
+    stopSpeaking(); // a new question ends the last answer's reading
     void invoke('assistant:ask', { text, action: 'ask' });
     setText('');
   };

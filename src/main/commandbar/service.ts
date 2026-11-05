@@ -155,6 +155,12 @@ export const COMMANDS: readonly CommandDef[] = [
     shortcut: '⌥⌘R',
   },
   {
+    id: 'voice',
+    title: 'Voice Command',
+    keywords: ['voice', 'speak', 'talk', 'microphone', 'dictate', 'listen'],
+    shortcut: '⇧⌘Space',
+  },
+  {
     id: 'screenshot',
     title: 'Take Screenshot',
     keywords: ['screenshot', 'capture', 'snap', 'grab', 'picture', 'copy'],
@@ -209,6 +215,11 @@ export class CommandBarService {
     private readonly archived?: (query: string) => ArchivedHit[],
     /** Development servers on this Mac (roadmap P3.6), when the query asks for them. */
     private readonly local?: () => Promise<{ port: number; url: string; title: string }[]>,
+    /** Orbit AI (roadmap R2 M2): whether it's available, and asking it (spoken: read aloud). */
+    private readonly ai?: {
+      available: () => boolean;
+      ask: (controller: WindowController, text: string, spoken: boolean) => void;
+    },
   ) {}
 
   /** Universal search: typing also finds tabs in your other Spaces (picking one goes there). */
@@ -266,14 +277,20 @@ export class CommandBarService {
       ...(trimmed && this.work ? { work: this.work(trimmed) } : {}),
       ...(trimmed && this.archived ? { archived: this.archived(trimmed) } : {}),
       local,
+      ask: Boolean(trimmed && this.ai?.available()),
     });
   }
 
   /** `split` (⌥⏎, roadmap P2.4): a tab or an address opens beside the current page. */
-  execute(controller: WindowController, item: CommandItem, split = false): void {
+  execute(controller: WindowController, item: CommandItem, split = false, voice = false): void {
     const mode = controller.overlay.mode ?? 'new';
     controller.overlay.close();
     const { tabs } = controller;
+
+    if (item.kind === 'ask') {
+      if (item.title.trim()) this.ai?.ask(controller, item.title, voice);
+      return;
+    }
 
     if (item.kind === 'tab' && item.tabId) {
       const target = controller.store.item(item.tabId);

@@ -86,6 +86,8 @@ export default defineConfig({
           shell: resolve(import.meta.dirname, 'src/renderer/shell/index.html'),
           overlay: resolve(import.meta.dirname, 'src/renderer/overlay/index.html'),
           internal: resolve(import.meta.dirname, 'src/renderer/internal/index.html'),
+          // The hidden voice page (its own CSP: WebAssembly for Whisper).
+          voice: resolve(import.meta.dirname, 'src/renderer/voice/index.html'),
         },
       },
     },

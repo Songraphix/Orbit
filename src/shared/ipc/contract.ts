@@ -61,6 +61,7 @@ import { ASSISTANT_LIMITS, assistantStateSchema, taskSuggestionSchema } from '..
 import { TOOLKIT_SECTIONS, toolkitStateSchema, viewportSchema } from '../toolkit/state';
 import { githubRepoViewSchema } from '../github';
 import { ruleInputSchema, rulesSchema } from '../rules';
+import { voicePrefsSchema, voiceStateSchema } from '../voice';
 
 /**
  * Every IPC channel lives here (PLAN.md section 4.4). Names follow `domain:verb`.
@@ -440,8 +441,15 @@ export const contract = {
     surfaces: ['overlay'],
   },
   'commandbar:execute': {
-    /** `split`: ⌥⏎ — beside the current page, in split view (roadmap P2.4). */
-    input: z.object({ item: commandItemSchema, split: z.boolean().optional() }).strict(),
+    /** `split`: ⌥⏎ — beside the current page, in split view (roadmap P2.4). `voice`: the words
+     *  were spoken (Orbit AI may read its answer aloud). */
+    input: z
+      .object({
+        item: commandItemSchema,
+        split: z.boolean().optional(),
+        voice: z.boolean().optional(),
+      })
+      .strict(),
     output: z.void(),
     surfaces: ['overlay'],
   },
@@ -1441,6 +1449,82 @@ export const contract = {
     output: z.void(),
     surfaces: ['internal'],
   },
+  /** Voice (roadmap R2 M2): push-to-talk. The command bar's microphone, ⇧⌘Space. */
+  'voice:get': {
+    input: z.object({}).strict(),
+    output: voiceStateSchema,
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  /** Start listening (opening the command bar), or finish now if listening. */
+  'voice:toggle': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  'voice:cancel': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  /** The one-time speech model download (the user agreed). */
+  'voice:download': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay', 'internal'],
+  },
+  /** System Settings → Privacy & Security → Microphone. */
+  'voice:micSettings': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay', 'internal'],
+  },
+  /** Settings → Voice. */
+  'voice:settings': {
+    input: z.object({}).strict(),
+    /** quiet: test runs (answers are "read" at no volume). */
+    output: z.object({
+      prefs: voicePrefsSchema,
+      modelReady: z.boolean(),
+      modelBytes: z.number(),
+      quiet: z.boolean(),
+    }),
+    surfaces: ['internal'],
+  },
+  'voice:setPrefs': {
+    input: voicePrefsSchema.partial().strict(),
+    output: voicePrefsSchema,
+    surfaces: ['internal', 'overlay'],
+  },
+  'voice:removeModel': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** From the hidden voice page only: what it's doing, and what was said. */
+  'voice:hostEvent': {
+    input: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('loading') }).strict(),
+      z.object({ kind: z.literal('listening') }).strict(),
+      z.object({ kind: z.literal('level'), rms: z.number().min(0).max(2) }).strict(),
+      z.object({ kind: z.literal('transcribing') }).strict(),
+      z.object({ kind: z.literal('result'), text: z.string().max(5000) }).strict(),
+      z
+        .object({
+          kind: z.literal('error'),
+          message: z.string().max(300),
+          micDenied: z.boolean().optional(),
+        })
+        .strict(),
+    ]),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** From the hidden voice page only: one of the speech model's files. */
+  'voice:modelFile': {
+    input: z.object({ path: z.string().max(200) }).strict(),
+    output: z.custom<Uint8Array>((v) => v instanceof Uint8Array),
+    surfaces: ['internal'],
+  },
   /** Focus and calming sounds, generated on the Mac (src/shared/sounds.ts). */
   'sounds:get': {
     input: z.object({}).strict(),
@@ -1830,6 +1914,10 @@ export const events = {
   'state:appPanel': appPanelStateSchema.nullable(),
   /** The customization preferences, sent to every shell and overlay. */
   'state:ui': uiPrefsSchema,
+  /** Voice (listening, transcribing…), sent to every shell and overlay. */
+  'state:voice': voiceStateSchema,
+  /** What the hidden voice page should do. */
+  'voice:command': z.object({ command: z.enum(['start', 'stop', 'cancel']), at: z.number() }),
   /** …and to every Orbit page (Settings, the Homepage, the panel). */
   'ui:update': uiPrefsSchema,
 } as const satisfies Record<string, z.ZodType>;
@@ -1847,6 +1935,7 @@ export const CHANNEL_NAME_PATTERN = /^[a-z]+:[a-z][a-zA-Z]*$/;
 
 /** The events internal orbit:// pages may listen to (main sends them to one page only). */
 export const INTERNAL_EVENTS = [
+  'voice:command',
   'assistant:update',
   'toolkit:update',
   'focus:update',

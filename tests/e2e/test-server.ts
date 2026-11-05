@@ -1,6 +1,16 @@
 import { createServer } from 'node:http';
 import type { ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, normalize } from 'node:path';
+
+/**
+ * Hugging Face, mirrored for voice tests: files are fetched once from huggingface.co into this
+ * folder (outside the repo, kept between runs), then served from here — so after the first run
+ * voice tests work offline.
+ */
+export const HF_MIRROR = join(tmpdir(), 'orbit-test-hf');
 
 /** A 1×1 PNG, served as the test pages' favicon. */
 const PNG = Buffer.from(
@@ -577,6 +587,30 @@ export async function startTestServer(): Promise<TestServer> {
           ]
         : [];
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ results }));
+      return;
+    }
+    // The speech model, through the local mirror (voice tests): /hf/<repo>/resolve/<rev>/<file>.
+    if (path.startsWith('/hf/')) {
+      const rest = normalize(decodeURIComponent(path.slice('/hf/'.length)));
+      if (rest.startsWith('..') || !rest.includes('/resolve/')) {
+        res.writeHead(400).end();
+        return;
+      }
+      const file = join(HF_MIRROR, rest);
+      const serve = () =>
+        res.writeHead(200, { 'content-type': 'application/octet-stream' }).end(readFileSync(file));
+      if (existsSync(file)) {
+        serve();
+        return;
+      }
+      void fetch(`https://huggingface.co/${rest}`)
+        .then(async (upstream) => {
+          if (!upstream.ok) throw new Error(String(upstream.status));
+          mkdirSync(dirname(file), { recursive: true });
+          writeFileSync(file, Buffer.from(await upstream.arrayBuffer()));
+          serve();
+        })
+        .catch(() => res.writeHead(502).end());
       return;
     }
     if (path === '/forecast') {

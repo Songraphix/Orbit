@@ -16,6 +16,9 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { CommandBarMode, CommandItem } from '@shared/types/command-bar';
+import type { VoiceState } from '@shared/voice';
+import { VoiceStatus, VoiceButton } from './Voice';
+import { useVoice } from './use-voice';
 
 const close = () => void window.orbit.invoke('overlay:close', {});
 
@@ -31,6 +34,17 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
   const [selected, setSelected] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const requestSeq = useRef(0);
+  /** The words in the box were spoken (not typed or edited since). */
+  const [spoken, setSpoken] = useState(false);
+  /** Run the top result once spoken words' results arrive (Settings → Voice → Run right away). */
+  const autoRun = useRef(false);
+  const voice = useVoice((text, runAtOnce) => {
+    setQuery(text);
+    setSpoken(true);
+    autoRun.current = runAtOnce;
+    input.current?.focus();
+  });
+  const voiceBusy = isBusy(voice);
 
   useEffect(() => {
     input.current?.focus();
@@ -46,6 +60,10 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
           setItems(next);
           setItemsQuery(query);
           setSelected(0);
+          if (autoRun.current && next[0]) {
+            autoRun.current = false;
+            void window.orbit.invoke('commandbar:execute', { item: next[0], voice: true });
+          }
         });
       },
       query ? 40 : 0,
@@ -55,13 +73,28 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
 
   /** ⌥ opens a tab or an address beside the current page, in split view (roadmap P2.4). */
   const run = (item: CommandItem | undefined, split = false) => {
-    if (item) void window.orbit.invoke('commandbar:execute', { item, split });
+    if (item) void window.orbit.invoke('commandbar:execute', { item, split, voice: spoken });
   };
+
+  // Closing the bar while listening stops the microphone.
+  const busy = useRef(false);
+  useEffect(() => {
+    busy.current = voiceBusy;
+  }, [voiceBusy]);
+  useEffect(
+    () => () => {
+      if (busy.current) void window.orbit.invoke('voice:cancel', {});
+    },
+    [],
+  );
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault();
-      close();
+      // Esc first stops listening; again closes the bar.
+      if (voiceBusy || voice.phase === 'needs-model' || voice.phase === 'error') {
+        void window.orbit.invoke('voice:cancel', {});
+      } else close();
     } else if (e.key === 'ArrowDown' || (e.key === 'n' && e.ctrlKey)) {
       e.preventDefault();
       setSelected((i) => Math.min(i + 1, items.length - 1));
@@ -100,9 +133,13 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
           <input
             ref={input}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setSpoken(false);
+              autoRun.current = false;
+            }}
             onKeyDown={onKeyDown}
-            placeholder="Search or enter address…"
+            placeholder={voicePlaceholder(voice) ?? 'Search or enter address…'}
             aria-label="Search or enter address"
             aria-controls="command-results"
             aria-activedescendant={items[selected] ? `cmd-${selected}` : undefined}
@@ -110,8 +147,11 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
             spellCheck={false}
             autoComplete="off"
             data-testid="command-input"
+            data-spoken={spoken}
           />
+          <VoiceButton voice={voice} />
         </div>
+        <VoiceStatus voice={voice} />
         {items.length > 0 && (
           <ul
             id="command-results"
@@ -154,6 +194,20 @@ export function CommandBar({ mode, initialQuery }: { mode: CommandBarMode; initi
   );
 }
 
+const isBusy = (voice: VoiceState) =>
+  voice.phase === 'listening' ||
+  voice.phase === 'loading' ||
+  voice.phase === 'transcribing' ||
+  voice.phase === 'downloading';
+
+/** While listening, the box says so (what's heard arrives as text when you stop). */
+function voicePlaceholder(voice: VoiceState): string | null {
+  if (voice.phase === 'listening') return 'Listening…';
+  if (voice.phase === 'loading') return 'Getting ready to listen…';
+  if (voice.phase === 'transcribing') return 'Writing down what you said…';
+  return null;
+}
+
 /** Each result's icon sits on a small lit tile, like Arc's. */
 function ItemIcon({ item }: { item: CommandItem }) {
   return (
@@ -186,6 +240,8 @@ function Glyph({ item }: { item: CommandItem }) {
       return <Bookmark {...props} />;
     case 'archived':
       return <Archive {...props} />;
+    case 'ask':
+      return <Sparkles {...props} />;
     case 'command':
       return item.commandId === 'new-tab-page' ? (
         <Sparkles {...props} />

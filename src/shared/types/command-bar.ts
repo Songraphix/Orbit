@@ -17,6 +17,8 @@ export const commandItemSchema = z.object({
     'note',
     'capture',
     'archived',
+    /** Orbit AI: ask this (the words typed or spoken). */
+    'ask',
   ]),
   title: z.string(),
   subtitle: z.string(),

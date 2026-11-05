@@ -278,8 +278,10 @@ export class AssistantService {
       research?: { projectId: string | null; captureIds: string[] };
       summarize?: boolean;
       tasksFromSelection?: boolean;
-      /** Asks this at once (Explain / Translate Selection). */
+      /** Asks this at once (Explain / Translate Selection, the command bar). */
       prompt?: string;
+      /** The question was spoken: its answer may be read aloud. */
+      spoken?: boolean;
     } = {},
   ): void {
     const session = this.session(controller);
@@ -295,7 +297,7 @@ export class AssistantService {
     controller.notes.openAt('panel/assistant');
     this.push(controller);
     if (options.summarize) void this.ask(controller, '', 'summarize');
-    else if (options.prompt) void this.ask(controller, options.prompt, 'ask');
+    else if (options.prompt) void this.ask(controller, options.prompt, 'ask', options.spoken);
     else if (options.tasksFromSelection) void this.suggestTasks(controller, 'selection');
   }
 
@@ -359,6 +361,7 @@ export class AssistantService {
     controller: WindowController,
     text: string,
     action: 'ask' | 'summarize',
+    spoken = false,
   ): Promise<void> {
     const session = this.session(controller);
     if (session.abort) return;
@@ -373,6 +376,7 @@ export class AssistantService {
       error: null,
       model: null,
       actions: [],
+      spoken,
     };
     const user: AssistantMessage = {
       id: randomUUID(),

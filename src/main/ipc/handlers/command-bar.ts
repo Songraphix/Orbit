@@ -21,8 +21,8 @@ export function registerCommandBarHandlers(
     items: await commandBar.query(windowFor(sender.webContentsId), query),
   }));
 
-  router.handle('commandbar:execute', ({ item, split }, { sender }) => {
-    commandBar.execute(windowFor(sender.webContentsId), item, split ?? false);
+  router.handle('commandbar:execute', ({ item, split, voice }, { sender }) => {
+    commandBar.execute(windowFor(sender.webContentsId), item, split ?? false, voice ?? false);
   });
 
   router.handle(

@@ -36,6 +36,19 @@ describe('buildResults', () => {
     ).toEqual(['search:orbit browser', 'suggestion:orbit browser mac']);
   });
 
+  it('offers Orbit AI: first for questions, after the search for other words, never for addresses', () => {
+    expect(kinds(base('what is on my list today?', { ask: true })).slice(0, 2)).toEqual([
+      'ask:what is on my list today?',
+      'search:what is on my list today?',
+    ]);
+    expect(kinds(base('lisbon flights', { ask: true })).slice(0, 2)).toEqual([
+      'search:lisbon flights',
+      'ask:lisbon flights',
+    ]);
+    expect(kinds(base('github.com', { ask: true })).some((k) => k.startsWith('ask:'))).toBe(false);
+    expect(kinds(base('what is this?')).some((k) => k.startsWith('ask:'))).toBe(false);
+  });
+
   it('offers to switch to an already-open tab rather than duplicating it', () => {
     const tabs = [
       { id: 't1', title: 'GitHub', url: 'https://github.com/', favicon: null, active: false },

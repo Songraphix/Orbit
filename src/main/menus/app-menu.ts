@@ -223,6 +223,12 @@ export function installAppMenu(actions: AppMenuActions): void {
           label: 'Summarize Page',
           click: () => actions.command('summarize-page'),
         },
+        {
+          id: 'voice',
+          label: 'Voice Command',
+          accelerator: 'Shift+CmdOrCtrl+Space',
+          click: () => actions.command('voice'),
+        },
         { id: 'toolkit', label: 'Toolkit', click: () => actions.command('toolkit') },
         {
           id: 'toggle-appearance',

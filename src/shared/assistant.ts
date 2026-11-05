@@ -68,6 +68,8 @@ export const assistantMessageSchema = z.discriminatedUnion('role', [
     model: z.string().nullable(),
     /** What it looked at or changed in your projects and tasks, in order. */
     actions: z.array(assistantActionSchema).default([]),
+    /** The question was spoken (voice): the panel may read this answer aloud. */
+    spoken: z.boolean().default(false),
   }),
 ]);
 export type AssistantMessage = z.output<typeof assistantMessageSchema>;

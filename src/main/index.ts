@@ -13,6 +13,7 @@ import {
   safeStorage,
   session,
   shell,
+  systemPreferences,
   webContents,
 } from 'electron';
 import type { Session } from 'electron';
@@ -98,6 +99,14 @@ import { FocusService } from './focus/service';
 import { WeatherService } from './newtab/weather';
 import { registerAppHubHandlers } from './ipc/handlers/apps';
 import { browserToolDeps } from './ai/browser-deps';
+import { VoiceService } from './voice/service';
+import {
+  downloadVoiceModel,
+  readModelFile,
+  removeVoiceModel,
+  voiceModelReady,
+} from './voice/model-files';
+import { registerVoiceHandlers } from './ipc/handlers/voice';
 import { openFavorite } from './apps/open';
 import { UnsplashService } from './newtab/unsplash';
 import { SoundService } from './focus/sounds';
@@ -155,6 +164,17 @@ process.on('unhandledRejection', (reason) => console.error('[orbit] unhandled re
 let windows: WindowManager | null = null;
 let floatingNotes: FloatingNotes | null = null;
 let captureService: CaptureService | null = null;
+// Tests only: Chromium's fake microphone plays a recording (voice e2e), and nothing asks.
+if (process.env['ORBIT_TEST_FAKE_MIC']) {
+  app.commandLine.appendSwitch('use-fake-device-for-media-stream');
+  app.commandLine.appendSwitch(
+    'use-file-for-fake-audio-capture',
+    `${process.env['ORBIT_TEST_FAKE_MIC']}%noloop`,
+  );
+  // The audio service's own (sandboxed) process can't read the recording; keep it in-process.
+  app.commandLine.appendSwitch('disable-features', 'AudioServiceOutOfProcess');
+}
+
 let focusService: FocusService | null = null;
 let soundService: SoundService | null = null;
 
@@ -163,6 +183,7 @@ function openFocusView(controller: WindowController): void {
   controller.notes.openAt('panel/focus');
 }
 let assistantService: AssistantService | null = null;
+let voiceService: VoiceService | null = null;
 let toolkitService: ToolkitService | null = null;
 
 function loadRenderer(win: BrowserWindow, entry: RendererEntry, query?: string): void {
@@ -235,7 +256,7 @@ function loadInternal(view: { webContents: Electron.WebContents }, url: string):
   // Settings can open on a section (orbit://settings/profiles).
   if (
     page === 'settings' &&
-    /^(account|general|appearance|apps|profiles|workspaces|integrations|rules|backup|shortcuts|ai|privacy|about)$/.test(
+    /^(account|general|appearance|apps|profiles|workspaces|integrations|rules|backup|shortcuts|ai|voice|privacy|about)$/.test(
       param,
     )
   )
@@ -565,6 +586,11 @@ function runCommand(controller: WindowController, commandId: string): void {
       return;
     case 'summarize-page':
       assistantService?.open(controller, { summarize: true });
+      return;
+    case 'voice':
+      // Push-to-talk: the command bar opens to show what's heard (again: finish now).
+      if (controller.overlay.mode === null) windows?.openCommandBar(controller, 'new');
+      void voiceService?.toggle();
       return;
     case 'toolkit':
       toolkitService?.open(controller);
@@ -1401,6 +1427,119 @@ void app.whenReady().then(() => {
     },
   });
   soundService = sounds;
+
+  // Voice (roadmap R2 M2): push-to-talk, transcribed on this Mac by a hidden page in a session
+  // of its own — the only Orbit page that may use the microphone, and only for audio.
+  const modelsRoot = process.env['ORBIT_MODELS_DIR'] ?? join(app.getPath('userData'), 'models');
+  const fakeMic = Boolean(process.env['ORBIT_TEST_FAKE_MIC']);
+  let voiceHostId: number | null = null;
+  const voice = new VoiceService({
+    modelReady: () => voiceModelReady(modelsRoot),
+    download: (onProgress, signal) =>
+      downloadVoiceModel(modelsRoot, {
+        fetchImpl: (url, init) => net.fetch(url, init),
+        onProgress,
+        signal,
+        // Development and tests may use a local mirror; the packaged app always uses Hugging Face.
+        ...(!app.isPackaged && process.env['ORBIT_VOICE_MODEL_BASE']
+          ? { baseUrl: process.env['ORBIT_VOICE_MODEL_BASE'] }
+          : {}),
+      }),
+    micAccess: async () => {
+      if (fakeMic) return true; // tests play a recording through Chromium's fake microphone
+      const status = systemPreferences.getMediaAccessStatus('microphone');
+      if (status === 'granted') return true;
+      if (status === 'not-determined') return systemPreferences.askForMediaAccess('microphone');
+      return false;
+    },
+    createHost: () => {
+      const voiceSession = session.fromPartition('orbit-voice');
+      const isHost = (contents: Electron.WebContents | null) =>
+        contents !== null && contents.id === voiceHostId;
+      voiceSession.setPermissionRequestHandler((contents, permission, callback, details) => {
+        const media = 'mediaTypes' in details ? (details.mediaTypes ?? []) : [];
+        callback(isHost(contents) && permission === 'media' && media.every((m) => m === 'audio'));
+      });
+      voiceSession.setPermissionCheckHandler(
+        (contents, permission, _origin, details) =>
+          isHost(contents) &&
+          permission === 'media' &&
+          (!('mediaType' in details) || details.mediaType === 'audio'),
+      );
+      const host = new BrowserWindow({
+        show: false,
+        width: 200,
+        height: 100,
+        webPreferences: {
+          preload: join(import.meta.dirname, '../preload/internal.cjs'),
+          sandbox: true,
+          contextIsolation: true,
+          nodeIntegration: false,
+          session: voiceSession,
+          backgroundThrottling: false,
+          autoplayPolicy: 'no-user-gesture-required',
+        },
+      });
+      const contents = host.webContents;
+      voiceHostId = contents.id;
+      senders.add(contents.id, 'internal');
+      contents.on('will-navigate', (event) => event.preventDefault());
+      contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+      let loaded = false;
+      const pending: ('start' | 'stop' | 'cancel')[] = [];
+      const send = (command: 'start' | 'stop' | 'cancel') =>
+        broadcaster.sendTo(contents, 'voice:command', { command, at: Date.now() });
+      contents.once('did-finish-load', () => {
+        loaded = true;
+        for (const command of pending.splice(0)) send(command);
+      });
+      const gone = () => {
+        senders.remove(contents.id);
+        if (voiceHostId === contents.id) voiceHostId = null;
+        voiceService?.hostGone();
+      };
+      contents.on('render-process-gone', () => {
+        if (!host.isDestroyed()) host.destroy();
+      });
+      host.once('closed', gone);
+      if (devServer) void contents.loadURL(`${devServer}/voice/index.html`);
+      else void contents.loadFile(join(rendererDir, 'voice', 'index.html'));
+      return {
+        send: (command) => (loaded ? send(command) : pending.push(command)),
+        close: () => {
+          if (!host.isDestroyed()) host.destroy();
+        },
+      };
+    },
+    broadcast: (state) => {
+      broadcaster.send('state:voice', state);
+      for (const controller of windowManager.all()) {
+        broadcaster.sendTo(controller.overlay.view.webContents, 'state:voice', state);
+      }
+    },
+  });
+  voiceService = voice;
+  registerVoiceHandlers(router, {
+    voice,
+    isHost: (webContentsId) => webContentsId === voiceHostId,
+    readModelFile: (path) => readModelFile(modelsRoot, path),
+    removeModel: async () => {
+      await removeVoiceModel(modelsRoot);
+      voice.modelRemoved();
+    },
+    modelReady: () => voiceModelReady(modelsRoot),
+    settings: persistence.settings,
+    openCommandBar: () => {
+      const controller = windowManager.focused();
+      if (controller && controller.overlay.mode === null) {
+        windowManager.openCommandBar(controller, 'new');
+      }
+    },
+    openMicSettings: () =>
+      void shell.openExternal(
+        'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
+      ),
+  });
   const pushFocusView = (view: FocusView) => {
     for (const controller of windowManager.all()) {
       const contents = controller.notes.contents;
@@ -1525,6 +1664,11 @@ void app.whenReady().then(() => {
           .list(query, 2)
           .map(({ id, title, url, favicon }) => ({ id, title, url, favicon })),
       () => toolkit.localServers(),
+      {
+        available: () => ai.available,
+        ask: (controller, text, spoken) =>
+          assistantService?.open(controller, { prompt: text, spoken }),
+      },
     ),
   );
   router.assertComplete();

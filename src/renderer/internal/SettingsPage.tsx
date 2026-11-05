@@ -7,6 +7,7 @@ import {
   Archive,
   DatabaseBackup,
   LayoutTemplate,
+  Mic,
   Plug,
   Route,
   Settings,
@@ -21,6 +22,7 @@ import { Group, Row, Section } from './settings/parts';
 import { AccountSection } from './settings/AccountSection';
 import { AppearanceSection } from './settings/AppearanceSection';
 import { AppsSection } from './settings/AppsSection';
+import { VoiceSection } from './settings/VoiceSection';
 import { buttonClass, FIELD } from '../ui/controls';
 import { useEffect, useState } from 'react';
 import type { UserSettings } from '@shared/settings';
@@ -302,6 +304,8 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
           >
             <AiSection />
           </Section>
+
+          <VoiceSection />
 
           <Section
             id="privacy"
@@ -675,6 +679,7 @@ const NAV = [
   { id: 'backup', label: 'Backup', icon: <DatabaseBackup size={16} /> },
   { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard size={16} /> },
   { id: 'ai', label: 'AI', icon: <Sparkles size={16} /> },
+  { id: 'voice', label: 'Voice', icon: <Mic size={16} /> },
   { id: 'privacy', label: 'Privacy', icon: <Shield size={16} /> },
   { id: 'about', label: 'About', icon: <Info size={16} /> },
 ];

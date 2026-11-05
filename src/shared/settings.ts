@@ -8,6 +8,7 @@ import { homeLayoutSchema } from './home-widgets';
 import { DEFAULT_LOOK, lookSchema, ROTATIONS } from './backgrounds';
 import { aiPrefsSchema, DEFAULT_AI_PREFS } from './ai';
 import { rulesSchema } from './rules';
+import { DEFAULT_VOICE_PREFS, voicePrefsSchema } from './voice';
 import { NOTES_WIDTH, rectSchema, SIDEBAR_WIDTH } from './types/layout';
 
 /**
@@ -79,6 +80,8 @@ export const settingsSchema = {
     .max(50),
   /** The productivity panel: open or not, and where (`panel/projects/<id>`…), for a restart. */
   'panel.state': z.object({ open: z.boolean(), route: z.string().max(120) }),
+  /** Voice (push-to-talk): run what you say at once, read answers aloud, which voice. */
+  'voice.prefs': voicePrefsSchema,
   /** The right-hand dock's width, as last dragged (Notes and docked apps share it). */
   'dock.width': z.number().int().min(NOTES_WIDTH.min).max(NOTES_WIDTH.max),
   /** The focus session under way (roadmap P2.3), kept across a restart. */
@@ -135,6 +138,7 @@ export const settingsDefaults: Settings = {
   'notes.floating': [],
   'panel.state': { open: false, route: 'panel' },
   'dock.width': NOTES_WIDTH.panel,
+  'voice.prefs': DEFAULT_VOICE_PREFS,
   'capture.lastProject': null,
   'focus.session': null,
   'focus.prefs': DEFAULT_FOCUS_PREFS,

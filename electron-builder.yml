@@ -18,6 +18,9 @@ mac:
       arch: arm64
   # Unsigned for personal use (M1–M2). Signing + notarisation: PLAN.md section 12.
   identity: null
+  # Voice (push-to-talk): macOS shows this when Orbit first asks for the microphone.
+  extendInfo:
+    NSMicrophoneUsageDescription: Orbit listens only while you use voice (⇧⌘Space or the microphone in the command bar) and turns what you say into text on this Mac. Websites you allow can use it too.
 # Lets Orbit be chosen as the default browser (links from other apps open in Little Orbit).
 protocols:
   - name: Web Page
