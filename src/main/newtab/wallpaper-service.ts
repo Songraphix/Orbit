@@ -96,7 +96,9 @@ export class WallpaperService {
     this.settings.set('newtab.wallpaper', choice);
     // Choosing one by hand shows it now on every open page (rotation resumes on new ones).
     this.shownByPage.clear();
+    this.lastShown = null;
     if (choice.kind === 'unsplash') void this.unsplash?.used(choice.photo);
+    this.changed(); // the window's canvas follows at once
     return this.state();
   }
 

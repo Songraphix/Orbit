@@ -31,6 +31,7 @@ const LEGACY = {
 };
 
 test('Homepage widgets: add, set up, resize, reorder, remove, presets — kept after a restart', async () => {
+  test.setTimeout(60_000); // two launches and a dozen widget edits
   const server = await startTestServer();
   const env = {
     ORBIT_GEOCODE_URL: server.url('/geo/search'),

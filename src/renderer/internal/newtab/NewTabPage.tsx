@@ -111,7 +111,7 @@ export function NewTabPage() {
       {state && (
         <div
           className={`relative flex min-h-full flex-col px-8 ${
-            state.home.show.shortcuts ? 'pb-28' : 'pb-6'
+            state.home.show.shortcuts ? 'pb-32' : 'pb-6'
           } ${compact ? 'pt-[3vh]' : 'pt-[6vh]'}`}
         >
           <section className="flex flex-col items-center text-center">
@@ -508,8 +508,8 @@ function Today({
   };
   return (
     <section className="flex min-h-0 flex-1 flex-col" aria-label="Today" data-testid="today">
-      <h2 className="mb-2 flex items-center gap-2 text-[12px] font-semibold tracking-wide uppercase opacity-90">
-        <Crosshair size={14} />
+      <h2 className="mb-2.5 flex items-center gap-2 text-[14.5px] font-semibold tracking-[-0.005em]">
+        <Crosshair size={16} className="opacity-85" />
         {/* Your tasks due today (and overdue), the same as the panel's Tasks → Today. */}
         <button
           type="button"

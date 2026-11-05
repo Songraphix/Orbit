@@ -229,6 +229,10 @@
   --work-border: var(--glass-border);
   --work-track: rgb(255 255 255 / 0.16);
   --work-sheet: var(--solid-elevated);
+  /* Accent-coloured text and soft fills read on the glass: the canvas's text and selection. */
+  --work-accent-text: var(--fg);
+  --work-accent-soft: var(--sel-bg);
+  --note-accent: var(--fg);
 }
 
 /* The panel's open tab names itself with a small slide (the others stay icons). */

@@ -96,8 +96,11 @@ export function Toolbar(props: {
   const navigate = (action: NavAction) => {
     if (tab) void invoke('tabs:navigate', { tabId: tab.id, action });
   };
-  // The left group reaches the page's edge so the nav pill lines up with the card below.
-  const leftWidth = Math.max(0, props.contentX - rect.x - 10);
+  // The left group reaches the page's edge so the nav pill lines up with the card below — when
+  // the window is wide enough; a narrow one gives the address the room instead.
+  const roomy = rect.width - (props.contentX - rect.x) >= 760;
+  const leftWidth = roomy ? Math.max(0, props.contentX - rect.x - 10) : 0;
+  const narrow = rect.width < 900;
 
   return (
     <div
@@ -112,7 +115,7 @@ export function Toolbar(props: {
           paddingLeft: props.lights ? 84 : 10,
         }}
       >
-        {props.menu && <OrbitMenuButton />}
+        {props.menu && <OrbitMenuButton compact={narrow} />}
         {props.sidebar && (
           <ToolbarButton
             label={props.sidebar === 'hidden' ? 'Show Sidebar' : 'Hide Sidebar'}
@@ -186,7 +189,7 @@ function AddressPill({
   const web = tab?.kind === 'web';
   return (
     <div
-      className="no-drag mat-light relative flex h-9 min-w-0 flex-1 items-center gap-0.5 overflow-hidden rounded-full pr-1"
+      className="no-drag mat-light @container relative flex h-9 min-w-0 flex-1 items-center gap-0.5 overflow-hidden rounded-full pr-1"
       data-testid="address-pill"
     >
       <button
@@ -235,7 +238,12 @@ function AddressPill({
           {toast}
         </div>
       )}
-      {web && <CopyLink />}
+      {web && (
+        // A narrow pill keeps the address readable: these stay in the menus and shortcuts.
+        <span className="contents @max-[26rem]:hidden">
+          <CopyLink />
+        </span>
+      )}
       {tab?.devMode && (
         <ToolbarButton
           label={`Developer Tools${tab.consoleErrors ? ` (${tab.consoleErrors} errors)` : ''}`}
@@ -265,26 +273,30 @@ function AddressPill({
         </ToolbarButton>
       )}
       {web && isShown(prefs, 'screenshot') && (
-        <ToolbarButton
-          label="Take Screenshot"
-          keys="⇧⌘2"
-          anim="pop"
-          onClick={() => void invoke('shot:start', {})}
-          testId="toolbar-screenshot"
-        >
-          <Camera size={15} />
-        </ToolbarButton>
+        <span className="contents @max-[30rem]:hidden">
+          <ToolbarButton
+            label="Take Screenshot"
+            keys="⇧⌘2"
+            anim="pop"
+            onClick={() => void invoke('shot:start', {})}
+            testId="toolbar-screenshot"
+          >
+            <Camera size={15} />
+          </ToolbarButton>
+        </span>
       )}
       {web && isShown(prefs, 'capture') && (
-        <ToolbarButton
-          label="Save to Orbit"
-          keys="⇧⌘S"
-          anim="pop"
-          onClick={() => void invoke('capture:open', {})}
-          testId="toolbar-capture"
-        >
-          <BookmarkPlus size={15} />
-        </ToolbarButton>
+        <span className="contents @max-[30rem]:hidden">
+          <ToolbarButton
+            label="Save to Orbit"
+            keys="⇧⌘S"
+            anim="pop"
+            onClick={() => void invoke('capture:open', {})}
+            testId="toolbar-capture"
+          >
+            <BookmarkPlus size={15} />
+          </ToolbarButton>
+        </span>
       )}
       {tab?.isLoading && (
         <div
@@ -330,7 +342,7 @@ function CopyLink() {
 }
 
 /** "◯ Orbit ⌄" (UI spec §5): Orbit's own menu — Home, the command bar, Spaces, profiles… */
-export function OrbitMenuButton() {
+export function OrbitMenuButton({ compact = false }: { compact?: boolean }) {
   return (
     <Tip label="Orbit Menu">
       <button
@@ -342,7 +354,7 @@ export function OrbitMenuButton() {
         data-testid="orbit-menu-button"
       >
         <OrbitMark size={20} />
-        Orbit
+        {!compact && 'Orbit'}
         <ChevronDown size={14} className="text-[var(--fg-muted)]" />
       </button>
     </Tip>

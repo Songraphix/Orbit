@@ -1,8 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
+  CalendarClock,
   Check,
+  Cloud,
+  CloudSun,
   Copy,
+  FolderClosed,
+  Globe2,
+  HardDrive,
+  History,
+  LayoutGrid,
+  NotebookPen,
+  Sparkles,
+  Target,
+  Timer,
   FileText,
   GripVertical,
   Mic,
@@ -355,11 +367,21 @@ function useWidgetData(layout: HomeLayout): WidgetData | null {
   return data;
 }
 
-function Title({ children, action }: { children: ReactNode; action?: ReactNode }) {
+/** A widget's heading (UI spec §9): an icon, its name, and an action on the right. */
+function Title({
+  children,
+  action,
+  icon,
+}: {
+  children: ReactNode;
+  action?: ReactNode;
+  icon?: ReactNode;
+}) {
   return (
-    <h3 className="mb-2 flex items-center gap-2 text-[12px] font-semibold tracking-wide uppercase opacity-70">
+    <h3 className="mb-1.5 flex items-center gap-2 text-[13.5px] leading-[18px] font-semibold tracking-[-0.005em]">
+      {icon && <span className="grid shrink-0 place-items-center opacity-85">{icon}</span>}
       <span className="flex-1">{children}</span>
-      {action}
+      {action && <span className="text-[12px] font-medium opacity-70">{action}</span>}
     </h3>
   );
 }
@@ -413,7 +435,7 @@ function WidgetBody(props: {
 function AppsWidget({ data }: { data: WidgetData | null }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="apps-widget">
-      <Title>Apps</Title>
+      <Title icon={<LayoutGrid size={16} />}>Quick Access</Title>
       {data && data.apps.length === 0 && (
         <Empty>Add favourites (or Settings → Apps) to keep them here.</Empty>
       )}
@@ -457,7 +479,7 @@ function AppsWidget({ data }: { data: WidgetData | null }) {
 function SpacesWidget({ data }: { data: WidgetData | null }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="spaces-widget">
-      <Title>Spaces</Title>
+      <Title icon={<Cloud size={16} />}>Spaces</Title>
       <ul className="flex min-h-0 flex-wrap gap-1.5 overflow-y-auto">
         {data?.spaces.map((space) => (
           <li key={space.id}>
@@ -491,7 +513,7 @@ function AskWidget() {
   };
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="ask-widget">
-      <Title>Ask Orbit</Title>
+      <Title icon={<Sparkles size={16} />}>Ask Orbit</Title>
       <form
         className="flex items-center gap-2"
         onSubmit={(e) => {
@@ -538,7 +560,7 @@ function DriveWidget() {
   }, []);
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="drive-widget">
-      <Title>Google Drive</Title>
+      <Title icon={<HardDrive size={16} />}>Google Drive</Title>
       {files === null && (
         <Empty>
           <button
@@ -605,6 +627,7 @@ function FocusWidget({ size }: { size: Widget['size'] }) {
   return (
     <div className="flex h-full flex-col" data-testid="focus-widget">
       <Title
+        icon={<Target size={16} />}
         action={
           todayMs >= 60_000 ? (
             <span className="normal-case" data-testid="focus-widget-today">
@@ -613,7 +636,7 @@ function FocusWidget({ size }: { size: Widget['size'] }) {
           ) : undefined
         }
       >
-        {session ? (session.kind === 'break' ? 'Break' : 'Focus') : 'Focus'}
+        {session ? (session.kind === 'break' ? 'Break' : 'Your Focus') : 'Your Focus'}
       </Title>
       <div className="flex flex-1 items-center gap-4">
         <div className="min-w-0 flex-1">
@@ -701,7 +724,7 @@ function Empty({ children }: { children: ReactNode }) {
 function ProjectsWidget({ data }: { data: WidgetData | null }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="projects-widget">
-      <Title>Projects</Title>
+      <Title icon={<FolderClosed size={16} />}>Projects</Title>
       {data && data.projects.length === 0 && <Empty>No active projects.</Empty>}
       <ul className="flex min-h-0 flex-col gap-2 overflow-y-auto">
         {data?.projects.map((p) => {
@@ -750,7 +773,7 @@ const ago = (t: number) => {
 function NotesWidget({ data }: { data: WidgetData | null }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="notes-widget">
-      <Title>Notes</Title>
+      <Title icon={<NotebookPen size={16} />}>Notes</Title>
       {data && data.notes.length === 0 && <Empty>No notes yet.</Empty>}
       <ul className="flex min-h-0 flex-col overflow-y-auto">
         {data?.notes.map((n) => (
@@ -774,7 +797,7 @@ function NotesWidget({ data }: { data: WidgetData | null }) {
 function RecentWidget({ data }: { data: WidgetData | null }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="recent-widget">
-      <Title>Recently Visited</Title>
+      <Title icon={<History size={16} />}>Recent</Title>
       {data && data.recent.length === 0 && <Empty>Pages you open show here.</Empty>}
       <ul className="flex min-h-0 flex-col overflow-y-auto">
         {data?.recent.map((r) => (
@@ -881,7 +904,7 @@ function PlaceSearch(props: { current: WidgetOptions; onOptions: (o: WidgetOptio
   };
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2" data-testid="weather-setup">
-      <Title>Weather</Title>
+      <Title icon={<CloudSun size={16} />}>Weather</Title>
       <form
         className="flex gap-1.5"
         onSubmit={(e) => {
@@ -949,7 +972,7 @@ function CountdownWidget(props: {
         }}
         data-testid="countdown-setup"
       >
-        <Title>Countdown</Title>
+        <Title icon={<CalendarClock size={16} />}>Countdown</Title>
         <input
           value={draft.title}
           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
@@ -1032,7 +1055,7 @@ function ClocksWidget(props: {
   const shown = props.widget.size === 'l' ? zones : zones.slice(0, 3);
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="clocks-widget">
-      <Title>World Clocks</Title>
+      <Title icon={<Globe2 size={16} />}>World Clocks</Title>
       {props.setupOpen && (
         <div className="mb-2 flex flex-wrap gap-1" data-testid="clocks-setup">
           {zones.map((z) => (
@@ -1098,7 +1121,7 @@ function StopwatchWidget() {
   const text = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}.${Math.floor((total % 1000) / 100)}`;
   return (
     <div className="flex h-full flex-col" data-testid="stopwatch-widget">
-      <Title>Stopwatch</Title>
+      <Title icon={<Timer size={16} />}>Stopwatch</Title>
       <div
         className="flex flex-1 items-center text-[32px] font-semibold tabular-nums"
         data-testid="stopwatch-time"

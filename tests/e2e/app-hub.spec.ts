@@ -19,8 +19,11 @@ async function pageWith(app: ElectronApplication, fragment: string): Promise<Pag
   await expect.poll(() => app.windows().some((p) => p.url().includes(fragment))).toBe(true);
   return app.windows().find((p) => p.url().includes(fragment))!;
 }
+/** An app is docked: beside the rail (the default) or in the dock on the right. */
 const dockOpen = (win: Page) =>
-  invoke<{ notes: unknown }>(win, 'layout:get').then((l) => l.notes !== null);
+  invoke<{ notes: unknown; appDock: unknown }>(win, 'layout:get').then(
+    (l) => l.notes !== null || l.appDock !== null,
+  );
 
 test('App Hub: add apps, open one docked beside the page, in a tab or its own window; per-Space; kept', async () => {
   test.setTimeout(120_000);
@@ -45,6 +48,8 @@ test('App Hub: add apps, open one docked beside the page, in a tab or its own wi
 
     // Open in the side panel: it docks beside the page with its own header.
     await settings.getByTestId('app-open-in').selectOption('panel');
+    // Here: the dock on the right that Notes shares (apps open beside the rail by default).
+    await invoke(settings, 'ui:set', { appSide: 'right' });
     await closeSettings(app);
     await win.getByTestId('favorite-tile').click();
     await expect(win.getByTestId('app-panel-header')).toBeVisible();
