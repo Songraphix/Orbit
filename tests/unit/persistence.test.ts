@@ -146,3 +146,25 @@ describe('openPersistence', () => {
     second.close();
   });
 });
+
+describe('transaction', () => {
+  it('nests as a savepoint: the inner part rolls back alone, the outer still commits', () => {
+    const db = openDatabase(':memory:');
+    db.exec('CREATE TABLE t (v INTEGER)');
+    transaction(db, () => {
+      db.prepare('INSERT INTO t VALUES (1)').run();
+      expect(() =>
+        transaction(db, () => {
+          db.prepare('INSERT INTO t VALUES (2)').run();
+          throw new Error('inner fails');
+        }),
+      ).toThrow('inner fails');
+      transaction(db, () => db.prepare('INSERT INTO t VALUES (3)').run());
+    });
+    const values = (db.prepare('SELECT v FROM t ORDER BY v').all() as { v: number }[]).map(
+      (r) => r.v,
+    );
+    expect(values).toEqual([1, 3]);
+    expect((db as { isTransaction?: boolean }).isTransaction).toBe(false);
+  });
+});

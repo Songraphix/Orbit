@@ -74,6 +74,7 @@ test('Settings has sections in a sidebar: About shows the versions', async () =>
     'Backup',
     'Shortcuts',
     'AI',
+    'Voice',
     'Privacy',
     'About',
   ]);

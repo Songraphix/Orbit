@@ -12,8 +12,26 @@ export function openDatabase(path: string): Database {
   return db;
 }
 
-/** Runs `fn` inside a transaction; rolls back if it throws. Not re-entrant. */
+let savepoints = 0;
+
+/**
+ * Runs `fn` inside a transaction; rolls back if it throws. Called while a transaction is already
+ * open (a change made from inside another), it nests as a savepoint instead of failing with
+ * "cannot start a transaction within a transaction".
+ */
 export function transaction<T>(db: Database, fn: () => T): T {
+  if ((db as { isTransaction?: boolean }).isTransaction) {
+    const name = `orbit_${++savepoints}`;
+    db.exec(`SAVEPOINT ${name};`);
+    try {
+      const result = fn();
+      db.exec(`RELEASE ${name};`);
+      return result;
+    } catch (error) {
+      db.exec(`ROLLBACK TO ${name}; RELEASE ${name};`);
+      throw error;
+    }
+  }
   db.exec('BEGIN IMMEDIATE;');
   try {
     const result = fn();
