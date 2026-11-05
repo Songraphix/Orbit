@@ -94,10 +94,10 @@ test('the rail and the sidebar grid show the same pinned apps; the choice is kep
     // In the rail (UI 1).
     const rail = win.getByTestId('app-rail');
     await expect(rail.getByTestId('favorite-tile')).toHaveCount(2);
-    // New apps open beside the page unless you choose otherwise.
-    await expect(rail.getByTestId('favorite-opens-in').first()).toHaveAttribute(
-      'data-open-in',
-      'panel',
+    // From the rail, apps open beside the page (like Opera's sidebar).
+    await expect(rail.getByTestId('favorite-tile').first()).toHaveAttribute(
+      'aria-label',
+      /opens beside the page/,
     );
     // As a grid inside the sidebar (UI 2): the same two, no rail.
     await settings.locator('[data-testid="ui-apps"] [data-value="grid"]').click();

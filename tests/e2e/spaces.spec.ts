@@ -47,7 +47,7 @@ test('pin with ⌘D, favorites, folders — and it all survives a relaunch', asy
     beforeId: null,
   });
   await expect(win.getByTestId('favorite-tile')).toHaveCount(1);
-  await expect(win.getByTestId('favorite-tile')).toHaveAttribute('aria-label', 'Page One');
+  await expect(win.getByTestId('favorite-tile')).toHaveAttribute('aria-label', /^Page One/);
 
   // New folder (opens inline rename), then put the pinned tab inside it.
   await clickMenu(app, 'new-folder');

@@ -27,11 +27,12 @@ export function registerTabHandlers(
     return { tabId: tab.id };
   });
 
-  router.handle('tabs:activate', ({ tabId }, { sender }) => {
+  router.handle('tabs:activate', ({ tabId, from }, { sender }) => {
     // App Hub (brief M5): a favourite may open in the docked panel (a click again closes it)
-    // or its own window.
+    // or its own window. From the rail, apps always open beside the page (owner request).
     const controller = windows.forSender(sender.webContentsId);
-    if (controller && openFavorite(controller, tabId, deps.openWindow, { toggle: true })) return;
+    const options = { toggle: true, panel: from === 'rail' };
+    if (controller && openFavorite(controller, tabId, deps.openWindow, options)) return;
     tabsFor(sender.webContentsId).activate(tabId);
   });
 

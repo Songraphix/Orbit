@@ -188,7 +188,8 @@ export const contract = {
     output: z.object({ tabId }),
   },
   'tabs:activate': {
-    input: z.object({ tabId }).strict(),
+    /** `rail`: from the app rail, where apps open beside the page (Opera's sidebar). */
+    input: z.object({ tabId, from: z.enum(['rail']).optional() }).strict(),
     output: z.void(),
   },
   'tabs:close': {

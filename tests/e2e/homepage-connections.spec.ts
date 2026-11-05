@@ -68,8 +68,11 @@ test('Homepage connects Orbit: Apps (open where set), Spaces, Ask Orbit (typed o
 
     // Apps: opens where it's set to — here, the docked panel.
     await page.getByTestId('apps-widget-item').filter({ hasText: 'Desk' }).click();
-    await expect(win.getByTestId('app-panel-title')).toHaveText('Page Two');
-    await win.getByTestId('app-panel-close').click();
+    // (Floating over the page by default, like Opera's sidebar.)
+    await expect
+      .poll(async () => (await invoke<{ title: string } | null>(win, 'apps:panelState', {}))?.title)
+      .toBe('Page Two');
+    await invoke(win, 'apps:panel', { action: 'close' });
 
     // Spaces: both listed; the other one is a click away.
     const spaces = page.getByTestId('spaces-widget-item');

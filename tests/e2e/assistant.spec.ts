@@ -330,7 +330,11 @@ test('Orbit AI uses the browser: lists apps and tabs, opens an app in the panel,
     'Saved the note “Voice notes”',
   ]);
   // The app opened where it's set to open: the docked panel.
-  await expect(win.getByTestId('app-panel-title')).toHaveText('Page Two');
+  await expect
+    .poll(
+      async () => ((await invoke(win, 'apps:panelState', {})) as { title: string } | null)?.title,
+    )
+    .toBe('Page Two');
   // The unknown site did not open by itself (no tab went there)…
   const tabs = () => invoke(win, 'tabs:get') as Promise<{ tabs: { url: string }[] }>;
   expect((await tabs()).tabs.some((t) => t.url.includes('attacker.example'))).toBe(false);

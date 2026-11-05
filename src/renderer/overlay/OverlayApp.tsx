@@ -104,7 +104,9 @@ export function OverlayApp() {
   return (
     <BackdropContext.Provider value={state.backdrop}>
       {state.sidebarPeek && !busy && <FloatingSidebar width={state.sidebarPeek.width} />}
-      {state.appFloat && <AppFloat rect={state.appFloat.rect} interactive={top === null} />}
+      {state.appFloat && (
+        <AppFloat rect={state.appFloat.rect} origin={state.origin} interactive={top === null} />
+      )}
       {state.peek && (
         <PeekFrame peek={state.peek} origin={state.origin} interactive={top === null} />
       )}

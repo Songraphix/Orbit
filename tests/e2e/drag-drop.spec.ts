@@ -70,7 +70,7 @@ test('drag to reorder Today, to Pinned, into a folder and onto Favorites', async
 
   // Drop "Page One" on the app rail → a favorite (a pinned app).
   await drag(today.nth(1), win.getByTestId('rail-apps'));
-  await expect(win.getByTestId('favorite-tile')).toHaveAttribute('aria-label', 'Page One');
+  await expect(win.getByTestId('favorite-tile')).toHaveAttribute('aria-label', /^Page One/);
   await expect(today).toHaveText(['New Tab']);
 
   // New folder, then drop the pinned tab onto the folder's middle → inside it.

@@ -119,6 +119,7 @@ test('a pinned app opens beside the rail (UI 3): the page stays, Notes can sit o
     invoke<{ card: Box; appDock: Box | null; notes: Box | null }>(win, 'layout:get');
   try {
     await addPanelApps(app, [{ url: server.url('/one'), title: 'Desk' }], 'left');
+    await invoke(win, 'apps:panel', { action: 'pin' }); // pinned beside the page
     await win.getByTestId('favorite-tile').click();
     await expect(win.getByTestId('app-dock')).toBeVisible();
     await expect(win.getByTestId('app-panel-title')).toHaveText('Page One');
@@ -157,7 +158,7 @@ test('a pinned app opens beside the rail (UI 3): the page stays, Notes can sit o
   }
 });
 
-test('sidebar apps keep running (like Opera); unpinned they float over the page and tuck away on a click outside', async () => {
+test('rail apps float over the page like Opera’s, keep running, tuck away on a click outside, and pin', async () => {
   test.setTimeout(90_000);
   const server = await startTestServer();
   const { app, win, close } = await launchOrbit();
@@ -175,36 +176,35 @@ test('sidebar apps keep running (like Opera); unpinned they float over the page 
       'left',
     );
     const tiles = win.getByTestId('favorite-tile');
+    const overlay = await pageWith(app, '/overlay/');
+    const fullCard = (await layout()).card;
+    // From the rail an app floats over the page by default (Opera's mini page); the page keeps
+    // its full width and the overlay draws the app's frame.
     await tiles.nth(0).click();
-    await expect(win.getByTestId('app-panel-title')).toHaveText('Page One');
-    // Switching apps: the first keeps running out of sight (marked on the rail).
+    await expect(overlay.getByTestId('app-float')).toBeVisible();
+    await expect(overlay.getByTestId('app-panel-title')).toHaveText('Page One');
+    await expect.poll(async () => (await layout()).appDockFloat).toBe(true);
+    expect((await layout()).card).toEqual(fullCard);
+    // Another app in the rail (still clickable): the first keeps running out of sight.
     await tiles.nth(1).click();
-    await expect(win.getByTestId('app-panel-title')).toHaveText('Page Two');
+    await expect(overlay.getByTestId('app-panel-title')).toHaveText('Page Two');
     await expect.poll(async () => (await alive()).length).toBe(2);
     await expect(win.getByTestId('rail-running')).toHaveCount(1);
-    const pinnedCard = (await layout()).card;
-
-    // Unpin: it floats over the page, which keeps its full width; the overlay draws its frame.
-    await win.getByTestId('app-panel-pin').click();
-    const overlay = await pageWith(app, '/overlay/');
-    await expect(overlay.getByTestId('app-float')).toBeVisible();
-    await expect.poll(async () => (await layout()).appDockFloat).toBe(true);
-    expect((await layout()).card.width).toBeGreaterThan(pinnedCard.width);
-    await expect(overlay.getByTestId('app-panel-title')).toHaveText('Page Two');
 
     // A click on the page tucks it away; both apps keep running.
-    await overlay.getByTestId('app-float-backdrop').click({ position: { x: 1100, y: 500 } });
+    await overlay.getByTestId('app-float-backdrop').click({ position: { x: 700, y: 400 } });
     await expect(overlay.getByTestId('app-float')).toHaveCount(0);
     expect((await alive()).length).toBe(2);
     await expect(win.getByTestId('rail-running')).toHaveCount(2);
 
-    // It opens floating again (the choice is kept); pinning puts it back beside the page.
+    // Pinned, it sits beside the page, which makes room; the choice is kept.
     await tiles.nth(1).click();
     await expect(overlay.getByTestId('app-float')).toBeVisible();
     await overlay.getByTestId('app-panel-pin').click();
     await expect(overlay.getByTestId('app-float')).toHaveCount(0);
     await expect.poll(async () => (await layout()).appDockFloat).toBe(false);
     await expect(win.getByTestId('app-panel-title')).toHaveText('Page Two');
+    await expect.poll(async () => (await layout()).card.width).toBeLessThan(fullCard.width);
 
     // Quit stops one for good.
     await invoke(win, 'apps:panel', { action: 'quit' });
@@ -335,7 +335,6 @@ test('panel apps are marked in Favorites; an app can show in several chosen Spac
   try {
     await addPanelApps(app, [{ url: server.url('/one'), title: 'Desk' }]);
     const tile = win.getByTestId('favorite-tile');
-    await expect(tile.getByTestId('favorite-opens-in')).toHaveAttribute('data-open-in', 'panel');
     await expect(tile).toHaveAttribute('aria-label', 'Desk, opens beside the page');
 
     // Three Spaces: show the app in the first and the last only.

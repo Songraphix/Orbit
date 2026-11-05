@@ -1,13 +1,4 @@
-import {
-  AppWindow,
-  Home,
-  LayoutGrid,
-  PanelLeft,
-  Plus,
-  Settings,
-  Sparkles,
-  Volume2,
-} from 'lucide-react';
+import { AppWindow, Home, LayoutGrid, Plus, Settings, Sparkles, Volume2 } from 'lucide-react';
 import type { AliveApp } from '@shared/apps';
 import { useState } from 'react';
 import type { DragEvent, ReactNode } from 'react';
@@ -101,12 +92,9 @@ export function Rail(props: {
         {props.apps.map((row, i) => {
           const inPanel = row.id === props.panelId;
           const current = inPanel || row.id === props.activeId;
-          const where =
-            row.openIn === 'panel'
-              ? 'Opens beside the page'
-              : row.openIn === 'window'
-                ? 'Opens in a window'
-                : null;
+          // From the rail every app opens beside the page (Opera's sidebar), unless it's set to
+          // its own window.
+          const where = row.openIn === 'window' ? 'Opens in a window' : 'Opens beside the page';
           const name = row.title || row.url || 'App';
           const running = props.alive.find((a) => a.itemId === row.id);
           return (
@@ -148,7 +136,7 @@ export function Rail(props: {
                   type="button"
                   aria-label={where ? `${name}, ${where.toLowerCase()}` : name}
                   aria-current={current ? 'page' : undefined}
-                  onClick={() => void invoke('tabs:activate', { tabId: row.id })}
+                  onClick={() => void invoke('tabs:activate', { tabId: row.id, from: 'rail' })}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     void invoke('sidebar:itemMenu', { itemId: row.id });
@@ -163,7 +151,7 @@ export function Rail(props: {
                   <span className="grid size-[22px] place-items-center [&>*]:size-[22px]">
                     <TabIcon row={row} />
                   </span>
-                  {row.openIn !== 'tab' && (
+                  {row.openIn === 'window' && (
                     // Apps that open beside the page, or in their own window, say so in a corner.
                     <span
                       className="pointer-events-none absolute right-1 bottom-1 opacity-55"
@@ -171,11 +159,7 @@ export function Rail(props: {
                       data-testid="favorite-opens-in"
                       data-open-in={row.openIn}
                     >
-                      {row.openIn === 'panel' ? (
-                        <PanelLeft size={9} strokeWidth={2.4} />
-                      ) : (
-                        <AppWindow size={9} strokeWidth={2.4} />
-                      )}
+                      <AppWindow size={9} strokeWidth={2.4} />
                     </span>
                   )}
                   {running?.audible ? (

@@ -92,7 +92,11 @@ export class OverlayController {
       commandBar: this.commandBar,
       prompt: this.prompts[0]?.prompt ?? null,
       peek: this.peek,
-      origin: this.onlyPeek ? { x: this.peek!.cover.x, y: this.peek!.cover.y } : { x: 0, y: 0 },
+      origin: this.onlyPeek
+        ? { x: this.peek!.cover.x, y: this.peek!.cover.y }
+        : this.onlyAppFloat
+          ? { x: this.appFloat!.rect.x, y: this.appFloat!.rect.y }
+          : { x: 0, y: 0 },
       siteControls: this.siteControls,
       capture: this.capture,
       colorPick: this.colorPick,
@@ -179,8 +183,9 @@ export class OverlayController {
    * or clicks: alone, the overlay shrinks to the tooltip's own box.
    */
   showTooltip(tip: { label: string; keys: string[]; anchor: Rect; side: TooltipSide }): void {
-    // The Peek's page covers the window's middle, and the overlay just the page area.
-    if (this.deps.win.isDestroyed() || this.peek !== null) return;
+    // The Peek's page covers the window's middle, and the overlay just the page area (a
+    // floating app's too).
+    if (this.deps.win.isDestroyed() || this.peek !== null || this.appFloat !== null) return;
     const [width = 0, height = 0] = this.deps.win.getContentSize();
     const box = tooltipBox(tip.anchor, tip.side, tipWidth(tip.label, tip.keys), { width, height });
     this.tooltip = { label: tip.label, keys: tip.keys, box, side: tip.side, at: Date.now() };
@@ -195,6 +200,30 @@ export class OverlayController {
     if (this.isOpen) this.fit();
     else this.view.setVisible(false);
     this.send();
+  }
+
+  /** Only a floating sidebar app is showing (with perhaps a tooltip). */
+  private get onlyAppFloat(): boolean {
+    return (
+      this.appFloat !== null &&
+      this.commandBar === null &&
+      this.prompts.length === 0 &&
+      this.peek === null &&
+      this.siteControls === null &&
+      this.capture === null &&
+      this.colorPick === null &&
+      this.createMenu === null &&
+      this.quickNote === null &&
+      this.profileMenu === null &&
+      this.orbitMenu === null &&
+      this.captureCard === null &&
+      this.shot === null &&
+      this.grouping === null &&
+      this.appLibrary === null &&
+      this.voicePopup === null &&
+      this.flight === null &&
+      this.sidebarPeek === null
+    );
   }
 
   /** Only the slid-out sidebar is showing: the overlay covers just that strip, so the rest of
@@ -530,6 +559,13 @@ export class OverlayController {
     }
     if (this.onlyPeek) {
       this.view.setBounds(this.peek!.cover);
+      return;
+    }
+    if (this.onlyAppFloat) {
+      // Just from the floating app to the window's edge: the rail, the sidebar and the toolbar
+      // stay usable (another app in the rail switches to it), a click on the page tucks it away.
+      const { x, y } = this.appFloat!.rect;
+      this.view.setBounds({ x, y, width: Math.max(0, width - x), height: Math.max(0, height - y) });
       return;
     }
     // Room for the sidebar's shadow when it's the only thing showing (and its tooltips).
