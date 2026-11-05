@@ -1,104 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Check, Heart, ImagePlus, RotateCcw, Search } from 'lucide-react';
-import { backgroundKey, DEFAULT_LOOK, lookFilter } from '@shared/backgrounds';
+import { backgroundKey, DEFAULT_LOOK } from '@shared/backgrounds';
 import type { BackgroundLook, Rotation, UnsplashPhoto } from '@shared/backgrounds';
 import { BUILTIN_WALLPAPERS } from '@shared/types/newtab';
 import type { NewTabState, WallpaperChoice } from '@shared/types/newtab';
-import { ATMOSPHERE_FIELDS, backgroundCss, GRAIN, WALLPAPER_CSS } from './wallpapers';
+import { backgroundCss, isPhotoChoice, WALLPAPER_CSS } from '@shared/wallpapers';
 
 const invoke = window.orbit.invoke;
 
-const isImage = (c: WallpaperChoice) => c.kind === 'custom' || c.kind === 'unsplash';
+const isImage = isPhotoChoice;
 
-/**
- * The Homepage's background (brief M4): the image or colours, then your adjustments
- * (brightness, saturation, contrast, blur), a veil over photos so text stays readable, the
- * grain and the vignette. A photo shows its average colour while it loads.
- */
-export function Wallpaper(props: {
-  choice: WallpaperChoice | null;
-  state: NewTabState | null;
-  look: BackgroundLook;
-  light: boolean;
-}) {
-  const { choice, state, look } = props;
-  const image = choice && isImage(choice);
-  const atmosphere = choice?.kind === 'builtin' && Boolean(ATMOSPHERE_FIELDS[choice.id]);
-  return (
-    <div
-      className="fixed inset-0 overflow-hidden"
-      style={{
-        background:
-          choice?.kind === 'unsplash' && choice.photo.color ? choice.photo.color : '#0b1026',
-      }}
-      data-testid="wallpaper"
-      data-wallpaper={choice ? (choice.kind === 'builtin' ? choice.id : choice.kind) : 'loading'}
-      data-key={choice ? backgroundKey(choice) : ''}
-    >
-      {choice && (
-        <div
-          className="absolute -inset-6 transition-[background,filter] duration-500"
-          style={{
-            background: backgroundCss(choice, state?.customImage ?? null),
-            backgroundSize: image ? look.fit : undefined,
-            backgroundPosition: image ? look.position : undefined,
-            backgroundRepeat: 'no-repeat',
-            filter: lookFilter(look),
-          }}
-          data-testid="wallpaper-image"
-        />
-      )}
-      {choice?.kind === 'builtin' && ATMOSPHERE_FIELDS[choice.id] && look.ambient && (
-        // The atmosphere's light fields, each on its own layer, drifting very slowly (transform
-        // only; stilled by Reduce Motion, Orbit's Motion setting or Customize → Background).
-        <div
-          className="pointer-events-none absolute -inset-[12%]"
-          aria-hidden
-          data-testid="atmosphere"
-        >
-          {ATMOSPHERE_FIELDS[choice.id]!.fields.map(([x, y, color, size], i) => (
-            <div
-              key={i}
-              className="ambient absolute inset-0"
-              style={{
-                background: `radial-gradient(at ${x}% ${y}%, ${color} 0px, transparent ${size}%)`,
-                animation: `orbit-drift-${i % 3} calc(var(--dur-ambient) + ${i * 9}s) var(--ease-in-out) ${-i * 7}s infinite alternate`,
-                filter: lookFilter(look),
-              }}
-            />
-          ))}
-        </div>
-      )}
-      {image && look.overlay > 0 && (
-        <div
-          className="absolute inset-0"
-          style={{ background: `rgb(0 0 0 / ${look.overlay / 100})` }}
-          data-testid="wallpaper-overlay"
-        />
-      )}
-      {/* Grain plus a soft vignette keeps text readable on any wallpaper; light glass adds a
-          pale veil instead. Photos stay crisp: no grain over them. */}
-      {!image && (
-        <div
-          className={`absolute inset-0 mix-blend-overlay ${atmosphere ? 'opacity-[0.06]' : 'opacity-[0.12]'}`}
-          style={{ background: GRAIN }}
-        />
-      )}
-      <div
-        className={`absolute inset-0 transition-colors duration-500 ${
-          props.light
-            ? atmosphere
-              ? 'bg-white/15'
-              : 'bg-white/45'
-            : atmosphere
-              ? 'bg-[radial-gradient(ellipse_at_center,transparent_45%,rgb(0_0_0/0.22)_100%)]'
-              : 'bg-[radial-gradient(ellipse_at_center,transparent_30%,rgb(0_0_0/0.35)_100%)]'
-        }`}
-      />
-    </div>
-  );
-}
+export { Wallpaper } from '../../ui/Wallpaper';
 
 /** "Photo by … on Unsplash", as Unsplash's guidelines ask (bottom left of the Homepage). */
 export function UnsplashCredit({ photo }: { photo: UnsplashPhoto }) {

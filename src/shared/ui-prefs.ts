@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { GLASS_LEVELS } from './canvas-theme';
 import { contrastRatio, hexToRgb } from './theme';
 
 /**
@@ -95,6 +96,14 @@ const fields = {
   /** Reduced: no movement beyond fades (as with the Mac's Reduce Motion). */
   motion: z.enum(['full', 'reduced']),
   font: z.enum(FONTS),
+  /** UI spec §4: the accent and glass follow the wallpaper (off: each Space's colour). */
+  palette: z.enum(['auto', 'off']),
+  /** How much glass: subtle (more solid, most readable), balanced, strong (most see-through). */
+  glass: z.enum(GLASS_LEVELS),
+  /** Pinned apps in their own rail beside the sidebar (UI 1) or as a grid inside it (UI 2). */
+  apps: z.enum(['rail', 'grid']),
+  /** Which side a pinned app's panel opens on (UI 3: beside the rail). */
+  appSide: z.enum(['left', 'right']),
 };
 
 export const uiPrefsSchema = z.object({
@@ -105,6 +114,10 @@ export const uiPrefsSchema = z.object({
   surfaces: fields.surfaces.default('glass'),
   motion: fields.motion.default('full'),
   font: fields.font.default('comfortaa'),
+  palette: fields.palette.default('auto'),
+  glass: fields.glass.default('balanced'),
+  apps: fields.apps.default('rail'),
+  appSide: fields.appSide.default('left'),
 });
 
 /** A change to some of them. (Not uiPrefsSchema.partial(): zod 4 would fill in every default.) */

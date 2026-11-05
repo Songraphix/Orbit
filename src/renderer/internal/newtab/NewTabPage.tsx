@@ -72,7 +72,7 @@ export function NewTabPage() {
     >
       <Wallpaper
         choice={preview ?? state?.shown ?? null}
-        state={state}
+        customImage={state?.customImage ?? null}
         look={lookPreview ?? state?.look ?? DEFAULT_LOOK}
         light={light}
       />

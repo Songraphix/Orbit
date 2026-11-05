@@ -253,12 +253,11 @@ export class WindowManager {
       minWidth: MIN_SIZE.width,
       minHeight: MIN_SIZE.height,
       show: false,
-      // Arc look: no visible title bar, traffic lights inside the sidebar, translucent sidebar.
+      // No visible title bar; the shell paints the wallpaper canvas behind everything (UI spec
+      // §4), so the window itself is opaque (a deep violet until the canvas's first paint).
       titleBarStyle: 'hiddenInset',
       trafficLightPosition: TRAFFIC_LIGHT_POSITION,
-      vibrancy: 'sidebar',
-      visualEffectState: 'followWindow',
-      backgroundColor: '#00000000',
+      backgroundColor: '#2a2440',
       webPreferences: {
         preload: preloadPath,
         sandbox: true,

@@ -17,6 +17,8 @@ const EVENTS = new Set([
   'focus:update',
   'sounds:update',
   'ui:update',
+  'canvas:update',
+  'canvas:frame',
   'popout:update',
   'account:update',
 ]);

@@ -63,7 +63,7 @@ function tryInvoke(page: Page, channel: string, input: unknown = {}) {
 test('shows wallpaper, clock and a focused search box', async () => {
   const page = await newTabPage(orbit.app);
   await expect(page).toHaveTitle('New Tab');
-  await expect(page.getByTestId('wallpaper')).toHaveAttribute('data-wallpaper', 'tide');
+  await expect(page.getByTestId('wallpaper')).toHaveAttribute('data-wallpaper', 'misty-sunrise');
   await expect(page.getByTestId('clock')).toHaveText(/\d{1,2}[:.]\d{2}/);
   await expect(page.getByTestId('newtab-search')).toBeFocused();
 });
@@ -152,7 +152,7 @@ test('a file that is not an image is rejected with a message', async () => {
   await page.getByTestId('customize-button').click();
   await page.getByTestId('choose-image').click();
   await expect(page.getByRole('alert')).toContainText('not an image');
-  await expect(page.getByTestId('wallpaper')).toHaveAttribute('data-wallpaper', 'tide');
+  await expect(page.getByTestId('wallpaper')).toHaveAttribute('data-wallpaper', 'misty-sunrise');
 });
 
 test('IPC roles: the new tab page cannot drive tabs, and the shell cannot call newtab:*', async () => {

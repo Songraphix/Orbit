@@ -45,6 +45,7 @@ import { CAPTURE_LIMITS, captureDraftSchema } from '../capture';
 import { focusPrefsPatchSchema, focusSessionSchema, focusViewSchema } from '../focus';
 import { soundIdSchema, soundStateSchema } from '../sounds';
 import { uiPrefsPatchSchema, uiPrefsSchema } from '../ui-prefs';
+import { canvasFrameSchema, canvasStateSchema } from '../types/canvas';
 import { homeLayoutSchema, placeSchema, weatherSchema, widgetDataSchema } from '../home-widgets';
 import { lookSchema, ROTATIONS, unsplashPhotoSchema } from '../backgrounds';
 import { appListSchema, appPanelStateSchema, OPEN_IN } from '../apps';
@@ -896,6 +897,12 @@ export const contract = {
   'ui:get': {
     input: z.object({}).strict(),
     output: uiPrefsSchema,
+    surfaces: ['shell', 'overlay', 'internal'],
+  },
+  /** The window's canvas: the wallpaper and the theme taken from it (UI spec §4). */
+  'canvas:get': {
+    input: z.object({}).strict(),
+    output: canvasStateSchema,
     surfaces: ['shell', 'overlay', 'internal'],
   },
   /** Settings → Appearance changes them (only Settings may). */
@@ -2059,6 +2066,12 @@ export const events = {
   }),
   /** …and to every Orbit page (Settings, the Homepage, the panel). */
   'ui:update': uiPrefsSchema,
+  /** The canvas (wallpaper and its theme), sent to every shell and overlay… */
+  'state:canvas': canvasStateSchema,
+  /** …and to every Orbit page (without your own image: they don't draw the canvas). */
+  'canvas:update': canvasStateSchema,
+  /** Where a Homepage's view sits in its window, so its wallpaper lines up with the canvas. */
+  'canvas:frame': canvasFrameSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type Contract = typeof contract;
@@ -2082,6 +2095,8 @@ export const INTERNAL_EVENTS = [
   'focus:update',
   'sounds:update',
   'ui:update',
+  'canvas:update',
+  'canvas:frame',
   'popout:update',
   'account:update',
 ] as const;

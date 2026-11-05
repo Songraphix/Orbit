@@ -5,6 +5,15 @@ import { homeSettingsSchema, shortcutSchema, todoSchema } from './home';
 
 /** Built-in wallpapers (rendered as layered CSS gradients by the new tab page). */
 export const BUILTIN_WALLPAPERS = [
+  // Photographs the owner chose (UI spec §4), shipped with Orbit at <renderer>/wallpapers/.
+  { id: 'misty-sunrise', name: 'Misty Sunrise', photo: 'misty-sunrise.jpg' },
+  { id: 'golden-valley', name: 'Golden Valley', photo: 'golden-valley.jpg' },
+  { id: 'sky-terrace', name: 'Sky Terrace', photo: 'sky-terrace.jpg' },
+  { id: 'cloud-terrace', name: 'Cloud Terrace', photo: 'cloud-terrace.jpg' },
+  { id: 'cosmic-clouds', name: 'Cosmic Clouds', photo: 'cosmic-clouds.jpg' },
+  { id: 'aurora-glass', name: 'Aurora Glass', photo: 'aurora-glass.jpg' },
+  { id: 'highland-tarn', name: 'Highland Tarn', photo: 'highland-tarn.jpg' },
+  { id: 'white-arches', name: 'White Arches', photo: 'white-arches.jpg' },
   // Atmospheres ("Quietly Alive" redesign): soft light fields that drift very slowly.
   { id: 'tide', name: 'Tidal Dusk' },
   { id: 'seaglass', name: 'Sea Glass Morning' },
@@ -25,6 +34,12 @@ export const BUILTIN_WALLPAPERS = [
   { id: 'slate', name: 'Slate' },
 ] as const;
 export type BuiltinWallpaperId = (typeof BUILTIN_WALLPAPERS)[number]['id'];
+
+/** A built-in photograph's file name (under <renderer>/wallpapers/), or null for a CSS one. */
+export function builtinPhoto(id: string): string | null {
+  const w = BUILTIN_WALLPAPERS.find((x) => x.id === id);
+  return w && 'photo' in w ? w.photo : null;
+}
 
 const builtinIds = BUILTIN_WALLPAPERS.map((w) => w.id) as [
   BuiltinWallpaperId,

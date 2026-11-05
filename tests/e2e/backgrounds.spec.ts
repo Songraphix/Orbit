@@ -31,12 +31,12 @@ test('backgrounds: preview and cancel, colours, gradients, adjustments, favourit
     const page = await homepage(app);
     await page.getByTestId('customize-button').click();
 
-    // A colour previews; Cancel goes back to Aurora.
+    // A colour previews; Cancel goes back to Misty Sunrise.
     await page.locator('[data-testid="background-tab"][data-tab="colour"]').click();
     await page.getByTestId('background-color').nth(3).click();
     expect(await key(page)).toBe('color:#2b1b4a');
     await page.getByTestId('background-cancel').click();
-    expect(await key(page)).toBe('builtin:tide');
+    expect(await key(page)).toBe('builtin:misty-sunrise');
 
     // A gradient, applied and made a favourite; then Dune as a second favourite.
     await page.locator('[data-testid="background-tab"][data-tab="gradient"]').click();

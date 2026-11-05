@@ -4,9 +4,11 @@ import '../styles/tokens.css';
 import { InternalApp } from './InternalApp';
 import { preloadFor } from './preload-routes';
 import { startUiPrefs } from '../ui/prefs-store';
+import { startCanvas } from '../ui/canvas-store';
 
 // Text size, density, accent… (Settings → Appearance) for every Orbit page.
 startUiPrefs('ui:update', { zoom: true });
+startCanvas('canvas:update');
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root missing');

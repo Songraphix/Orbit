@@ -31,6 +31,9 @@ export class WallpaperService {
   /** What each open new tab page shows under a rotation (picked when the page loads). */
   private readonly shownByPage = new Map<number, WallpaperChoice>();
   private lastRotation: number | null = null;
+  /** The background the newest Homepage picked (rotation), which the window's canvas shows. */
+  private lastShown: WallpaperChoice | null = null;
+  private readonly listeners = new Set<() => void>();
 
   constructor(
     userDataDir: string,
@@ -46,7 +49,8 @@ export class WallpaperService {
     const customImage = this.loadCustom();
     let wallpaper = this.settings.get('newtab.wallpaper');
     // A custom choice whose file has gone missing falls back to the default.
-    if (wallpaper.kind === 'custom' && !customImage) wallpaper = { kind: 'builtin', id: 'aurora' };
+    if (wallpaper.kind === 'custom' && !customImage)
+      wallpaper = { kind: 'builtin', id: 'misty-sunrise' };
     const favorites = this.settings
       .get('newtab.favorites')
       .filter((f) => f.kind !== 'custom' || customImage);
@@ -79,6 +83,9 @@ export class WallpaperService {
     }
     this.lastRotation = picked.index;
     this.shownByPage.set(page, picked.pick);
+    const changed = !this.lastShown || backgroundKey(this.lastShown) !== backgroundKey(picked.pick);
+    this.lastShown = picked.pick;
+    if (changed) this.changed();
     if (this.shownByPage.size > 50) this.shownByPage.delete(this.shownByPage.keys().next().value!);
   }
 
@@ -95,10 +102,40 @@ export class WallpaperService {
 
   setLook(look: BackgroundLook): void {
     this.settings.set('newtab.look', look);
+    this.changed();
   }
 
   setRotation(rotation: Rotation): void {
     this.settings.set('newtab.rotation', rotation);
+    if (rotation === 'off') this.lastShown = null;
+    this.changed();
+  }
+
+  /** What the window's canvas shows: the newest Homepage's pick under a rotation, else yours. */
+  canvasChoice(): WallpaperChoice {
+    const { wallpaper } = this.state();
+    if (this.settings.get('newtab.rotation') === 'off' || !this.lastShown) return wallpaper;
+    if (this.lastShown.kind === 'custom' && !this.loadCustom()) return wallpaper;
+    return this.lastShown;
+  }
+
+  /** Your own image's file and when it was last replaced (palettes are cached by it). */
+  customFile(): { path: string; stamp: number } | null {
+    try {
+      return { path: this.customPath, stamp: Math.round(statSync(this.customPath).mtimeMs) };
+    } catch {
+      return null;
+    }
+  }
+
+  /** Calls `listener` whenever the background, its look or the rotation changes. */
+  onChange(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private changed(): void {
+    for (const l of this.listeners) l();
   }
 
   /** Adds or removes a favourite (rotation picks from favourites). */
@@ -137,6 +174,7 @@ export class WallpaperService {
     mkdirSync(this.dir, { recursive: true });
     writeFileSync(this.customPath, image.toJPEG(JPEG_QUALITY));
     this.customDataUrl = undefined; // reload on next read
+    this.changed();
   }
 
   /** Removes the custom image (e.g. when resetting). */
@@ -144,8 +182,9 @@ export class WallpaperService {
     rmSync(this.customPath, { force: true });
     this.customDataUrl = null;
     if (this.settings.get('newtab.wallpaper').kind === 'custom') {
-      this.settings.set('newtab.wallpaper', { kind: 'builtin', id: 'aurora' });
+      this.settings.set('newtab.wallpaper', { kind: 'builtin', id: 'misty-sunrise' });
     }
+    this.changed();
   }
 
   private loadCustom(): string | null {

@@ -90,6 +90,20 @@ export const settingsSchema = {
   'pdf.notes': z.record(z.string(), z.string()),
   /** Voice (push-to-talk): run what you say at once, read answers aloud, which voice. */
   'voice.prefs': voicePrefsSchema,
+  /** Wallpaper palettes already read (UI spec §4), newest last, by background (and file date). */
+  'canvas.palettes': z
+    .array(
+      z.object({
+        key: z.string().max(400),
+        palette: z.object({
+          swatches: z
+            .array(z.object({ hex: z.string().regex(/^#[0-9a-f]{6}$/i), weight: z.number() }))
+            .max(16),
+          average: z.string().regex(/^#[0-9a-f]{6}$/i),
+        }),
+      }),
+    )
+    .max(16),
   /** The right-hand dock's width, as last dragged (Notes and docked apps share it). */
   'dock.width': z.number().int().min(NOTES_WIDTH.min).max(NOTES_WIDTH.max),
   /** The focus session under way (roadmap P2.3), kept across a restart. */
@@ -123,7 +137,7 @@ export const settingsDefaults: Settings = {
   'window.state': { bounds: null, isMaximized: false },
   'sidebar.width': 260,
   'sidebar.visible': true,
-  'newtab.wallpaper': { kind: 'builtin', id: 'tide' },
+  'newtab.wallpaper': { kind: 'builtin', id: 'misty-sunrise' },
   'newtab.look': DEFAULT_LOOK,
   'newtab.favorites': [],
   'newtab.rotation': 'off',
@@ -147,6 +161,7 @@ export const settingsDefaults: Settings = {
   'notes.floating': [],
   'panel.state': { open: false, route: 'panel' },
   'dock.width': NOTES_WIDTH.panel,
+  'canvas.palettes': [],
   'voice.prefs': DEFAULT_VOICE_PREFS,
   'pdf.local': [],
   'pdf.notes': {},

@@ -7,6 +7,8 @@ import { ArrowLeft, ExternalLink, Plus, RotateCw, X } from 'lucide-react';
 import { panelApps } from '@shared/apps';
 import { themeToVars } from '@shared/theme';
 import { useColorMode } from './use-color-mode';
+import { useCanvas } from '../ui/canvas-store';
+import { Wallpaper } from '../ui/Wallpaper';
 import { useUiPrefs } from '../ui/prefs-store';
 import { DEFAULT_THEME } from '@shared/types/space';
 import type { SidebarRow, SidebarSnapshot } from '@shared/types/space';
@@ -45,31 +47,54 @@ function MainShell() {
   const media = useMainState('state:media');
   const library = useMainState('state:library');
   const focus = useMainState('state:focus');
+  const canvas = useCanvas();
 
   // ThemeEngine: the active space's theme becomes CSS variables for the whole shell.
   const theme = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId)?.theme ?? DEFAULT_THEME;
   const mode = useColorMode();
   const ui = useUiPrefs();
-  // Settings → Appearance → Accent replaces the Space's accent everywhere.
-  const accent = ui?.accent ?? null;
+  // Settings → Appearance → Accent replaces the Space's accent everywhere; with the Automatic
+  // palette, the wallpaper's accent does (UI spec §4).
+  const accent = ui?.accent ?? (canvas?.auto ? canvas.accent : null);
   const vars = useMemo(
-    () => ({ ...themeToVars(theme, mode), ...(accent ? { '--accent': accent } : {}) }),
-    [theme, mode, accent],
+    () => ({
+      ...themeToVars(theme, mode),
+      // Everything floats on the wallpaper: text and states come from the canvas's theme, so they
+      // read on whatever wallpaper is behind (the Space's colours tint only its accent then).
+      ...(canvas
+        ? {
+            '--sidebar-bg': 'transparent',
+            '--sidebar-fg': 'var(--fg)',
+            '--sidebar-muted': 'var(--fg-muted)',
+            '--hover': 'var(--glass-hover)',
+            '--row-active': 'var(--sel-bg)',
+            '--tile-bg': 'var(--glass-light)',
+            '--row-shadow':
+              'inset 0 0 0 0.5px var(--sel-border), inset 0 1px 0 var(--glass-highlight)',
+            '--grain': '0',
+          }
+        : {}),
+      ...(accent ? { '--accent': accent } : {}),
+    }),
+    [theme, mode, accent, canvas],
   );
   const solid = ui?.surfaces === 'solid';
 
   return (
     <div
-      className="relative h-full overflow-hidden transition-[background] duration-500"
+      className="relative h-full overflow-hidden"
       style={{ ...(vars as CSSProperties), background: 'var(--sidebar-bg)' }}
       data-testid="shell"
       data-surfaces={solid ? 'solid' : 'glass'}
+      data-tone={canvas?.tone}
     >
-      {/* Solid surfaces: an opaque base under the Space's colours (no desktop showing through). */}
-      {solid && (
-        <div
-          className="pointer-events-none absolute inset-0 -z-10"
-          style={{ background: mode === 'dark' ? 'rgb(24 24 28)' : 'rgb(240 240 244)' }}
+      {canvas && (
+        <Wallpaper
+          choice={canvas.wallpaper}
+          customImage={canvas.customImage}
+          look={canvas.look}
+          light={canvas.tone === 'light'}
+          testId="canvas"
         />
       )}
       <div

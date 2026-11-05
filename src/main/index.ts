@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -71,6 +72,8 @@ import { registerLayoutHandlers } from './ipc/handlers/layout';
 import { registerNewTabHandlers } from './ipc/handlers/newtab';
 import { navigateTab, registerTabHandlers } from './ipc/handlers/tabs';
 import { WallpaperService } from './newtab/wallpaper-service';
+import { CanvasService } from './theme/canvas-service';
+import { readThumbnail } from './theme/thumbnail';
 import { installAppMenu } from './menus/app-menu';
 import { IpcRouter } from './ipc/router';
 import { SenderRegistry } from './ipc/sender';
@@ -170,6 +173,7 @@ let runTidy: ((controller: WindowController) => Promise<void>) | null = null;
 process.on('uncaughtException', (error) => console.error('[orbit] uncaught exception', error));
 process.on('unhandledRejection', (reason) => console.error('[orbit] unhandled rejection', reason));
 let windows: WindowManager | null = null;
+let canvasService: CanvasService | null = null;
 let floatingNotes: FloatingNotes | null = null;
 let captureService: CaptureService | null = null;
 // PDFs from this Mac open at orbit-pdf:// addresses (Chromium's PDF viewer shows them).
@@ -1187,50 +1191,84 @@ void app.whenReady().then(() => {
   // Coming back to Orbit, or the Mac waking: other Macs may have changed something.
   app.on('browser-window-focus', () => accounts.pullSoon());
   powerMonitor.on('resume', () => void accounts.syncNow());
-  registerNewTabHandlers(
-    router,
-    windowManager,
-    new WallpaperService(app.getPath('userData'), persistence.settings, unsplash),
-    {
-      home: persistence.home,
-      settings: persistence.settings,
-      history: persistence.history,
-      work: persistence.work,
-      // The panel's projects and tasks follow changes made on the new tab page.
-      workChanged: () => windowManager.all().forEach((c) => c.notes.refresh()),
-      notes: persistence.notes,
-      unsplash,
-      weather: new WeatherService({
-        fetch: (url) => net.fetch(url),
-        geocodeUrl: devOnly('ORBIT_GEOCODE_URL'),
-        forecastUrl: devOnly('ORBIT_FORECAST_URL'),
-      }),
-      openNote: (controller, id) => {
-        if (persistence?.notes.title(id) !== null) controller.tabs.create(noteUrl(id));
-      },
-      openApp: (controller, itemId) =>
-        void openFavorite(controller, itemId, (url) => openLittle?.(url)),
-      ask: (controller, text) => assistantService?.open(controller, { prompt: text }),
-      aiAvailable: () => aiServiceRef?.available ?? false,
-      driveRecent: async () => {
-        if (!driveService?.connected) return null;
-        const now = Date.now();
-        return (await driveService.search('', { limit: 6, timeoutMs: 8000 })).flatMap((f) =>
-          f.webViewLink
-            ? [
-                {
-                  id: f.id,
-                  name: f.name,
-                  kind: driveKind(f.mimeType),
-                  edited: editedLabel(f.modifiedTime, now),
-                  url: f.webViewLink,
-                },
-              ]
-            : [],
-        );
-      },
-    },
+  const wallpaperService = new WallpaperService(
+    app.getPath('userData'),
+    persistence.settings,
+    unsplash,
   );
+  // The window's canvas (UI spec §4): the wallpaper behind everything, and the theme from it.
+  const canvas = new CanvasService({
+    choice: () => wallpaperService.canvasChoice(),
+    customImage: () => wallpaperService.state().customImage,
+    customFile: () => wallpaperService.customFile(),
+    look: () => persistence!.settings.get('newtab.look'),
+    ui: () => persistence!.settings.get('ui'),
+    cache: {
+      get: () => persistence!.settings.get('canvas.palettes'),
+      set: (entries) => persistence!.settings.set('canvas.palettes', entries),
+    },
+    readPixels: readThumbnail,
+    photoFile: (name) => {
+      const built = join(rendererDir, 'wallpapers', name);
+      return existsSync(built)
+        ? built
+        : join(app.getAppPath(), 'src/renderer/public/wallpapers', name);
+    },
+    publish: (state) => {
+      broadcaster.send('state:canvas', state);
+      const light = { ...state, customImage: null };
+      for (const id of senders.idsOf('internal')) {
+        const contents = webContents.fromId(id);
+        if (contents) broadcaster.sendTo(contents, 'canvas:update', light);
+      }
+    },
+  });
+  canvasService = canvas;
+  wallpaperService.onChange(() => canvas.refresh());
+  router.handle('canvas:get', (_input, { sender }) =>
+    senders.surfaceOf(sender) === 'internal'
+      ? { ...canvas.state, customImage: null }
+      : canvas.state,
+  );
+  registerNewTabHandlers(router, windowManager, wallpaperService, {
+    home: persistence.home,
+    settings: persistence.settings,
+    history: persistence.history,
+    work: persistence.work,
+    // The panel's projects and tasks follow changes made on the new tab page.
+    workChanged: () => windowManager.all().forEach((c) => c.notes.refresh()),
+    notes: persistence.notes,
+    unsplash,
+    weather: new WeatherService({
+      fetch: (url) => net.fetch(url),
+      geocodeUrl: devOnly('ORBIT_GEOCODE_URL'),
+      forecastUrl: devOnly('ORBIT_FORECAST_URL'),
+    }),
+    openNote: (controller, id) => {
+      if (persistence?.notes.title(id) !== null) controller.tabs.create(noteUrl(id));
+    },
+    openApp: (controller, itemId) =>
+      void openFavorite(controller, itemId, (url) => openLittle?.(url)),
+    ask: (controller, text) => assistantService?.open(controller, { prompt: text }),
+    aiAvailable: () => aiServiceRef?.available ?? false,
+    driveRecent: async () => {
+      if (!driveService?.connected) return null;
+      const now = Date.now();
+      return (await driveService.search('', { limit: 6, timeoutMs: 8000 })).flatMap((f) =>
+        f.webViewLink
+          ? [
+              {
+                id: f.id,
+                name: f.name,
+                kind: driveKind(f.mimeType),
+                edited: editedLabel(f.modifiedTime, now),
+                url: f.webViewLink,
+              },
+            ]
+          : [],
+      );
+    },
+  });
   registerFindHandlers(router, windowManager);
   registerSidebarHandlers(router, windowManager);
   router.handle(
@@ -2008,6 +2046,7 @@ void app.whenReady().then(() => {
     const next = { ...persistence!.settings.get('ui'), ...patch };
     persistence!.settings.set('ui', next);
     broadcaster.send('state:ui', next);
+    canvasService?.refresh(); // the accent, glass and palette preferences shape the canvas
     for (const id of senders.idsOf('internal')) {
       const contents = webContents.fromId(id);
       if (contents) broadcaster.sendTo(contents, 'ui:update', next);
