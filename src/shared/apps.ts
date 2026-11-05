@@ -44,6 +44,14 @@ export const appListSchema = z.object({
 });
 export type AppList = z.output<typeof appListSchema>;
 
+/** The apps the docked panel can switch between: this Space's favourites that open in it, in
+ *  the sidebar's order (folders' favourites too). Pure. */
+export function panelApps<R extends { kind: string; openIn: OpenIn }>(
+  favorites: readonly R[],
+): R[] {
+  return favorites.filter((row) => row.kind === 'tab' && row.openIn === 'panel');
+}
+
 /** Whether a favourite shows in a Space. Pure. */
 export function showsIn(options: AppOptions | undefined, spaceId: string): boolean {
   return !options?.spaces || options.spaces.includes(spaceId);

@@ -49,7 +49,8 @@ export function registerAppHubHandlers(router: IpcRouter, windows: WindowManager
 
   router.handle('apps:panel', ({ action }, { sender }) => {
     const { appPanel } = shellOf(sender.webContentsId);
-    if (action === 'close') appPanel.close();
+    if (action === 'manage') windows.openSettings('apps');
+    else if (action === 'close') appPanel.close();
     else if (action === 'openAsTab') appPanel.openAsTab();
     else appPanel.navigate(action);
   });

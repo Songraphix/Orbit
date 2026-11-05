@@ -786,7 +786,10 @@ export const contract = {
   },
   'apps:panel': {
     input: z
-      .object({ action: z.enum(['close', 'back', 'forward', 'reload', 'openAsTab']) })
+      .object({
+        // manage: Settings → Apps (the switcher's +)
+        action: z.enum(['close', 'back', 'forward', 'reload', 'openAsTab', 'manage']),
+      })
       .strict(),
     output: z.void(),
     surfaces: ['shell'],

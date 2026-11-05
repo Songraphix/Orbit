@@ -75,3 +75,39 @@ test('the docked panel: drag its edge to resize; the width is kept', async () =>
     await server.close();
   }
 });
+
+test('the docked panel switches between this Space’s panel apps; + opens Settings → Apps', async () => {
+  test.setTimeout(90_000);
+  const server = await startTestServer();
+  const { app, win, close } = await launchOrbit();
+  try {
+    await addPanelApps(app, [
+      { url: server.url('/one'), title: 'Desk' },
+      { url: server.url('/two'), title: 'Mail' },
+    ]);
+    await win.getByTestId('favorite-tile').first().click();
+    await expect(win.getByTestId('app-panel-title')).toHaveText('Page One');
+    const switches = win.getByTestId('app-panel-switch');
+    await expect(switches).toHaveCount(2);
+    await expect(switches.first()).toHaveAttribute('data-current', 'true');
+    // One click swaps the app; the panel stays open.
+    await switches.nth(1).click();
+    await expect(win.getByTestId('app-panel-title')).toHaveText('Page Two');
+    await expect(switches.nth(1)).toHaveAttribute('data-current', 'true');
+    // The current one does nothing (it doesn't close the panel).
+    await switches.nth(1).click();
+    await expect(win.getByTestId('app-panel-header')).toBeVisible();
+    // Back to the first: as it was (kept loaded).
+    await switches.first().click();
+    await expect(win.getByTestId('app-panel-title')).toHaveText('Page One');
+
+    // +: Settings opens on Apps.
+    await win.getByTestId('app-panel-add').click();
+    await expect.poll(() => app.windows().some((p) => p.url().includes('#/settings'))).toBe(true);
+    const settings = app.windows().find((p) => p.url().includes('#/settings'))!;
+    await expect(settings.getByTestId('app-row')).toHaveCount(2);
+  } finally {
+    await close();
+    await server.close();
+  }
+});

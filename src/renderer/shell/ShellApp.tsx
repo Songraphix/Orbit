@@ -3,12 +3,13 @@ import type { FocusSession } from '@shared/focus';
 import type { ProfileView } from '@shared/profile';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
-import { ArrowLeft, ExternalLink, RotateCw, X } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Plus, RotateCw, X } from 'lucide-react';
+import { panelApps } from '@shared/apps';
 import { themeToVars } from '@shared/theme';
 import { useColorMode } from './use-color-mode';
 import { useUiPrefs } from '../ui/prefs-store';
 import { DEFAULT_THEME } from '@shared/types/space';
-import type { SidebarSnapshot } from '@shared/types/space';
+import type { SidebarRow, SidebarSnapshot } from '@shared/types/space';
 import type { Layout, Rect } from '@shared/types/layout';
 import type { DownloadView } from '@shared/types/downloads';
 import type { FindState } from '@shared/types/find';
@@ -200,7 +201,13 @@ function Chrome({
           data-testid="notes-card"
         />
       )}
-      {layout.notes && <AppPanelHeader rect={layout.notes} radius={layout.radius} />}
+      {layout.notes && (
+        <AppPanelHeader
+          rect={layout.notes}
+          radius={layout.radius}
+          favorites={sidebar?.favorites ?? []}
+        />
+      )}
       {layout.notes && (
         <DockEdge
           dock={layout.notes}
@@ -423,14 +430,24 @@ function SplitDivider({ rect, left, right }: { rect: Rect; left: Pane; right: Pa
 }
 
 /**
- * The docked app's header (App Hub, brief M5): which app, and Back, Reload, Open as Tab and
+ * The docked app's header (App Hub, brief M5): a switcher with this Space's other panel apps
+ * (one click swaps; + adds apps in Settings), the app's name, and Back, Reload, Open as Tab and
  * Close. The app itself is a native view main places just below it.
  */
-function AppPanelHeader({ rect, radius }: { rect: Rect; radius: number }) {
+function AppPanelHeader({
+  rect,
+  radius,
+  favorites,
+}: {
+  rect: Rect;
+  radius: number;
+  favorites: SidebarRow[];
+}) {
   const app = useMainState('state:appPanel');
   if (!app) return null;
-  const act = (action: 'close' | 'back' | 'reload' | 'openAsTab') =>
+  const act = (action: 'close' | 'back' | 'reload' | 'openAsTab' | 'manage') =>
     void window.orbit.invoke('apps:panel', { action });
+  const apps = panelApps(favorites);
   return (
     <div
       className="ui-light absolute flex items-center gap-1 overflow-hidden border-b border-black/[0.06] bg-white px-2 text-neutral-700"
@@ -444,13 +461,47 @@ function AppPanelHeader({ rect, radius }: { rect: Rect; radius: number }) {
       }}
       data-testid="app-panel-header"
     >
-      <AppIcon favicon={app.favicon} />
+      {apps.length > 1 ? (
+        <div
+          className="scrollbar-none flex max-w-[55%] shrink-0 items-center gap-0.5 overflow-x-auto"
+          role="tablist"
+          aria-label="Panel apps"
+          data-testid="app-panel-switcher"
+        >
+          {apps.map((row) => {
+            const current = row.id === app.itemId;
+            return (
+              <Tip key={row.id} label={row.title || row.url || 'App'}>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={current}
+                  aria-label={row.title || row.url || 'App'}
+                  onClick={() => {
+                    if (!current) void window.orbit.invoke('tabs:activate', { tabId: row.id });
+                  }}
+                  className={`press grid size-7 shrink-0 place-items-center rounded-[8px] transition-colors ${current ? 'bg-black/[0.07]' : 'opacity-60 hover:bg-black/[0.05] hover:opacity-100'}`}
+                  data-testid="app-panel-switch"
+                  data-current={current}
+                >
+                  <AppIcon favicon={row.favicon} />
+                </button>
+              </Tip>
+            );
+          })}
+        </div>
+      ) : (
+        <AppIcon favicon={app.favicon} />
+      )}
       <span
-        className="min-w-0 flex-1 truncate text-[13px] font-medium"
+        className="ml-1 min-w-0 flex-1 truncate text-[13px] font-medium"
         data-testid="app-panel-title"
       >
         {app.title}
       </span>
+      <HeaderButton label="Add Apps…" onClick={() => act('manage')} testId="app-panel-add">
+        <Plus size={14} />
+      </HeaderButton>
       <HeaderButton
         label="Back"
         onClick={() => act('back')}
@@ -474,9 +525,9 @@ function AppPanelHeader({ rect, radius }: { rect: Rect; radius: number }) {
 
 function AppIcon({ favicon }: { favicon: string | null }) {
   return favicon ? (
-    <img src={favicon} alt="" className="ml-1 size-4 shrink-0 rounded-[4px]" />
+    <img src={favicon} alt="" className="size-4 shrink-0 rounded-[4px]" />
   ) : (
-    <span className="ml-1 size-4 shrink-0 rounded-[4px] bg-neutral-200" />
+    <span className="size-4 shrink-0 rounded-[4px] bg-neutral-200" />
   );
 }
 
