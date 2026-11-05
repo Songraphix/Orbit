@@ -19,6 +19,8 @@ export function registerInternalPageHandlers(
   router: IpcRouter,
   windows: WindowManager,
   deps: {
+    /** Redraw every sidebar (a setting that changes what they show). */
+    sidebarsChanged?: () => void;
     archive: ArchiveRepository;
     settings: SettingsRepository;
     history: HistoryRepository;
@@ -118,6 +120,7 @@ export function registerInternalPageHandlers(
     peekScope: deps.settings.get('peek.scope'),
     littleShortcut: deps.settings.get('little.globalShortcut'),
     autoPopout: deps.settings.get('media.autoPopout'),
+    groupSuggestions: deps.settings.get('tabs.groupSuggestions'),
   });
 
   router.handle('settings:get', (_input, { sender }) => {
@@ -147,6 +150,10 @@ export function registerInternalPageHandlers(
     if (patch.peek !== undefined) deps.settings.set('peek.enabled', patch.peek);
     if (patch.peekScope) deps.settings.set('peek.scope', patch.peekScope);
     if (patch.autoPopout !== undefined) deps.settings.set('media.autoPopout', patch.autoPopout);
+    if (patch.groupSuggestions !== undefined) {
+      deps.settings.set('tabs.groupSuggestions', patch.groupSuggestions);
+      deps.sidebarsChanged?.();
+    }
     if (patch.littleShortcut !== undefined) {
       deps.settings.set('little.globalShortcut', patch.littleShortcut);
       deps.applyLittleShortcut(patch.littleShortcut);

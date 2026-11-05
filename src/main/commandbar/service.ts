@@ -155,6 +155,11 @@ export const COMMANDS: readonly CommandDef[] = [
     shortcut: '⌥⌘R',
   },
   {
+    id: 'group-tabs',
+    title: 'Group Tabs…',
+    keywords: ['folders', 'organise', 'organize', 'tidy', 'sort', 'group', 'clean'],
+  },
+  {
     id: 'voice',
     title: 'Voice Command',
     keywords: ['voice', 'speak', 'talk', 'microphone', 'dictate', 'listen'],

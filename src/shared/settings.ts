@@ -58,6 +58,8 @@ export const settingsSchema = {
   appearance: z.enum(['system', 'light', 'dark']),
   /** Where tabs go: the sidebar (Arc) or a strip across the top (owner request). */
   'tabs.layout': z.enum(['sidebar', 'top']),
+  /** Suggest grouping a crowded Today into folders (never moves tabs by itself). */
+  'tabs.groupSuggestions': z.boolean(),
   /** Live pages beyond this many are put to sleep, least recently used first (F-25). */
   'tabs.maxLive': z.number().int().min(1).max(50),
   /** Pages not viewed for this many minutes are put to sleep. 0 = only the maxLive limit. */
@@ -127,6 +129,7 @@ export const settingsDefaults: Settings = {
   appearance: 'system',
   ui: DEFAULT_UI_PREFS,
   'tabs.layout': 'sidebar',
+  'tabs.groupSuggestions': true,
   'tabs.splits': {},
   'tabs.maxLive': 8,
   'tabs.sleepAfterMinutes': 30,
@@ -171,5 +174,6 @@ export const userSettingsSchema = z.object({
   peekScope: settingsSchema['peek.scope'],
   littleShortcut: settingsSchema['little.globalShortcut'],
   autoPopout: settingsSchema['media.autoPopout'],
+  groupSuggestions: settingsSchema['tabs.groupSuggestions'],
 });
 export type UserSettings = z.output<typeof userSettingsSchema>;

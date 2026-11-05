@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import type { OverlayState } from '@shared/types/command-bar';
 import { CommandBar } from './CommandBar';
 import { ShotCard } from './ShotCard';
+import { GroupingCard } from './GroupingCard';
 import { PeekFrame } from './PeekFrame';
 import { SiteControls } from './SiteControls';
 import { CaptureLayer } from './CaptureLayer';
@@ -40,6 +41,7 @@ export function OverlayApp() {
     tooltip: null,
     flight: null,
     backdrop: null,
+    grouping: null,
   });
 
   useEffect(() => {
@@ -70,6 +72,8 @@ export function OverlayApp() {
     <ProfileMenu key={state.profileMenu.openedAt} anchor={state.profileMenu.anchor} />
   ) : state.shot ? (
     <ShotCard key={state.shot.at} shot={state.shot} />
+  ) : state.grouping ? (
+    <GroupingCard key={state.grouping.at} grouping={state.grouping} />
   ) : state.captureCard ? (
     <CaptureCard key={state.captureCard.openedAt} />
   ) : state.quickNote ? (

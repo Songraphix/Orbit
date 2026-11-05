@@ -1,4 +1,14 @@
-import { ArrowDownToLine, Library, Moon, Plus, Settings, Sparkles, Sun, Undo2 } from 'lucide-react';
+import {
+  ArrowDownToLine,
+  FolderTree,
+  Library,
+  Moon,
+  Plus,
+  Settings,
+  Sparkles,
+  Sun,
+  Undo2,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { SidebarSnapshot, SpaceView } from '@shared/types/space';
 import { RenameInput } from './Rows';
@@ -84,6 +94,19 @@ export function SpaceHeader({
             {tidy.running ? 'Tidying…' : 'Tidy'}
           </button>
         )
+      )}
+      {!tidy.canUndo && tidy.suggestGroups && hasToday && (
+        // A crowded Today: Orbit has folders to suggest (by site and topic; a preview first).
+        <button
+          type="button"
+          className="flex items-center gap-1 rounded px-1 text-xs font-medium text-[var(--accent-text,var(--sidebar-fg))] hover:bg-[var(--hover)]"
+          onClick={() => void invoke('grouping:open', {})}
+          title="Group Today’s tabs into folders by site and topic — see them first"
+          data-testid="suggest-groups"
+        >
+          <FolderTree size={12} />
+          Group
+        </button>
       )}
       {hasToday && (
         <button

@@ -133,6 +133,26 @@ export const overlayStateSchema = z.object({
     })
     .nullable()
     .default(null),
+  /** Group Tabs (roadmap R2 M4): folders proposed for Today's loose tabs, to accept or edit. */
+  grouping: z
+    .object({
+      spaceId: z.string(),
+      at: z.number(),
+      /** Today's loose tabs (the ones that would stay loose are the rest). */
+      loose: z.number(),
+      groups: z.array(
+        z.object({
+          key: z.string(),
+          name: z.string(),
+          reason: z.enum(['site', 'topic']),
+          tabs: z.array(
+            z.object({ id: z.string(), title: z.string(), favicon: z.string().nullable() }),
+          ),
+        }),
+      ),
+    })
+    .nullable()
+    .default(null),
   /** Orbit Capture (roadmap P2.1): the card that saves a finding to a project. */
   captureCard: z.object({ openedAt: z.number() }).nullable(),
   /** A quick note (F-33): a glass card over the page; it writes into note `id`. */

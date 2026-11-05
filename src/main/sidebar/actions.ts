@@ -485,6 +485,11 @@ export class SidebarActions {
         click: () => go && this.tabs.create(go.url),
       },
       { type: 'separator' },
+      {
+        label: 'Group Tabs…',
+        enabled: today >= 4,
+        click: () => this.ui.command('group-tabs'),
+      },
       { label: 'Tidy Today', enabled: today >= 2, click: () => this.ui.command('tidy') },
       {
         label: 'Sort Today',

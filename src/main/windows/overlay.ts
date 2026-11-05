@@ -49,6 +49,7 @@ export class OverlayController {
   private profileMenu: OverlayState['profileMenu'] = null;
   private captureCard: OverlayState['captureCard'] = null;
   private shot: OverlayState['shot'] = null;
+  private grouping: OverlayState['grouping'] = null;
   private tooltip: Omit<NonNullable<OverlayState['tooltip']>, 'alone'> | null = null;
   private flight: OverlayState['flight'] = null;
   private flightTimer: ReturnType<typeof setTimeout> | null = null;
@@ -97,6 +98,7 @@ export class OverlayController {
       profileMenu: this.profileMenu,
       captureCard: this.captureCard,
       shot: this.shot,
+      grouping: this.grouping,
       tooltip: this.tooltip && { ...this.tooltip, alone: this.onlyTooltip },
       flight: this.flight,
       backdrop: this.backdrop,
@@ -116,6 +118,7 @@ export class OverlayController {
       this.profileMenu !== null ||
       this.captureCard !== null ||
       this.shot !== null ||
+      this.grouping !== null ||
       this.flight !== null ||
       this.sidebarPeek !== null
     );
@@ -134,7 +137,8 @@ export class OverlayController {
       this.quickNote !== null ||
       this.profileMenu !== null ||
       this.captureCard !== null ||
-      this.shot !== null
+      this.shot !== null ||
+      this.grouping !== null
     );
   }
 
@@ -326,6 +330,19 @@ export class OverlayController {
   closeShot(): void {
     if (!this.shot) return;
     this.shot = null;
+    this.sync();
+  }
+
+  /** Group Tabs: the proposed folders, to accept, rename, merge or leave out. */
+  showGrouping(view: Omit<NonNullable<OverlayState['grouping']>, 'at'>): void {
+    this.siteControls = null;
+    this.grouping = { ...view, at: Date.now() };
+    this.show();
+  }
+
+  closeGrouping(): void {
+    if (!this.grouping) return;
+    this.grouping = null;
     this.sync();
   }
 

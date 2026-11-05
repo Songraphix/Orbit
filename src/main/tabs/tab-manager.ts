@@ -82,6 +82,7 @@ export type TabManagerDeps = Pick<
     running: boolean;
     canUndo: boolean;
     assistant: boolean;
+    suggestGroups: boolean;
   };
 };
 
@@ -247,6 +248,7 @@ export class TabManager {
         running: false,
         canUndo: false,
         assistant: false,
+        suggestGroups: false,
       },
     };
   }

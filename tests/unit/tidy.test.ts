@@ -137,6 +137,7 @@ describe('TidyService', () => {
       running: false,
       canUndo: true,
       assistant: true,
+      suggestGroups: false, // never while Undo is offered
     });
 
     tidy.untidy(space);

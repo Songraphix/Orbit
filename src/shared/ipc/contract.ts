@@ -223,6 +223,34 @@ export const contract = {
     input: z.object({}).strict(),
     output: z.void(),
   },
+  /** Group Tabs (roadmap R2 M4): the preview of folders for this Space's loose Today tabs. */
+  'grouping:open': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
+  'grouping:apply': {
+    input: z
+      .object({
+        groups: z
+          .array(
+            z
+              .object({
+                name: z.string().max(80),
+                tabIds: z.array(z.string().max(64)).max(300),
+              })
+              .strict(),
+          )
+          .max(12),
+      })
+      .strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
+  'grouping:dismiss': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
   'sidebar:clearToday': {
     input: z.object({}).strict(),
     output: z.void(),

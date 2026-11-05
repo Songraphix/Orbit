@@ -80,6 +80,8 @@ export const sidebarSnapshotSchema = z.object({
     running: z.boolean(),
     canUndo: z.boolean(),
     assistant: z.boolean(),
+    /** Group Tabs has folders to suggest for a crowded Today (roadmap R2 M4). */
+    suggestGroups: z.boolean().default(false),
   }),
 });
 export type SidebarSnapshot = z.output<typeof sidebarSnapshotSchema>;

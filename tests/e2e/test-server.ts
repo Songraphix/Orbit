@@ -720,6 +720,15 @@ export async function startTestServer(): Promise<TestServer> {
       });
       return;
     }
+    // A page titled by its address (?t=…), for grouping tests.
+    if (path === '/titled') {
+      const t = new URL(req.url ?? '/', 'http://x').searchParams.get('t') ?? 'Untitled';
+      const safe = t.replace(/[<>&"]/g, '');
+      res
+        .writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+        .end(`<!doctype html><title>${safe}</title><h1>${safe}</h1>`);
+      return;
+    }
     if (path.startsWith('/drive/v3/files')) {
       google.driveCalls++;
       const auth = String(req.headers['authorization'] ?? '');

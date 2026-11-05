@@ -223,6 +223,22 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
               </Row>
             </Group>
 
+            <Group title="Tabs">
+              <Row
+                label="Suggest grouping tabs"
+                hint="When Today gets crowded, a Group button suggests folders by site and topic. Nothing moves until you accept; Undo puts it back."
+              >
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={settings.groupSuggestions}
+                  onChange={(e) => update({ groupSuggestions: e.target.checked })}
+                  className="orbit-switch"
+                  data-testid="setting-group-suggestions"
+                />
+              </Row>
+            </Group>
+
             <Group title="Video">
               <Row
                 label="Pop out playing videos"

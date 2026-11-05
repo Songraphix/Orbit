@@ -188,6 +188,7 @@ function openFocusView(controller: WindowController): void {
 let assistantService: AssistantService | null = null;
 let voiceService: VoiceService | null = null;
 let driveService: DriveService | null = null;
+let openGrouping: ((controller: WindowController) => void) | null = null;
 let toolkitService: ToolkitService | null = null;
 
 function loadRenderer(win: BrowserWindow, entry: RendererEntry, query?: string): void {
@@ -591,6 +592,9 @@ function runCommand(controller: WindowController, commandId: string): void {
     case 'summarize-page':
       assistantService?.open(controller, { summarize: true });
       return;
+    case 'group-tabs':
+      openGrouping?.(controller);
+      return;
     case 'voice':
       // Push-to-talk: the command bar opens to show what's heard (again: finish now).
       if (controller.overlay.mode === null) windows?.openCommandBar(controller, 'new');
@@ -796,7 +800,12 @@ void app.whenReady().then(() => {
     activity: persistence.aiActivity,
   });
   const refreshSidebars = () => windows?.all().forEach((c) => c.tabs.refresh());
-  const tidy = new TidyService({ store, ai, onChange: refreshSidebars });
+  const tidy = new TidyService({
+    store,
+    ai,
+    onChange: refreshSidebars,
+    suggestions: () => persistence!.settings.get('tabs.groupSuggestions'),
+  });
   app.on('web-contents-created', (_event, contents) => {
     boosts.attach(contents);
     attachJsonViewer(contents); // JSON responses show as a tree (roadmap P3.6)
@@ -1163,6 +1172,7 @@ void app.whenReady().then(() => {
     }
   });
   registerInternalPageHandlers(router, windowManager, {
+    sidebarsChanged: refreshSidebars,
     archive: persistence.archive,
     settings: persistence.settings,
     history: persistence.history,
@@ -1257,6 +1267,35 @@ void app.whenReady().then(() => {
   router.handle('sidebar:untidy', (_input, { sender }) => {
     const controller = windowManager.forSender(sender.webContentsId);
     if (controller) tidy.untidy(controller.tabs.space);
+  });
+  // Group Tabs (roadmap R2 M4): a preview in the overlay; nothing moves until it's accepted.
+  openGrouping = (controller) => {
+    const proposal = tidy.proposal(controller.tabs.space);
+    if (proposal.groups.length === 0) {
+      toast(controller, 'Nothing to group yet — Today needs a few tabs that belong together');
+      return;
+    }
+    controller.overlay.showGrouping({ spaceId: controller.tabs.space.id, ...proposal });
+  };
+  router.handle('grouping:open', (_input, { sender }) => {
+    const controller = windowManager.forSender(sender.webContentsId);
+    if (controller) openGrouping?.(controller);
+  });
+  router.handle('grouping:apply', ({ groups }, { sender }) => {
+    const controller = windowManager.forSender(sender.webContentsId);
+    if (!controller) return;
+    controller.overlay.closeGrouping();
+    const made = tidy.group(controller.tabs.space, groups);
+    toast(
+      controller,
+      made ? `Grouped into ${made} folder${made === 1 ? '' : 's'}` : 'Nothing to group',
+    );
+  });
+  router.handle('grouping:dismiss', (_input, { sender }) => {
+    const controller = windowManager.forSender(sender.webContentsId);
+    if (!controller) return;
+    controller.overlay.closeGrouping();
+    tidy.dismiss(controller.tabs.space);
   });
   registerSiteControlsHandlers(router, windowManager, {
     siteSettings: persistence.siteSettings,
