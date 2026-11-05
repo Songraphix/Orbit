@@ -1,4 +1,14 @@
-import { AppWindow, Home, LayoutGrid, PanelLeft, Plus, Settings, Sparkles } from 'lucide-react';
+import {
+  AppWindow,
+  Home,
+  LayoutGrid,
+  PanelLeft,
+  Plus,
+  Settings,
+  Sparkles,
+  Volume2,
+} from 'lucide-react';
+import type { AliveApp } from '@shared/apps';
 import { useState } from 'react';
 import type { DragEvent, ReactNode } from 'react';
 import type { Rect } from '@shared/types/layout';
@@ -31,6 +41,8 @@ export function Rail(props: {
   home: boolean;
   /** Tabs on top: Home, Orbit AI and Settings live here too. */
   standalone: boolean;
+  /** Apps running out of sight (kept alive), and those playing sound. */
+  alive: AliveApp[];
 }) {
   const { rect } = props;
   const [over, setOver] = useState<{ id: string | null; after: boolean } | null>(null);
@@ -96,6 +108,7 @@ export function Rail(props: {
                 ? 'Opens in a window'
                 : null;
           const name = row.title || row.url || 'App';
+          const running = props.alive.find((a) => a.itemId === row.id);
           return (
             <li
               key={row.id}
@@ -164,6 +177,26 @@ export function Rail(props: {
                         <AppWindow size={9} strokeWidth={2.4} />
                       )}
                     </span>
+                  )}
+                  {running?.audible ? (
+                    // Playing out of sight (music in a tucked-away panel): a little speaker.
+                    <span
+                      className="absolute -right-0.5 -bottom-0.5 grid size-4 place-items-center rounded-full bg-[var(--canvas-accent,var(--accent))] text-white shadow-[0_0_0_1.5px_var(--glass-deep)]"
+                      aria-label="Playing"
+                      data-testid="rail-playing"
+                    >
+                      <Volume2 size={9} strokeWidth={2.6} />
+                    </span>
+                  ) : (
+                    running &&
+                    !inPanel && (
+                      // Running out of sight: a small dot (like the Dock's).
+                      <span
+                        className="absolute -bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-[var(--fg)] opacity-80"
+                        aria-label="Running"
+                        data-testid="rail-running"
+                      />
+                    )
                   )}
                   {hasCount(row.title) && (
                     <span

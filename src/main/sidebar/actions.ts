@@ -54,6 +54,8 @@ export type SidebarUi = {
   };
   /** Tabs in the sidebar or across the top (Settings → Appearance → Tab layout). */
   tabLayout?: () => 'sidebar' | 'top';
+  /** Sidebar apps kept running out of sight: whether one is, and stopping it. */
+  apps?: { alive: (itemId: string) => boolean; quit: (itemId: string) => void };
   /** Workspace templates (roadmap P2.5): save a Space as one, or start a Space from one. */
   templates?: {
     save: (spaceId: string) => void;
@@ -440,6 +442,13 @@ export class SidebarActions {
           accelerator: 'Shift+CmdOrCtrl+T',
           click: () => this.tabs.reopenClosed(),
         },
+      );
+    }
+    if (this.ui.apps?.alive(item.id)) {
+      // An app running beside the page (or tucked away, maybe playing): stop it.
+      template.push(
+        { type: 'separator' },
+        { label: 'Quit App', click: () => this.ui.apps?.quit(item.id) },
       );
     }
     template.push(...this.layoutItems());

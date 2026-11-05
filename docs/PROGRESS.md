@@ -210,6 +210,14 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
   - **Wallpapers in the gallery:** the owner's eight now have their own section in Customize → Background (thumbnails that show the whole picture), and Settings → Appearance lists every wallpaper.
   - **Right-click the toolbar, tab row, rail or any tab** to switch between sidebar and horizontal tabs.
 
+- 2026-11-05 — Owner requests: **sidebar apps like Opera's** and **Orbit AI on the Homepage**.
+  - **Apps keep running:** each app opened from the rail keeps running out of sight, so switching or tucking it away doesn't stop music or lose a chat's place. Up to 6 at once; the least recently used quiet one stops first.
+  - **Rail markers:** a dot for a running app and a speaker for one playing sound. Right-click → Quit App stops one.
+  - **Pin:** pinned (the default), the app sits beside the page and the page makes room. Unpinned, it floats over the page like a small window (the overlay draws its glass frame and header) and a click back on the page tucks it away. The choice is kept.
+  - **Open in Its Own Window** moves the app into a Little Orbit window and stops the panel's copy.
+  - **Orbit AI on the Homepage:** asking from the Homepage just answers. "This page" goes along only when there is one, so the "Open a web page" error is gone.
+  - **Tests:** e2e for running apps, floating, tuck-away, pin and quit, and for asking from the Homepage. Full suite: 163 passed, 2 skipped.
+
 ## In progress
 
 - Owner review of the redesign in the running app (light and dark); v0.1.0 after dogfooding

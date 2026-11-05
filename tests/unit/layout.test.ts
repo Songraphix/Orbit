@@ -250,6 +250,16 @@ describe('a pinned app beside the rail (UI 3)', () => {
     expect(computeLayout(base).appDock).toBeNull();
   });
 
+  it('unpinned, it floats over the page: the page keeps its width', () => {
+    const float = computeLayout({ ...base, appDock: { width: 360, progress: 1, float: true } });
+    expect(float.appDock).toEqual({ x: 350, y: 52, width: 360, height: 758 });
+    expect(float.appDockFloat).toBe(true);
+    expect(float.card).toEqual(computeLayout(base).card);
+    expect(computeLayout({ ...base, appDock: { width: 360, progress: 1 } }).appDockFloat).toBe(
+      false,
+    );
+  });
+
   it('keeps the page its minimum width, and sits beside the right-hand dock', () => {
     const both = computeLayout({
       ...base,

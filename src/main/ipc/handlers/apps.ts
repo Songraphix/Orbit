@@ -54,17 +54,34 @@ export function registerAppHubHandlers(
     };
   };
 
+  /** The shell's header, or the overlay's when the app floats. */
+  const chromeOf = (webContentsId: number) => {
+    const controller = windows.forSender(webContentsId);
+    if (!controller) throw new Error(`Sender ${webContentsId} has no window`);
+    return controller;
+  };
+
   router.handle('apps:panelState', (_input, { sender }) =>
-    shellOf(sender.webContentsId).appPanel.state(),
+    chromeOf(sender.webContentsId).appPanel.state(),
+  );
+  router.handle('apps:alive', (_input, { sender }) =>
+    shellOf(sender.webContentsId).appPanel.alive(),
   );
 
   router.handle('apps:panel', ({ action }, { sender }) => {
-    const controller = shellOf(sender.webContentsId);
+    const controller = chromeOf(sender.webContentsId);
     const { appPanel } = controller;
-    if (action === 'manage') controller.overlay.showAppLibrary(appLibraryView(controller));
+    if (action === 'pin' || action === 'unpin') appPanel.setPinned(action === 'pin');
+    else if (action === 'quit') {
+      const id = appPanel.openItemId;
+      if (id) appPanel.quit(id);
+    } else if (action === 'manage') controller.overlay.showAppLibrary(appLibraryView(controller));
     else if (action === 'openInWindow') {
       const url = appPanel.state()?.url;
-      appPanel.close();
+      const id = appPanel.openItemId;
+      // It moves to its own window: the panel's copy stops (no music playing twice).
+      if (id) appPanel.quit(id);
+      else appPanel.close();
       if (url) deps.openWindow?.(url);
     } else if (action === 'close') appPanel.close();
     else if (action === 'openAsTab') appPanel.openAsTab();

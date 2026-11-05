@@ -572,8 +572,10 @@ export class WindowManager {
       side: () => settings.get('ui').appSide,
       // Beside the rail on the left (its own place; Notes can stay open on the right), or the
       // right-hand dock.
-      setDockOpen: (open) => {
-        if (open && settings.get('ui').appSide === 'left') layout.setAppDock(true);
+      pinned: () => settings.get('appdock.pinned'),
+      setPinned: (pinned) => settings.set('appdock.pinned', pinned),
+      setDockOpen: (open, float = false) => {
+        if (open && settings.get('ui').appSide === 'left') layout.setAppDock(true, float);
         else if (open) layout.setNotes(true, false);
         else {
           layout.setAppDock(false);
@@ -585,8 +587,20 @@ export class WindowManager {
       detach: (view) => {
         if (!win.isDestroyed()) win.contentView.removeChildView(view);
       },
+      // Floating: above everything, the overlay included (it draws the frame around it).
+      raise: (view) => {
+        if (!win.isDestroyed()) win.contentView.addChildView(view);
+      },
+      lower: (view) => {
+        if (!win.isDestroyed()) win.contentView.addChildView(view, 0);
+      },
+      floatFrame: (rect) => overlay.setAppFloat(rect),
       adopt: (page) => tabManager.adopt(page),
-      push: (state) => broadcaster.sendTo(contents, 'state:appPanel', state),
+      push: (state) => {
+        broadcaster.sendTo(contents, 'state:appPanel', state);
+        broadcaster.sendTo(overlay.view.webContents, 'state:appPanel', state);
+      },
+      pushAlive: (alive) => broadcaster.sendTo(contents, 'state:appsAlive', alive),
       closeNotes: () => notesPanel.close(),
     });
     const appPanelController = appPanel;
@@ -605,6 +619,10 @@ export class WindowManager {
       openCommandBar: () => overlay.openCommandBar('new'),
       command: (commandId) => this.deps.runCommand?.(controller, commandId),
       tabLayout: () => settings.get('tabs.layout'),
+      apps: {
+        alive: (itemId) => appPanelController.isAlive(itemId),
+        quit: (itemId) => appPanelController.quit(itemId),
+      },
       liveFolders: this.deps.liveFolders && {
         add: (kind, spaceId) => this.deps.liveFolders?.add(controller, kind, spaceId),
         refresh: (folderId) => this.deps.liveFolders?.refresh(folderId),

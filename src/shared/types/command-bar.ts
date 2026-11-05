@@ -111,6 +111,8 @@ export const overlayStateSchema = z.object({
   profileMenu: z.object({ anchor: rectSchema, openedAt: z.number() }).nullable(),
   /** The Orbit menu (UI spec §5), under the toolbar's "Orbit ⌄". */
   orbitMenu: z.object({ anchor: rectSchema, openedAt: z.number() }).nullable().default(null),
+  /** A sidebar app floating over the page (unpinned): its frame; a click outside tucks it away. */
+  appFloat: z.object({ rect: rectSchema }).nullable().default(null),
   /** An Arc-style tooltip for a shell control: label, key caps, and its box in the window.
    *  `alone`: nothing else is showing, so the overlay is just this box. */
   tooltip: z

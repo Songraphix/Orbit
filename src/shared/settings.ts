@@ -106,6 +106,8 @@ export const settingsSchema = {
     .max(16),
   /** A pinned app's panel beside the rail (UI 3): its width as last dragged. */
   'appdock.width': z.number().int().min(NOTES_WIDTH.min).max(NOTES_WIDTH.max),
+  /** …pinned beside the page (it makes room), or floating over it (unpinned). */
+  'appdock.pinned': z.boolean(),
   /** The right-hand dock's width, as last dragged (Notes and docked apps share it). */
   'dock.width': z.number().int().min(NOTES_WIDTH.min).max(NOTES_WIDTH.max),
   /** The focus session under way (roadmap P2.3), kept across a restart. */
@@ -165,6 +167,7 @@ export const settingsDefaults: Settings = {
   'dock.width': NOTES_WIDTH.panel,
   'canvas.palettes': [],
   'appdock.width': 360,
+  'appdock.pinned': true,
   'voice.prefs': DEFAULT_VOICE_PREFS,
   'pdf.local': [],
   'pdf.notes': {},

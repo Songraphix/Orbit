@@ -27,8 +27,16 @@ export const appPanelStateSchema = z.object({
   canGoBack: z.boolean(),
   /** The app couldn't load (Chromium's net error code): the panel shows a card instead. */
   loadError: z.number().int().nullable().default(null),
+  /** Pinned beside the page, or floating over it (unpinned; owner request, like Opera). */
+  pinned: z.boolean().default(true),
+  /** It can float (apps beside the rail; the right-hand dock is always pinned). */
+  canPin: z.boolean().default(false),
 });
 export type AppPanelState = z.output<typeof appPanelStateSchema>;
+
+/** A sidebar app that's running (kept alive out of sight), and whether it's playing sound. */
+export const aliveAppSchema = z.object({ itemId: z.string(), audible: z.boolean() });
+export type AliveApp = z.output<typeof aliveAppSchema>;
 
 /** Settings → Apps: the favourites, and the Spaces they can show in. */
 export const appListSchema = z.object({

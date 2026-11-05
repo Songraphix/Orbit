@@ -157,6 +157,64 @@ test('a pinned app opens beside the rail (UI 3): the page stays, Notes can sit o
   }
 });
 
+test('sidebar apps keep running (like Opera); unpinned they float over the page and tuck away on a click outside', async () => {
+  test.setTimeout(90_000);
+  const server = await startTestServer();
+  const { app, win, close } = await launchOrbit();
+  type Box = { x: number; width: number };
+  const layout = () =>
+    invoke<{ card: Box; appDock: Box | null; appDockFloat: boolean }>(win, 'layout:get');
+  const alive = () => invoke<{ itemId: string }[]>(win, 'apps:alive');
+  try {
+    await addPanelApps(
+      app,
+      [
+        { url: server.url('/one'), title: 'Desk' },
+        { url: server.url('/two'), title: 'Mail' },
+      ],
+      'left',
+    );
+    const tiles = win.getByTestId('favorite-tile');
+    await tiles.nth(0).click();
+    await expect(win.getByTestId('app-panel-title')).toHaveText('Page One');
+    // Switching apps: the first keeps running out of sight (marked on the rail).
+    await tiles.nth(1).click();
+    await expect(win.getByTestId('app-panel-title')).toHaveText('Page Two');
+    await expect.poll(async () => (await alive()).length).toBe(2);
+    await expect(win.getByTestId('rail-running')).toHaveCount(1);
+    const pinnedCard = (await layout()).card;
+
+    // Unpin: it floats over the page, which keeps its full width; the overlay draws its frame.
+    await win.getByTestId('app-panel-pin').click();
+    const overlay = await pageWith(app, '/overlay/');
+    await expect(overlay.getByTestId('app-float')).toBeVisible();
+    await expect.poll(async () => (await layout()).appDockFloat).toBe(true);
+    expect((await layout()).card.width).toBeGreaterThan(pinnedCard.width);
+    await expect(overlay.getByTestId('app-panel-title')).toHaveText('Page Two');
+
+    // A click on the page tucks it away; both apps keep running.
+    await overlay.getByTestId('app-float-backdrop').click({ position: { x: 1100, y: 500 } });
+    await expect(overlay.getByTestId('app-float')).toHaveCount(0);
+    expect((await alive()).length).toBe(2);
+    await expect(win.getByTestId('rail-running')).toHaveCount(2);
+
+    // It opens floating again (the choice is kept); pinning puts it back beside the page.
+    await tiles.nth(1).click();
+    await expect(overlay.getByTestId('app-float')).toBeVisible();
+    await overlay.getByTestId('app-panel-pin').click();
+    await expect(overlay.getByTestId('app-float')).toHaveCount(0);
+    await expect.poll(async () => (await layout()).appDockFloat).toBe(false);
+    await expect(win.getByTestId('app-panel-title')).toHaveText('Page Two');
+
+    // Quit stops one for good.
+    await invoke(win, 'apps:panel', { action: 'quit' });
+    await expect.poll(async () => (await alive()).length).toBe(1);
+  } finally {
+    await close();
+    await server.close();
+  }
+});
+
 test('the docked panel switches between this Space’s panel apps; + opens the App Library', async () => {
   test.setTimeout(90_000);
   const server = await startTestServer();

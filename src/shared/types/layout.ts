@@ -39,6 +39,8 @@ export const layoutSchema = z.object({
   notes: rectSchema.nullable(),
   /** A pinned app open beside the rail (UI spec §8, UI 3); the page narrows. */
   appDock: rectSchema.nullable(),
+  /** …or floating over the page (unpinned): the page keeps its width. */
+  appDockFloat: z.boolean().default(false),
   /** Tabs on top: the row of tab pills across the window's top. */
   tabStrip: rectSchema.nullable(),
 });

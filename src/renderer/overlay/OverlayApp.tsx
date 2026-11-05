@@ -14,6 +14,7 @@ import { FloatingSidebar } from './FloatingSidebar';
 import { CreateMenu } from './CreateMenu';
 import { ProfileMenu } from './ProfileMenu';
 import { OrbitMenu } from './OrbitMenu';
+import { AppFloat } from './AppFloat';
 import { CaptureCard } from './CaptureCard';
 import { TooltipPill } from '../tooltip/TooltipPill';
 import { DownloadFlight } from './DownloadFlight';
@@ -40,6 +41,7 @@ export function OverlayApp() {
     quickNote: null,
     profileMenu: null,
     orbitMenu: null,
+    appFloat: null,
     captureCard: null,
     shot: null,
     tooltip: null,
@@ -102,6 +104,7 @@ export function OverlayApp() {
   return (
     <BackdropContext.Provider value={state.backdrop}>
       {state.sidebarPeek && !busy && <FloatingSidebar width={state.sidebarPeek.width} />}
+      {state.appFloat && <AppFloat rect={state.appFloat.rect} interactive={top === null} />}
       {state.peek && (
         <PeekFrame peek={state.peek} origin={state.origin} interactive={top === null} />
       )}

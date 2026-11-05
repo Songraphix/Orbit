@@ -34,6 +34,8 @@ export class LayoutEngine {
   private apps: 'rail' | 'grid';
   /** A pinned app beside the rail (UI 3): shown, heading open or shut, its slide and width. */
   private appDock = false;
+  /** Floating over the page (unpinned) rather than beside it. */
+  private appFloat = false;
   private appTarget = false;
   private appProgress = 1;
   private appTimer: ReturnType<typeof setInterval> | null = null;
@@ -226,7 +228,15 @@ export class LayoutEngine {
 
   /** A pinned app opened beside the rail, or closed: it slides from the rail's side while the
    *  page makes room (and back), like the dock on the right. Not persisted. */
-  setAppDock(open: boolean): void {
+  setAppDock(open: boolean, float = false): void {
+    if (open && float !== this.appFloat) {
+      // Pinned ↔ floating while open: the page makes room (or takes it back) at once.
+      this.appFloat = float;
+      if (this.appTarget) {
+        this.update();
+        return;
+      }
+    }
     if (open === this.appTarget) return;
     const wasShown = this.appDock;
     this.appTarget = open;
@@ -327,7 +337,9 @@ export class LayoutEngine {
       dockProgress: this.dockProgress,
       topTabs: this.topTabs,
       apps: this.apps,
-      appDock: this.appDock ? { width: this.appWidth, progress: this.appProgress } : null,
+      appDock: this.appDock
+        ? { width: this.appWidth, progress: this.appProgress, float: this.appFloat }
+        : null,
     });
   }
 }

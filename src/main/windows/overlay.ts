@@ -48,6 +48,7 @@ export class OverlayController {
   private quickNote: OverlayState['quickNote'] = null;
   private profileMenu: OverlayState['profileMenu'] = null;
   private orbitMenu: OverlayState['orbitMenu'] = null;
+  private appFloat: OverlayState['appFloat'] = null;
   private captureCard: OverlayState['captureCard'] = null;
   private shot: OverlayState['shot'] = null;
   private grouping: OverlayState['grouping'] = null;
@@ -100,6 +101,7 @@ export class OverlayController {
       quickNote: this.quickNote,
       profileMenu: this.profileMenu,
       orbitMenu: this.orbitMenu,
+      appFloat: this.appFloat,
       captureCard: this.captureCard,
       shot: this.shot,
       grouping: this.grouping,
@@ -123,6 +125,7 @@ export class OverlayController {
       this.quickNote !== null ||
       this.profileMenu !== null ||
       this.orbitMenu !== null ||
+      this.appFloat !== null ||
       this.captureCard !== null ||
       this.shot !== null ||
       this.grouping !== null ||
@@ -146,6 +149,7 @@ export class OverlayController {
       this.quickNote !== null ||
       this.profileMenu !== null ||
       this.orbitMenu !== null ||
+      this.appFloat !== null ||
       this.captureCard !== null ||
       this.shot !== null ||
       this.grouping !== null ||
@@ -233,6 +237,17 @@ export class OverlayController {
     this.createMenu = null;
     this.profileMenu = { anchor, openedAt: Date.now() };
     this.show();
+  }
+
+  /** A sidebar app floating over the page: its glass frame and header (the app's page sits on
+   *  top of the overlay), and a backdrop where a click tucks it away. Null hides it. */
+  setAppFloat(rect: Rect | null): void {
+    const same =
+      rect && this.appFloat && JSON.stringify(rect) === JSON.stringify(this.appFloat.rect);
+    if (same || (!rect && !this.appFloat)) return;
+    this.appFloat = rect ? { rect } : null;
+    if (rect) this.show();
+    else this.sync();
   }
 
   /** The Orbit menu under the toolbar's "Orbit ⌄"; the button toggles it. */

@@ -189,6 +189,18 @@ test('Tasks from a page, Stop, research questions, and AI off', async () => {
   await expect(panel.getByTestId('assistant-input')).toBeDisabled();
 });
 
+test('on the Homepage (no web page) a question is simply asked', async () => {
+  const { app, win } = orbit;
+  await addKey(app);
+  await expect(win.getByTestId('toolbar-address')).toContainText('Search or enter a website');
+  await win.getByTestId('toolbar-assistant').click();
+  const panel = await pageWith(app, '#/notes/panel/assistant');
+  await panel.getByTestId('assistant-input').fill('hey Orbit');
+  await panel.getByTestId('assistant-input').press('Enter');
+  await expect(panel.getByTestId('assistant-answer').last()).toHaveAttribute('data-status', 'done');
+  await expect(panel.getByTestId('assistant-answer').last()).not.toContainText('Open a web page');
+});
+
 test('Orbit AI as a coworker: it looks at today’s tasks, adds one, and says what it did', async () => {
   const { app, win } = orbit;
   await addKey(app);

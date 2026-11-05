@@ -41,8 +41,9 @@ export type LayoutInput = {
   topTabs?: boolean;
   /** Pinned apps in a rail (UI 1, the default) or as a grid in the sidebar (UI 2). */
   apps?: 'rail' | 'grid';
-  /** A pinned app open beside the rail: its width and how far it has slid in (0–1). */
-  appDock?: { width: number; progress: number } | null;
+  /** A pinned app open beside the rail: its width and how far it has slid in (0–1); `float`:
+   *  over the page, which keeps its width. */
+  appDock?: { width: number; progress: number; float?: boolean } | null;
 };
 
 /** How wide the dock is: the width you dragged it to (the Project Board at least its wide
@@ -152,6 +153,7 @@ export function computeLayout(input: LayoutInput): Layout {
       library: null,
       notes: null,
       appDock: null,
+      appDockFloat: false,
       tabStrip: null,
     };
   }
@@ -187,7 +189,8 @@ export function computeLayout(input: LayoutInput): Layout {
       )
     : 0;
   const appDock = input.appDock ? { x: left, width: appW, ...below } : null;
-  if (appDock) left += (appW + inset) * appProgress;
+  const floatDock = Boolean(input.appDock?.float);
+  if (appDock && !floatDock) left += (appW + inset) * appProgress;
 
   // Rows: the toolbar spans the window (it holds the traffic lights) unless the sidebar island
   // runs the full height (grid) or the Library's columns do; with tabs on top it's a second
@@ -250,6 +253,7 @@ export function computeLayout(input: LayoutInput): Layout {
     library: library && { nav: library.nav, panel: library.panel },
     notes,
     appDock,
+    appDockFloat: appDock !== null && floatDock,
     tabStrip,
   };
 }

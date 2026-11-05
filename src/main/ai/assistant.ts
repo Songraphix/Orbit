@@ -411,8 +411,10 @@ export class AssistantService {
 
     // What goes with this question: the page (read now), a selection, picked research.
     const fresh: ConversationDoc[] = [];
-    const withPage = action === 'summarize' || session.attachPage;
     const tab = this.currentPage(controller);
+    // "This page" goes along when there is one; on the Homepage (or any Orbit page) the question
+    // is simply asked. Only Summarize needs a page.
+    const withPage = action === 'summarize' || (session.attachPage && tab !== null);
     if (withPage) {
       if (!tab) return fail('Open a web page to ask about it');
       const page = await readPage(tab.view.webContents);

@@ -49,7 +49,7 @@ import { canvasFrameSchema, canvasStateSchema } from '../types/canvas';
 import { ORBIT_MENU_ACTIONS, orbitMenuViewSchema } from '../types/orbit-menu';
 import { homeLayoutSchema, placeSchema, weatherSchema, widgetDataSchema } from '../home-widgets';
 import { lookSchema, ROTATIONS, unsplashPhotoSchema } from '../backgrounds';
-import { appListSchema, appPanelStateSchema, OPEN_IN } from '../apps';
+import { aliveAppSchema, appListSchema, appPanelStateSchema, OPEN_IN } from '../apps';
 import {
   PROJECT_STATUSES,
   TASK_STATUSES,
@@ -830,6 +830,12 @@ export const contract = {
   'apps:panelState': {
     input: z.object({}).strict(),
     output: appPanelStateSchema.nullable(),
+    surfaces: ['shell', 'overlay'],
+  },
+  /** The sidebar apps running out of sight (the rail marks them, and those playing sound). */
+  'apps:alive': {
+    input: z.object({}).strict(),
+    output: z.array(aliveAppSchema),
     surfaces: ['shell'],
   },
   'apps:panel': {
@@ -844,11 +850,16 @@ export const contract = {
           'openAsTab',
           'openInWindow',
           'manage',
+          // Pin beside the page, or float over it; stop the app (it's kept running otherwise).
+          'pin',
+          'unpin',
+          'quit',
         ]),
       })
       .strict(),
     output: z.void(),
-    surfaces: ['shell'],
+    // The shell's header, or the overlay's when the app floats.
+    surfaces: ['shell', 'overlay'],
   },
   /** The App Library (redesign brief §7): open it; open an app; add one from the catalogue. */
   'applib:open': {
@@ -2100,6 +2111,8 @@ export const events = {
   'state:sounds': soundStateSchema,
   /** The docked app panel (null: closed), sent to its window's shell. */
   'state:appPanel': appPanelStateSchema.nullable(),
+  /** The sidebar apps running, sent to its window's shell. */
+  'state:appsAlive': z.array(aliveAppSchema),
   /** The customization preferences, sent to every shell and overlay. */
   'state:ui': uiPrefsSchema,
   /** Google Drive's connection, sent to Settings. */
