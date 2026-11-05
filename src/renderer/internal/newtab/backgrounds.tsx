@@ -5,7 +5,7 @@ import { backgroundKey, DEFAULT_LOOK, lookFilter } from '@shared/backgrounds';
 import type { BackgroundLook, Rotation, UnsplashPhoto } from '@shared/backgrounds';
 import { BUILTIN_WALLPAPERS } from '@shared/types/newtab';
 import type { NewTabState, WallpaperChoice } from '@shared/types/newtab';
-import { backgroundCss, GRAIN, WALLPAPER_CSS } from './wallpapers';
+import { ATMOSPHERE_FIELDS, backgroundCss, GRAIN, WALLPAPER_CSS } from './wallpapers';
 
 const invoke = window.orbit.invoke;
 
@@ -24,6 +24,7 @@ export function Wallpaper(props: {
 }) {
   const { choice, state, look } = props;
   const image = choice && isImage(choice);
+  const atmosphere = choice?.kind === 'builtin' && Boolean(ATMOSPHERE_FIELDS[choice.id]);
   return (
     <div
       className="fixed inset-0 overflow-hidden"
@@ -48,6 +49,27 @@ export function Wallpaper(props: {
           data-testid="wallpaper-image"
         />
       )}
+      {choice?.kind === 'builtin' && ATMOSPHERE_FIELDS[choice.id] && look.ambient && (
+        // The atmosphere's light fields, each on its own layer, drifting very slowly (transform
+        // only; stilled by Reduce Motion, Orbit's Motion setting or Customize → Background).
+        <div
+          className="pointer-events-none absolute -inset-[12%]"
+          aria-hidden
+          data-testid="atmosphere"
+        >
+          {ATMOSPHERE_FIELDS[choice.id]!.fields.map(([x, y, color, size], i) => (
+            <div
+              key={i}
+              className="ambient absolute inset-0"
+              style={{
+                background: `radial-gradient(at ${x}% ${y}%, ${color} 0px, transparent ${size}%)`,
+                animation: `orbit-drift-${i % 3} calc(var(--dur-ambient) + ${i * 9}s) var(--ease-in-out) ${-i * 7}s infinite alternate`,
+                filter: lookFilter(look),
+              }}
+            />
+          ))}
+        </div>
+      )}
       {image && look.overlay > 0 && (
         <div
           className="absolute inset-0"
@@ -59,15 +81,19 @@ export function Wallpaper(props: {
           pale veil instead. Photos stay crisp: no grain over them. */}
       {!image && (
         <div
-          className="absolute inset-0 opacity-[0.12] mix-blend-overlay"
+          className={`absolute inset-0 mix-blend-overlay ${atmosphere ? 'opacity-[0.06]' : 'opacity-[0.12]'}`}
           style={{ background: GRAIN }}
         />
       )}
       <div
         className={`absolute inset-0 transition-colors duration-500 ${
           props.light
-            ? 'bg-white/45'
-            : 'bg-[radial-gradient(ellipse_at_center,transparent_30%,rgb(0_0_0/0.35)_100%)]'
+            ? atmosphere
+              ? 'bg-white/15'
+              : 'bg-white/45'
+            : atmosphere
+              ? 'bg-[radial-gradient(ellipse_at_center,transparent_45%,rgb(0_0_0/0.22)_100%)]'
+              : 'bg-[radial-gradient(ellipse_at_center,transparent_30%,rgb(0_0_0/0.35)_100%)]'
         }`}
       />
     </div>
@@ -528,6 +554,18 @@ function Adjustments(props: {
           onChange={(e) => set({ blur: e.target.checked ? 8 : 0 })}
           className="orbit-switch"
           data-testid="look-blur-toggle"
+        />
+      </label>
+      {/* Atmospheres drift very slowly; this stills them (Reduce Motion always does). */}
+      <label className="mt-2 flex items-center justify-between gap-3 rounded-[12px] bg-white/[0.06] px-3 py-2 text-[13px] font-medium">
+        Gentle motion in atmospheres
+        <input
+          type="checkbox"
+          role="switch"
+          checked={look.ambient}
+          onChange={(e) => set({ ambient: e.target.checked })}
+          className="orbit-switch"
+          data-testid="look-ambient-toggle"
         />
       </label>
       <details

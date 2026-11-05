@@ -1,6 +1,20 @@
-import { Check, Crosshair, LayoutGrid, Moon, Plus, Quote, Search, Sun, X } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Check,
+  Crosshair,
+  LayoutGrid,
+  Mic,
+  Moon,
+  Plus,
+  Quote,
+  Search,
+  Sparkles,
+  Sun,
+  X,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
+import { looksLikeQuestion } from '@shared/voice';
 import { greetingFor } from '@shared/profile';
 import { quoteFor } from '@shared/quotes';
 import type { NewTabState, WallpaperChoice } from '@shared/types/newtab';
@@ -63,7 +77,10 @@ export function NewTabPage() {
         light={light}
       />
       {shownChoice?.kind === 'unsplash' && <UnsplashCredit photo={shownChoice.photo} />}
-      <div className="absolute top-5 right-5 z-10 flex gap-2">
+      <div
+        className="surface-clear absolute top-4 right-4 z-10 flex gap-0.5 rounded-full p-1"
+        data-testid="home-controls"
+      >
         <CornerButton
           label={light ? 'Dark Glass' : 'Light Glass'}
           light={light}
@@ -73,7 +90,7 @@ export function NewTabPage() {
           }
           testId="theme-toggle"
         >
-          {light ? <Moon size={18} /> : <Sun size={18} />}
+          {light ? <Moon size={16} /> : <Sun size={16} />}
         </CornerButton>
         <CornerButton
           label="Customize"
@@ -82,7 +99,7 @@ export function NewTabPage() {
           expanded={customizing}
           testId="customize-button"
         >
-          <LayoutGrid size={18} />
+          <LayoutGrid size={16} />
         </CornerButton>
       </div>
 
@@ -96,11 +113,11 @@ export function NewTabPage() {
             <Clock compact={compact} />
             <Greeting name={state.name} onChange={setState} />
             {state.home.tagline && (
-              <p className="mt-2 text-[17px] opacity-85" data-testid="tagline">
+              <p className="mt-1.5 text-[14.5px] opacity-70" data-testid="tagline">
                 {state.home.tagline}
               </p>
             )}
-            <SearchBox light={light} />
+            <SearchBox light={light} ai={state.ai} />
           </section>
           <div className="min-h-8 flex-1" />
           <WidgetGrid
@@ -125,7 +142,7 @@ export function NewTabPage() {
       )}
 
       {state?.home.show.shortcuts && (
-        <Dock shortcuts={state.shortcuts} light={light} glass={glass(light)} onChange={setState} />
+        <Dock shortcuts={state.shortcuts} light={light} glass="surface-frost" onChange={setState} />
       )}
 
       {menuAt && state && (
@@ -173,11 +190,10 @@ export function NewTabPage() {
   );
 }
 
-/** The glass every widget sits on. */
-function glass(light: boolean): string {
-  return light
-    ? 'border border-white/70 bg-white/65 shadow-[0_10px_40px_-12px_rgb(0_0_0/0.25)] backdrop-blur-2xl'
-    : 'border border-white/[0.14] bg-[rgb(12_16_36/0.42)] shadow-[0_10px_40px_-12px_rgb(0_0_0/0.5)] backdrop-blur-2xl';
+/** What widgets sit on: a content surface — nearly solid, for reading (the redesign's surface
+ *  vocabulary; [data-theme] on the page picks light or dark). */
+function glass(_light: boolean): string {
+  return 'surface-content';
 }
 
 function CornerButton(props: {
@@ -195,8 +211,12 @@ function CornerButton(props: {
       title={props.label}
       aria-expanded={props.expanded}
       onClick={props.onClick}
-      className={`press grid size-12 place-items-center rounded-[16px] ${glass(props.light)} ${
-        props.light ? 'hover:bg-white/85' : 'hover:bg-[rgb(12_16_36/0.6)]'
+      className={`lift grid size-9 place-items-center rounded-full ${
+        props.expanded
+          ? 'surface-selected'
+          : props.light
+            ? 'hover:bg-white/60'
+            : 'hover:bg-white/[0.12]'
       }`}
       data-testid={props.testId}
     >
@@ -231,18 +251,18 @@ function Clock({ compact = false }: { compact?: boolean }) {
   const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const date = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
   return (
-    <div className="[text-shadow:0_2px_24px_rgb(0_0_0/0.18)]">
+    <div className="[text-shadow:0_2px_24px_rgb(0_0_0/0.14)]">
       <div
         className={`${
           compact
-            ? 'text-[clamp(40px,min(5.5vw,7vh),64px)]'
-            : 'text-[clamp(48px,min(8.5vw,11vh),96px)]'
-        } leading-none font-bold tracking-[-0.03em] tabular-nums transition-[font-size] duration-300`}
+            ? 'text-[clamp(36px,min(4.6vw,6vh),54px)]'
+            : 'text-[clamp(44px,min(6.4vw,8.5vh),76px)]'
+        } leading-none font-semibold tracking-[-0.035em] tabular-nums transition-[font-size] duration-[var(--dur-layout)] ease-[var(--ease-out)]`}
         data-testid="clock"
       >
         {time}
       </div>
-      <div className="mt-2 text-[17px] font-medium opacity-75">{date}</div>
+      <div className="mt-2 text-[14px] font-medium tracking-wide opacity-70">{date}</div>
     </div>
   );
 }
@@ -257,9 +277,9 @@ function Greeting({ name, onChange }: { name: string; onChange: (s: NewTabState)
     if (value.trim() !== name) void invoke('newtab:setName', { name: value.trim() }).then(onChange);
   };
   return (
-    <div className="mt-[3.5vh] flex flex-col items-center">
+    <div className="mt-[2.6vh] flex flex-col items-center">
       <h1
-        className="text-[clamp(26px,3.4vw,38px)] font-bold tracking-[-0.02em] [text-shadow:0_2px_20px_rgb(0_0_0/0.15)]"
+        className="text-[clamp(20px,2.4vw,28px)] font-semibold tracking-[-0.015em] [text-shadow:0_2px_20px_rgb(0_0_0/0.12)]"
         data-testid="greeting"
       >
         {hello}
@@ -299,8 +319,25 @@ function Greeting({ name, onChange }: { name: string; onChange: (s: NewTabState)
   );
 }
 
-function SearchBox({ light }: { light: boolean }) {
+type Route = 'open' | 'search' | 'ask';
+const ROUTE_LABEL: Record<Route, string> = {
+  open: 'Open address',
+  search: 'Search the web',
+  ask: 'Ask Orbit',
+};
+/** "github.com", "localhost:5173", "https://…": what's typed is an address. */
+const looksLikeAddress = (text: string) =>
+  /^(https?:\/\/|localhost(:\d+)?(\/|$))/i.test(text) || /^[^\s/]+\.[a-z]{2,}(\/\S*)?$/i.test(text);
+
+/**
+ * The Homepage's command input ("Quietly Alive" redesign): one place to search the web, open an
+ * address or ask Orbit AI — typed, or spoken with the microphone. As you type, the ways it can
+ * go open beneath it; the likely one is first (questions go to Orbit AI). ⏎ takes the first,
+ * ⌘⏎ the second, ↑↓ choose.
+ */
+function SearchBox({ light, ai }: { light: boolean; ai: boolean }) {
   const [value, setValue] = useState('');
+  const [chosen, setChosen] = useState(0);
   const input = useRef<HTMLInputElement>(null);
 
   // The tab gets focus when it opens; put the caret straight into the box. ⌘K comes back to it.
@@ -317,46 +354,134 @@ function SearchBox({ light }: { light: boolean }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const query = value.trim();
+  const routes: Route[] = !query
+    ? []
+    : looksLikeAddress(query)
+      ? ['open', 'search']
+      : ai
+        ? looksLikeQuestion(query)
+          ? ['ask', 'search']
+          : ['search', 'ask']
+        : ['search'];
+  const current = Math.min(chosen, Math.max(0, routes.length - 1));
+
+  const go = (route: Route | undefined) => {
+    if (!route || !query) return;
+    if (route === 'ask') void invoke('newtab:ask', { text: query });
+    else void invoke('newtab:navigate', { input: query });
+    if (route === 'ask') setValue('');
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const query = value.trim();
-    if (query) void invoke('newtab:navigate', { input: query });
+    go(routes[current]);
   };
+  const onKeyDown = (e: ReactKeyboardEvent) => {
+    if (e.key === 'Enter' && e.metaKey) {
+      e.preventDefault();
+      go(routes[1] ?? routes[0]);
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (routes.length < 2) return;
+      e.preventDefault();
+      setChosen((i) => (i + (e.key === 'ArrowDown' ? 1 : routes.length - 1)) % routes.length);
+    }
+  };
+  const lead = routes[current] ?? (ai ? 'ask' : 'search');
 
   return (
-    <form onSubmit={submit} className="mt-[3.5vh] w-full max-w-[600px]" role="search">
+    <form onSubmit={submit} className="mt-[3.2vh] w-full max-w-[620px]" role="search">
       <label
-        className={`flex h-[46px] items-center gap-3 rounded-full px-5 transition focus-within:ring-2 ${
-          light ? 'focus-within:ring-black/10' : 'focus-within:ring-white/25'
-        } ${glass(light)}`}
+        className={`surface-frost flex h-[52px] items-center gap-3 rounded-full pr-1.5 pl-5 transition-[box-shadow] duration-[var(--dur-hover)] focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--orbit-focus)_45%,transparent)]`}
       >
-        <Search size={17} className="shrink-0 opacity-80" />
+        <span
+          className="relative grid size-[18px] shrink-0 place-items-center opacity-80"
+          aria-hidden
+        >
+          <Search
+            size={17}
+            className={`absolute transition-[opacity,transform] duration-[var(--dur-hover)] ${lead === 'ask' ? 'scale-75 opacity-0' : 'opacity-100'}`}
+          />
+          <Sparkles
+            size={17}
+            className={`absolute transition-[opacity,transform] duration-[var(--dur-hover)] ${lead === 'ask' ? 'opacity-100' : 'scale-75 opacity-0'}`}
+          />
+        </span>
         <input
           ref={input}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="Search the web"
-          aria-label="Search or enter an address"
-          className={`h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none ${
-            light ? 'placeholder:text-neutral-500' : 'placeholder:text-white/65'
+          onChange={(e) => {
+            setValue(e.target.value);
+            setChosen(0);
+          }}
+          onKeyDown={onKeyDown}
+          placeholder={ai ? 'Ask Orbit or search the web…' : 'Search the web or type an address…'}
+          aria-label={ai ? 'Ask Orbit, search, or enter an address' : 'Search or enter an address'}
+          className={`h-full min-w-0 flex-1 bg-transparent text-[15.5px] outline-none ${
+            light ? 'placeholder:text-neutral-500' : 'placeholder:text-white/60'
           }`}
           spellCheck={false}
           autoComplete="off"
           data-testid="newtab-search"
         />
-        <span className="flex shrink-0 gap-1 text-[11px] font-medium opacity-70" aria-hidden>
-          <kbd
-            className={`rounded-[6px] px-1.5 py-0.5 ${light ? 'bg-black/[0.07]' : 'bg-white/15'}`}
-          >
-            ⌘
-          </kbd>
-          <kbd
-            className={`rounded-[6px] px-1.5 py-0.5 ${light ? 'bg-black/[0.07]' : 'bg-white/15'}`}
-          >
-            K
-          </kbd>
-        </span>
+        {!query && (
+          <span className="flex shrink-0 gap-1 text-[11px] font-medium opacity-60" aria-hidden>
+            <kbd
+              className={`rounded-[6px] px-1.5 py-0.5 ${light ? 'bg-black/[0.07]' : 'bg-white/15'}`}
+            >
+              ⌘
+            </kbd>
+            <kbd
+              className={`rounded-[6px] px-1.5 py-0.5 ${light ? 'bg-black/[0.07]' : 'bg-white/15'}`}
+            >
+              K
+            </kbd>
+          </span>
+        )}
+        <button
+          type="button"
+          aria-label="Speak (⇧⌘Space)"
+          title="Speak (⇧⌘Space)"
+          onClick={() => void invoke('voice:toggle', {})}
+          className={`lift grid size-10 shrink-0 place-items-center rounded-full ${
+            light ? 'hover:bg-black/[0.06]' : 'hover:bg-white/[0.12]'
+          }`}
+          data-testid="newtab-voice"
+        >
+          <Mic size={17} className="opacity-85" />
+        </button>
       </label>
+      {/* The ways this can go, opening out of the box as you type. */}
+      <div className="expand mt-2" data-open={routes.length > 0} aria-hidden={routes.length === 0}>
+        <div className="flex justify-center gap-1.5" role="listbox" aria-label="Go to">
+          {routes.map((route, i) => (
+            <button
+              key={route}
+              type="button"
+              role="option"
+              aria-selected={i === current}
+              tabIndex={-1}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => go(route)}
+              className={`lift flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium ${
+                i === current ? 'surface-selected' : 'surface-clear opacity-80'
+              }`}
+              data-testid="newtab-route"
+              data-route={route}
+              data-current={i === current}
+            >
+              {route === 'ask' ? (
+                <Sparkles size={13} />
+              ) : route === 'open' ? (
+                <ArrowUpRight size={13} />
+              ) : (
+                <Search size={13} />
+              )}
+              {ROUTE_LABEL[route]}
+              <span className="ml-0.5 text-[11px] opacity-55">{i === 0 ? '⏎' : '⌘⏎'}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </form>
   );
 }

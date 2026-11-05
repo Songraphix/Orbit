@@ -123,7 +123,7 @@ export const settingsDefaults: Settings = {
   'window.state': { bounds: null, isMaximized: false },
   'sidebar.width': 260,
   'sidebar.visible': true,
-  'newtab.wallpaper': { kind: 'builtin', id: 'aurora' },
+  'newtab.wallpaper': { kind: 'builtin', id: 'tide' },
   'newtab.look': DEFAULT_LOOK,
   'newtab.favorites': [],
   'newtab.rotation': 'off',

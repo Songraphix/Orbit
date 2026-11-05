@@ -36,6 +36,8 @@ export const lookSchema = z.object({
   overlay: z.number().min(0).max(80),
   position: z.enum(['center', 'top', 'bottom']),
   fit: z.enum(['cover', 'contain']),
+  /** Atmospheres drift very slowly (off: still; Reduce Motion stills them too). */
+  ambient: z.boolean().default(true),
 });
 export type BackgroundLook = z.output<typeof lookSchema>;
 
@@ -47,6 +49,7 @@ export const DEFAULT_LOOK: BackgroundLook = {
   overlay: 15,
   position: 'center',
   fit: 'cover',
+  ambient: true,
 };
 
 export const ROTATIONS = ['off', 'daily', 'every-tab'] as const;

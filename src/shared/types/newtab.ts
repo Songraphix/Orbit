@@ -5,6 +5,10 @@ import { homeSettingsSchema, shortcutSchema, todoSchema } from './home';
 
 /** Built-in wallpapers (rendered as layered CSS gradients by the new tab page). */
 export const BUILTIN_WALLPAPERS = [
+  // Atmospheres ("Quietly Alive" redesign): soft light fields that drift very slowly.
+  { id: 'tide', name: 'Tidal Dusk' },
+  { id: 'seaglass', name: 'Sea Glass Morning' },
+  { id: 'pearl', name: 'Pearl Fog' },
   { id: 'aurora', name: 'Aurora' },
   { id: 'dusk', name: 'Dusk' },
   { id: 'lagoon', name: 'Lagoon' },
@@ -74,5 +78,7 @@ export const newTabStateSchema = wallpaperStateSchema.extend({
   layoutScope: z.enum(['all', 'space']).default('all'),
   /** This page's Space (for "Only in …"). */
   spaceName: z.string().default(''),
+  /** Orbit AI can answer (a key and AI on): the command input offers Ask Orbit. */
+  ai: z.boolean().default(false),
 });
 export type NewTabState = z.output<typeof newTabStateSchema>;

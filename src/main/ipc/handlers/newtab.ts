@@ -46,6 +46,8 @@ export function registerNewTabHandlers(
     openNote: (window: WindowController, id: string) => void;
     /** Opens a favourite where it's set to open (App Hub). */
     openApp?: (window: WindowController, itemId: string) => void;
+    /** Orbit AI can answer (a key, and AI on). */
+    aiAvailable?: () => boolean;
     /** Asks Orbit AI (the assistant opens with the question). */
     ask?: (window: WindowController, text: string) => void;
     /** Google Drive's recent files, or null when it isn't connected. */
@@ -124,6 +126,7 @@ export function registerNewTabHandlers(
       name: owner.window.store.profiles.find((p) => p.id === profileId)?.displayName ?? '',
       shortcuts: home.shortcuts(profileId),
       todos: todos(profileId),
+      ai: deps.aiAvailable?.() ?? false,
       ...layoutFor(owner),
     };
   };

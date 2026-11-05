@@ -28,9 +28,10 @@ describe('Homepage widgets', () => {
     for (const type of WIDGET_TYPES) {
       expect(WIDGETS[type].sizes).toContain(WIDGETS[type].size);
     }
-    const today = newWidget('today');
-    expect(nextSize(today)).toBe('m');
-    expect(nextSize({ ...today, size: 'm' })).toBe('l');
+    const today = newWidget('today'); // two tiles wide to start (the redesign's calmer Homepage)
+    expect(today.size).toBe('m');
+    expect(nextSize(today)).toBe('l');
+    expect(nextSize({ ...today, size: 'l' })).toBe('m');
     expect(nextSize(newWidget('stopwatch'))).toBe('s'); // only one size
   });
 

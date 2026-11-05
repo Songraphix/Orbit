@@ -32,6 +32,32 @@
   --dur-fast: 140ms;
   --dur: 240ms;
   --dur-slow: 380ms;
+  /* The redesign's timing scale ("Quietly Alive", docs/REDESIGN-AUDIT.md): one duration per
+     kind of change, so similar things move alike. */
+  --dur-hover: 140ms;
+  --dur-press: 120ms;
+  --dur-popover: 190ms;
+  --dur-panel: 260ms;
+  --dur-modal: 280ms;
+  --dur-layout: 300ms;
+  --stagger: 30ms;
+  /* Ambient background drift: very slow, very small. */
+  --dur-ambient: 48s;
+
+  /* ── Palette ("Quietly Alive"): atmospheric blue, sea glass, mist, pearl and sand, with one
+     restrained accent. Surfaces and wallpapers read these; Spaces' themes still tint the
+     sidebar. */
+  --orbit-ink: #0f1b24;
+  --orbit-night: #0c1f26;
+  --orbit-night-2: #12303a;
+  --orbit-mist: #e8eef1;
+  --orbit-sky: #8db4d1;
+  --orbit-sea-glass: #7cc4b5;
+  --orbit-pearl: #f7f4ef;
+  --orbit-sand: #dccdb5;
+  --orbit-line: rgb(255 255 255 / 0.14);
+  --orbit-line-dark: rgb(15 27 36 / 0.1);
+  --orbit-focus: #6cb8d9;
 }
 
 html,
@@ -158,10 +184,13 @@ body {
   --text-meta: 11.5px;
   --text-meta--line-height: 1.4;
 
-  /* Corner radii: controls (buttons, fields) · cards and groups · panels and sheets. */
+  /* Corner radii: controls (buttons, fields) · cards and groups · panels and sheets · the
+     largest floating panels · capsules (pills, command inputs, floating control groups). */
   --radius-control: 8px;
   --radius-card: 14px;
   --radius-panel: 20px;
+  --radius-sheet: 26px;
+  --radius-capsule: 999px;
 }
 
 /* The accent used for fills under white text (buttons, the on state of switches). */
@@ -323,6 +352,138 @@ body {
   background: var(--glass-solid, rgb(26 25 32 / 0.6));
 }
 
+/* ── Surface vocabulary ("Quietly Alive"): six kinds, nothing else. Dark by default; a
+   [data-theme='light'] ancestor (the Homepage's light glass) switches to the light set.
+   - content: nearly solid, for reading and dense information (widgets, cards)
+   - frost: moderate blur, for toolbars and inputs with text over the atmosphere
+   - clear: more transparent glass, only for small controls over rich backgrounds
+   - popover: strongest separation, for menus and temporary floating UI
+   - selected: a soft tint and lit edge for what's active
+   - quiet: almost nothing, for inactive items */
+.surface-content,
+.surface-frost,
+.surface-clear,
+.surface-popover {
+  border: 0.5px solid var(--orbit-line);
+}
+.surface-content {
+  background: rgb(14 31 38 / 0.8);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 18px 44px -22px rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(10px);
+}
+.surface-frost {
+  background: rgb(18 40 50 / 0.42);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 10px 34px -14px rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(22px) saturate(140%);
+}
+.surface-clear {
+  background: rgb(255 255 255 / 0.08);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    0 6px 18px -10px rgb(0 0 0 / 0.4);
+  backdrop-filter: blur(16px) saturate(150%);
+}
+.surface-popover {
+  background: rgb(16 34 42 / 0.88);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 0 0 0.5px rgb(0 0 0 / 0.4),
+    0 24px 64px -16px rgb(0 0 0 / 0.6);
+  backdrop-filter: blur(28px) saturate(150%);
+}
+.surface-selected {
+  background: rgb(124 196 181 / 0.18);
+  box-shadow: inset 0 0 0 0.5px rgb(124 196 181 / 0.45);
+}
+.surface-quiet {
+  background: transparent;
+}
+[data-theme='light'] .surface-content {
+  background: rgb(250 248 244 / 0.86);
+  border-color: var(--orbit-line-dark);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.7),
+    0 18px 44px -24px rgb(15 27 36 / 0.3);
+}
+[data-theme='light'] .surface-frost {
+  background: rgb(250 248 244 / 0.55);
+  border-color: rgb(255 255 255 / 0.7);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.8),
+    0 10px 34px -16px rgb(15 27 36 / 0.28);
+}
+[data-theme='light'] .surface-clear {
+  background: rgb(255 255 255 / 0.42);
+  border-color: rgb(255 255 255 / 0.75);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    0 6px 18px -10px rgb(15 27 36 / 0.25);
+}
+[data-theme='light'] .surface-popover {
+  background: rgb(250 248 244 / 0.94);
+  border-color: var(--orbit-line-dark);
+}
+[data-theme='light'] .surface-selected {
+  background: rgb(124 196 181 / 0.22);
+  box-shadow: inset 0 0 0 0.5px rgb(60 140 125 / 0.4);
+}
+/* Solid surfaces (Settings → Appearance) and macOS "Reduce transparency": no see-through. */
+.surfaces-solid :is(.surface-content, .surface-frost, .surface-clear, .surface-popover) {
+  backdrop-filter: none;
+  background: rgb(20 38 46);
+}
+.surfaces-solid
+  [data-theme='light']
+  :is(.surface-content, .surface-frost, .surface-clear, .surface-popover) {
+  background: rgb(248 246 242);
+}
+@media (prefers-reduced-transparency: reduce) {
+  :is(.surface-content, .surface-frost, .surface-clear, .surface-popover) {
+    backdrop-filter: none;
+    background: rgb(20 38 46);
+  }
+  [data-theme='light'] :is(.surface-content, .surface-frost, .surface-clear, .surface-popover) {
+    background: rgb(248 246 242);
+  }
+}
+
+/* Lift: a control over the atmosphere answers the pointer with a hair of height and light. */
+.lift {
+  transition:
+    transform var(--dur-hover) var(--ease-out),
+    background-color var(--dur-hover) var(--ease-out),
+    box-shadow var(--dur-hover) var(--ease-out);
+}
+.lift:hover {
+  transform: translateY(-1px);
+}
+.lift:active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: var(--dur-press);
+}
+
+/* Expands open (rows of a grid, 0fr → 1fr): for content that grows out of a control. */
+.expand {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--dur-popover) var(--ease-out),
+    opacity var(--dur-popover) var(--ease-out);
+}
+.expand > * {
+  min-height: 0;
+  overflow: hidden;
+}
+.expand[data-open='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
 /* The page card's edge: a hairline and a soft lift off the sidebar (F-01). */
 .card-depth {
   box-shadow:
@@ -426,6 +587,16 @@ body {
 
 /* Keyboard focus is always visible on controls (mouse clicks don't show it). Text fields keep
    their own focus styles. */
+/* Pause ambient motion (atmosphere drift) when asked: Reduce Motion, or Orbit's own setting. */
+@media (prefers-reduced-motion: reduce) {
+  .ambient {
+    animation: none !important;
+  }
+}
+.motion-reduced .ambient {
+  animation: none !important;
+}
+
 :where(button, [role='button'], [role='switch'], [role='tab'], a, select):focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 75%, white);
   outline-offset: 1px;
@@ -813,4 +984,30 @@ button:hover > .lib-icon {
   background:
     radial-gradient(rgb(0 0 0 / 0.09) 1px, transparent 1.2px) 0 0 / 14px 14px,
     #eeeef2;
+}
+
+/* ── Atmosphere drift (the Homepage's light fields): small, slow, transform only. ───────── */
+@keyframes orbit-drift-0 {
+  from {
+    transform: translate3d(-2%, -1.5%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2.5%, 2%, 0) scale(1.06);
+  }
+}
+@keyframes orbit-drift-1 {
+  from {
+    transform: translate3d(2%, -2%, 0) scale(1.04);
+  }
+  to {
+    transform: translate3d(-2.5%, 1.5%, 0) scale(0.98);
+  }
+}
+@keyframes orbit-drift-2 {
+  from {
+    transform: translate3d(0, 2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(1.5%, -2.5%, 0) scale(1.05);
+  }
 }

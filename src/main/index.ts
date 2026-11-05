@@ -198,6 +198,8 @@ function openFocusView(controller: WindowController): void {
 let assistantService: AssistantService | null = null;
 let voiceService: VoiceService | null = null;
 let driveService: DriveService | null = null;
+/** Orbit AI's service, for pages that only ask whether it can answer. */
+let aiServiceRef: AIService | null = null;
 let openGrouping: ((controller: WindowController) => void) | null = null;
 let toolkitService: ToolkitService | null = null;
 
@@ -864,12 +866,12 @@ void app.whenReady().then(() => {
     join(app.getPath('userData'), 'anthropic-key.bin'),
     testCipher ?? safeStorage,
   );
-  const ai = new AIService({
+  const ai = (aiServiceRef = new AIService({
     apiKey: () => keyStore.get(),
     baseURL: devOnly('ORBIT_ANTHROPIC_BASE_URL'),
     prefs: () => persistence!.settings.get('ai.prefs'),
     activity: persistence.aiActivity,
-  });
+  }));
   const refreshSidebars = () => windows?.all().forEach((c) => c.tabs.refresh());
   const tidy = new TidyService({
     store,
@@ -1199,6 +1201,7 @@ void app.whenReady().then(() => {
       openApp: (controller, itemId) =>
         void openFavorite(controller, itemId, (url) => openLittle?.(url)),
       ask: (controller, text) => assistantService?.open(controller, { prompt: text }),
+      aiAvailable: () => aiServiceRef?.available ?? false,
       driveRecent: async () => {
         if (!driveService?.connected) return null;
         const now = Date.now();

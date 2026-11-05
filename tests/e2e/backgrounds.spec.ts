@@ -36,7 +36,7 @@ test('backgrounds: preview and cancel, colours, gradients, adjustments, favourit
     await page.getByTestId('background-color').nth(3).click();
     expect(await key(page)).toBe('color:#2b1b4a');
     await page.getByTestId('background-cancel').click();
-    expect(await key(page)).toBe('builtin:aurora');
+    expect(await key(page)).toBe('builtin:tide');
 
     // A gradient, applied and made a favourite; then Dune as a second favourite.
     await page.locator('[data-testid="background-tab"][data-tab="gradient"]').click();

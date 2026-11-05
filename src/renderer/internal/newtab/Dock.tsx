@@ -14,7 +14,7 @@ const messageOf = (e: unknown) =>
 
 /** An icon's resting size, and how much it grows right under the pointer (like macOS). */
 const ICON = 46;
-const GROW = 0.42;
+const GROW = 0.3;
 /** How far (px) from the pointer icons still grow a little. */
 const REACH = 120;
 

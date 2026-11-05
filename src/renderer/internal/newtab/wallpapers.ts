@@ -11,7 +11,59 @@ function mesh(base: string, blobs: [x: number, y: number, color: string, size: n
   ].join(', ');
 }
 
+/**
+ * Atmospheres: a calm base gradient (sky to depth) under a few very soft light fields. The
+ * fields also drift on their own layers (see ATMOSPHERE_FIELDS) when ambient motion is on.
+ */
+export const ATMOSPHERE_FIELDS: Partial<
+  Record<
+    BuiltinWallpaperId,
+    { base: string; fields: [x: number, y: number, color: string, size: number][] }
+  >
+> = {
+  tide: {
+    base: 'linear-gradient(170deg, #20414d 0%, #12303a 38%, #0b1d25 72%, #08161c 100%)',
+    fields: [
+      [22, 18, 'rgb(124 196 181 / 0.55)', 46],
+      [78, 12, 'rgb(141 180 209 / 0.5)', 44],
+      [60, 82, 'rgb(36 92 110 / 0.7)', 52],
+      [14, 88, 'rgb(220 205 181 / 0.18)', 40],
+    ],
+  },
+  seaglass: {
+    base: 'linear-gradient(175deg, #dfeaee 0%, #c9dde2 40%, #a9c9cf 75%, #8fb6bd 100%)',
+    fields: [
+      [18, 22, 'rgb(247 244 239 / 0.85)', 44],
+      [80, 18, 'rgb(141 180 209 / 0.55)', 46],
+      [62, 86, 'rgb(124 196 181 / 0.6)', 50],
+      [10, 80, 'rgb(220 205 181 / 0.45)', 40],
+    ],
+  },
+  pearl: {
+    base: 'linear-gradient(170deg, #f3eee6 0%, #e7e0d4 45%, #d6d3cb 78%, #c4cdcf 100%)',
+    fields: [
+      [24, 20, 'rgb(255 252 247 / 0.9)', 46],
+      [80, 30, 'rgb(220 205 181 / 0.55)', 44],
+      [50, 92, 'rgb(141 180 209 / 0.4)', 50],
+    ],
+  },
+};
+
+const atmosphere = (id: BuiltinWallpaperId) => {
+  const a = ATMOSPHERE_FIELDS[id]!;
+  return [
+    ...a.fields.map(
+      ([x, y, color, size]) =>
+        `radial-gradient(at ${x}% ${y}%, ${color} 0px, transparent ${size}%)`,
+    ),
+    a.base,
+  ].join(', ');
+};
+
 export const WALLPAPER_CSS: Record<BuiltinWallpaperId, string> = {
+  tide: atmosphere('tide'),
+  seaglass: atmosphere('seaglass'),
+  pearl: atmosphere('pearl'),
   aurora: mesh('#0b1026', [
     [18, 18, '#38e8b6', 48],
     [82, 8, '#7b5cff', 46],

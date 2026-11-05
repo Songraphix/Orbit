@@ -33,7 +33,7 @@ export const WIDGETS: Record<
   WidgetType,
   { name: string; description: string; sizes: readonly WidgetSize[]; size: WidgetSize }
 > = {
-  today: { name: 'Today', description: 'Your tasks due today', sizes: ['m', 'l'], size: 'l' },
+  today: { name: 'Today', description: 'Your tasks due today', sizes: ['m', 'l'], size: 'm' },
   focus: {
     name: 'Focus',
     description: 'The focus timer and sounds',
@@ -157,7 +157,7 @@ export function layoutFromShow(show: { today: boolean; quote: boolean }): HomeLa
   return {
     widgets: [
       ...(show.today
-        ? [{ id: 'today', type: 'today' as const, size: 'l' as const, options: {} }]
+        ? [{ id: 'today', type: 'today' as const, size: 'm' as const, options: {} }]
         : []),
       ...(show.quote
         ? [{ id: 'quote', type: 'quote' as const, size: 'm' as const, options: {} }]
