@@ -12,22 +12,24 @@ test('sidebar toggles from the menu, resizes by drag, and both persist', async (
   const first = await launchOrbit();
   const { app, win } = first;
 
-  // Defaults: 260 px sidebar, card inset 8 px to its right.
+  // Defaults: the rail (10 + 60), a 10 px gap, the 236 px sidebar island, the card 10 px on.
   await expect(win.getByTestId('sidebar')).toBeVisible();
-  expect((await box(win, 'sidebar')).width).toBe(260);
-  expect((await box(win, 'content-card')).x).toBe(260);
+  const island = await box(win, 'sidebar');
+  expect(island.x).toBe(80);
+  expect(island.width).toBe(236);
+  expect((await box(win, 'content-card')).x).toBe(326);
 
-  // Drag the right edge from 260 → 320 px. The new tab page's native view sits in the card,
+  // Drag the right edge from 236 → 320 px. The new tab page's native view sits in the card,
   // so this also proves the drag isn't swallowed once the pointer crosses onto the page.
   const handle = await box(win, 'sidebar-resize-handle');
   const y = handle.y + 200;
   await win.mouse.move(handle.x + handle.width / 2, y);
   await win.mouse.down();
-  await win.mouse.move(300, y, { steps: 5 });
-  await win.mouse.move(320, y, { steps: 5 });
+  await win.mouse.move(80 + 300, y, { steps: 5 });
+  await win.mouse.move(80 + 320, y, { steps: 5 });
   await win.mouse.up();
   await expect.poll(async () => (await box(win, 'sidebar')).width).toBe(320);
-  expect((await box(win, 'content-card')).x).toBe(320);
+  expect((await box(win, 'content-card')).x).toBe(410);
   // After the drag the live page is back (snapshot gone, view visible at the new position).
   await expect(win.getByTestId('resize-snapshot')).toHaveCount(0);
   await expect
@@ -38,7 +40,7 @@ test('sidebar toggles from the menu, resizes by drag, and both persist', async (
           .map((v) => v.getBounds().x),
       ),
     )
-    .toEqual([320]);
+    .toEqual([410]);
 
   // Toggle via the real View → Toggle Sidebar menu item (⌘S).
   const clickToggle = () =>
@@ -47,7 +49,8 @@ test('sidebar toggles from the menu, resizes by drag, and both persist', async (
     );
   await clickToggle();
   await expect(win.getByTestId('sidebar')).toHaveCount(0);
-  expect((await box(win, 'content-card')).x).toBe(8);
+  await expect(win.getByTestId('app-rail')).toHaveCount(0); // the rail hides with it
+  expect((await box(win, 'content-card')).x).toBe(10);
 
   await first.close({ keepData: true });
 

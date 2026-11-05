@@ -34,7 +34,7 @@ test('tabs on top: a strip replaces the sidebar, switches, closes and opens tabs
     await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
     // The page sits below the strip.
     const layout = (await invoke(win, 'layout:get')) as { card: { y: number } };
-    expect(layout.card.y).toBe(48);
+    expect(layout.card.y).toBe(52 + 46); // the tab row, then the address row
 
     await tabs.nth(1).click();
     await expect(win.getByTestId('toolbar-address')).toContainText('Page One');

@@ -31,8 +31,8 @@ test('shows domain / title, and back / forward follow the history', async () => 
   const back = win.getByTestId('toolbar-back');
   const forward = win.getByTestId('toolbar-forward');
 
-  // New tab page: just "New Tab", nothing to go back to.
-  await expect(address).toHaveText('New Tab');
+  // The Homepage: an invitation to search, nothing to go back to.
+  await expect(address).toHaveText('Search or enter a website…');
   await expect(back).toBeDisabled();
 
   await invoke(win, 'tabs:create', { url: server.url('/one') });

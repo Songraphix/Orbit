@@ -4,12 +4,10 @@ import {
   Crosshair,
   LayoutGrid,
   Mic,
-  Moon,
   Plus,
   Quote,
   Search,
   Sparkles,
-  Sun,
   X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -25,10 +23,24 @@ import { WidgetGrid } from './widgets';
 import { Dock } from './Dock';
 import { HomeMenu } from './HomeMenu';
 import { BUILTIN_WALLPAPERS } from '@shared/types/newtab';
-import { layoutFromShow, newWidget } from '@shared/home-widgets';
+import { DEFAULT_LAYOUT, newWidget } from '@shared/home-widgets';
 import type { HomeLayout } from '@shared/home-widgets';
+import type { CanvasFrame } from '@shared/types/canvas';
+import { useCanvas } from '../../ui/canvas-store';
 
 const invoke = window.orbit.invoke;
+
+/** Where this page sits in its window (main says when it moves), so the wallpaper lines up
+ *  with the canvas the shell paints around it (UI spec §9): one surface, no seam. */
+function useCanvasFrame(): CanvasFrame | null {
+  const [frame, setFrame] = useState<CanvasFrame | null>(null);
+  useEffect(() => {
+    const off = window.orbit.on('canvas:frame', setFrame);
+    void invoke('canvas:place', {}).then((f) => setFrame((current) => current ?? f));
+    return off;
+  }, []);
+  return frame;
+}
 
 /**
  * orbit://newtab (owner request, 2026-11-01): the time, a greeting by name, your tagline, a
@@ -43,6 +55,7 @@ export function NewTabPage() {
   // A background being previewed (Apply keeps it), and adjustments as you drag.
   const [preview, setPreview] = useState<WallpaperChoice | null>(null);
   const [lookPreview, setLookPreview] = useState<BackgroundLook | null>(null);
+  const frame = useCanvasFrame();
   const shownChoice = preview ?? state?.shown ?? null;
   // With several widgets the top steps back so they fit (UI REFERENCE S3).
   const compact = (state?.layout.widgets.length ?? 0) >= 4;
@@ -56,7 +69,9 @@ export function NewTabPage() {
     void invoke('newtab:get', {}).then(setState);
   }, []);
 
-  const light = state?.home.theme === 'light';
+  // The glass follows the wallpaper (UI spec §4): light glass and dark text on a light one.
+  const canvas = useCanvas();
+  const light = canvas ? canvas.tone === 'light' : state?.home.theme === 'light';
   return (
     <main
       className={`relative h-full overflow-y-auto ${light ? 'text-neutral-900' : 'text-white'}`}
@@ -73,25 +88,15 @@ export function NewTabPage() {
       <Wallpaper
         choice={preview ?? state?.shown ?? null}
         customImage={state?.customImage ?? null}
+        frame={frame}
         look={lookPreview ?? state?.look ?? DEFAULT_LOOK}
         light={light}
       />
       {shownChoice?.kind === 'unsplash' && <UnsplashCredit photo={shownChoice.photo} />}
       <div
-        className="surface-clear absolute top-4 right-4 z-10 flex gap-0.5 rounded-full p-1"
+        className="mat-light absolute top-4 right-4 z-10 flex gap-0.5 rounded-full p-1"
         data-testid="home-controls"
       >
-        <CornerButton
-          label={light ? 'Dark Glass' : 'Light Glass'}
-          light={light}
-          onClick={() =>
-            state &&
-            void invoke('newtab:setHome', { theme: light ? 'dark' : 'light' }).then(setState)
-          }
-          testId="theme-toggle"
-        >
-          {light ? <Moon size={16} /> : <Sun size={16} />}
-        </CornerButton>
         <CornerButton
           label="Customize"
           light={light}
@@ -113,7 +118,7 @@ export function NewTabPage() {
             <Clock compact={compact} />
             <Greeting name={state.name} onChange={setState} />
             {state.home.tagline && (
-              <p className="mt-1.5 text-[14.5px] opacity-70" data-testid="tagline">
+              <p className="mt-1.5 text-[17px] opacity-80" data-testid="tagline">
                 {state.home.tagline}
               </p>
             )}
@@ -142,7 +147,7 @@ export function NewTabPage() {
       )}
 
       {state?.home.show.shortcuts && (
-        <Dock shortcuts={state.shortcuts} light={light} glass="surface-frost" onChange={setState} />
+        <Dock shortcuts={state.shortcuts} light={light} glass="mat-light" onChange={setState} />
       )}
 
       {menuAt && state && (
@@ -152,7 +157,7 @@ export function NewTabPage() {
           onPick={(action) => {
             if (action === 'customize' || action === 'background') setCustomizing(true);
             if (action === 'widgets') setEditing(true);
-            if (action === 'reset') setLayout(layoutFromShow({ today: true, quote: true }));
+            if (action === 'reset') setLayout(DEFAULT_LAYOUT);
             if (action === 'shuffle') {
               // A different background at once: one of your favourites, else a built-in.
               const pool: WallpaperChoice[] = state.favorites.length
@@ -193,7 +198,7 @@ export function NewTabPage() {
 /** What widgets sit on: a content surface — nearly solid, for reading (the redesign's surface
  *  vocabulary; [data-theme] on the page picks light or dark). */
 function glass(_light: boolean): string {
-  return 'surface-content';
+  return 'mat';
 }
 
 function CornerButton(props: {
@@ -255,14 +260,14 @@ function Clock({ compact = false }: { compact?: boolean }) {
       <div
         className={`${
           compact
-            ? 'text-[clamp(36px,min(4.6vw,6vh),54px)]'
-            : 'text-[clamp(44px,min(6.4vw,8.5vh),76px)]'
-        } leading-none font-semibold tracking-[-0.035em] tabular-nums transition-[font-size] duration-[var(--dur-layout)] ease-[var(--ease-out)]`}
+            ? 'text-[clamp(48px,min(6vw,8vh),78px)]'
+            : 'text-[clamp(60px,min(8vw,11vh),112px)]'
+        } leading-none font-medium tracking-[-0.04em] tabular-nums transition-[font-size] duration-[var(--dur-layout)] ease-[var(--ease-out)]`}
         data-testid="clock"
       >
         {time}
       </div>
-      <div className="mt-2 text-[14px] font-medium tracking-wide opacity-70">{date}</div>
+      <div className="mt-2 text-[16px] font-medium tracking-wide opacity-80">{date}</div>
     </div>
   );
 }
@@ -277,9 +282,9 @@ function Greeting({ name, onChange }: { name: string; onChange: (s: NewTabState)
     if (value.trim() !== name) void invoke('newtab:setName', { name: value.trim() }).then(onChange);
   };
   return (
-    <div className="mt-[2.6vh] flex flex-col items-center">
+    <div className="mt-[2.4vh] flex flex-col items-center">
       <h1
-        className="text-[clamp(20px,2.4vw,28px)] font-semibold tracking-[-0.015em] [text-shadow:0_2px_20px_rgb(0_0_0/0.12)]"
+        className="text-[clamp(26px,3vw,40px)] font-medium tracking-[-0.02em] [text-shadow:0_2px_20px_rgb(0_0_0/0.16)]"
         data-testid="greeting"
       >
         {hello}
@@ -389,21 +394,18 @@ function SearchBox({ light, ai }: { light: boolean; ai: boolean }) {
   const lead = routes[current] ?? (ai ? 'ask' : 'search');
 
   return (
-    <form onSubmit={submit} className="mt-[3.2vh] w-full max-w-[620px]" role="search">
+    <form onSubmit={submit} className="mt-[3.4vh] w-full max-w-[760px]" role="search">
       <label
-        className={`surface-frost flex h-[52px] items-center gap-3 rounded-full pr-1.5 pl-5 transition-[box-shadow] duration-[var(--dur-hover)] focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--orbit-focus)_45%,transparent)]`}
+        className={`mat flex h-[60px] items-center gap-3.5 rounded-full pr-2 pl-5 transition-[box-shadow] duration-[var(--dur-hover)] focus-within:shadow-[0_0_0_3px_var(--focus-ring),inset_0_1px_0_var(--glass-highlight)]`}
       >
-        <span
-          className="relative grid size-[18px] shrink-0 place-items-center opacity-80"
-          aria-hidden
-        >
+        <span className="relative grid size-[22px] shrink-0 place-items-center" aria-hidden>
           <Search
-            size={17}
+            size={20}
             className={`absolute transition-[opacity,transform] duration-[var(--dur-hover)] ${lead === 'ask' ? 'scale-75 opacity-0' : 'opacity-100'}`}
           />
           <Sparkles
-            size={17}
-            className={`absolute transition-[opacity,transform] duration-[var(--dur-hover)] ${lead === 'ask' ? 'opacity-100' : 'scale-75 opacity-0'}`}
+            size={21}
+            className={`absolute text-[var(--canvas-accent-2,currentColor)] transition-[opacity,transform] duration-[var(--dur-hover)] ${lead === 'ask' ? 'opacity-100' : 'scale-75 opacity-0'}`}
           />
         </span>
         <input
@@ -414,11 +416,13 @@ function SearchBox({ light, ai }: { light: boolean; ai: boolean }) {
             setChosen(0);
           }}
           onKeyDown={onKeyDown}
-          placeholder={ai ? 'Ask Orbit or search the web…' : 'Search the web or type an address…'}
+          placeholder={
+            ai
+              ? 'Ask Orbit anything, search the web, or use voice…'
+              : 'Search the web, type an address, or use voice…'
+          }
           aria-label={ai ? 'Ask Orbit, search, or enter an address' : 'Search or enter an address'}
-          className={`h-full min-w-0 flex-1 bg-transparent text-[15.5px] outline-none ${
-            light ? 'placeholder:text-neutral-500' : 'placeholder:text-white/60'
-          }`}
+          className="h-full min-w-0 flex-1 bg-transparent text-[16.5px] outline-none placeholder:text-[var(--fg-muted)]"
           spellCheck={false}
           autoComplete="off"
           data-testid="newtab-search"
@@ -442,12 +446,10 @@ function SearchBox({ light, ai }: { light: boolean; ai: boolean }) {
           aria-label="Speak (⇧⌘Space)"
           title="Speak (⇧⌘Space)"
           onClick={() => void invoke('voice:toggle', {})}
-          className={`lift grid size-10 shrink-0 place-items-center rounded-full ${
-            light ? 'hover:bg-black/[0.06]' : 'hover:bg-white/[0.12]'
-          }`}
+          className="lift grid size-11 shrink-0 place-items-center rounded-full bg-[var(--accent-fill)] text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.35),0_6px_18px_-6px_var(--accent-fill)] hover:brightness-110"
           data-testid="newtab-voice"
         >
-          <Mic size={17} className="opacity-85" />
+          <Mic size={19} />
         </button>
       </label>
       {/* The ways this can go, opening out of the box as you type. */}
@@ -463,7 +465,7 @@ function SearchBox({ light, ai }: { light: boolean; ai: boolean }) {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => go(route)}
               className={`lift flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium ${
-                i === current ? 'surface-selected' : 'surface-clear opacity-80'
+                i === current ? 'mat-sel' : 'mat-light opacity-85'
               }`}
               data-testid="newtab-route"
               data-route={route}

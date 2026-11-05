@@ -78,11 +78,10 @@ test('pushing the sidebar edge to the window edge hides it', async () => {
   const y = handle.y + 200;
   await win.mouse.move(handle.x + handle.width / 2, y);
   await win.mouse.down();
-  await win.mouse.move(130, y, { steps: 4 });
+  const left = (await box(win, 'sidebar')).x;
+  await win.mouse.move(left + 130, y, { steps: 4 });
   await expect.poll(async () => (await box(win, 'sidebar')).width).toBe(150); // held at the minimum
-  // At the minimum, favorites are two square tiles; the address pill still fits.
-  await expect(win.getByTestId('address-pill')).toBeVisible();
-  await win.mouse.move(60, y, { steps: 4 });
+  await win.mouse.move(left + 60, y, { steps: 4 });
   await win.mouse.up();
   await expect(win.getByTestId('sidebar')).toHaveCount(0);
   await expect(win.getByTestId('sidebar-edge')).toHaveCount(1); // and it slides out from there
@@ -116,7 +115,7 @@ test('downloads: the badge flies to the shelf; the card shows "x/y MB" while dow
   await expect(bar.getByTestId('download-flight')).toHaveCount(0); // gone after its second
 });
 
-test('the sidebar’s address pill: the site, and its link icon copies the address', async () => {
+test('the address pill: the site, and its link icon copies the address', async () => {
   const { app, win } = orbit;
   const url = server.url('/one');
   await invoke(win, 'tabs:create', { url });

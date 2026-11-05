@@ -33,8 +33,10 @@ export function registerLayoutHandlers(router: IpcRouter, windows: WindowManager
     snapshot: windowFor(sender.webContentsId).tabs.freeze(),
   }));
 
-  router.handle('dock:setWidth', ({ width }, { sender }) => {
-    windowFor(sender.webContentsId).layout.setDockWidth(width);
+  router.handle('dock:setWidth', ({ width, dock }, { sender }) => {
+    const { layout } = windowFor(sender.webContentsId);
+    if (dock === 'app') layout.setAppDockWidth(width);
+    else layout.setDockWidth(width);
   });
   // Synchronous like the sidebar's: the views hide before the next pointer move arrives.
   router.handle('dock:beginResize', (_input, { sender }) => {

@@ -8,36 +8,34 @@ import {
   contentArea,
 } from '../../src/main/windows/layout';
 
+// Rail + sidebar (UI 1) unless a test says otherwise. Gaps are 10 px; the toolbar row is 52.
 const base = { windowWidth: 1280, windowHeight: 820, sidebarVisible: true, sidebarWidth: 260 };
 
-describe('computeLayout', () => {
-  it('places the card right of the sidebar, inset 8 px, with the toolbar on top', () => {
+describe('computeLayout — rail and sidebar (UI 1)', () => {
+  it('puts the toolbar across the top, then the rail, the sidebar island and the card', () => {
     const layout = computeLayout(base);
-    expect(layout.sidebar).toEqual({ visible: true, width: 260 });
-    expect(layout.card).toEqual({ x: 260, y: 8, width: 1012, height: 804 });
-    expect(layout.toolbar).toEqual({ x: 260, y: 8, width: 1012, height: 36 });
-    expect(layout.webView).toEqual({ x: 260, y: 44, width: 1012, height: 768 });
-    expect(layout.radius).toBe(14);
+    expect(layout.toolbar).toEqual({ x: 0, y: 0, width: 1280, height: 52 });
+    expect(layout.rail).toEqual({ x: 10, y: 52, width: 60, height: 758 });
+    expect(layout.sidebar).toEqual({
+      visible: true,
+      width: 260,
+      rect: { x: 80, y: 52, width: 260, height: 758 },
+    });
+    expect(layout.card).toEqual({ x: 350, y: 52, width: 920, height: 758 });
+    expect(layout.webView).toEqual(layout.card); // no toolbar inside the card any more
+    expect(layout.radius).toBe(16);
   });
 
-  it('gives the card the full width minus insets when the sidebar is hidden', () => {
+  it('hiding the sidebar hides the rail too; the card takes the width', () => {
     const layout = computeLayout({ ...base, sidebarVisible: false });
-    expect(layout.card).toEqual({ x: 8, y: 8, width: 1264, height: 804 });
-    expect(layout.webView.x).toBe(8);
-  });
-
-  it('keeps the toolbar and web view stacked exactly inside the card', () => {
-    for (const windowHeight of [400, 820, 1440]) {
-      const { card, toolbar, webView } = computeLayout({ ...base, windowHeight });
-      expect(toolbar.y).toBe(card.y);
-      expect(webView.y).toBe(toolbar.y + toolbar.height);
-      expect(webView.y + webView.height).toBe(card.y + card.height);
-    }
+    expect(layout.rail).toBeNull();
+    expect(layout.sidebar.rect).toBeNull();
+    expect(layout.card).toEqual({ x: 10, y: 52, width: 1260, height: 758 });
   });
 
   it('clamps the sidebar width into its allowed range', () => {
     expect(computeLayout({ ...base, sidebarWidth: 50 }).sidebar.width).toBe(150);
-    expect(computeLayout({ ...base, sidebarWidth: 900 }).card.x).toBe(400);
+    expect(computeLayout({ ...base, sidebarWidth: 900 }).card.x).toBe(80 + 400 + 10);
   });
 
   it('never produces negative sizes in a tiny window', () => {
@@ -63,28 +61,46 @@ describe('computeLayout', () => {
     expect(layout.toolbar.height).toBe(0);
     expect(layout.radius).toBe(0);
     expect(layout.sidebar.visible).toBe(false);
+    expect(layout.rail).toBeNull();
     expect(layout.fullscreen).toBe(true);
     // The remembered sidebar width survives fullscreen.
     expect(layout.sidebar.width).toBe(260);
   });
 });
 
+describe('computeLayout — sidebar grid (UI 2)', () => {
+  it('runs the sidebar the full height (traffic lights inside); the toolbar sits to its right', () => {
+    const layout = computeLayout({ ...base, apps: 'grid' });
+    expect(layout.rail).toBeNull();
+    expect(layout.sidebar.rect).toEqual({ x: 10, y: 10, width: 260, height: 800 });
+    expect(layout.toolbar).toEqual({ x: 270, y: 0, width: 1010, height: 52 });
+    expect(layout.card).toEqual({ x: 280, y: 52, width: 990, height: 758 });
+  });
+
+  it('hidden, the toolbar spans the window again', () => {
+    const layout = computeLayout({ ...base, apps: 'grid', sidebarVisible: false });
+    expect(layout.toolbar).toEqual({ x: 0, y: 0, width: 1280, height: 52 });
+    expect(layout.card.x).toBe(10);
+  });
+});
+
 describe('split view layout', () => {
-  it('splits the card into two panes with an 8 px divider', () => {
+  it('splits the card into two panes with a 10 px divider, each with a slim header', () => {
     const layout = computeLayout({ ...base, splitRatio: 0.5 });
     expect(layout.panes).toHaveLength(2);
     const [left, right] = layout.panes;
-    // card 1012 wide: 1004 usable, 502 each, divider in between.
-    expect(left!.card).toEqual({ x: 260, y: 8, width: 502, height: 804 });
-    expect(layout.divider).toEqual({ x: 762, y: 8, width: 8, height: 804 });
-    expect(right!.card).toEqual({ x: 770, y: 8, width: 502, height: 804 });
-    expect(right!.webView.y).toBe(44);
+    // card 920 wide: 910 usable, 455 each, divider in between.
+    expect(left!.card).toEqual({ x: 350, y: 52, width: 455, height: 758 });
+    expect(layout.divider).toEqual({ x: 805, y: 52, width: 10, height: 758 });
+    expect(right!.card).toEqual({ x: 815, y: 52, width: 455, height: 758 });
+    expect(right!.toolbar.height).toBe(32);
+    expect(right!.webView.y).toBe(84);
     expect(layout.webView).toEqual(left!.webView); // first pane doubles as the main one
   });
 
   it('clamps the ratio and ignores it when not split', () => {
     const narrow = computeLayout({ ...base, splitRatio: 0.01 });
-    expect(narrow.panes[0]!.card.width).toBe(Math.round(1004 * 0.2));
+    expect(narrow.panes[0]!.card.width).toBe(Math.round(910 * 0.2));
     expect(computeLayout({ ...base, splitRatio: null }).panes).toHaveLength(1);
     expect(computeLayout(base).divider).toBeNull();
   });
@@ -93,15 +109,15 @@ describe('split view layout', () => {
 describe('Peek frame', () => {
   it('floats centred over the content area, header on top of the page', () => {
     const area = contentArea(computeLayout(base));
-    expect(area).toEqual({ x: 260, y: 8, width: 1012, height: 804 });
+    expect(area).toEqual({ x: 350, y: 52, width: 920, height: 758 });
     const peek = computePeek(area);
-    expect(peek.frame).toEqual({ x: 320, y: 30, width: 892, height: 760 });
-    expect(peek.webView).toEqual({ x: 320, y: 66, width: 892, height: 724 });
+    expect(peek.frame).toEqual({ x: 410, y: 74, width: 800, height: 714 });
+    expect(peek.webView).toEqual({ x: 410, y: 110, width: 800, height: 678 });
   });
 
   it('spans both split panes and caps its width on wide windows', () => {
     const area = contentArea(computeLayout({ ...base, windowWidth: 2560, splitRatio: 0.5 }));
-    expect(area.width).toBe(2560 - 260 - 8);
+    expect(area.width).toBe(2560 - 350 - 10);
     expect(computePeek(area).frame.width).toBe(1180);
   });
 });
@@ -111,7 +127,7 @@ describe('clampSidebarWidth', () => {
     expect(clampSidebarWidth(250.6)).toBe(251);
     expect(clampSidebarWidth(149)).toBe(150);
     expect(clampSidebarWidth(401)).toBe(400);
-    expect(clampSidebarWidth(Number.NaN)).toBe(260);
+    expect(clampSidebarWidth(Number.NaN)).toBe(236);
   });
 });
 
@@ -124,13 +140,19 @@ describe('Library mode layout', () => {
       sidebarWidth: 260,
       library: 'narrow',
     });
-    expect(layout.sidebar).toEqual({ visible: true, width: 116 });
+    expect(layout.sidebar).toEqual({
+      visible: true,
+      width: 116,
+      rect: { x: 0, y: 0, width: 116, height: 900 },
+    });
     expect(layout.library).toEqual({
       nav: { x: 0, y: 0, width: 116, height: 900 },
-      panel: { x: 116, y: 8, width: 300, height: 884 },
+      panel: { x: 116, y: 10, width: 300, height: 880 },
     });
-    expect(layout.card.x).toBe(424);
-    expect(layout.card.width).toBe(1400 - 424 - 8);
+    expect(layout.rail).toBeNull();
+    expect(layout.card.x).toBe(426);
+    expect(layout.card.width).toBe(1400 - 426 - 10);
+    expect(layout.toolbar).toEqual({ x: 416, y: 0, width: 984, height: 52 });
   });
 
   it('a wide panel (Spaces) leaves a strip of the page in view', () => {
@@ -141,8 +163,8 @@ describe('Library mode layout', () => {
       sidebarWidth: 260,
       library: 'wide',
     });
-    expect(layout.library!.panel.width).toBe(1400 - 116 - 8 - 360);
-    expect(layout.card.width).toBe(360 - 8);
+    expect(layout.library!.panel.width).toBe(1400 - 116 - 10 - 360);
+    expect(layout.card.width).toBe(360 - 10);
     // A small window still gets the full narrow panel.
     const small = computeLayout({
       windowWidth: 700,
@@ -155,18 +177,18 @@ describe('Library mode layout', () => {
   });
 });
 
-describe('Notes panel layout', () => {
-  it('docks the panel on the right and narrows the page', () => {
+describe('the dock (Notes, the assistant, a docked app)', () => {
+  it('docks on the right below the toolbar and narrows the page', () => {
     const layout = computeLayout({ ...base, notes: true });
-    // 1280 − 260 sidebar − 8 gap − 380 panel − 8 edge = 624 for the page.
-    expect(layout.card).toEqual({ x: 260, y: 8, width: 624, height: 804 });
-    expect(layout.notes).toEqual({ x: 892, y: 8, width: 380, height: 804 });
+    // 1280 − 350 left − 10 gap − 380 panel − 10 edge = 530 for the page.
+    expect(layout.card).toEqual({ x: 350, y: 52, width: 530, height: 758 });
+    expect(layout.notes).toEqual({ x: 890, y: 52, width: 380, height: 758 });
     expect(computeLayout(base).notes).toBeNull();
   });
 
   it('gives way on small windows, but never below its minimum', () => {
-    const mid = computeLayout({ ...base, windowWidth: 1000, notes: true });
-    expect(mid.notes!.width).toBe(1000 - 260 - 16 - 420);
+    const mid = computeLayout({ ...base, windowWidth: 1150, notes: true });
+    expect(mid.notes!.width).toBe(1150 - 350 - 20 - 420);
     expect(mid.card.width).toBe(420);
     const small = computeLayout({ ...base, windowWidth: 800, notes: true });
     expect(small.notes!.width).toBe(280);
@@ -179,7 +201,7 @@ describe('Notes panel layout', () => {
   it('takes the width it was dragged to, within its limits and the page’s minimum', () => {
     const dragged = computeLayout({ ...base, windowWidth: 1600, notes: true, dockWidth: 520 });
     expect(dragged.notes!.width).toBe(520);
-    expect(dragged.card.x + dragged.card.width).toBe(dragged.notes!.x - 8);
+    expect(dragged.card.x + dragged.card.width).toBe(dragged.notes!.x - 10);
     // Wider than the window allows: the page keeps 420 px.
     const big = computeLayout({ ...base, notes: true, dockWidth: 1000 });
     expect(big.card.width).toBe(420);
@@ -194,7 +216,7 @@ describe('Notes panel layout', () => {
     const full = computeLayout({ ...base, windowWidth: 1600, notes: true });
     expect(half.notes!.width).toBe(full.notes!.width);
     expect(half.card.width).toBeGreaterThan(full.card.width);
-    expect(half.notes!.x).toBe(half.card.x + half.card.width + 8);
+    expect(half.notes!.x).toBe(half.card.x + half.card.width + 10);
     // Partly past the window's edge (the window clips it): it slides in from the right.
     expect(half.notes!.x + half.notes!.width).toBeGreaterThan(1600);
     const start = computeLayout({ ...base, windowWidth: 1600, notes: true, dockProgress: 0 });
@@ -210,26 +232,55 @@ describe('Notes panel layout', () => {
 
   it('works beside split view and Library mode, and hides in fullscreen', () => {
     const split = computeLayout({ ...base, notes: true, splitRatio: 0.5 });
-    expect(split.panes.at(-1)!.card.x + split.panes.at(-1)!.card.width).toBe(split.notes!.x - 8);
+    expect(split.panes.at(-1)!.card.x + split.panes.at(-1)!.card.width).toBe(split.notes!.x - 10);
     const library = computeLayout({ ...base, windowWidth: 1400, notes: true, library: 'narrow' });
-    expect(library.card.x).toBe(424);
-    expect(library.notes!.x).toBe(library.card.x + library.card.width + 8);
+    expect(library.card.x).toBe(426);
+    expect(library.notes!.x).toBe(library.card.x + library.card.width + 10);
     expect(computeLayout({ ...base, notes: true, htmlFullscreen: true }).notes).toBeNull();
   });
 });
 
-describe('tabs on top', () => {
-  it('puts the strip across the top, hides the sidebar and starts the page below it', () => {
+describe('a pinned app beside the rail (UI 3)', () => {
+  it('opens between the sidebar and the page; the page narrows as it slides in', () => {
+    const open = computeLayout({ ...base, appDock: { width: 360, progress: 1 } });
+    expect(open.appDock).toEqual({ x: 350, y: 52, width: 360, height: 758 });
+    expect(open.card).toEqual({ x: 720, y: 52, width: 550, height: 758 });
+    const half = computeLayout({ ...base, appDock: { width: 360, progress: 0.5 } });
+    expect(half.card.x).toBe(350 + 185);
+    expect(computeLayout(base).appDock).toBeNull();
+  });
+
+  it('keeps the page its minimum width, and sits beside the right-hand dock', () => {
+    const both = computeLayout({
+      ...base,
+      windowWidth: 1600,
+      appDock: { width: 900, progress: 1 },
+      notes: true,
+    });
+    expect(both.appDock!.width).toBe(1600 - 350 - 20 - 420);
+    expect(both.notes).not.toBeNull();
+  });
+});
+
+describe('tabs on top (UI 3)', () => {
+  it('puts the tab row across the top, the rail below it and the address row over the page', () => {
     const layout = computeLayout({ ...base, topTabs: true });
-    expect(layout.tabStrip).toEqual({ x: 0, y: 0, width: 1280, height: 48 });
+    expect(layout.tabStrip).toEqual({ x: 0, y: 0, width: 1280, height: 52 });
     expect(layout.sidebar.visible).toBe(false);
-    expect(layout.card).toEqual({ x: 8, y: 48, width: 1264, height: 764 });
+    expect(layout.rail).toEqual({ x: 10, y: 52, width: 60, height: 758 });
+    expect(layout.toolbar).toEqual({ x: 80, y: 52, width: 1190, height: 46 });
+    expect(layout.card).toEqual({ x: 80, y: 98, width: 1190, height: 712 });
     expect(computeLayout(base).tabStrip).toBeNull();
   });
 
-  it('keeps the Notes panel level with the page; Library and fullscreen take over', () => {
+  it('keeps the rail even when apps are a grid (there’s no sidebar to hold them)', () => {
+    expect(computeLayout({ ...base, topTabs: true, apps: 'grid' }).rail).not.toBeNull();
+    expect(computeLayout({ ...base, topTabs: true, sidebarVisible: false }).rail).toBeNull();
+  });
+
+  it('keeps the dock level with the page; Library and fullscreen take over', () => {
     const withNotes = computeLayout({ ...base, topTabs: true, notes: true });
-    expect(withNotes.notes!.y).toBe(48);
+    expect(withNotes.notes!.y).toBe(98);
     expect(withNotes.notes!.height).toBe(withNotes.card.height);
     expect(computeLayout({ ...base, topTabs: true, library: 'narrow' }).tabStrip).toBeNull();
     expect(computeLayout({ ...base, topTabs: true, htmlFullscreen: true }).tabStrip).toBeNull();
@@ -241,6 +292,6 @@ describe('sidebar edge drag', () => {
     expect(sidebarDrag(300)).toEqual({ collapse: false, width: 300 });
     expect(sidebarDrag(130)).toEqual({ collapse: false, width: 150 }); // held at the minimum
     expect(sidebarDrag(109)).toEqual({ collapse: true });
-    expect(sidebarDrag(Number.NaN)).toEqual({ collapse: false, width: 260 });
+    expect(sidebarDrag(Number.NaN)).toEqual({ collapse: false, width: 236 });
   });
 });

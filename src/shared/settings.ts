@@ -104,6 +104,8 @@ export const settingsSchema = {
       }),
     )
     .max(16),
+  /** A pinned app's panel beside the rail (UI 3): its width as last dragged. */
+  'appdock.width': z.number().int().min(NOTES_WIDTH.min).max(NOTES_WIDTH.max),
   /** The right-hand dock's width, as last dragged (Notes and docked apps share it). */
   'dock.width': z.number().int().min(NOTES_WIDTH.min).max(NOTES_WIDTH.max),
   /** The focus session under way (roadmap P2.3), kept across a restart. */
@@ -135,7 +137,7 @@ export type SettingKey = keyof typeof settingsSchema;
 
 export const settingsDefaults: Settings = {
   'window.state': { bounds: null, isMaximized: false },
-  'sidebar.width': 260,
+  'sidebar.width': SIDEBAR_WIDTH.default,
   'sidebar.visible': true,
   'newtab.wallpaper': { kind: 'builtin', id: 'misty-sunrise' },
   'newtab.look': DEFAULT_LOOK,
@@ -162,6 +164,7 @@ export const settingsDefaults: Settings = {
   'panel.state': { open: false, route: 'panel' },
   'dock.width': NOTES_WIDTH.panel,
   'canvas.palettes': [],
+  'appdock.width': 360,
   'voice.prefs': DEFAULT_VOICE_PREFS,
   'pdf.local': [],
   'pdf.notes': {},

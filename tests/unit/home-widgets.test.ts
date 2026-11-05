@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   daysUntil,
+  DEFAULT_LAYOUT,
   homeLayoutSchema,
+  layoutForShow,
   layoutFromPreset,
   layoutFromShow,
   moveWidget,
@@ -20,6 +22,23 @@ describe('Homepage widgets', () => {
       'quote',
     ]);
     expect(layoutFromShow({ today: false, quote: true }).widgets.map((w) => w.type)).toEqual([
+      'quote',
+    ]);
+  });
+
+  it('a new Homepage starts with the redesign’s layout; switched-off parts are respected', () => {
+    expect(layoutForShow({ today: true, quote: true })).toBe(DEFAULT_LAYOUT);
+    expect(DEFAULT_LAYOUT.widgets.map((w) => w.type)).toEqual([
+      'focus',
+      'projects',
+      'apps',
+      'recent',
+      'quote',
+      'today',
+    ]);
+    expect(homeLayoutSchema.parse(DEFAULT_LAYOUT)).toEqual(DEFAULT_LAYOUT);
+    for (const w of DEFAULT_LAYOUT.widgets) expect(WIDGETS[w.type].sizes).toContain(w.size);
+    expect(layoutForShow({ today: false, quote: true }).widgets.map((w) => w.type)).toEqual([
       'quote',
     ]);
   });

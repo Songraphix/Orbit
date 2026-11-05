@@ -1,5 +1,5 @@
 import type { BrowserWindow, Session, WebContents, WebContentsView } from 'electron';
-import type { Layout } from '@shared/types/layout';
+import type { Layout, Rect } from '@shared/types/layout';
 import type { SidebarRow, SidebarSnapshot } from '@shared/types/space';
 import { NEW_TAB_URL } from '@shared/types/tabs';
 import type { TabState, TabsSnapshot } from '@shared/types/tabs';
@@ -56,6 +56,8 @@ export type TabManagerDeps = Pick<
   onCapture?: (tabId: string, request: PageMenuRequest) => void;
   /** A tab's media started or stopped. */
   onMedia?: (tabId: string, event: 'playing' | 'paused') => void;
+  /** An Orbit page was placed in the window (the Homepage lines its wallpaper up with it). */
+  onPlaced?: (contents: Electron.WebContents, bounds: Rect) => void;
   /** Chrome extensions see web tabs as tabs (chrome.tabs.*). */
   extensions?: {
     addTab: (contents: WebContents, win: BrowserWindow) => void;
@@ -859,6 +861,7 @@ export class TabManager {
       } else {
         tab.view.setBounds(bounds);
         tab.view.setBorderRadius(layout.radius);
+        if (tab.state.kind === 'internal') this.deps.onPlaced?.(tab.view.webContents, bounds);
       }
       tab.view.setVisible(!this.frozen && !tab.state.crashed && !tab.state.loadError);
     });

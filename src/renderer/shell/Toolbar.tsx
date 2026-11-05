@@ -1,27 +1,30 @@
 import {
   ArrowLeft,
-  ArrowLeftRight,
   ArrowRight,
   BookmarkPlus,
-  Camera,
   Bug,
+  Camera,
   Check,
+  ChevronDown,
+  Link2,
   Lock,
-  PanelLeft,
-  RotateCw,
+  Mic,
   NotebookPen,
-  Sparkles,
-  SlidersHorizontal,
-  Target,
+  PanelLeft,
   Pause,
   Play,
+  RotateCw,
+  SlidersHorizontal,
+  Sparkles,
+  Target,
   X,
-  Mic,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { formatAddress } from '@shared/format-address';
 import type { FindState } from '@shared/types/find';
+import type { Rect } from '@shared/types/layout';
+import { NEW_TAB_URL } from '@shared/types/tabs';
 import type { TabState } from '@shared/types/tabs';
 import { FindBar } from './FindBar';
 import { Tip } from '../tooltip/Tip';
@@ -33,10 +36,12 @@ import { soundName } from '@shared/sounds';
 import type { FocusSession } from '@shared/focus';
 import type { ProfileView } from '@shared/profile';
 import { Avatar } from '../profile/Avatar';
+import { OrbitMark } from './OrbitMark';
 
 const TOAST_MS = 1600;
+const invoke = window.orbit.invoke;
 
-/** Short confirmations from main ("Copied link", "Zoom 120%"), shown in place of the address. */
+/** Short confirmations from main ("Copied link", "Zoom 120%"), shown beside the address. */
 function useToast(): string | null {
   const [toast, setToast] = useState<{ message: string; at: number } | null>(null);
   useEffect(() => window.orbit.on('toast:show', setToast), []);
@@ -50,298 +55,353 @@ function useToast(): string | null {
 
 type NavAction = 'back' | 'forward' | 'reload' | 'stop';
 
+const anchorOf = (event: ReactMouseEvent<HTMLElement>) => {
+  const r = event.currentTarget.getBoundingClientRect();
+  return { x: r.x, y: r.y, width: r.width, height: r.height };
+};
+
+/** The window's tools on the right (UI spec §5): Focus, Orbit AI, Notes, then your profile. */
+export type ToolsProps = {
+  notesOpen: boolean;
+  assistant: boolean;
+  profile: ProfileView | null | undefined;
+  focus: FocusSession | null;
+};
+
 /**
- * The compact toolbar above the page (F-14, Img 6): back / forward / reload on the left,
- * "domain / title" in the middle, a thin loading bar along the bottom. The strip itself is a
- * window drag region; only the controls opt out.
+ * The toolbar row on the canvas (UI spec §5, UI 1 and UI 2): the traffic lights' room, the
+ * Orbit menu, back / forward / reload in one glass pill, the address in a wide light pill (the
+ * page's own actions at its end), and the tools on the right. With tabs on top it's the second
+ * row over the page (`compact`: no menu and no tools — the tab row has them).
  */
-export function Toolbar({
-  tab,
-  height,
-  sidebarVisible,
-  find,
-  focused = true,
-  inSplit = false,
-  notesOpen,
-  assistant = false,
-  profile,
-  focus,
-}: {
+export function Toolbar(props: {
+  rect: Rect;
+  /** Where the page's card starts (the nav pill lines up with it when there's room). */
+  contentX: number;
   tab: TabState | null;
-  height: number;
-  /** Hidden sidebar → this toolbar shows the "Show sidebar" button (left pane only). */
-  sidebarVisible: boolean;
   find: FindState | null;
-  /** Split view: only the focused pane shows find and toasts. */
-  focused?: boolean;
-  /** Split view: show the swap and "show alone" buttons. */
-  inSplit?: boolean;
-  /** The Notes button (right-most toolbar only): whether the panel is open. */
-  notesOpen?: boolean | undefined;
-  /** The assistant's ✦ button (right-most toolbar only, unless AI is turned off). */
-  assistant?: boolean;
-  /** The profile button (right-most toolbar only). */
-  profile?: ProfileView | null | undefined;
-  /** Focus mode's pill (right-most toolbar only). */
-  focus?: FocusSession | null | undefined;
+  /** The row starts at the window's left edge: leave room for the traffic lights. */
+  lights: boolean;
+  /** Show the Orbit menu here (not when the sidebar holds it). */
+  menu: boolean;
+  /** The sidebar is hidden (a Show Sidebar button), shown (Hide), or not ours to toggle. */
+  sidebar: 'shown' | 'hidden' | null;
+  /** The second row under the tabs: just navigation and the address. */
+  compact?: boolean;
+  tools: ToolsProps;
 }) {
-  const toastMessage = useToast();
-  // Settings → Appearance → Show: hidden features lose their toolbar buttons.
+  const { rect, tab } = props;
+  const toast = useToast();
   const prefs = useUiPrefs();
-  const shown = {
-    capture: isShown(prefs, 'capture'),
-    screenshot: isShown(prefs, 'screenshot'),
-    focus: isShown(prefs, 'focus'),
-    assistant: isShown(prefs, 'assistant'),
-    notes: isShown(prefs, 'notes'),
-  };
-  const toast = focused ? toastMessage : null;
   const navigate = (action: NavAction) => {
-    if (tab) void window.orbit.invoke('tabs:navigate', { tabId: tab.id, action });
+    if (tab) void invoke('tabs:navigate', { tabId: tab.id, action });
   };
-  const address = tab ? formatAddress(tab.url, tab.title) : null;
+  // The left group reaches the page's edge so the nav pill lines up with the card below.
+  const leftWidth = Math.max(0, props.contentX - rect.x - 10);
 
   return (
     <div
-      className="drag-region relative flex items-center gap-1 border-b border-black/5 px-2 text-neutral-600"
-      style={{ height }}
+      className="drag-region absolute flex items-center gap-2 pr-2.5 text-[var(--fg)]"
+      style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
       data-testid="toolbar"
     >
-      {!sidebarVisible && (
+      <div
+        className="flex shrink-0 items-center gap-1.5"
+        style={{
+          minWidth: props.compact ? undefined : leftWidth,
+          paddingLeft: props.lights ? 84 : 10,
+        }}
+      >
+        {props.menu && <OrbitMenuButton />}
+        {props.sidebar && (
+          <ToolbarButton
+            label={props.sidebar === 'hidden' ? 'Show Sidebar' : 'Hide Sidebar'}
+            keys="⌘S"
+            onClick={() => void invoke('sidebar:toggle', {})}
+            testId={props.sidebar === 'hidden' ? 'toolbar-sidebar' : 'sidebar-toggle'}
+          >
+            <PanelLeft size={16} />
+          </ToolbarButton>
+        )}
+      </div>
+      <div
+        className="no-drag mat-light flex h-9 shrink-0 items-center gap-0.5 rounded-full px-1"
+        data-testid="nav-pill"
+      >
         <ToolbarButton
-          label="Show Sidebar"
-          keys="⌘S"
-          onClick={() => void window.orbit.invoke('sidebar:toggle', {})}
-          testId="toolbar-sidebar"
+          label="Back"
+          keys="⌘["
+          anim="nudge-left"
+          disabled={!tab?.canGoBack}
+          onClick={() => navigate('back')}
+          testId="toolbar-back"
         >
-          <PanelLeft size={15} />
+          <ArrowLeft size={16} />
         </ToolbarButton>
-      )}
-      <ToolbarButton
-        label="Back"
-        keys="⌘["
-        anim="nudge-left"
-        disabled={!tab?.canGoBack}
-        onClick={() => navigate('back')}
-        testId="toolbar-back"
-      >
-        <ArrowLeft size={15} />
-      </ToolbarButton>
-      <ToolbarButton
-        label="Forward"
-        keys="⌘]"
-        anim="nudge-right"
-        disabled={!tab?.canGoForward}
-        onClick={() => navigate('forward')}
-        testId="toolbar-forward"
-      >
-        <ArrowRight size={15} />
-      </ToolbarButton>
-      <ToolbarButton
-        label={tab?.isLoading ? 'Stop' : 'Reload'}
-        keys={tab?.isLoading ? undefined : '⌘R'}
-        anim={tab?.isLoading ? undefined : 'spin'}
-        disabled={!tab}
-        onClick={() => navigate(tab?.isLoading ? 'stop' : 'reload')}
-        testId="toolbar-reload"
-      >
-        {tab?.isLoading ? <X size={15} /> : <RotateCw size={14} />}
-      </ToolbarButton>
+        <ToolbarButton
+          label="Forward"
+          keys="⌘]"
+          anim="nudge-right"
+          disabled={!tab?.canGoForward}
+          onClick={() => navigate('forward')}
+          testId="toolbar-forward"
+        >
+          <ArrowRight size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label={tab?.isLoading ? 'Stop' : 'Reload'}
+          keys={tab?.isLoading ? undefined : '⌘R'}
+          anim={tab?.isLoading ? undefined : 'spin'}
+          disabled={!tab}
+          onClick={() => navigate(tab?.isLoading ? 'stop' : 'reload')}
+          testId="toolbar-reload"
+        >
+          {tab?.isLoading ? <X size={16} /> : <RotateCw size={15} />}
+        </ToolbarButton>
+      </div>
 
+      {props.find?.open ? (
+        <FindBar state={props.find} />
+      ) : (
+        <AddressPill tab={tab} toast={toast} prefs={prefs} />
+      )}
+
+      {!props.compact && <Tools {...props.tools} />}
+    </div>
+  );
+}
+
+/** The address (UI spec §5): prominent but light; a click edits it in the command bar. */
+function AddressPill({
+  tab,
+  toast,
+  prefs,
+}: {
+  tab: TabState | null;
+  toast: string | null;
+  prefs: ReturnType<typeof useUiPrefs>;
+}) {
+  const home = !tab || tab.url === NEW_TAB_URL;
+  const address = tab && !home ? formatAddress(tab.url, tab.title) : null;
+  const web = tab?.kind === 'web';
+  return (
+    <div
+      className="no-drag mat-light relative flex h-9 min-w-0 flex-1 items-center gap-0.5 overflow-hidden rounded-full pr-1"
+      data-testid="address-pill"
+    >
+      <button
+        type="button"
+        className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-full pl-3.5 text-left text-[13.5px] focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]"
+        title={tab?.url}
+        onClick={() => void invoke('commandbar:open', { mode: home ? 'new' : 'edit' })}
+        data-testid="toolbar-address"
+      >
+        {home || !address ? (
+          <>
+            <Sparkles size={15} className="shrink-0 text-[var(--fg-muted)]" />
+            <span className="truncate text-[var(--fg-faint)]">Search or enter a website…</span>
+          </>
+        ) : tab?.devMode ? (
+          <span className="truncate font-mono text-[12px]" data-testid="toolbar-full-url">
+            {tab.url}
+          </span>
+        ) : (
+          <>
+            {address.domain && address.secure ? (
+              <Lock size={13} className="shrink-0 text-[var(--fg-muted)]" aria-label="Secure" />
+            ) : (
+              <Sparkles size={15} className="shrink-0 text-[var(--fg-muted)]" />
+            )}
+            {address.domain && <span className="shrink-0 font-medium">{address.domain}</span>}
+            {address.domain && address.title && (
+              <span className="shrink-0 text-[var(--fg-faint)]">/</span>
+            )}
+            {address.title && (
+              <span className="truncate text-[var(--fg-muted)]">{address.title}</span>
+            )}
+          </>
+        )}
+      </button>
       {toast && (
-        // Arc-style confirmation: a small dark pill by the toolbar's right edge.
         <div
           key={toast}
-          className="animate-pop pointer-events-none absolute right-11 z-10 flex h-[26px] origin-right items-center gap-1.5 rounded-[9px] bg-[rgb(28_27_34/0.92)] pr-2.5 pl-2 text-[12.5px] font-medium text-on-accent shadow-[inset_0_0.5px_0_rgb(255_255_255/0.14),0_0_0_0.5px_rgb(0_0_0/0.3),0_6px_18px_-4px_rgb(0_0_0/0.35)]"
-          style={{ top: Math.max(0, (height - 26) / 2) }}
+          className="animate-pop pointer-events-none flex h-7 shrink-0 origin-right items-center gap-1.5 rounded-full bg-[rgb(28_27_34/0.9)] pr-2.5 pl-1.5 text-[12.5px] font-medium text-white"
           role="status"
           data-testid="toolbar-toast"
         >
-          <span className="grid size-4 place-items-center rounded-full bg-[var(--accent)]">
+          <span className="grid size-4 place-items-center rounded-full bg-[var(--accent-fill)]">
             <Check size={10} strokeWidth={3} />
           </span>
           {toast}
         </div>
       )}
-      {focused && find?.open ? (
-        <FindBar state={find} />
-      ) : (
-        address && (
-          // Clicking the address edits it in the command bar (⌘L), like Arc.
-          <button
-            type="button"
-            // Centred in the toolbar; while focusing, it gives way to the focus pill instead.
-            className={`no-drag flex min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-1 text-[13px] hover:bg-black/5 ${
-              focus ? 'mx-2 flex-1' : 'absolute inset-x-28 mx-auto w-fit max-w-[calc(100%-14rem)]'
-            }`}
-            title={tab?.url}
-            onClick={() => void window.orbit.invoke('commandbar:open', { mode: 'edit' })}
-            data-testid="toolbar-address"
-          >
-            {tab?.devMode ? (
-              // Developer Mode (F-30): the whole URL, port and path included.
+      {web && <CopyLink />}
+      {tab?.devMode && (
+        <ToolbarButton
+          label={`Developer Tools${tab.consoleErrors ? ` (${tab.consoleErrors} errors)` : ''}`}
+          onClick={() => void invoke('tabs:devtools', { tabId: tab.id })}
+          testId="toolbar-devtools"
+        >
+          <span className="relative">
+            <Bug size={15} />
+            {tab.consoleErrors > 0 && (
               <span
-                className="truncate font-mono text-[12px] text-neutral-700"
-                data-testid="toolbar-full-url"
+                className="absolute -top-1.5 -right-2 min-w-3.5 rounded-full bg-red-500 px-1 text-[9px] leading-3.5 font-semibold text-white"
+                data-testid="toolbar-errors"
               >
-                {tab.url}
+                {tab.consoleErrors > 99 ? '99+' : tab.consoleErrors}
               </span>
-            ) : (
-              <>
-                {address.domain && address.secure && (
-                  <Lock size={11} className="shrink-0 text-neutral-400" aria-label="Secure" />
-                )}
-                {address.domain && (
-                  <span className="shrink-0 font-medium text-neutral-800">{address.domain}</span>
-                )}
-                {address.domain && address.title && (
-                  <span className="shrink-0 text-neutral-300">/</span>
-                )}
-                {address.title && (
-                  <span className="truncate text-neutral-500">{address.title}</span>
-                )}
-              </>
             )}
-          </button>
-        )
+          </span>
+        </ToolbarButton>
       )}
-
-      <div className="ml-auto flex items-center gap-0.5">
-        {tab?.devMode && (
-          <ToolbarButton
-            label={`Developer Tools${tab.consoleErrors ? ` (${tab.consoleErrors} errors)` : ''}`}
-            onClick={() => void window.orbit.invoke('tabs:devtools', { tabId: tab.id })}
-            testId="toolbar-devtools"
-          >
-            <span className="relative">
-              <Bug size={14} />
-              {tab.consoleErrors > 0 && (
-                <span
-                  className="absolute -top-1.5 -right-2 min-w-3.5 rounded-full bg-red-500 px-1 text-[9px] leading-3.5 font-semibold text-on-accent"
-                  data-testid="toolbar-errors"
-                >
-                  {tab.consoleErrors > 99 ? '99+' : tab.consoleErrors}
-                </span>
-              )}
-            </span>
-          </ToolbarButton>
-        )}
-        {tab?.kind === 'web' && (
-          <ToolbarButton
-            label="Site Controls"
-            onClick={(event) => {
-              const r = event.currentTarget.getBoundingClientRect();
-              const anchor = { x: r.x, y: r.y, width: r.width, height: r.height };
-              void window.orbit.invoke('sitecontrols:open', { anchor });
-            }}
-            testId="toolbar-site-controls"
-          >
-            <SlidersHorizontal size={14} />
-          </ToolbarButton>
-        )}
-        {tab?.kind === 'web' && shown.screenshot && (
-          <ToolbarButton
-            label="Take Screenshot"
-            keys="⇧⌘2"
-            anim="pop"
-            onClick={() => void window.orbit.invoke('shot:start', {})}
-            testId="toolbar-screenshot"
-          >
-            <Camera size={14} />
-          </ToolbarButton>
-        )}
-        {tab?.kind === 'web' && shown.capture && (
-          <ToolbarButton
-            label="Save to Orbit"
-            keys="⇧⌘S"
-            anim="pop"
-            onClick={() => void window.orbit.invoke('capture:open', {})}
-            testId="toolbar-capture"
-          >
-            <BookmarkPlus size={14} />
-          </ToolbarButton>
-        )}
-        {notesOpen !== undefined && <WakeIndicator />}
-        {focus && <FocusPill session={focus} />}
-        {notesOpen !== undefined && shown.focus && <FocusButton />}
-        {assistant && shown.assistant && (
-          <ToolbarButton
-            label="Ask Orbit"
-            keys="⌘J"
-            anim="pop"
-            onClick={() => void window.orbit.invoke('assistant:open', {})}
-            testId="toolbar-assistant"
-          >
-            <Sparkles size={14} />
-          </ToolbarButton>
-        )}
-        {notesOpen !== undefined && shown.notes && (
-          <ToolbarButton
-            label={notesOpen ? 'Hide Notes' : 'Notes'}
-            keys="⇧⌘N"
-            anim="pop"
-            onClick={() => void window.orbit.invoke('notes:panel', {})}
-            active={notesOpen}
-            testId="toolbar-notes"
-          >
-            <NotebookPen size={14} />
-          </ToolbarButton>
-        )}
-        {profile && (
-          <Tip
-            label={profile.displayName ? `${profile.name} · ${profile.displayName}` : profile.name}
-          >
-            <button
-              type="button"
-              aria-label={`Profile: ${profile.name}`}
-              onClick={(event) => {
-                const r = event.currentTarget.getBoundingClientRect();
-                const anchor = { x: r.x, y: r.y, width: r.width, height: r.height };
-                void window.orbit.invoke('profile:menu', { anchor });
-              }}
-              className="press no-drag grid size-7 place-items-center rounded-full hover:ring-2 hover:ring-black/10"
-              data-testid="toolbar-profile"
-            >
-              <Avatar profile={profile} size={22} />
-            </button>
-          </Tip>
-        )}
-        {inSplit && (
-          <>
-            <ToolbarButton
-              label="Swap Panes"
-              onClick={() => void window.orbit.invoke('split:swap', {})}
-              testId="split-swap"
-            >
-              <ArrowLeftRight size={14} />
-            </ToolbarButton>
-            {/* Ends the split, keeping this pane's page (a click here focuses it first). */}
-            <ToolbarButton
-              label="Close Split View"
-              onClick={() => void window.orbit.invoke('split:exit', {})}
-              testId="split-exit"
-            >
-              <X size={14} />
-            </ToolbarButton>
-          </>
-        )}
-      </div>
-
+      {web && (
+        <ToolbarButton
+          label="Site Controls"
+          onClick={(event) => void invoke('sitecontrols:open', { anchor: anchorOf(event) })}
+          testId="toolbar-site-controls"
+        >
+          <SlidersHorizontal size={15} />
+        </ToolbarButton>
+      )}
+      {web && isShown(prefs, 'screenshot') && (
+        <ToolbarButton
+          label="Take Screenshot"
+          keys="⇧⌘2"
+          anim="pop"
+          onClick={() => void invoke('shot:start', {})}
+          testId="toolbar-screenshot"
+        >
+          <Camera size={15} />
+        </ToolbarButton>
+      )}
+      {web && isShown(prefs, 'capture') && (
+        <ToolbarButton
+          label="Save to Orbit"
+          keys="⇧⌘S"
+          anim="pop"
+          onClick={() => void invoke('capture:open', {})}
+          testId="toolbar-capture"
+        >
+          <BookmarkPlus size={15} />
+        </ToolbarButton>
+      )}
       {tab?.isLoading && (
         <div
-          className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden"
+          className="pointer-events-none absolute inset-x-4 bottom-0 h-[2px] overflow-hidden rounded-full"
           data-testid="toolbar-loading"
           role="progressbar"
           aria-label="Loading"
         >
-          <div className="h-full w-1/3 animate-[orbit-loading_1.1s_ease-in-out_infinite] rounded-full bg-[var(--accent)]" />
+          <div className="h-full w-1/3 animate-[orbit-loading_1.1s_ease-in-out_infinite] rounded-full bg-[var(--canvas-accent,var(--accent))]" />
         </div>
       )}
     </div>
   );
 }
 
-function ToolbarButton(props: {
+/** Copies the page's address (one click; a check and a "Copied link" toast answer). */
+function CopyLink() {
+  const [copiedAt, setCopiedAt] = useState(0);
+  useEffect(() => {
+    if (!copiedAt) return;
+    const timer = setTimeout(() => setCopiedAt(0), 1400);
+    return () => clearTimeout(timer);
+  }, [copiedAt]);
+  return (
+    <ToolbarButton
+      label="Copy Link"
+      keys="⇧⌘C"
+      onClick={() => {
+        void invoke('tabs:copyUrl', {});
+        setCopiedAt(Date.now());
+      }}
+      testId="address-copy"
+    >
+      {copiedAt ? (
+        <span key={copiedAt} className="anim-pop grid">
+          <Check size={15} strokeWidth={2.6} />
+        </span>
+      ) : (
+        <Link2 size={15} />
+      )}
+    </ToolbarButton>
+  );
+}
+
+/** "◯ Orbit ⌄" (UI spec §5): Orbit's own menu — Home, the command bar, Spaces, profiles… */
+export function OrbitMenuButton() {
+  return (
+    <Tip label="Orbit Menu">
+      <button
+        type="button"
+        aria-label="Orbit menu"
+        aria-haspopup="menu"
+        onClick={(event) => void invoke('orbitmenu:open', { anchor: anchorOf(event) })}
+        className="no-drag lift mat-light flex h-9 shrink-0 items-center gap-2 rounded-full pr-2.5 pl-2 text-[14px] font-semibold"
+        data-testid="orbit-menu-button"
+      >
+        <OrbitMark size={20} />
+        Orbit
+        <ChevronDown size={14} className="text-[var(--fg-muted)]" />
+      </button>
+    </Tip>
+  );
+}
+
+/** The tools on the right: "Hey Orbit", the focus session, Focus, Orbit AI, Notes, profile. */
+export function Tools({ notesOpen, assistant, profile, focus }: ToolsProps) {
+  const prefs = useUiPrefs();
+  return (
+    <div className="flex shrink-0 items-center gap-1.5">
+      <WakeIndicator />
+      {focus && <FocusPill session={focus} />}
+      <div className="no-drag mat-light flex h-9 items-center gap-0.5 rounded-full px-1">
+        {isShown(prefs, 'focus') && <FocusButton />}
+        {assistant && isShown(prefs, 'assistant') && (
+          <ToolbarButton
+            label="Ask Orbit"
+            keys="⌘J"
+            anim="pop"
+            onClick={() => void invoke('assistant:open', {})}
+            testId="toolbar-assistant"
+          >
+            <Sparkles size={16} />
+          </ToolbarButton>
+        )}
+        {isShown(prefs, 'notes') && (
+          <ToolbarButton
+            label={notesOpen ? 'Hide Notes' : 'Notes'}
+            keys="⇧⌘N"
+            anim="pop"
+            onClick={() => void invoke('notes:panel', {})}
+            active={notesOpen}
+            testId="toolbar-notes"
+          >
+            <NotebookPen size={16} />
+          </ToolbarButton>
+        )}
+      </div>
+      {profile && (
+        <Tip
+          label={profile.displayName ? `${profile.name} · ${profile.displayName}` : profile.name}
+        >
+          <button
+            type="button"
+            aria-label={`Profile: ${profile.name}`}
+            onClick={(event) => void invoke('profile:menu', { anchor: anchorOf(event) })}
+            className="press no-drag grid size-9 place-items-center rounded-full ring-1 ring-[var(--glass-border)] hover:ring-2 hover:ring-[var(--sel-border)]"
+            data-testid="toolbar-profile"
+          >
+            <Avatar profile={profile} size={30} />
+          </button>
+        </Tip>
+      )}
+    </div>
+  );
+}
+
+export function ToolbarButton(props: {
   label: string;
   /** Its shortcut, shown in the tooltip ("⌘R"). */
   keys?: string;
@@ -366,8 +426,8 @@ function ToolbarButton(props: {
           if (props.anim) setPlayed((n) => n + 1);
           props.onClick(event);
         }}
-        className={`press no-drag grid size-7 place-items-center rounded-[10px] hover:bg-black/[0.06] disabled:opacity-30 disabled:hover:bg-transparent ${
-          props.active ? 'bg-black/[0.07] text-neutral-900' : ''
+        className={`press no-drag grid size-8 shrink-0 place-items-center rounded-full text-[var(--icon)] transition-colors hover:bg-[var(--glass-hover)] hover:text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] disabled:opacity-35 disabled:hover:bg-transparent ${
+          props.active ? 'mat-sel text-[var(--fg)]' : ''
         }`}
         data-testid={props.testId}
       >
@@ -393,17 +453,17 @@ function FocusButton() {
       {playing && (
         <ToolbarButton
           label={paused ? `Resume ${soundName(playing)}` : `Pause ${soundName(playing)}`}
-          onClick={() => void window.orbit.invoke('sounds:pause', { paused: !paused })}
+          onClick={() => void invoke('sounds:pause', { paused: !paused })}
           testId="toolbar-sound-pause"
         >
-          {paused ? <Play size={13} /> : <Pause size={13} />}
+          {paused ? <Play size={14} /> : <Pause size={14} />}
         </ToolbarButton>
       )}
       <ToolbarButton
         label={playing ? `Focus & Sounds · ${soundName(playing)}` : 'Focus & Sounds'}
         keys="⌥⌘F"
         anim="pop"
-        onClick={() => void window.orbit.invoke('focus:open', {})}
+        onClick={() => void invoke('focus:open', {})}
         active={playing !== null && !paused}
         testId="toolbar-focus"
       >
@@ -422,7 +482,7 @@ function FocusButton() {
             ))}
           </span>
         ) : (
-          <Target size={14} />
+          <Target size={16} />
         )}
       </ToolbarButton>
     </>
@@ -436,30 +496,32 @@ function WakeIndicator() {
   useEffect(() => {
     const read = (v: { wakeEnabled: boolean; wakeListening: boolean }) =>
       setWake({ on: v.wakeEnabled, listening: v.wakeListening });
-    void window.orbit.invoke('voice:get', {}).then(read);
+    void invoke('voice:get', {}).then(read);
     return window.orbit.on('state:voice', read);
   }, []);
   if (!wake.on) return null;
   return (
-    <ToolbarButton
-      label={
-        wake.listening
-          ? 'Listening for “Hey Orbit” — click to turn off'
-          : '“Hey Orbit” is paused — click to turn off'
-      }
-      onClick={() => void window.orbit.invoke('voice:setPrefs', { wakeWord: false })}
-      testId="toolbar-wake"
-    >
-      <span
-        className={`relative grid place-items-center ${wake.listening ? '' : 'opacity-45'}`}
-        data-testid="toolbar-wake-state"
-        data-listening={wake.listening}
+    <div className="no-drag mat-light flex h-9 items-center rounded-full px-0.5">
+      <ToolbarButton
+        label={
+          wake.listening
+            ? 'Listening for “Hey Orbit” — click to turn off'
+            : '“Hey Orbit” is paused — click to turn off'
+        }
+        onClick={() => void invoke('voice:setPrefs', { wakeWord: false })}
+        testId="toolbar-wake"
       >
-        {wake.listening && (
-          <span className="ambient absolute size-4 rounded-full bg-[var(--accent)] opacity-30 animate-[orbit-breathe_2.4s_var(--ease-in-out)_infinite]" />
-        )}
-        <Mic size={14} className="relative text-[var(--accent)]" />
-      </span>
-    </ToolbarButton>
+        <span
+          className={`relative grid place-items-center ${wake.listening ? '' : 'opacity-45'}`}
+          data-testid="toolbar-wake-state"
+          data-listening={wake.listening}
+        >
+          {wake.listening && (
+            <span className="ambient absolute size-4 animate-[orbit-breathe_2.4s_var(--ease-in-out)_infinite] rounded-full bg-[var(--canvas-accent,var(--accent))] opacity-30" />
+          )}
+          <Mic size={15} className="relative" />
+        </span>
+      </ToolbarButton>
+    </div>
   );
 }

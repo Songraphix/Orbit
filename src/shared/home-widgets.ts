@@ -166,6 +166,24 @@ export function layoutFromShow(show: { today: boolean; quote: boolean }): HomeLa
   };
 }
 
+/**
+ * The Homepage a new profile starts with (UI spec §9): Focus, Projects and Quick Access, then
+ * Recent, a quote and Today — every one of them real data (or a clear empty state). Editable.
+ */
+export const DEFAULT_LAYOUT: HomeLayout = {
+  widgets: (['focus', 'projects', 'apps', 'recent', 'quote', 'today'] as const).map((type) => ({
+    id: type,
+    type,
+    size: 'm' as const,
+    options: {},
+  })),
+};
+
+/** The layout for the old show/hide switches; both on (as they start) is the default layout. */
+export function layoutForShow(show: { today: boolean; quote: boolean }): HomeLayout {
+  return show.today && show.quote ? DEFAULT_LAYOUT : layoutFromShow(show);
+}
+
 /** Starting layouts (brief §5): editable after you pick one. */
 export const PRESETS: Record<string, { name: string; types: WidgetType[] }> = {
   minimal: { name: 'Minimal', types: [] },

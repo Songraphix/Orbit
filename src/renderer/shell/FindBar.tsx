@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FindState } from '@shared/types/find';
 
 /**
- * Find in page (⌘F), drawn in the toolbar strip so it never needs to float over the page.
+ * Find in page (⌘F), in place of the address pill so it never needs to float over the page.
  * Enter = next, ⇧Enter = previous, Esc = close.
  */
 export function FindBar({ state }: { state: FindState }) {
@@ -21,10 +21,10 @@ export function FindBar({ state }: { state: FindState }) {
 
   return (
     <div
-      className="no-drag absolute inset-x-28 mx-auto flex h-7 w-[min(420px,100%)] items-center gap-1.5 rounded-lg bg-black/5 px-2 text-[13px]"
+      className="no-drag mat-light flex h-9 min-w-0 flex-1 items-center gap-1.5 rounded-full px-3 text-[13px]"
       data-testid="find-bar"
     >
-      <Search size={13} className="shrink-0 text-neutral-400" />
+      <Search size={14} className="shrink-0 text-[var(--fg-faint)]" />
       <input
         ref={input}
         value={query}
@@ -43,19 +43,22 @@ export function FindBar({ state }: { state: FindState }) {
         }}
         placeholder="Find in page"
         aria-label="Find in page"
-        className="h-full min-w-0 flex-1 bg-transparent text-neutral-800 outline-none placeholder:text-neutral-400"
+        className="h-full min-w-0 flex-1 bg-transparent text-[var(--fg)] outline-none placeholder:text-[var(--fg-faint)]"
         spellCheck={false}
         data-testid="find-input"
       />
       {state.query && (
-        <span className="shrink-0 text-xs text-neutral-500 tabular-nums" data-testid="find-count">
+        <span
+          className="shrink-0 text-xs text-[var(--fg-muted)] tabular-nums"
+          data-testid="find-count"
+        >
           {state.matches === 0 ? 'No matches' : `${state.activeMatch}/${state.matches}`}
         </span>
       )}
       <button
         type="button"
         aria-label="Previous match"
-        className="grid size-5 place-items-center rounded hover:bg-black/5"
+        className="grid size-5 place-items-center rounded-full hover:bg-[var(--glass-hover)]"
         onClick={() => search(query, 'previous')}
       >
         <ChevronUp size={14} />
@@ -63,7 +66,7 @@ export function FindBar({ state }: { state: FindState }) {
       <button
         type="button"
         aria-label="Next match"
-        className="grid size-5 place-items-center rounded hover:bg-black/5"
+        className="grid size-5 place-items-center rounded-full hover:bg-[var(--glass-hover)]"
         onClick={() => search(query, 'next')}
       >
         <ChevronDown size={14} />
@@ -71,7 +74,7 @@ export function FindBar({ state }: { state: FindState }) {
       <button
         type="button"
         aria-label="Close find"
-        className="grid size-5 place-items-center rounded hover:bg-black/5"
+        className="grid size-5 place-items-center rounded-full hover:bg-[var(--glass-hover)]"
         onClick={() => void window.orbit.invoke('find:close', {})}
         data-testid="find-close"
       >

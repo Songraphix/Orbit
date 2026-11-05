@@ -1,3 +1,4 @@
+import type { SyncStatus } from '@shared/types/account';
 import type { IpcRouter } from '../router';
 import { profileView } from '../../sidebar/profiles';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
@@ -18,10 +19,25 @@ export function switchToProfile(controller: WindowController, profileId: string)
  * The profile menu (owner request, like Wavebox's): who you are in this space, your other
  * profiles, a new one, and the way to Settings. Opened from the toolbar's avatar.
  */
+const SYNC_LABEL: Record<Exclude<SyncStatus['state'], 'off'>, string> = {
+  synced: 'Synced',
+  syncing: 'Syncing…',
+  offline: 'Offline',
+  error: 'Sync problem',
+  'verify-email': 'Verify email',
+};
+
 export function registerProfileHandlers(
   router: IpcRouter,
   windows: WindowManager,
-  deps: { runCommand: (controller: WindowController, id: string) => void },
+  deps: {
+    runCommand: (controller: WindowController, id: string) => void;
+    /** Sync's state now (null: no account / sync off). */
+    syncStatus?: () => SyncStatus | null;
+    /** About Orbit and Quit (the app's own panels). */
+    about?: () => void;
+    quit?: () => void;
+  },
 ): void {
   const windowFor = (webContentsId: number) => {
     const controller = windows.forSender(webContentsId);
@@ -31,6 +47,64 @@ export function registerProfileHandlers(
 
   router.handle('profile:menu', ({ anchor }, { sender }) => {
     windowFor(sender.webContentsId).overlay.toggleProfileMenu(anchor);
+  });
+
+  // The Orbit menu (UI spec §5): only actions Orbit really has.
+  router.handle('orbitmenu:open', ({ anchor }, { sender }) => {
+    windowFor(sender.webContentsId).overlay.toggleOrbitMenu(anchor);
+  });
+
+  router.handle('orbitmenu:get', (_input, { sender }) => {
+    const { store, tabs } = windowFor(sender.webContentsId);
+    const sync = deps.syncStatus?.() ?? null;
+    return {
+      spaces: store.spaces.map((s) => ({
+        id: s.id,
+        name: s.name,
+        icon: s.icon,
+        active: s.id === tabs.activeSpaceId,
+      })),
+      sync:
+        sync && sync.state !== 'off' ? { state: sync.state, label: SYNC_LABEL[sync.state] } : null,
+    };
+  });
+
+  router.handle('orbitmenu:run', ({ action, spaceId }, { sender }) => {
+    const controller = windowFor(sender.webContentsId);
+    controller.overlay.closeOrbitMenu();
+    switch (action) {
+      case 'home':
+        deps.runCommand(controller, 'new-tab-page');
+        return;
+      case 'command-bar':
+        controller.overlay.openCommandBar('new');
+        return;
+      case 'space':
+        if (spaceId && controller.store.spaces.some((s) => s.id === spaceId)) {
+          controller.tabs.switchSpace(spaceId);
+        }
+        return;
+      case 'new-space':
+        deps.runCommand(controller, 'new-space');
+        return;
+      case 'workspaces':
+        windows.openSettings('workspaces');
+        return;
+      case 'profiles':
+        windows.openSettings('profiles');
+        return;
+      case 'sync':
+        windows.openSettings('account');
+        return;
+      case 'settings':
+        windows.openSettings();
+        return;
+      case 'about':
+        deps.about?.();
+        return;
+      case 'quit':
+        deps.quit?.();
+    }
   });
 
   router.handle('profile:get', (_input, { sender }) => {

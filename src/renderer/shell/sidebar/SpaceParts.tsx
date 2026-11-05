@@ -20,7 +20,46 @@ import { useShown } from '../../ui/prefs-store';
 
 const invoke = window.orbit.invoke;
 
-/** The divider between Pinned and Today: space icon and name, with Clear (F-03, Img 5). */
+/** A Space's icon on a chip of its own colour (the Spaces list, UI spec §11). */
+export function SpaceChip({ space, size = 26 }: { space: SpaceView; size?: number }) {
+  return (
+    <span
+      className="grid shrink-0 place-items-center rounded-full text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.3),0_2px_6px_-2px_rgb(0_0_0/0.35)]"
+      style={{
+        width: size,
+        height: size,
+        background: `linear-gradient(160deg, ${space.theme.colors[0] ?? '#6c5ce7'}, ${space.theme.colors.at(-1) ?? '#4834d4'})`,
+      }}
+    >
+      <SpaceIcon icon={space.icon} size={Math.round(size * 0.55)} />
+    </span>
+  );
+}
+
+/** A Space you aren't in: its chip and name; a click goes there (⌃1…9 too). */
+export function SpaceRow({ space, index }: { space: SpaceView; index: number }) {
+  return (
+    <Tip label={space.name} keys={index < 9 ? `⌃${index + 1}` : undefined} side="right">
+      <button
+        type="button"
+        aria-label={space.name}
+        className="press mat-hover flex h-[var(--row-h,38px)] w-full items-center gap-2.5 rounded-[12px] px-1.5 text-left text-[13.5px] text-[var(--fg-muted)] hover:text-[var(--fg)]"
+        onClick={() => void invoke('spaces:activate', { spaceId: space.id })}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          void invoke('sidebar:spaceMenu', { spaceId: space.id });
+        }}
+        data-testid="space-button"
+      >
+        <SpaceChip space={space} size={24} />
+        <span className="min-w-0 flex-1 truncate">{space.name}</span>
+      </button>
+    </Tip>
+  );
+}
+
+/** The Space you're in, at its place in the Spaces list: chip and name (double-click renames),
+ *  with Tidy / Group and Clear for its Today tabs, which are listed below it (F-03). */
 export function SpaceHeader({
   space,
   renaming,
@@ -36,16 +75,25 @@ export function SpaceHeader({
 }) {
   return (
     <div
-      className="flex items-center gap-2 px-3 pt-2 pb-1 text-[13px]"
+      className="flex h-[var(--row-h,38px)] items-center gap-2.5 px-1.5 text-[13.5px]"
       onContextMenu={(e) => {
         e.preventDefault();
         void invoke('sidebar:spaceMenu', { spaceId: space.id });
       }}
       data-testid="space-header"
     >
-      <span className="opacity-80">
-        <SpaceIcon icon={space.icon} size={15} />
-      </span>
+      <button
+        type="button"
+        aria-label={space.name}
+        aria-current="true"
+        className="press shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)]"
+        onClick={() => void invoke('spaces:activate', { spaceId: space.id })}
+        data-testid="space-button"
+      >
+        <span key={space.id} className="anim-pop grid">
+          <SpaceChip space={space} size={24} />
+        </span>
+      </button>
       {renaming ? (
         <RenameInput
           // A new space's rename can start before the sidebar shows that space; keying by id
@@ -67,7 +115,7 @@ export function SpaceHeader({
           {space.name}
         </span>
       )}
-      <span className="h-px flex-1 bg-[var(--sidebar-muted)] opacity-40" />
+      <span className="flex-1" />
       {tidy.canUndo ? (
         <button
           type="button"
@@ -124,14 +172,9 @@ export function SpaceHeader({
   );
 }
 
-/** Library (left), one icon per space (middle), "+" (right) — F-07, Img 1/2/7. */
-export function BottomBar({
-  spaces,
-  activeSpaceId,
-}: {
-  spaces: SpaceView[];
-  activeSpaceId: string;
-}) {
+/** The utility row at the sidebar's foot (UI spec §11): Library, light/dark, Settings, then
+ *  "+" (new Space, folder, note…). Spaces themselves are in the list above. */
+export function BottomBar() {
   // Hovering the Library button shows recent files (after a short pause, like a tooltip).
   const [recent, setRecent] = useState(false);
   const timer = useRef<number | undefined>(undefined);
@@ -190,36 +233,7 @@ export function BottomBar({
           <Settings size={16} />
         </button>
       </Tip>
-      <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-hidden">
-        {spaces.map((space, i) => (
-          <Tip key={space.id} label={space.name} keys={i < 9 ? `⌃${i + 1}` : undefined} side="top">
-            <button
-              type="button"
-              aria-label={space.name}
-              aria-current={space.id === activeSpaceId ? 'true' : undefined}
-              className={`grid size-8 place-items-center rounded-[11px] transition ${
-                space.id === activeSpaceId
-                  ? 'bg-[var(--row-active)] opacity-100'
-                  : 'opacity-55 hover:bg-[var(--hover)] hover:opacity-90'
-              }`}
-              onClick={() => void invoke('spaces:activate', { spaceId: space.id })}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                void invoke('sidebar:spaceMenu', { spaceId: space.id });
-              }}
-              data-testid="space-button"
-            >
-              {/* Switching to a space gives its icon a little bounce. */}
-              <span
-                key={space.id === activeSpaceId ? 'active' : 'idle'}
-                className={`grid ${space.id === activeSpaceId ? 'anim-pop' : ''}`}
-              >
-                <SpaceIcon icon={space.icon} size={15} />
-              </span>
-            </button>
-          </Tip>
-        ))}
-      </div>
+      <span className="flex-1" />
       <Tip label="New Space, Folder, Note…" side="top">
         <button
           type="button"

@@ -1,3 +1,4 @@
+import { useCanvas } from '../../ui/canvas-store';
 import {
   AppWindow,
   ArrowLeft,
@@ -147,6 +148,7 @@ const showInPanel = (id: string | null) => {
  */
 export function NotesPanelPage() {
   const mode = useAppearance();
+  const canvas = useCanvas();
   const hash = useSyncExternalStore(subscribe, panelRoute);
   const [a = '', b = ''] = hash.split('/').slice(3);
   const tab: PanelTab =
@@ -187,8 +189,10 @@ export function NotesPanelPage() {
   const lists = (a === 'projects' && !b) || a === 'tasks';
   return (
     <main
-      data-note-theme={mode}
-      className="relative flex h-screen flex-col overflow-hidden bg-[var(--note-bg)] text-[var(--note-fg)]"
+      // On the canvas: see-through, in the wallpaper's tone (the shell draws the glass).
+      data-note-theme={canvas?.tone ?? mode}
+      data-note-glass
+      className="relative flex h-screen flex-col overflow-hidden text-[var(--note-fg)]"
       data-testid="notes-panel"
     >
       <WorkProvider>
@@ -236,7 +240,7 @@ function PanelTabs({ current }: { current: PanelTab }) {
   const tabs = all.filter((t) => isShown(prefs, PANEL_FEATURE[t.id]) || t.id === current);
   return (
     <nav
-      className="flex shrink-0 items-center gap-1 border-b border-[var(--work-border)] px-2.5 py-2"
+      className="flex shrink-0 items-center gap-1 px-2.5 pt-2.5 pb-1.5"
       aria-label="Panel"
       data-testid="panel-tabs"
     >
@@ -251,7 +255,7 @@ function PanelTabs({ current }: { current: PanelTab }) {
               onClick={() => showPanelView(t.id)}
               className={`press panel-tab flex h-9 items-center justify-center gap-1.5 rounded-[11px] text-[13px] font-medium ${
                 on
-                  ? 'flex-1 bg-[var(--work-accent)] text-white shadow-[0_6px_16px_-8px_var(--work-accent)]'
+                  ? 'mat-sel flex-1 text-[var(--note-fg)]'
                   : 'w-10 text-[var(--note-muted)] hover:bg-[var(--note-hover)] hover:text-[var(--note-fg)]'
               }`}
               data-testid="panel-tab"

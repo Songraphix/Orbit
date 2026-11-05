@@ -20,6 +20,16 @@ const types = (page: Page) =>
       els.map((e) => (e as unknown as { dataset: { type: string } }).dataset.type),
     );
 
+/** A new profile's Homepage (UI spec §9). */
+const DEFAULT_TYPES = ['focus', 'projects', 'apps', 'recent', 'quote', 'today'];
+/** What the Homepage used to start with: Today and the quote. */
+const LEGACY = {
+  widgets: [
+    { id: 'today', type: 'today', size: 'm', options: {} },
+    { id: 'quote', type: 'quote', size: 'm', options: {} },
+  ],
+};
+
 test('Homepage widgets: add, set up, resize, reorder, remove, presets — kept after a restart', async () => {
   const server = await startTestServer();
   const env = {
@@ -30,7 +40,15 @@ test('Homepage widgets: add, set up, resize, reorder, remove, presets — kept a
   const { userData } = first;
   try {
     const page = await homepage(first.app);
-    // What it showed before: Today and the quote, now as widgets.
+    // A new profile's Homepage (UI spec §9); then start this test from Today and the quote.
+    expect(await types(page)).toEqual(DEFAULT_TYPES);
+    await page.evaluate((layout) => {
+      type Invoke = (channel: string, input: unknown) => Promise<unknown>;
+      const { invoke } = (globalThis as unknown as { orbit: { invoke: Invoke } }).orbit;
+      return invoke('newtab:setLayout', { layout });
+    }, LEGACY);
+    await page.reload();
+    await page.getByTestId('newtab').waitFor();
     expect(await types(page)).toEqual(['today', 'quote']);
 
     // Customize → Edit Widgets: the toolbar, then the gallery.
@@ -130,7 +148,7 @@ test('a Space can keep its own Homepage layout; the others share one', async () 
         id,
       );
     const page = await homepage(app);
-    expect(await types(page)).toEqual(['today', 'quote']);
+    expect(await types(page)).toEqual(DEFAULT_TYPES);
     // This Space only: then Minimal here.
     await page.getByTestId('customize-button').click();
     await page.getByTestId('customize-edit-widgets').click();
@@ -153,7 +171,7 @@ test('a Space can keep its own Homepage layout; the others share one', async () 
     await expect.poll(() => others().length).toBeGreaterThan(0);
     const other = others()[0]!;
     await other.getByTestId('newtab').waitFor();
-    expect(await types(other)).toEqual(['today', 'quote']);
+    expect(await types(other)).toEqual(DEFAULT_TYPES);
 
     // Back to All Spaces: the first Space shares again.
     await win.getByTestId('space-button').first().click();
@@ -162,7 +180,7 @@ test('a Space can keep its own Homepage layout; the others share one', async () 
     await page.getByTestId('customize-button').click();
     await page.getByTestId('customize-edit-widgets').click();
     await page.locator('[data-testid="widgets-scope"] [data-value="all"]').click();
-    expect(await types(page)).toEqual(['today', 'quote']);
+    expect(await types(page)).toEqual(DEFAULT_TYPES);
   } finally {
     await orbit.close();
   }

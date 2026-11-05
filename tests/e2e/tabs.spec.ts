@@ -80,7 +80,7 @@ test('loads a page in a tab with title and favicon, placed exactly in the layout
   await app.evaluate(({ Menu }) =>
     Menu.getApplicationMenu()!.getMenuItemById('toggle-sidebar')!.click(),
   );
-  await expect.poll(async () => (await visibleViewBounds(app))[0]?.x).toBe(8);
+  await expect.poll(async () => (await visibleViewBounds(app))[0]?.x).toBe(10);
 });
 
 test('web pages get no Orbit API and cannot reach main', async () => {

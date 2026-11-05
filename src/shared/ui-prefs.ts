@@ -104,6 +104,8 @@ const fields = {
   apps: z.enum(['rail', 'grid']),
   /** Which side a pinned app's panel opens on (UI 3: beside the rail). */
   appSide: z.enum(['left', 'right']),
+  /** Where a newly added app opens (each app can still be changed in Settings → Apps). */
+  appOpen: z.enum(['tab', 'panel', 'window']),
 };
 
 export const uiPrefsSchema = z.object({
@@ -118,6 +120,7 @@ export const uiPrefsSchema = z.object({
   glass: fields.glass.default('balanced'),
   apps: fields.apps.default('rail'),
   appSide: fields.appSide.default('left'),
+  appOpen: fields.appOpen.default('panel'),
 });
 
 /** A change to some of them. (Not uiPrefsSchema.partial(): zod 4 would fill in every default.) */

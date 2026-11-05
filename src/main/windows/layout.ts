@@ -1,11 +1,21 @@
-import { LIBRARY_WIDTH, NOTES_WIDTH, SIDEBAR_WIDTH, TAB_STRIP_HEIGHT } from '@shared/types/layout';
+import {
+  ADDRESS_ROW_HEIGHT,
+  LIBRARY_WIDTH,
+  NOTES_WIDTH,
+  PANE_HEADER_HEIGHT,
+  RAIL_WIDTH,
+  SIDEBAR_WIDTH,
+  TAB_STRIP_HEIGHT,
+} from '@shared/types/layout';
 import type { Layout, LibraryPanel, Rect } from '@shared/types/layout';
 
 /** Arc-like defaults (PLAN.md section 4.6). */
 export const LAYOUT_DEFAULTS = {
-  inset: 8,
-  radius: 14,
-  toolbarHeight: 36,
+  /** The gap between islands, and around the window's edge. */
+  inset: 10,
+  radius: 16,
+  /** The toolbar row (and the tab row with tabs on top). */
+  toolbarHeight: TAB_STRIP_HEIGHT,
 } as const;
 
 export type LayoutInput = {
@@ -29,6 +39,10 @@ export type LayoutInput = {
   dockProgress?: number;
   /** Tabs on top instead of in the sidebar. */
   topTabs?: boolean;
+  /** Pinned apps in a rail (UI 1, the default) or as a grid in the sidebar (UI 2). */
+  apps?: 'rail' | 'grid';
+  /** A pinned app open beside the rail: its width and how far it has slid in (0–1). */
+  appDock?: { width: number; progress: number } | null;
 };
 
 /** How wide the dock is: the width you dragged it to (the Project Board at least its wide
@@ -73,9 +87,9 @@ export function clampRatio(ratio: number): number {
   return Number.isFinite(ratio) ? Math.min(0.8, Math.max(0.2, ratio)) : 0.5;
 }
 
-/** A card (toolbar + web view) occupying `card`. */
-function paneIn(card: Rect, toolbarHeight: number) {
-  const toolbar = { ...card, height: Math.min(toolbarHeight, card.height) };
+/** A page's card: in split view a slim header on top (its title, swap, close split). */
+function paneIn(card: Rect, header: number) {
+  const toolbar = { ...card, height: Math.min(header, card.height) };
   const webView = {
     x: card.x,
     y: card.y + toolbar.height,
@@ -102,74 +116,116 @@ export function clampSidebarWidth(width: number): number {
 }
 
 /**
- * Pure layout maths. The sidebar runs full height on the left; the content card fills the
- * rest, inset from the window edges, with the toolbar strip on top and the web view below.
- * With the sidebar hidden, the card keeps its inset on the left too (that strip is where
- * hover-to-reveal will live).
+ * Pure layout maths (UI spec §5–8). Everything floats on the wallpaper canvas the shell paints:
+ *
+ * - **Rail + sidebar** (UI 1): a toolbar row across the top (traffic lights, Orbit menu,
+ *   back / forward / reload, address, tools); below it the app rail, the sidebar island, then
+ *   the page's card.
+ * - **Sidebar grid** (UI 2): the sidebar island runs the full height (traffic lights inside);
+ *   the toolbar row and the card sit to its right.
+ * - **Tabs on top** (UI 3): the tab row across the top; the rail below it; the address row over
+ *   the page, then its card.
+ *
+ * A pinned app may sit beside the rail (`appDock`) and the dock (Notes, the assistant) on the
+ * right; the page narrows for both. Hiding the sidebar (⌘S) hides the rail too.
  */
 export function computeLayout(input: LayoutInput): Layout {
   const { inset, radius, toolbarHeight } = LAYOUT_DEFAULTS;
   const sidebarWidth = clampSidebarWidth(input.sidebarWidth);
+  const W = Math.max(0, input.windowWidth);
+  const H = Math.max(0, input.windowHeight);
 
   if (input.htmlFullscreen) {
     // Section 4.6: the page fills the window edge to edge — no sidebar, toolbar or corners.
-    const full = {
-      x: 0,
-      y: 0,
-      width: Math.max(0, input.windowWidth),
-      height: Math.max(0, input.windowHeight),
-    };
+    const full = { x: 0, y: 0, width: W, height: H };
     const pane = { card: full, toolbar: { ...full, height: 0 }, webView: full };
     return {
-      sidebar: { visible: false, width: sidebarWidth },
-      ...pane,
+      sidebar: { visible: false, width: sidebarWidth, rect: null },
+      rail: null,
+      toolbar: { ...full, height: 0 },
+      card: full,
+      webView: full,
       panes: [pane],
       divider: null,
       radius: 0,
       fullscreen: true,
       library: null,
       notes: null,
+      appDock: null,
       tabStrip: null,
     };
   }
 
-  const library = input.library
-    ? libraryColumns(input.library, input.windowWidth, input.windowHeight, inset)
+  const library = input.library ? libraryColumns(input.library, W, H, inset) : null;
+  // Tabs on top: the tab row replaces the sidebar (the Library still takes over the left).
+  const strip = Boolean(input.topTabs) && !library;
+  const shown = input.sidebarVisible && !library;
+  const sidebarShown = shown && !strip;
+  // The rail: always with tabs on top; beside the sidebar unless apps are a grid inside it.
+  const railShown = shown && (strip || input.apps !== 'grid');
+  const gridMode = sidebarShown && !railShown;
+  const top = toolbarHeight;
+  const below = { y: top, height: Math.max(0, H - top - inset) };
+
+  let left: number = inset;
+  const rail = railShown ? { x: inset, width: RAIL_WIDTH, ...below } : null;
+  if (rail) left = rail.x + rail.width + inset;
+  const sidebarRect = sidebarShown
+    ? gridMode
+      ? { x: inset, y: inset, width: sidebarWidth, height: Math.max(0, H - inset * 2) }
+      : { x: left, width: sidebarWidth, ...below }
     : null;
-  // Tabs on top: the strip across the window replaces the sidebar (the Library still takes over
-  // the left when it's open).
-  const strip = input.topTabs && !library;
-  const sidebarVisible = input.sidebarVisible && !strip;
-  const top = strip ? TAB_STRIP_HEIGHT : inset;
-  const left = library ? library.pageLeft : sidebarVisible ? sidebarWidth : inset;
-  // The Notes panel takes a column on the right, with the usual gap before it.
-  const notesW = input.notes
-    ? notesWidth(input.windowWidth, left, inset, input.notesWide, input.dockWidth)
+  if (sidebarRect) left = sidebarRect.x + sidebarRect.width + inset;
+  if (library) left = library.pageLeft;
+
+  // A pinned app beside the rail: the page makes room as it slides in.
+  const appProgress = Math.min(1, Math.max(0, input.appDock?.progress ?? 1));
+  const appW = input.appDock
+    ? Math.max(
+        NOTES_WIDTH.min,
+        Math.min(clampDockWidth(input.appDock.width), W - left - inset * 2 - NOTES_WIDTH.pageMin),
+      )
     : 0;
+  const appDock = input.appDock ? { x: left, width: appW, ...below } : null;
+  if (appDock) left += (appW + inset) * appProgress;
+
+  // Rows: the toolbar spans the window (it holds the traffic lights) unless the sidebar island
+  // runs the full height (grid) or the Library's columns do; with tabs on top it's a second
+  // row over the page.
+  const tabStrip = strip ? { x: 0, y: 0, width: W, height: top } : null;
+  const toolbar = strip
+    ? { x: left, y: top, width: Math.max(0, W - left - inset), height: ADDRESS_ROW_HEIGHT }
+    : gridMode || library
+      ? { x: left - inset, y: 0, width: Math.max(0, W - left + inset), height: top }
+      : { x: 0, y: 0, width: W, height: top };
+  const cardTop = strip ? top + ADDRESS_ROW_HEIGHT : top;
+
+  // The dock on the right, with the usual gap before it.
+  const notesW = input.notes ? notesWidth(W, left, inset, input.notesWide, input.dockWidth) : 0;
   const progress = Math.min(1, Math.max(0, input.dockProgress ?? 1));
   const right = input.notes ? inset + (notesW + inset) * progress : inset;
 
   const card = {
     x: left,
-    y: top,
-    width: Math.max(0, input.windowWidth - left - right),
-    height: Math.max(0, input.windowHeight - top - inset),
+    y: cardTop,
+    width: Math.max(0, W - left - right),
+    height: Math.max(0, H - cardTop - inset),
   };
   const notes = input.notes
     ? { x: card.x + card.width + inset, y: card.y, width: notesW, height: card.height }
     : null;
-  // Split view: two cards side by side with a gap (the divider) between them.
+  // Split view: two cards side by side with a gap (the divider), each with a slim header.
   const panes =
     input.splitRatio == null
-      ? [paneIn(card, toolbarHeight)]
+      ? [paneIn(card, 0)]
       : (() => {
           const usable = Math.max(0, card.width - inset);
           const leftWidth = Math.round(usable * clampRatio(input.splitRatio));
           return [
-            paneIn({ ...card, width: leftWidth }, toolbarHeight),
+            paneIn({ ...card, width: leftWidth }, PANE_HEADER_HEIGHT),
             paneIn(
               { ...card, x: card.x + leftWidth + inset, width: usable - leftWidth },
-              toolbarHeight,
+              PANE_HEADER_HEIGHT,
             ),
           ];
         })();
@@ -181,18 +237,20 @@ export function computeLayout(input: LayoutInput): Layout {
   return {
     // In Library mode the sidebar is the sections column.
     sidebar: library
-      ? { visible: true, width: library.nav.width }
-      : { visible: sidebarVisible, width: sidebarWidth },
-    ...panes[0]!,
+      ? { visible: true, width: library.nav.width, rect: library.nav }
+      : { visible: sidebarShown, width: sidebarWidth, rect: sidebarRect },
+    rail,
+    toolbar,
+    card: panes[0]!.card,
+    webView: panes[0]!.webView,
     panes,
     divider,
     radius,
     fullscreen: false,
     library: library && { nav: library.nav, panel: library.panel },
     notes,
-    tabStrip: strip
-      ? { x: 0, y: 0, width: Math.max(0, input.windowWidth), height: TAB_STRIP_HEIGHT }
-      : null,
+    appDock,
+    tabStrip,
   };
 }
 

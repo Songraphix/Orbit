@@ -1,4 +1,4 @@
-import { APP_CATALOG, appUrl, showsIn } from '@shared/apps';
+import { APP_CATALOG, appUrl, DEFAULT_APP_OPTIONS, showsIn } from '@shared/apps';
 import type { OpenIn } from '@shared/apps';
 import type { WindowController } from '../windows/window-manager';
 
@@ -57,7 +57,13 @@ export function appLibraryView(controller: WindowController): AppLibraryView {
 }
 
 /** Adds a site as an app (a favourite of the window's profile, shown in every Space). */
-export function addApp(controller: WindowController, url: string, title?: string): string {
+export function addApp(
+  controller: WindowController,
+  url: string,
+  title?: string,
+  /** Where it opens (Settings → Appearance → New apps open in). */
+  openIn: OpenIn = 'tab',
+): string {
   const address = appUrl(url);
   if (!address) throw new Error('That isn’t a web address');
   const space = controller.tabs.space;
@@ -73,5 +79,8 @@ export function addApp(controller: WindowController, url: string, title?: string
   );
   controller.store.setHome(item.id, address);
   if (title?.trim()) controller.store.rename(item.id, title.trim());
+  if (openIn !== 'tab') {
+    controller.store.setData(item.id, { ...item.data, app: { ...DEFAULT_APP_OPTIONS, openIn } });
+  }
   return item.id;
 }

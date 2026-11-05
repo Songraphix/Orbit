@@ -84,7 +84,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
             <Group title="Tabs">
               <Row
                 label="Tab layout"
-                hint="Tabs in the sidebar, like Arc, or in a strip across the top."
+                hint="Tabs in the sidebar, like Arc, or as pills across the top (also in Appearance)."
               >
                 <select
                   value={settings.tabLayout}
@@ -95,7 +95,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
                   data-testid="setting-tab-layout"
                 >
                   <option value="sidebar">Sidebar</option>
-                  <option value="top">Top</option>
+                  <option value="top">Horizontal</option>
                 </select>
               </Row>
               <Row
@@ -265,6 +265,11 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
             onAppearance={(appearance) => {
               setSettings({ ...settings, appearance }); // at once; main's answer follows
               update({ appearance });
+            }}
+            tabLayout={settings.tabLayout}
+            onTabLayout={(tabLayout) => {
+              setSettings({ ...settings, tabLayout });
+              update({ tabLayout });
             }}
           />
 

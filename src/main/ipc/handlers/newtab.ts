@@ -14,7 +14,7 @@ import type { WorkRepository } from '../../persistence/repositories/work';
 import { dateKey, todayTasks } from '@shared/work';
 import type { TaskInput } from '@shared/work';
 import type { Todo } from '@shared/types/home';
-import { layoutFromShow } from '@shared/home-widgets';
+import { layoutForShow } from '@shared/home-widgets';
 import { colorHex, projectProgress } from '@shared/work';
 import type { NotesRepository } from '../../persistence/repositories/notes';
 import type { WeatherService } from '../../newtab/weather';
@@ -107,8 +107,7 @@ export function registerNewTabHandlers(
     const spaceId = spaceOf(owner);
     const own = settings.get('home.spaceLayouts')[spaceId];
     return {
-      layout:
-        own ?? settings.get('home.layout') ?? layoutFromShow(settings.get('newtab.home').show),
+      layout: own ?? settings.get('home.layout') ?? layoutForShow(settings.get('newtab.home').show),
       layoutScope: own ? ('space' as const) : ('all' as const),
       spaceName: owner.window.store.space(spaceId)?.name ?? '',
     };

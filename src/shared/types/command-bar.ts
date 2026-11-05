@@ -109,6 +109,8 @@ export const overlayStateSchema = z.object({
     .nullable(),
   /** The profile menu (owner request), under the toolbar's avatar at `anchor`. */
   profileMenu: z.object({ anchor: rectSchema, openedAt: z.number() }).nullable(),
+  /** The Orbit menu (UI spec §5), under the toolbar's "Orbit ⌄". */
+  orbitMenu: z.object({ anchor: rectSchema, openedAt: z.number() }).nullable().default(null),
   /** An Arc-style tooltip for a shell control: label, key caps, and its box in the window.
    *  `alone`: nothing else is showing, so the overlay is just this box. */
   tooltip: z

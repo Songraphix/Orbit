@@ -1,7 +1,7 @@
 import { DEFAULT_APP_OPTIONS } from '@shared/apps';
 import { addApp, appLibraryView } from '../../apps/library';
 import { openFavorite } from '../../apps/open';
-import type { AppList, AppOptions } from '@shared/apps';
+import type { AppList, AppOptions, OpenIn } from '@shared/apps';
 import type { IpcRouter } from '../router';
 import type { WindowController, WindowManager } from '../../windows/window-manager';
 
@@ -15,6 +15,8 @@ export function registerAppHubHandlers(
   deps: {
     /** Little Orbit: the panel's app in its own small window. */
     openWindow?: (url: string) => void;
+    /** Where newly added apps open (Settings → Appearance). */
+    defaultOpenIn?: () => OpenIn;
   } = {},
 ): void {
   const shellOf = (webContentsId: number) => {
@@ -76,7 +78,11 @@ export function registerAppHubHandlers(
     return controller;
   };
   router.handle('applib:open', (_input, { sender }) => {
-    const controller = windowOf(sender.webContentsId);
+    // From the shell or overlay, or from the Homepage (an Orbit page in a tab).
+    const controller =
+      windows.forSender(sender.webContentsId) ??
+      windows.tabForContents(sender.webContentsId)?.window;
+    if (!controller) throw new Error(`No window for sender ${sender.webContentsId}`);
     controller.overlay.showAppLibrary(appLibraryView(controller));
   });
   router.handle('applib:launch', ({ itemId }, { sender }) => {
@@ -86,7 +92,7 @@ export function registerAppHubHandlers(
   });
   router.handle('applib:add', ({ url, title }, { sender }) => {
     const controller = windowOf(sender.webContentsId);
-    addApp(controller, url, title);
+    addApp(controller, url, title, deps.defaultOpenIn?.());
     controller.overlay.showAppLibrary(appLibraryView(controller), true);
   });
   router.handle('applib:close', ({ settings }, { sender }) => {
@@ -99,7 +105,7 @@ export function registerAppHubHandlers(
 
   router.handle('apps:add', ({ url, title }, { sender }) => {
     const window = settingsOf(sender.webContentsId);
-    addApp(window, url, title);
+    addApp(window, url, title, deps.defaultOpenIn?.());
     return list(window);
   });
 

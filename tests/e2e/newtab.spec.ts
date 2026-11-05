@@ -177,15 +177,16 @@ test('the home page greets you by name, keeps today’s to-dos and shows a quote
 
   // Today: your real tasks due today. Add two, tick one, take one off today's list.
   const input = page.getByTestId('todo-input');
-  await input.fill('Finish brand guide');
+  await input.fill('Proof the poster');
   await input.press('Enter');
   await input.fill('Edit video');
   await input.press('Enter');
-  const row = (p: typeof page, text: string) => p.getByTestId('todo').filter({ hasText: text });
-  await expect(row(page, 'Finish brand guide')).toHaveCount(1);
+  const row = (p: typeof page, text: string) =>
+    p.getByTestId('today').getByTestId('todo').filter({ hasText: text });
+  await expect(row(page, 'Proof the poster')).toHaveCount(1);
   await expect(row(page, 'Edit video')).toHaveCount(1);
-  await row(page, 'Finish brand guide').getByTestId('todo-check').click();
-  await expect(row(page, 'Finish brand guide').getByTestId('todo-check')).toHaveAttribute(
+  await row(page, 'Proof the poster').getByTestId('todo-check').click();
+  await expect(row(page, 'Proof the poster').getByTestId('todo-check')).toHaveAttribute(
     'aria-checked',
     'true',
   );
@@ -203,7 +204,7 @@ test('the home page greets you by name, keeps today’s to-dos and shows a quote
   const tasks = (await panel.evaluate(() =>
     (globalThis as unknown as { orbit: { invoke: Invoke } }).orbit.invoke('work:get', {}),
   )) as { tasks: { title: string; status: string; dueDate: string | null }[] };
-  expect(tasks.tasks.find((t) => t.title === 'Finish brand guide')?.status).toBe('done');
+  expect(tasks.tasks.find((t) => t.title === 'Proof the poster')?.status).toBe('done');
   expect(tasks.tasks.find((t) => t.title === 'Edit video')?.dueDate).toBeNull();
 
   // A new tab page later shows the same list.
@@ -211,7 +212,7 @@ test('the home page greets you by name, keeps today’s to-dos and shows a quote
     (globalThis as unknown as { orbit: { invoke: Invoke } }).orbit.invoke('tabs:create', {}),
   );
   const second = await newTabPage(orbit.app);
-  await expect(row(second, 'Finish brand guide').getByTestId('todo-check')).toHaveAttribute(
+  await expect(row(second, 'Proof the poster').getByTestId('todo-check')).toHaveAttribute(
     'aria-checked',
     'true',
   );
@@ -230,9 +231,8 @@ test('shortcuts: add one, open it, remove it; widgets and theme can be switched'
   await page.getByTestId('shortcut-save').click();
   await expect(page.getByTestId('shortcut-name')).toHaveText(['Two']);
 
-  // Light glass, and hiding the quote, stick.
-  await page.getByTestId('theme-toggle').click();
-  await expect(page.getByTestId('newtab')).toHaveAttribute('data-theme', 'light');
+  // The glass follows the wallpaper (dark text on a light one); hiding the quote sticks.
+  await expect(page.getByTestId('newtab')).toHaveAttribute('data-theme', 'dark');
   await page.getByTestId('customize-button').click();
   await page.getByTestId('show-quote').uncheck();
   await expect(page.getByTestId('quote')).toHaveCount(0);

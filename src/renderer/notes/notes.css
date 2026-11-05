@@ -217,6 +217,20 @@
   --work-sheet: #26262b;
 }
 
+/* The side panel on the canvas (UI spec §10): its page is see-through over the shell's deep
+   glass, with the canvas's text colours; inner sheets stay opaque in the wallpaper's tint. */
+[data-note-glass][data-note-theme] {
+  --note-bg: var(--solid-deep);
+  --note-fg: var(--fg);
+  --note-muted: var(--fg-muted);
+  --note-hover: var(--glass-hover);
+  --note-line: var(--glass-border);
+  --work-card: var(--glass-light);
+  --work-border: var(--glass-border);
+  --work-track: rgb(255 255 255 / 0.16);
+  --work-sheet: var(--solid-elevated);
+}
+
 /* The panel's open tab names itself with a small slide (the others stay icons). */
 .panel-tab {
   transition:

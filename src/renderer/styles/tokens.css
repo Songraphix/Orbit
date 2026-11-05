@@ -330,6 +330,49 @@ body {
   }
 }
 
+/* On the canvas (UI spec §4): the overlay's floating glass (menus, the command bar, prompts)
+   takes the wallpaper's tone and tint, whatever the Mac's appearance — like the islands it
+   floats beside. (`:root:root` outranks the appearance media queries above.) */
+:root:root.ui-dark[data-canvas-tone='dark'] {
+  --color-white: #fff;
+  --color-black: #000;
+  --color-neutral-50: oklch(98.5% 0 none);
+  --color-neutral-100: oklch(97% 0 none);
+  --color-neutral-200: oklch(92.2% 0 none);
+  --color-neutral-300: oklch(87% 0 none);
+  --color-neutral-400: oklch(70.8% 0 none);
+  --color-neutral-500: oklch(55.6% 0 none);
+  --color-neutral-600: oklch(43.9% 0 none);
+  --color-neutral-700: oklch(37.1% 0 none);
+  --color-neutral-800: oklch(26.9% 0 none);
+  --color-neutral-900: oklch(20.5% 0 none);
+  --color-neutral-950: oklch(14.5% 0 none);
+  --glass-tint: color-mix(in srgb, var(--solid-elevated) 80%, transparent);
+  --glass-solid: color-mix(in srgb, var(--solid-elevated) 88%, transparent);
+  --glass-rim: var(--glass-border);
+  --glass-backdrop: brightness(0.85);
+  color-scheme: dark;
+}
+:root:root.ui-dark[data-canvas-tone='light'] {
+  --color-white: #0b0b0d;
+  --color-neutral-50: #1c1c1f;
+  --color-neutral-100: #2c2c2e;
+  --color-neutral-200: #3a3a3c;
+  --color-neutral-300: #48484a;
+  --color-neutral-400: #5f5f64;
+  --color-neutral-500: #6e6e73;
+  --color-neutral-600: #8e8e93;
+  --color-neutral-700: #aeaeb2;
+  --color-neutral-800: #e5e5ea;
+  --color-neutral-900: #f2f2f7;
+  --color-neutral-950: #fafafa;
+  --glass-tint: color-mix(in srgb, var(--solid-elevated) 82%, transparent);
+  --glass-solid: color-mix(in srgb, var(--solid-elevated) 90%, transparent);
+  --glass-rim: rgb(0 0 0 / 0.1);
+  --glass-backdrop: brightness(1.15);
+  color-scheme: light;
+}
+
 /* ── Materials ───────────────────────────────────────────────────────────────
    Glass for floating UI: a dark tint over a blurred copy of the page (GlassBackdrop), a hairline
    rim with a lit top edge, and layered shadows for real depth. */

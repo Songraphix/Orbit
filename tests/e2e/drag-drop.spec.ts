@@ -68,8 +68,8 @@ test('drag to reorder Today, to Pinned, into a folder and onto Favorites', async
   await expect(pinned).toHaveText(['Page Two']);
   await expect(today).toHaveText(['New Tab', 'Page One']);
 
-  // Drop "Page One" on the favorites area → favorite.
-  await drag(today.nth(1), win.getByTestId('favorites-drop'));
+  // Drop "Page One" on the app rail → a favorite (a pinned app).
+  await drag(today.nth(1), win.getByTestId('rail-apps'));
   await expect(win.getByTestId('favorite-tile')).toHaveAttribute('aria-label', 'Page One');
   await expect(today).toHaveText(['New Tab']);
 

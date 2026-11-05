@@ -1,4 +1,4 @@
-import { Plus, X } from 'lucide-react';
+import { LayoutGrid, Plus, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import type { NewTabState } from '@shared/types/newtab';
@@ -14,7 +14,8 @@ const messageOf = (e: unknown) =>
 
 /** An icon's resting size, and how much it grows right under the pointer (like macOS). */
 const ICON = 46;
-const GROW = 0.3;
+/** Gentle on purpose (UI spec §9: no exaggerated Dock magnification). */
+const GROW = 0.12;
 /** How far (px) from the pointer icons still grow a little. */
 const REACH = 120;
 
@@ -72,6 +73,21 @@ export function Dock(props: {
         onMouseLeave={() => track(null)}
         data-testid="shortcuts"
       >
+        <li className="group relative flex flex-col items-center">
+          <button
+            type="button"
+            onClick={() => void invoke('applib:open', {})}
+            aria-label="App Library"
+            title="App Library (⇧⌘A)"
+            className={`press lift grid place-items-center rounded-[14px] ${
+              light ? 'bg-black/[0.07]' : 'bg-white/[0.14]'
+            }`}
+            style={{ width: ICON, height: ICON }}
+            data-testid="dock-launcher"
+          >
+            <LayoutGrid size={20} strokeWidth={2} className="opacity-90" />
+          </button>
+        </li>
         {shortcuts.map((s, i) => {
           const size = sizeOf(i);
           return (

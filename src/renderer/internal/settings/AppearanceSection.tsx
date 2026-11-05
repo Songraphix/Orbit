@@ -13,6 +13,9 @@ import {
 import type { UiPrefs } from '@shared/ui-prefs';
 import type { UserSettings } from '@shared/settings';
 import { useUiPrefs } from '../../ui/prefs-store';
+import { useCanvas } from '../../ui/canvas-store';
+import { BUILTIN_WALLPAPERS } from '@shared/types/newtab';
+import { WALLPAPER_CSS } from '@shared/wallpapers';
 import { Segmented } from '../../ui/Segmented';
 import { Toggle } from '../../ui/Toggle';
 import { Group, Row, Section } from './parts';
@@ -25,8 +28,11 @@ import { Group, Row, Section } from './parts';
 export function AppearanceSection(props: {
   appearance: UserSettings['appearance'];
   onAppearance: (value: UserSettings['appearance']) => void;
+  tabLayout: UserSettings['tabLayout'];
+  onTabLayout: (value: UserSettings['tabLayout']) => void;
 }) {
   const stored = useUiPrefs();
+  const canvas = useCanvas();
   // Changes show at once; main's answer (and its update to every page) follows.
   const [local, setLocal] = useState<UiPrefs | null>(null);
   const prefs = local ?? stored;
@@ -56,6 +62,129 @@ export function AppearanceSection(props: {
             />
           ))}
         </div>
+      </Group>
+
+      <Group title="Wallpaper and glass">
+        <div className="p-3" data-testid="ui-wallpapers">
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+            {BUILTIN_WALLPAPERS.slice(0, 12).map((w) => {
+              const on = canvas?.wallpaper.kind === 'builtin' && canvas.wallpaper.id === w.id;
+              return (
+                <button
+                  key={w.id}
+                  type="button"
+                  aria-label={w.name}
+                  aria-pressed={on}
+                  title={w.name}
+                  onClick={() =>
+                    void window.orbit.invoke('canvas:setWallpaper', {
+                      wallpaper: { kind: 'builtin', id: w.id },
+                    })
+                  }
+                  className={`press aspect-[16/10] rounded-[10px] bg-cover bg-center ${
+                    on
+                      ? 'shadow-[0_0_0_2px_var(--accent-fill,#2f7d75),0_0_0_4px_white]'
+                      : 'hover:brightness-110'
+                  }`}
+                  style={{ background: WALLPAPER_CSS[w.id], backgroundSize: 'cover' }}
+                  data-testid="ui-wallpaper"
+                  data-value={w.id}
+                />
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[12px] text-neutral-500">
+            Your own image, colours and Unsplash photos are in the Homepage’s Customize panel.
+          </p>
+        </div>
+        <Row
+          label="Match the wallpaper"
+          hint="Orbit’s accent and glass take their colour from the wallpaper. Off: each Space’s colour."
+        >
+          <Toggle
+            checked={prefs.palette === 'auto'}
+            onChange={(on) => set({ palette: on ? 'auto' : 'off' })}
+            label="Match the wallpaper"
+            testId="ui-palette"
+          />
+        </Row>
+        <Row
+          label="Glass"
+          hint="Subtle is the most solid and easiest to read; Strong lets the most wallpaper through."
+        >
+          <Segmented
+            label="Glass"
+            value={prefs.glass}
+            onChange={(glass) => set({ glass })}
+            options={[
+              { value: 'subtle', label: 'Subtle' },
+              { value: 'balanced', label: 'Balanced' },
+              { value: 'strong', label: 'Strong' },
+            ]}
+            testId="ui-glass"
+          />
+        </Row>
+        <Row label="Dim photos" hint="A darker veil over photo wallpapers, for readable text.">
+          <input
+            type="range"
+            min={0}
+            max={60}
+            step={5}
+            value={canvas?.look.overlay ?? 15}
+            onChange={(e) =>
+              void window.orbit.invoke('canvas:setDim', { overlay: Number(e.target.value) })
+            }
+            aria-label="Dim photos"
+            className="w-40 accent-[var(--accent-fill)]"
+            data-testid="ui-dim"
+          />
+        </Row>
+      </Group>
+
+      <Group title="Browser layout">
+        <Row label="Tab layout" hint="Tabs in the sidebar, or as pills across the top.">
+          <Segmented
+            label="Tab layout"
+            value={props.tabLayout}
+            onChange={props.onTabLayout}
+            options={[
+              { value: 'sidebar', label: 'Sidebar' },
+              { value: 'top', label: 'Horizontal' },
+            ]}
+            testId="ui-tab-layout"
+          />
+        </Row>
+        <Row
+          label="Pinned apps"
+          hint="In their own rail beside the sidebar, or as a grid inside it. With horizontal tabs they’re always in the rail."
+        >
+          <Segmented
+            label="Pinned apps"
+            value={prefs.apps}
+            onChange={(apps) => set({ apps })}
+            options={[
+              { value: 'rail', label: 'App rail' },
+              { value: 'grid', label: 'Sidebar grid' },
+            ]}
+            testId="ui-apps"
+          />
+        </Row>
+        <Row
+          label="New apps open"
+          hint="Where an app you add opens. Each app can be changed in Apps."
+        >
+          <Segmented
+            label="New apps open"
+            value={prefs.appOpen}
+            onChange={(appOpen) => set({ appOpen })}
+            options={[
+              { value: 'panel', label: 'Beside the page' },
+              { value: 'tab', label: 'As a tab' },
+              { value: 'window', label: 'In a window' },
+            ]}
+            testId="ui-app-open"
+          />
+        </Row>
       </Group>
 
       <Group title="Theme">
@@ -91,7 +220,11 @@ export function AppearanceSection(props: {
         </Row>
         <Row
           label="Accent colour"
-          hint="Buttons, switches and highlights. Space uses each Space’s colour."
+          hint={
+            prefs.palette === 'auto'
+              ? 'Buttons, switches and highlights. Auto takes it from the wallpaper.'
+              : 'Buttons, switches and highlights. Space uses each Space’s colour.'
+          }
         >
           <div
             className="flex flex-wrap items-center gap-1.5"
@@ -101,8 +234,12 @@ export function AppearanceSection(props: {
           >
             <Swatch
               on={prefs.accent === null}
-              label="Space"
-              color="conic-gradient(#5b5bd6, #0f9488, #e8590c, #d6336c, #5b5bd6)"
+              label={prefs.palette === 'auto' ? 'Auto (wallpaper)' : 'Space'}
+              color={
+                prefs.palette === 'auto' && canvas
+                  ? `conic-gradient(${canvas.accent}, ${canvas.accent2}, ${canvas.accent})`
+                  : 'conic-gradient(#5b5bd6, #0f9488, #e8590c, #d6336c, #5b5bd6)'
+              }
               onClick={() => set({ accent: null })}
               value="space"
             />

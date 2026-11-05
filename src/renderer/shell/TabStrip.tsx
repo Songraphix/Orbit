@@ -1,4 +1,9 @@
 import { ArrowDown, Plus, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import type { DragEvent } from 'react';
+import { DRAG_TYPE, readDragged } from './sidebar/dnd';
+import { OrbitMenuButton, Tools } from './Toolbar';
+import type { ToolsProps } from './Toolbar';
 import type { DownloadView } from '@shared/types/downloads';
 import type { MouseEvent } from 'react';
 import type { Rect } from '@shared/types/layout';
@@ -15,41 +20,89 @@ const menu = (e: MouseEvent, row: SidebarRow) => {
 };
 
 /**
- * Tabs on top (owner request): the space's tabs in a strip across the window instead of the
- * sidebar — spaces, then favorites and pinned tabs as icons, then Today's tabs as pills that
- * shrink as more open. Same tabs, same right-click menu; ⌘-number and ⌃Tab work as always.
+ * Tabs on top (UI spec §6, layout B, UI 3): the Space's tabs as floating pills across the top —
+ * favicon, title and close; the active one a little raised in the canvas's accent glass. The
+ * same tabs as the sidebar (one tab model): pinned tabs first as icon pills, then Today's. Drag
+ * to reorder; the row scrolls sideways (wheel or trackpad) when there are many; ⌘-number and
+ * ⌃Tab work as always. The Orbit menu sits before them and Orbit's tools after.
  */
 export function TabStrip({
   rect,
   sidebar,
   downloads,
+  tools,
 }: {
   rect: Rect;
   sidebar: SidebarSnapshot;
   downloads: DownloadView[];
+  tools: ToolsProps;
 }) {
-  const icons = [...sidebar.favorites, ...sidebar.pinned].filter((r) => r.kind === 'tab');
+  const pinned = sidebar.pinned.filter((r) => r.kind === 'tab');
+  // Every tab, folders' too (dragging reorders top-level tabs; tabs in folders stay in them).
   const today = sidebar.today.filter((r) => r.kind === 'tab');
+  const scroller = useRef<HTMLDivElement>(null);
+  const [over, setOver] = useState<{ id: string; after: boolean } | null>(null);
+  const active = sidebar.activeItemId;
+
+  // Keep the active pill in view (a ⌘-number or ⌃Tab to a tab scrolled away).
+  useEffect(() => {
+    scroller.current
+      ?.querySelector('[aria-selected="true"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [active]);
+
+  const drop = (e: DragEvent, row: SidebarRow, section: 'pinned' | 'today', list: SidebarRow[]) => {
+    e.preventDefault();
+    const itemId = readDragged(e);
+    const after = over?.id === row.id && over.after;
+    setOver(null);
+    if (!itemId || itemId === row.id) return;
+    const index = list.findIndex((r) => r.id === row.id);
+    const beforeId = after ? (list[index + 1]?.id ?? null) : row.id;
+    void invoke('sidebar:move', { itemId, section, parentId: null, beforeId });
+  };
+  const dragProps = (row: SidebarRow, section: 'pinned' | 'today', list: SidebarRow[]) => ({
+    draggable: true,
+    onDragStart: (e: DragEvent) => {
+      e.dataTransfer.setData(DRAG_TYPE, row.id);
+      e.dataTransfer.effectAllowed = 'move' as const;
+    },
+    onDragOver: (e: DragEvent<HTMLElement>) => {
+      if (!e.dataTransfer.types.includes(DRAG_TYPE)) return;
+      e.preventDefault();
+      const r = e.currentTarget.getBoundingClientRect();
+      setOver({ id: row.id, after: e.clientX > r.left + r.width / 2 });
+    },
+    onDragLeave: () => setOver(null),
+    onDrop: (e: DragEvent) => drop(e, row, section, list),
+  });
+  const marker = (row: SidebarRow) =>
+    over?.id === row.id ? (
+      <span
+        className={`pointer-events-none absolute inset-y-1.5 w-0.5 rounded-full bg-[var(--fg)] ${over.after ? '-right-1' : '-left-1'}`}
+      />
+    ) : null;
+
   return (
     <div
-      className="drag-region absolute flex items-center gap-1 pr-3 pl-[84px] text-[var(--sidebar-fg)]"
+      className="drag-region absolute flex items-center gap-2 pr-2.5 pl-[84px] text-[var(--fg)]"
       style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
       data-testid="tab-strip"
     >
+      <OrbitMenuButton />
       {sidebar.spaces.length > 1 && (
-        <div className="no-drag mr-1 flex shrink-0 items-center gap-0.5">
+        <div className="no-drag mat-light flex h-9 shrink-0 items-center gap-0.5 rounded-full px-1">
           {sidebar.spaces.map((space, i) => (
             <Tip key={space.id} label={space.name} keys={i < 9 ? `⌃${i + 1}` : undefined}>
               <button
-                key={space.id}
                 type="button"
                 aria-label={space.name}
                 aria-current={space.id === sidebar.activeSpaceId ? 'true' : undefined}
                 onClick={() => void invoke('spaces:activate', { spaceId: space.id })}
-                className={`press grid size-7 place-items-center rounded-[9px] ${
+                className={`press grid size-7 place-items-center rounded-full ${
                   space.id === sidebar.activeSpaceId
-                    ? 'bg-[var(--row-active)]'
-                    : 'opacity-55 hover:bg-[var(--hover)] hover:opacity-90'
+                    ? 'mat-sel'
+                    : 'opacity-60 hover:bg-[var(--glass-hover)] hover:opacity-100'
                 }`}
                 data-testid="strip-space"
               >
@@ -59,81 +112,93 @@ export function TabStrip({
           ))}
         </div>
       )}
-      {icons.map((row) => (
-        <Tip key={row.id} label={row.title}>
-          <button
-            key={row.id}
-            type="button"
-            aria-label={row.title}
-            aria-current={row.id === sidebar.activeItemId ? 'page' : undefined}
-            onClick={() => activate(row)}
-            onContextMenu={(e) => menu(e, row)}
-            className={`press no-drag grid size-8 shrink-0 place-items-center rounded-[11px] ${
-              row.id === sidebar.activeItemId
-                ? 'bg-[var(--row-active)] shadow-[var(--row-shadow)]'
-                : `hover:bg-[var(--hover)] ${row.live ? '' : 'opacity-60'}`
-            }`}
-            data-testid="strip-pinned"
-          >
-            <TabIcon row={row} />
-          </button>
-        </Tip>
-      ))}
-      {icons.length > 0 && <span className="mx-1 h-4 w-px shrink-0 bg-[var(--hover)]" />}
-      <div className="flex min-w-0 flex-1 items-center gap-1">
+      <div
+        ref={scroller}
+        className="scrollbar-none flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-0.5 py-2"
+        onWheel={(e) => {
+          // A mouse wheel scrolls the row sideways.
+          if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.currentTarget.scrollLeft += e.deltaY;
+        }}
+        role="tablist"
+        aria-label="Tabs"
+      >
+        {pinned.map((row) => (
+          <Tip key={row.id} label={row.title}>
+            <button
+              type="button"
+              role="tab"
+              aria-label={row.title}
+              aria-selected={row.id === active}
+              onClick={() => activate(row)}
+              onContextMenu={(e) => menu(e, row)}
+              className={`press no-drag relative grid h-9 w-11 shrink-0 place-items-center rounded-full ${
+                row.id === active ? 'mat-sel' : `mat-light ${row.live ? '' : 'opacity-70'}`
+              }`}
+              data-testid="strip-pinned"
+              {...dragProps(row, 'pinned', pinned)}
+            >
+              {marker(row)}
+              <TabIcon row={row} />
+            </button>
+          </Tip>
+        ))}
         {today.map((row) => {
-          const active = row.id === sidebar.activeItemId;
+          const on = row.id === active;
           return (
-            <Tip key={row.id} label={row.title}>
-              <div
-                key={row.id}
-                role="tab"
-                tabIndex={0}
-                aria-selected={active}
-                onClick={() => activate(row)}
-                onKeyDown={(e) => e.key === 'Enter' && activate(row)}
-                onAuxClick={(e) => e.button === 1 && void invoke('tabs:close', { tabId: row.id })}
-                onContextMenu={(e) => menu(e, row)}
-                className={`press no-drag group flex h-8 max-w-[220px] min-w-[38px] flex-1 cursor-default items-center gap-2 rounded-[11px] pr-1 pl-2.5 text-[13px] ${
-                  active
-                    ? 'bg-[var(--row-active)] font-medium shadow-[var(--row-shadow)]'
-                    : 'text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]'
-                }`}
-                data-testid="strip-tab"
-              >
+            <div
+              key={row.id}
+              role="tab"
+              tabIndex={0}
+              aria-selected={on}
+              title={row.title}
+              onClick={() => activate(row)}
+              onKeyDown={(e) => e.key === 'Enter' && activate(row)}
+              onAuxClick={(e) => e.button === 1 && void invoke('tabs:close', { tabId: row.id })}
+              onContextMenu={(e) => menu(e, row)}
+              className={`press no-drag group relative flex h-9 w-[200px] min-w-[120px] shrink cursor-default items-center gap-2 rounded-full pr-1.5 pl-3 text-[13.5px] transition-[background,box-shadow] duration-[var(--dur-hover)] ${
+                on
+                  ? 'mat-sel font-medium'
+                  : 'mat-light text-[var(--fg-muted)] hover:text-[var(--fg)]'
+              }`}
+              data-testid="strip-tab"
+              {...(row.depth === 0 ? dragProps(row, 'today', today) : {})}
+            >
+              {marker(row)}
+              <span className="grid size-4 shrink-0 place-items-center [&>*]:size-4">
                 <TabIcon row={row} />
-                <span className="min-w-0 flex-1 truncate">{row.title}</span>
-                <button
-                  type="button"
-                  aria-label={`Close ${row.title}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void invoke('tabs:close', { tabId: row.id });
-                  }}
-                  className={`grid size-5 shrink-0 place-items-center rounded-[6px] hover:bg-[var(--hover)] ${
-                    active ? '' : 'opacity-0 group-hover:opacity-100'
-                  }`}
-                  data-testid="strip-close"
-                >
-                  <X size={12} strokeWidth={2.2} />
-                </button>
-              </div>
-            </Tip>
+              </span>
+              <span className="min-w-0 flex-1 truncate">{row.title}</span>
+              <button
+                type="button"
+                aria-label={`Close ${row.title}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void invoke('tabs:close', { tabId: row.id });
+                }}
+                className={`grid size-6 shrink-0 place-items-center rounded-full hover:bg-[var(--glass-hover)] focus-visible:opacity-100 ${
+                  on ? '' : 'opacity-0 group-hover:opacity-100'
+                }`}
+                data-testid="strip-close"
+              >
+                <X size={13} strokeWidth={2.2} />
+              </button>
+            </div>
           );
         })}
-        <Tip label="New Tab">
+        <Tip label="New Tab" keys="⌘T">
           <button
             type="button"
             aria-label="New Tab"
             onClick={() => void invoke('tabs:create', {})}
-            className="press no-drag grid size-8 shrink-0 place-items-center rounded-[11px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+            className="press no-drag mat-light grid size-9 shrink-0 place-items-center rounded-full text-[var(--icon)] hover:text-[var(--fg)]"
             data-testid="strip-new-tab"
           >
-            <Plus size={16} />
+            <Plus size={17} />
           </button>
         </Tip>
       </div>
       <DownloadsButton downloads={downloads} />
+      <Tools {...tools} />
     </div>
   );
 }
@@ -153,7 +218,7 @@ function DownloadsButton({ downloads }: { downloads: DownloadView[] }) {
         type="button"
         aria-label="Downloads"
         onClick={() => void invoke('library:open', { section: 'downloads' })}
-        className="press no-drag relative ml-1 grid size-8 shrink-0 place-items-center rounded-[11px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
+        className="press no-drag mat-light relative grid size-9 shrink-0 place-items-center rounded-full text-[var(--icon)] hover:text-[var(--fg)]"
         data-testid="strip-downloads"
       >
         {progress !== null && (

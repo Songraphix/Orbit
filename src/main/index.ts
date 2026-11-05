@@ -1083,7 +1083,10 @@ void app.whenReady().then(() => {
   registerAppHandlers(router);
   registerLayoutHandlers(router, windowManager);
   registerTabHandlers(router, windowManager, { openWindow: (url) => openLittle?.(url) });
-  registerAppHubHandlers(router, windowManager, { openWindow: (url) => openLittle?.(url) });
+  registerAppHubHandlers(router, windowManager, {
+    openWindow: (url) => openLittle?.(url),
+    defaultOpenIn: () => persistence!.settings.get('ui').appOpen,
+  });
 
   // Orbit accounts and cloud sync (docs/FIREBASE.md). Optional: without an account everything
   // stays on this Mac. The session is Keychain-encrypted in its own file; development builds
@@ -1203,6 +1206,7 @@ void app.whenReady().then(() => {
     customFile: () => wallpaperService.customFile(),
     look: () => persistence!.settings.get('newtab.look'),
     ui: () => persistence!.settings.get('ui'),
+    dark: () => nativeTheme.shouldUseDarkColors,
     cache: {
       get: () => persistence!.settings.get('canvas.palettes'),
       set: (entries) => persistence!.settings.set('canvas.palettes', entries),
@@ -1225,6 +1229,30 @@ void app.whenReady().then(() => {
   });
   canvasService = canvas;
   wallpaperService.onChange(() => canvas.refresh());
+  // Light / Dark (or the Mac's own) — the glass's tone when it doesn't follow the wallpaper.
+  nativeTheme.on('updated', () => {
+    if (persistence?.settings.get('ui').palette === 'off') canvas.refresh();
+  });
+  // Settings → Appearance (the Homepage's Customize panel has the full background picker).
+  router.handle('canvas:setWallpaper', ({ wallpaper }, { sender }) => {
+    if (!windowManager.settingsFor(sender.webContentsId)) {
+      throw new Error(`Sender ${sender.webContentsId} is not Settings`);
+    }
+    wallpaperService.set(wallpaper);
+  });
+  router.handle('canvas:setDim', ({ overlay }, { sender }) => {
+    if (!windowManager.settingsFor(sender.webContentsId)) {
+      throw new Error(`Sender ${sender.webContentsId} is not Settings`);
+    }
+    wallpaperService.setLook({ ...persistence!.settings.get('newtab.look'), overlay });
+  });
+  router.handle('canvas:place', (_input, { sender }) => {
+    const owner = windowManager.tabForContents(sender.webContentsId);
+    if (!owner) return null;
+    const bounds = owner.tab.view.getBounds();
+    const [windowWidth = 0, windowHeight = 0] = owner.window.win.getContentSize();
+    return { x: bounds.x, y: bounds.y, windowWidth, windowHeight };
+  });
   router.handle('canvas:get', (_input, { sender }) =>
     senders.surfaceOf(sender) === 'internal'
       ? { ...canvas.state, customImage: null }
@@ -1477,7 +1505,12 @@ void app.whenReady().then(() => {
   });
   floatingNotes = floating;
   registerNotesHandlers(router, windowManager, { notes: notesRepo, floating });
-  registerProfileHandlers(router, windowManager, { runCommand });
+  registerProfileHandlers(router, windowManager, {
+    runCommand,
+    syncStatus: () => accounts.view().sync,
+    about: () => app.showAboutPanel(),
+    quit: () => app.quit(),
+  });
   registerWorkHandlers(
     router,
     windowManager,
@@ -2043,10 +2076,16 @@ void app.whenReady().then(() => {
     if (!windowManager.settingsFor(sender.webContentsId)) {
       throw new Error(`Sender ${sender.webContentsId} is not Settings`);
     }
-    const next = { ...persistence!.settings.get('ui'), ...patch };
+    const previous = persistence!.settings.get('ui');
+    const next = { ...previous, ...patch };
+    // An app open on the side that's no longer used closes (it reopens on the new side).
+    if (next.appSide !== previous.appSide) {
+      for (const controller of windowManager.all()) controller.appPanel.close();
+    }
     persistence!.settings.set('ui', next);
     broadcaster.send('state:ui', next);
     canvasService?.refresh(); // the accent, glass and palette preferences shape the canvas
+    for (const controller of windowManager.all()) controller.layout.setApps(next.apps);
     for (const id of senders.idsOf('internal')) {
       const contents = webContents.fromId(id);
       if (contents) broadcaster.sendTo(contents, 'ui:update', next);

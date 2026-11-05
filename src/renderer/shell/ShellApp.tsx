@@ -1,9 +1,11 @@
 import { ResponsiveFrame } from './ResponsiveFrame';
 import type { FocusSession } from '@shared/focus';
-import type { ProfileView } from '@shared/profile';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
-import { ArrowLeft, ExternalLink, Plus, RotateCw, X } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, ExternalLink, Plus, RotateCw, X } from 'lucide-react';
+import { formatAddress } from '@shared/format-address';
+import { NEW_TAB_URL } from '@shared/types/tabs';
+import { Rail } from './Rail';
 import { panelApps } from '@shared/apps';
 import { themeToVars } from '@shared/theme';
 import { useColorMode } from './use-color-mode';
@@ -168,29 +170,83 @@ function Chrome({
   const paneTabs = split
     ? split.tabIds.map((id) => tabs?.tabs.find((t) => t.id === id) ?? null)
     : [activeTab];
+  const tools = {
+    notesOpen: layout.notes !== null && !appPanel,
+    assistant: sidebar?.tidy.assistant ?? false,
+    profile: sidebar?.profile,
+    focus,
+  };
+  // UI 2: the sidebar runs the full height and holds the traffic lights and the Orbit menu.
+  const gridSidebar =
+    layout.sidebar.visible && layout.rail === null && !layout.library && !layout.tabStrip;
+  if (layout.fullscreen) {
+    return paneTabs.map((tab, i) => {
+      const pane = layout.panes[i];
+      return pane ? (
+        <ContentCard
+          key={i}
+          pane={pane}
+          radius={0}
+          tab={tab}
+          focused
+          inSplit={false}
+          snapshot={null}
+        />
+      ) : null;
+    });
+  }
 
   return (
     <>
       {layout.tabStrip && sidebar && (
-        <TabStrip rect={layout.tabStrip} sidebar={sidebar} downloads={downloads} />
+        <TabStrip rect={layout.tabStrip} sidebar={sidebar} downloads={downloads} tools={tools} />
       )}
-      {!layout.sidebar.visible && !layout.fullscreen && !layout.tabStrip && (
+      <Toolbar
+        rect={layout.toolbar}
+        contentX={layout.appDock?.x ?? layout.card.x}
+        tab={activeTab}
+        find={find}
+        lights={layout.toolbar.x === 0 && !layout.tabStrip}
+        menu={!layout.tabStrip && !gridSidebar}
+        sidebar={
+          layout.tabStrip || gridSidebar || layout.library
+            ? null
+            : layout.sidebar.visible
+              ? 'shown'
+              : 'hidden'
+        }
+        compact={layout.tabStrip !== null}
+        tools={tools}
+      />
+      {!layout.sidebar.visible && !layout.tabStrip && (
         // The hidden sidebar's edge: resting the pointer here slides it out (F-01).
         <div
-          className="absolute inset-y-0 left-0 z-10"
-          style={{ width: layout.card.x }}
+          className="absolute bottom-0 left-0 z-10"
+          style={{ top: layout.toolbar.height, width: Math.max(8, layout.card.x - 2) }}
           onPointerEnter={() => void window.orbit.invoke('sidebar:peek', { open: true })}
           data-testid="sidebar-edge"
         />
       )}
-      {layout.sidebar.visible && (
+      {layout.rail && sidebar && (
+        <Rail
+          rect={layout.rail}
+          apps={sidebar.favorites}
+          activeId={sidebar.activeItemId}
+          panelId={appPanel?.itemId ?? null}
+          home={activeTab?.url === NEW_TAB_URL}
+          standalone={layout.tabStrip !== null}
+        />
+      )}
+      {layout.sidebar.visible && layout.sidebar.rect && (
         <Sidebar
+          rect={layout.sidebar.rect}
           width={layout.sidebar.width}
           sidebar={sidebar}
           downloads={downloads}
           media={media}
           librarySection={librarySection}
           activeTab={activeTab}
+          grid={gridSidebar}
           onResizeStart={() => onResizeStart('sidebar')}
           onResizeEnd={() => onResizeEnd('sidebar')}
         />
@@ -204,39 +260,55 @@ function Chrome({
             pane={pane}
             radius={layout.radius}
             tab={tab}
-            showToolbar={!layout.fullscreen}
-            // No "show sidebar" button with tabs on top (the strip is the tab list).
-            sidebarVisible={layout.sidebar.visible || layout.tabStrip !== null || i > 0}
-            find={find}
             focused={!split || tab?.id === tabs?.activeTabId}
             inSplit={split !== null}
             snapshot={split ? null : snapshot}
-            // The right-most toolbar has the Notes button.
-            notesOpen={i === paneTabs.length - 1 ? layout.notes !== null && !appPanel : undefined}
-            profile={i === paneTabs.length - 1 ? sidebar?.profile : undefined}
-            assistant={i === paneTabs.length - 1 ? (sidebar?.tidy.assistant ?? false) : false}
-            focus={i === paneTabs.length - 1 ? focus : null}
           />
         );
       })}
-      {layout.notes && (
-        // Depth under the Notes panel (its page is a native view on top).
+      {layout.appDock && (
+        // A pinned app beside the rail (UI 3): an elevated glass island, its page below the
+        // header.
         <div
-          className="card-depth absolute bg-[var(--sidebar-bg)]"
-          style={{ ...toStyle(layout.notes), borderRadius: layout.radius }}
-          data-testid="notes-card"
+          className="mat-elevated absolute"
+          style={{ ...toStyle(layout.appDock), borderRadius: layout.radius + 4 }}
+          data-testid="app-dock"
+        />
+      )}
+      {layout.appDock && (
+        <AppPanelHeader
+          rect={layout.appDock}
+          radius={layout.radius + 4}
+          favorites={sidebar?.favorites ?? []}
+        />
+      )}
+      {layout.appDock && (
+        <DockEdge
+          dock={layout.appDock}
+          side="app"
+          onStart={() => onResizeStart('dock')}
+          onEnd={() => onResizeEnd('dock')}
         />
       )}
       {layout.notes && (
+        // The dock's glass (its page is a native view on top, transparent where it's glass).
+        <div
+          className="mat-deep absolute"
+          style={{ ...toStyle(layout.notes), borderRadius: layout.radius + 4 }}
+          data-testid="notes-card"
+        />
+      )}
+      {layout.notes && !layout.appDock && (
         <AppPanelHeader
           rect={layout.notes}
-          radius={layout.radius}
+          radius={layout.radius + 4}
           favorites={sidebar?.favorites ?? []}
         />
       )}
       {layout.notes && (
         <DockEdge
           dock={layout.notes}
+          side="right"
           onStart={() => onResizeStart('dock')}
           onEnd={() => onResizeEnd('dock')}
         />
@@ -253,7 +325,7 @@ type Pane = Layout['panes'][number];
 /** The usual dock width (double-clicking its edge goes back to it). */
 const DOCK_USUAL = 380;
 /** The gap between the page and the dock that holds its edge. */
-const DOCK_GAP = 8;
+const DOCK_GAP = 10;
 
 /**
  * The dock's edge (Notes or a docked app): dragging the gap before it makes the dock wider or
@@ -262,10 +334,13 @@ const DOCK_GAP = 8;
  */
 function DockEdge({
   dock,
+  side,
   onStart,
   onEnd,
 }: {
   dock: Rect;
+  /** The dock on the right (its edge on its left), or the app beside the rail (on its right). */
+  side: 'right' | 'app';
   onStart: () => void;
   onEnd: () => void;
 }) {
@@ -279,7 +354,12 @@ function DockEdge({
     const onMove = (ev: PointerEvent) => {
       // Chromium sends a synthetic move after the views hide; ignore moves without the button.
       if ((ev.buttons & 1) === 0) return;
-      void window.orbit.invoke('dock:setWidth', { width: right - ev.clientX - DOCK_GAP / 2 });
+      void window.orbit.invoke(
+        'dock:setWidth',
+        side === 'app'
+          ? { width: ev.clientX - dock.x - DOCK_GAP / 2, dock: 'app' }
+          : { width: right - ev.clientX - DOCK_GAP / 2 },
+      );
     };
     const onUp = () => {
       document.removeEventListener('pointermove', onMove);
@@ -293,14 +373,24 @@ function DockEdge({
   return (
     <div
       className="group absolute flex cursor-col-resize items-center justify-center"
-      style={{ left: dock.x - DOCK_GAP, top: dock.y, width: DOCK_GAP, height: dock.height }}
+      style={{
+        left: side === 'app' ? dock.x + dock.width : dock.x - DOCK_GAP,
+        top: dock.y,
+        width: DOCK_GAP,
+        height: dock.height,
+      }}
       onPointerEnter={() => void window.orbit.invoke('sidebar:prepareResize', {})}
       onPointerDown={onPointerDown}
-      onDoubleClick={() => void window.orbit.invoke('dock:setWidth', { width: DOCK_USUAL })}
+      onDoubleClick={() =>
+        void window.orbit.invoke(
+          'dock:setWidth',
+          side === 'app' ? { width: 360, dock: 'app' } : { width: DOCK_USUAL },
+        )
+      }
       role="separator"
       aria-orientation="vertical"
       aria-label="Resize panel"
-      data-testid="dock-edge"
+      data-testid={side === 'app' ? 'app-dock-edge' : 'dock-edge'}
     >
       <div
         className={`h-10 w-1 rounded-full transition-[background,opacity] duration-150 ${dragging ? 'bg-[var(--accent)] opacity-100' : 'bg-[var(--sidebar-fg)] opacity-0 group-hover:opacity-25'}`}
@@ -310,29 +400,27 @@ function DockEdge({
 }
 
 /**
- * A content card: toolbar on top; the tab's web view is a native view that main places exactly
- * over the area below it. In split view each pane is a card, and the focused one is outlined.
+ * A content card (UI spec §5): a web page sits in a rounded card on the canvas; the Homepage has
+ * no card at all (its wallpaper lines up with the canvas, so the window reads as one surface).
+ * In split view each pane gets a slim header (title, swap, show alone), and the focused one a
+ * soft accent rim. The page itself is a native view main places over the card.
  */
 function ContentCard(props: {
   pane: Pane;
   radius: number;
   tab: TabState | null;
-  showToolbar: boolean;
-  sidebarVisible: boolean;
-  find: FindState | null;
   focused: boolean;
   inSplit: boolean;
   snapshot: string | null;
-  notesOpen: boolean | undefined;
-  assistant: boolean;
-  profile: ProfileView | undefined;
-  focus: FocusSession | null;
 }) {
   const { pane, tab, inSplit, focused } = props;
   const webViewTop = pane.webView.y - pane.card.y;
+  const home = tab?.url === NEW_TAB_URL;
   return (
     <div
-      className="card-depth ui-light absolute overflow-hidden bg-white transition-[box-shadow] duration-200"
+      className={`absolute overflow-hidden transition-[box-shadow] duration-200 ${
+        home && !inSplit ? '' : 'card-depth ui-light bg-white'
+      }`}
       style={{
         ...toStyle(pane.card),
         borderRadius: props.radius,
@@ -340,11 +428,11 @@ function ContentCard(props: {
         ...(inSplit && focused
           ? {
               boxShadow:
-                '0 0 0 2px color-mix(in srgb, var(--accent) 80%, transparent), 0 10px 30px -10px rgb(0 0 0 / 0.4)',
+                '0 0 0 2px color-mix(in srgb, var(--canvas-accent, var(--accent)) 80%, transparent), 0 10px 30px -10px rgb(0 0 0 / 0.4)',
             }
           : {}),
       }}
-      // Clicking the other pane's toolbar focuses that pane first.
+      // Clicking the other pane's header focuses that pane first.
       onMouseDownCapture={() => {
         if (inSplit && !focused && tab)
           void window.orbit.invoke('tabs:activate', { tabId: tab.id });
@@ -352,21 +440,9 @@ function ContentCard(props: {
       data-testid="content-card"
       data-focused={focused}
       data-tab-id={tab?.id}
+      data-home={home}
     >
-      {props.showToolbar && (
-        <Toolbar
-          tab={tab}
-          height={pane.toolbar.height}
-          sidebarVisible={props.sidebarVisible}
-          find={props.find}
-          focused={focused}
-          inSplit={inSplit}
-          notesOpen={props.notesOpen}
-          assistant={props.assistant}
-          profile={props.profile}
-          focus={props.focus}
-        />
-      )}
+      {inSplit && <PaneHeader tab={tab} height={pane.toolbar.height} />}
       {tab?.viewport && (
         <ResponsiveFrame area={pane.webView} origin={pane.card} viewport={tab.viewport} />
       )}
@@ -420,6 +496,47 @@ function ContentCard(props: {
           No tab open — press ⌘T
         </div>
       )}
+    </div>
+  );
+}
+
+/** A split pane's slim header: the page's name, reload, swap panes, show this page alone. */
+function PaneHeader({ tab, height }: { tab: TabState | null; height: number }) {
+  const address = tab ? formatAddress(tab.url, tab.title) : null;
+  return (
+    <div
+      className="flex items-center gap-1 border-b border-black/[0.06] pr-1 pl-3 text-[12.5px] text-neutral-600"
+      style={{ height }}
+      data-testid="pane-header"
+    >
+      <span className="min-w-0 flex-1 truncate" data-testid="pane-title">
+        {address?.domain && <span className="font-medium text-neutral-800">{address.domain}</span>}
+        {address?.domain && address.title && <span className="text-neutral-300"> / </span>}
+        {address?.title}
+      </span>
+      <HeaderButton
+        label="Reload"
+        onClick={() =>
+          tab && void window.orbit.invoke('tabs:navigate', { tabId: tab.id, action: 'reload' })
+        }
+        testId="pane-reload"
+      >
+        <RotateCw size={12} />
+      </HeaderButton>
+      <HeaderButton
+        label="Swap Panes"
+        onClick={() => void window.orbit.invoke('split:swap', {})}
+        testId="split-swap"
+      >
+        <ArrowLeftRight size={13} />
+      </HeaderButton>
+      <HeaderButton
+        label="Show This Page Alone"
+        onClick={() => void window.orbit.invoke('split:exit', {})}
+        testId="split-exit"
+      >
+        <X size={13} />
+      </HeaderButton>
     </div>
   );
 }
@@ -528,7 +645,7 @@ function AppPanelHeader({
         </div>
       )}
       <div
-        className="ui-light absolute flex items-center gap-1 overflow-hidden border-b border-black/[0.06] bg-white px-2 text-neutral-700"
+        className="absolute flex items-center gap-1 overflow-hidden px-2 text-[var(--fg)]"
         style={{
           left: rect.x,
           top: rect.y,
@@ -558,7 +675,7 @@ function AppPanelHeader({
                     onClick={() => {
                       if (!current) void window.orbit.invoke('tabs:activate', { tabId: row.id });
                     }}
-                    className={`press grid size-7 shrink-0 place-items-center rounded-[8px] transition-colors ${current ? 'bg-black/[0.07]' : 'opacity-60 hover:bg-black/[0.05] hover:opacity-100'}`}
+                    className={`press grid size-7 shrink-0 place-items-center rounded-[9px] transition-colors ${current ? 'mat-sel' : 'opacity-60 hover:bg-[var(--glass-hover)] hover:opacity-100'}`}
                     data-testid="app-panel-switch"
                     data-current={current}
                   >
@@ -572,7 +689,7 @@ function AppPanelHeader({
           <AppIcon favicon={app.favicon} title={app.title} />
         )}
         <span
-          className="ml-1 min-w-0 flex-1 truncate text-[13px] font-medium"
+          className="ml-1 min-w-0 flex-1 truncate text-[14px] font-semibold"
           data-testid="app-panel-title"
         >
           {app.title}
@@ -614,9 +731,9 @@ function AppPanelHeader({
 /** An app's icon; without one, its initial (so apps in the switcher stay tellable apart). */
 function AppIcon({ favicon, title }: { favicon: string | null; title: string }) {
   return favicon ? (
-    <img src={favicon} alt="" className="size-4 shrink-0 rounded-[4px]" />
+    <img src={favicon} alt="" className="size-5 shrink-0 rounded-[5px]" />
   ) : (
-    <span className="grid size-4 shrink-0 place-items-center rounded-[4px] bg-neutral-200 text-[10px] leading-none font-semibold text-neutral-600">
+    <span className="grid size-4 shrink-0 place-items-center rounded-[4px] bg-white/25 text-[10px] leading-none font-semibold">
       {(title.replace(/^https?:\/\/(www\.)?/, '')[0] ?? '?').toUpperCase()}
     </span>
   );
@@ -636,7 +753,7 @@ function HeaderButton(props: {
         aria-label={props.label}
         onClick={props.onClick}
         disabled={props.disabled}
-        className="press grid size-7 shrink-0 place-items-center rounded-[8px] hover:bg-black/[0.06] disabled:opacity-30"
+        className="press grid size-7 shrink-0 place-items-center rounded-full text-[var(--icon)] hover:bg-[var(--glass-hover)] hover:text-[var(--fg)] disabled:opacity-30"
         data-testid={props.testId}
       >
         {props.children}

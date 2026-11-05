@@ -321,13 +321,21 @@ export const GLASS_CONTRAST = 4.6;
  */
 export function canvasTheme(
   palette: Palette,
-  options: { glass?: GlassLevel; accent?: string | null; neutral?: boolean } = {},
+  options: {
+    glass?: GlassLevel;
+    accent?: string | null;
+    /** Glass without the wallpaper's hue (Automatic palette off). */
+    neutral?: boolean;
+    /** Light or dark glass whatever the wallpaper (then Light / Dark appearance decides). */
+    tone?: 'light' | 'dark';
+  } = {},
 ): CanvasTheme {
   const level = options.glass ?? 'balanced';
   const avg = hexToRgb(palette.average);
   // Light text if it reads at least as well as dark text (wallpapers are usually mid-dark).
   const tone: 'light' | 'dark' =
-    contrastRatio(avg, LIGHT_FG) >= contrastRatio(avg, DARK_FG) * 0.8 ? 'dark' : 'light';
+    options.tone ??
+    (contrastRatio(avg, LIGHT_FG) >= contrastRatio(avg, DARK_FG) * 0.8 ? 'dark' : 'light');
   const fg = tone === 'dark' ? LIGHT_FG : DARK_FG;
   const picked = pickAccents(palette);
   const accent = options.accent ?? picked.accent;

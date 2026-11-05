@@ -55,6 +55,9 @@ test('Homepage connects Orbit: Apps (open where set), Spaces, Ask Orbit (typed o
     await invoke(win, 'spaces:cycle', { direction: -1 });
 
     const page = await homepage(app);
+    // From an empty Homepage (new profiles start with a few widgets, Apps among them).
+    await invoke(page, 'newtab:setLayout', { layout: { widgets: [] } });
+    await page.reload();
     await page.getByTestId('customize-button').click();
     await page.getByTestId('customize-edit-widgets').click();
     for (const type of ['apps', 'spaces', 'ask', 'drive']) {

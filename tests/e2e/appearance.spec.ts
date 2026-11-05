@@ -44,17 +44,20 @@ test('Settings → Appearance: Light and Dark switch the whole app, and are kept
     const settings = await pageWith(app, '#/settings');
     const picker = settings.getByTestId('setting-appearance');
     await expect(picker.locator('[aria-checked="true"]')).toHaveAttribute('data-value', 'system');
+    // The glass follows the wallpaper by default; with that off, Light and Dark decide it.
+    await settings.getByTestId('ui-palette').click();
+    await expect(settings.getByTestId('ui-palette')).not.toBeChecked();
 
     await picker.locator('[data-value="light"]').click();
     await expect(picker.locator('[aria-checked="true"]')).toHaveAttribute('data-value', 'light');
     await expect.poll(() => dark(win)).toBe(false);
     await expect.poll(() => dark(settings)).toBe(false);
-    await expect.poll(() => sidebarFg(win)).toBe('rgb(29 29 31 / 1)'); // dark text: light sidebar
+    await expect.poll(() => sidebarFg(win)).toBe('rgb(24 26 32 / 1)'); // dark text: light glass
     await expect.poll(() => surface(settings, 'settings-page')).toBe('#fff');
 
     await picker.locator('[data-value="dark"]').click();
     await expect.poll(() => dark(win)).toBe(true);
-    await expect.poll(() => sidebarFg(win)).toBe('rgb(242 242 247 / 1)');
+    await expect.poll(() => sidebarFg(win)).toBe('rgb(246 247 250 / 1)');
     await expect.poll(() => surface(settings, 'settings-page')).toBe('#1f1f23');
     // The overlay's glass follows too (it's drawn dark; light mode mirrors it).
     await win.evaluate(() =>
@@ -86,7 +89,7 @@ test('Settings → Appearance: Light and Dark switch the whole app, and are kept
   const second = await launchOrbit({ userData, colorScheme: null });
   try {
     expect(await dark(second.win)).toBe(false);
-    expect(await sidebarFg(second.win)).toBe('rgb(29 29 31 / 1)');
+    await expect.poll(() => sidebarFg(second.win)).toBe('rgb(24 26 32 / 1)');
     const toggle = second.win.getByTestId('appearance-toggle');
     await expect(toggle).toHaveAttribute('data-mode', 'light');
     await toggle.click();

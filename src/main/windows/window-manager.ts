@@ -30,7 +30,8 @@ import { OverlayController } from './overlay';
 import { MIN_SIZE, resolveWindowBounds } from './window-state';
 
 /** Where the macOS traffic lights sit, inside the sidebar's top-left corner (F-01). */
-export const TRAFFIC_LIGHT_POSITION = { x: 16, y: 18 } as const;
+/** Centred in the 52 px toolbar row (or the top of the sidebar grid's island). */
+export const TRAFFIC_LIGHT_POSITION = { x: 18, y: 20 } as const;
 
 /** Window position/size writes are debounced; moving a window fires dozens of events. */
 const SAVE_DELAY_MS = 500;
@@ -268,6 +269,8 @@ export class WindowManager {
     if (saved.isMaximized) win.maximize();
 
     const contents = win.webContents;
+    /** The last frame each Orbit page was told (sent only when it changes). */
+    const placedFrames = new Map<number, string>();
     let tabs: TabManager | null = null;
     let splitsTimer: ReturnType<typeof setTimeout> | undefined;
     let pendingSplits: Record<string, { ids: [string, string]; ratio: number }> | null = null;
@@ -330,6 +333,15 @@ export class WindowManager {
         if (!item || !space || !panelAppShowsIn(item, space)) appPanel?.close();
       },
       getLayout: () => layout.current(),
+      // The Homepage draws the canvas's wallpaper too, lined up with the window (UI spec §9).
+      onPlaced: (contents, bounds) => {
+        const [windowWidth = 0, windowHeight = 0] = win.getContentSize();
+        const frame = { x: bounds.x, y: bounds.y, windowWidth, windowHeight };
+        const key = `${frame.x},${frame.y},${windowWidth},${windowHeight}`;
+        if (placedFrames.get(contents.id) === key) return;
+        placedFrames.set(contents.id, key);
+        broadcaster.sendTo(contents, 'canvas:frame', frame);
+      },
       internalPreload: this.deps.internalPreloadPath,
       loadInternal: this.deps.loadInternal,
       registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
@@ -547,13 +559,27 @@ export class WindowManager {
       loadInternal: this.deps.loadInternal,
       registerInternal: (webContentsId) => senders.add(webContentsId, 'internal'),
       unregisterInternal: (webContentsId) => senders.remove(webContentsId),
-      onOpen: () => appPanel?.close(),
+      // Notes takes the right-hand dock: an app sharing it steps aside (one beside the rail
+      // stays).
+      onOpen: () => {
+        if (appPanel?.side === 'right') appPanel.close();
+      },
     });
     const notesPanel = notes;
     // App Hub: a favourite's app docked beside the page (brief M5).
     appPanel = new AppPanelController({
       getLayout: () => layout.current(),
-      setDockOpen: (open) => layout.setNotes(open, false),
+      side: () => settings.get('ui').appSide,
+      // Beside the rail on the left (its own place; Notes can stay open on the right), or the
+      // right-hand dock.
+      setDockOpen: (open) => {
+        if (open && settings.get('ui').appSide === 'left') layout.setAppDock(true);
+        else if (open) layout.setNotes(true, false);
+        else {
+          layout.setAppDock(false);
+          if (!notesPanel.isOpen) layout.setNotes(false, false);
+        }
+      },
       createPage: (url, itemId, onChange) => tabManager.createDetached(url, itemId, onChange),
       attach: (view) => win.contentView.addChildView(view, 0),
       detach: (view) => {

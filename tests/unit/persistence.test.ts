@@ -101,7 +101,7 @@ describe('SettingsRepository', () => {
 
   it('returns defaults when nothing is stored', () => {
     const { settings } = repo();
-    expect(settings.get('sidebar.width')).toBe(260);
+    expect(settings.get('sidebar.width')).toBe(236);
     expect(settings.get('sidebar.visible')).toBe(true);
     expect(settings.get('window.state')).toEqual({ bounds: null, isMaximized: false });
   });
@@ -126,7 +126,7 @@ describe('SettingsRepository', () => {
     const put = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
     put.run('sidebar.width', '9000');
     put.run('sidebar.visible', '{not json');
-    expect(settings.get('sidebar.width')).toBe(260);
+    expect(settings.get('sidebar.width')).toBe(236);
     expect(settings.get('sidebar.visible')).toBe(true);
   });
 });

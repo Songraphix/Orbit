@@ -1,4 +1,7 @@
-import { PanelLeft, Plus } from 'lucide-react';
+import { Cloud, Home, PanelLeft, Plus } from 'lucide-react';
+import type { Rect } from '@shared/types/layout';
+import { NEW_TAB_URL } from '@shared/types/tabs';
+import { OrbitMenuButton } from './Toolbar';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent, PointerEvent } from 'react';
 import type { DownloadView } from '@shared/types/downloads';
@@ -10,12 +13,11 @@ import { DndContext, moveFor, readDragged } from './sidebar/dnd';
 import type { DndState, DropTarget } from './sidebar/dnd';
 import { FavoritesGrid } from './sidebar/FavoritesGrid';
 import { RowList } from './sidebar/Rows';
-import { BottomBar, SpaceHeader } from './sidebar/SpaceParts';
+import { BottomBar, SpaceHeader, SpaceRow } from './sidebar/SpaceParts';
 import { LibraryNav } from './sidebar/LibraryNav';
 import { Tip } from '../tooltip/Tip';
 import { WorkspaceNav } from './sidebar/WorkspaceNav';
 import { FocusChip } from './sidebar/FocusChip';
-import { AddressPill } from './sidebar/AddressPill';
 import type { TabState } from '@shared/types/tabs';
 import type { LibrarySection } from '@shared/types/library';
 
@@ -23,6 +25,8 @@ import type { LibrarySection } from '@shared/types/library';
 const TITLE_STRIP_HEIGHT = 44;
 
 type Props = {
+  /** Where the island sits in the window (the slid-out copy fills its own strip instead). */
+  rect?: Rect;
   width: number;
   sidebar: SidebarSnapshot | null;
   downloads: DownloadView[];
@@ -31,7 +35,10 @@ type Props = {
   librarySection: LibrarySection | null;
   /** Drawn by the overlay as the hidden sidebar slid out over the page (no resize edge). */
   floating?: boolean;
-  /** The page on screen, for the address pill (Arc). */
+  /** UI 2: pinned apps as a grid in the sidebar, which runs the full height (traffic lights and
+   *  the Orbit menu at its top). */
+  grid?: boolean;
+  /** The page on screen (its row, or New Tab when it's the Homepage, is lit). */
   activeTab: TabState | null;
   /** Called when an edge drag starts/ends, so the shell can stand in for the live web view. */
   onResizeStart: () => void;
@@ -97,12 +104,14 @@ function dropZone(dnd: DndState, target: DropTarget) {
 }
 
 export function Sidebar({
+  rect,
   width,
   sidebar,
   downloads,
   media,
   librarySection,
   floating = false,
+  grid = false,
   activeTab,
   onResizeStart,
   onResizeEnd,
@@ -112,8 +121,10 @@ export function Sidebar({
   const isTarget = (t: DropTarget) => JSON.stringify(dnd.target) === JSON.stringify(t);
   const space = sidebar?.spaces.find((s) => s.id === sidebar.activeSpaceId);
   const renamingItem = renaming?.target === 'item' ? renaming.id : null;
+  // The top holds the traffic lights (UI 2, the slid-out copy) or starts right away (UI 1).
+  const titled = grid || floating;
+  const home = activeTab?.url === NEW_TAB_URL;
 
-  // Switching spaces slides the list the way you moved (next space: from the right).
   const [spaceMotion, setSpaceMotion] = useState<{
     id: string | null;
     dir: 'next' | 'prev' | null;
@@ -132,10 +143,20 @@ export function Sidebar({
 
   return (
     <aside
-      className="absolute inset-y-0 left-0 flex flex-col"
-      style={{ width, color: 'var(--sidebar-fg)' }}
-      // Right-click on empty space (rows, tiles and the space header have their own menus, and
-      // text fields keep the text menu): Arc's sidebar menu.
+      className={`flex flex-col overflow-hidden ${
+        librarySection ? 'absolute' : 'mat-deep absolute rounded-[22px]'
+      }`}
+      style={
+        rect
+          ? {
+              left: rect.x,
+              top: rect.y,
+              width: rect.width,
+              height: rect.height,
+              color: 'var(--fg)',
+            }
+          : { left: 0, top: 0, bottom: 0, width, color: 'var(--fg)' }
+      }
       onContextMenu={(e) => {
         if (e.defaultPrevented || librarySection) return;
         if ((e.target as HTMLElement).closest('input, textarea')) return;
@@ -143,97 +164,149 @@ export function Sidebar({
         void window.orbit.invoke('sidebar:backgroundMenu', {});
       }}
       data-testid="sidebar"
+      data-grid={grid}
     >
-      <div
-        className="drag-region relative shrink-0"
-        style={{ height: TITLE_STRIP_HEIGHT }}
-        data-testid="title-strip"
-      >
-        {/* Beside the traffic lights, like Arc: hide the sidebar (⌘S), or pin it back. The
-            Library's narrow column has no room for it. */}
-        {!librarySection && (
-          <Tip label={floating ? 'Keep Sidebar Open' : 'Hide Sidebar'} keys="⌘S">
-            <button
-              type="button"
-              aria-label={floating ? 'Keep Sidebar Open' : 'Hide Sidebar'}
-              onClick={() => void window.orbit.invoke('sidebar:toggle', {})}
-              className="no-drag absolute top-[11px] left-[78px] grid size-6 place-items-center rounded-md text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
-              data-testid="sidebar-toggle"
-            >
-              <PanelLeft size={15} />
-            </button>
-          </Tip>
-        )}
-      </div>
-      {!librarySection && <AddressPill tab={activeTab} />}
+      {(titled || librarySection) && (
+        <div
+          className="drag-region relative shrink-0"
+          style={{ height: librarySection ? TITLE_STRIP_HEIGHT : 42 }}
+          data-testid="title-strip"
+        >
+          {/* Beside the traffic lights: hide the sidebar (⌘S), or keep the slid-out one. */}
+          {!librarySection && (
+            <Tip label={floating ? 'Keep Sidebar Open' : 'Hide Sidebar'} keys="⌘S">
+              <button
+                type="button"
+                aria-label={floating ? 'Keep Sidebar Open' : 'Hide Sidebar'}
+                onClick={() => void window.orbit.invoke('sidebar:toggle', {})}
+                className="no-drag absolute top-[8px] right-2.5 grid size-7 place-items-center rounded-full text-[var(--fg-muted)] hover:bg-[var(--glass-hover)] hover:text-[var(--fg)]"
+                data-testid="sidebar-toggle"
+              >
+                <PanelLeft size={16} />
+              </button>
+            </Tip>
+          )}
+        </div>
+      )}
+      {grid && (
+        <div className="no-drag shrink-0 px-2.5 pb-2">
+          <OrbitMenuButton />
+        </div>
+      )}
       {librarySection && <LibraryNav section={librarySection} />}
       {!librarySection && sidebar && space && (
         <DndContext.Provider value={dnd}>
           <div
-            key={space.id}
-            className={`no-drag scrollbar-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-2 ${
-              spaceMotion.dir === 'next'
-                ? 'animate-space-next'
-                : spaceMotion.dir === 'prev'
-                  ? 'animate-space-prev'
-                  : ''
-            }`}
+            className={`no-drag scrollbar-none flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-2 pb-2 ${titled ? '' : 'pt-2.5'}`}
           >
-            <div
-              {...dropZone(dnd, { kind: 'favorites' })}
-              className={`rounded-xl ${isTarget({ kind: 'favorites' }) ? 'bg-[var(--hover)] ring-2 ring-[var(--accent)]' : ''} ${
-                sidebar.favorites.length === 0 && dnd.dragging ? 'mx-3 mb-2 h-10' : ''
+            <button
+              type="button"
+              aria-current={home ? 'page' : undefined}
+              onClick={() => {
+                if (!home) void window.orbit.invoke('tabs:create', {});
+              }}
+              className={`press flex h-10 shrink-0 items-center gap-2.5 rounded-[14px] px-2.5 text-left text-[13.5px] font-medium ${
+                home ? 'mat-sel' : 'mat-hover text-[var(--fg)]'
               }`}
-              data-testid="favorites-drop"
+              data-testid="home-row"
             >
-              <FavoritesGrid
-                rows={sidebar.favorites}
-                activeId={sidebar.activeItemId}
-                width={width}
-              />
-            </div>
-            <WorkspaceNav />
-            <nav className="flex flex-col gap-0.5 px-2" aria-label="Tabs">
-              <RowList
-                rows={sidebar.pinned}
-                activeId={sidebar.activeItemId}
-                renamingId={renamingItem}
-                onRenamed={stopRenaming}
-                testId="pinned-list"
-              />
+              <Home size={17} strokeWidth={2} />
+              New Tab
+            </button>
+            {(grid || floating) && (
               <div
-                {...dropZone(dnd, { kind: 'end', section: 'pinned' })}
-                className={`h-2 rounded ${isTarget({ kind: 'end', section: 'pinned' }) ? 'bg-[var(--accent)]/60' : ''}`}
-                data-testid="pinned-end"
-              />
-              <SpaceHeader
-                space={space}
-                renaming={renaming?.target === 'space'}
-                onRenamed={stopRenaming}
-                hasToday={sidebar.today.length > 0}
-                tidy={sidebar.tidy}
-              />
+                {...dropZone(dnd, { kind: 'favorites' })}
+                className={`mt-2 rounded-xl ${isTarget({ kind: 'favorites' }) ? 'bg-[var(--glass-hover)] ring-2 ring-[var(--focus-ring)]' : ''} ${
+                  sidebar.favorites.length === 0 && dnd.dragging ? 'h-10' : ''
+                }`}
+                data-testid="favorites-drop"
+              >
+                <FavoritesGrid
+                  rows={sidebar.favorites}
+                  activeId={sidebar.activeItemId}
+                  width={width}
+                />
+              </div>
+            )}
+            <div className="mt-2">
+              <WorkspaceNav />
+            </div>
+            <div className="flex items-center gap-2.5 px-2.5 pt-1 pb-1.5 text-[13.5px] text-[var(--fg-muted)]">
+              <Cloud size={17} strokeWidth={1.9} />
+              <span className="font-medium">Spaces</span>
+            </div>
+            <nav
+              key={space.id}
+              className={`flex flex-col gap-0.5 ${
+                spaceMotion.dir === 'next'
+                  ? 'animate-space-next'
+                  : spaceMotion.dir === 'prev'
+                    ? 'animate-space-prev'
+                    : ''
+              }`}
+              aria-label="Spaces and tabs"
+            >
+              {sidebar.spaces.map((s, i) =>
+                s.id !== space.id ? (
+                  <SpaceRow key={s.id} space={s} index={i} />
+                ) : (
+                  <div
+                    key={s.id}
+                    className="mat-light flex flex-col gap-0.5 rounded-[16px] p-1"
+                    data-testid="active-space"
+                  >
+                    <SpaceHeader
+                      space={space}
+                      renaming={renaming?.target === 'space'}
+                      onRenamed={stopRenaming}
+                      hasToday={sidebar.today.length > 0}
+                      tidy={sidebar.tidy}
+                    />
+                    <RowList
+                      rows={sidebar.pinned}
+                      activeId={sidebar.activeItemId}
+                      renamingId={renamingItem}
+                      onRenamed={stopRenaming}
+                      testId="pinned-list"
+                    />
+                    <div
+                      {...dropZone(dnd, { kind: 'end', section: 'pinned' })}
+                      className={`h-1.5 rounded ${isTarget({ kind: 'end', section: 'pinned' }) ? 'bg-[var(--fg)]/60' : ''}`}
+                      data-testid="pinned-end"
+                    />
+                    <button
+                      type="button"
+                      className="press flex h-[var(--row-h,34px)] items-center gap-2.5 rounded-[12px] px-2 text-left text-[13px] text-[var(--fg-muted)] hover:bg-[var(--glass-hover)] hover:text-[var(--fg)]"
+                      onClick={() => void window.orbit.invoke('tabs:create', {})}
+                      data-testid="new-tab-row"
+                    >
+                      <Plus size={16} strokeWidth={2} />
+                      New Tab
+                    </button>
+                    <RowList
+                      rows={sidebar.today}
+                      activeId={sidebar.activeItemId}
+                      renamingId={renamingItem}
+                      onRenamed={stopRenaming}
+                      testId="tab-list"
+                    />
+                    <div
+                      {...dropZone(dnd, { kind: 'end', section: 'today' })}
+                      className={`min-h-4 rounded ${isTarget({ kind: 'end', section: 'today' }) ? 'shadow-[inset_0_2px_0_var(--fg)]' : ''}`}
+                      data-testid="today-end"
+                    />
+                  </div>
+                ),
+              )}
               <button
                 type="button"
-                className="press flex h-[34px] items-center gap-2.5 rounded-[12px] px-2 text-left text-[13px] text-[var(--sidebar-muted)] hover:bg-[var(--hover)] hover:text-[var(--sidebar-fg)]"
-                onClick={() => void window.orbit.invoke('tabs:create', {})}
-                data-testid="new-tab-row"
+                className="press mt-0.5 flex h-9 items-center gap-2.5 rounded-[12px] px-2.5 text-left text-[13px] text-[var(--fg-muted)] hover:bg-[var(--glass-hover)] hover:text-[var(--fg)]"
+                onClick={() => void window.orbit.invoke('orbitmenu:run', { action: 'new-space' })}
+                data-testid="add-space"
               >
                 <Plus size={16} strokeWidth={2} />
-                New Tab
+                Add Space
               </button>
-              <RowList
-                rows={sidebar.today}
-                activeId={sidebar.activeItemId}
-                renamingId={renamingItem}
-                onRenamed={stopRenaming}
-                testId="tab-list"
-              />
-              <div
-                {...dropZone(dnd, { kind: 'end', section: 'today' })}
-                className={`min-h-8 flex-1 rounded ${isTarget({ kind: 'end', section: 'today' }) ? 'shadow-[inset_0_2px_0_var(--accent)]' : ''}`}
-                data-testid="today-end"
-              />
             </nav>
           </div>
         </DndContext.Provider>
@@ -241,16 +314,24 @@ export function Sidebar({
       {!librarySection && media && <MediaCard media={media} />}
       {!librarySection && <DownloadsShelf items={downloads} />}
       {!librarySection && <FocusChip />}
-      {!librarySection && sidebar && (
-        <BottomBar spaces={sidebar.spaces} activeSpaceId={sidebar.activeSpaceId} />
+      {!librarySection && sidebar && <BottomBar />}
+      {!floating && rect && (
+        <ResizeHandle left={rect.x} onStart={onResizeStart} onEnd={onResizeEnd} />
       )}
-      {!floating && <ResizeHandle onStart={onResizeStart} onEnd={onResizeEnd} />}
     </aside>
   );
 }
 
 /** Drag the sidebar's right edge to resize. Main clamps the width and sends back the layout. */
-function ResizeHandle({ onStart, onEnd }: { onStart: () => void; onEnd: () => void }) {
+function ResizeHandle({
+  left,
+  onStart,
+  onEnd,
+}: {
+  left: number;
+  onStart: () => void;
+  onEnd: () => void;
+}) {
   const frame = useRef<number | null>(null);
   const pending = useRef<number | null>(null);
 
@@ -273,7 +354,7 @@ function ResizeHandle({ onStart, onEnd }: { onStart: () => void; onEnd: () => vo
       // Hiding the web view makes Chromium send a hover move at the OS cursor position with no
       // button held; only real drag moves (primary button down) count.
       if ((ev.buttons & 1) === 0) return;
-      pending.current = ev.clientX; // the sidebar starts at x = 0, so pointer x is the width
+      pending.current = ev.clientX - left; // the pointer's distance from the island's left edge
       frame.current ??= requestAnimationFrame(send); // at most one update per frame
     };
     const finish = () => {
@@ -293,7 +374,7 @@ function ResizeHandle({ onStart, onEnd }: { onStart: () => void; onEnd: () => vo
 
   return (
     <div
-      className="no-drag absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize"
+      className="no-drag absolute inset-y-0 right-0 z-10 w-2 cursor-col-resize"
       // Hovering the edge snapshots the page, so a drag can swap it in without delay.
       onPointerEnter={() => void window.orbit.invoke('sidebar:prepareResize', {})}
       onPointerDown={onPointerDown}

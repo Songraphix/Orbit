@@ -5,11 +5,15 @@ import type { TabController } from '../tabs/tab-controller';
 
 /** The panel's header (drawn by the shell): title and buttons, above the app. */
 export const APP_PANEL_HEADER = 40;
+/** The app's page sits this far inside the panel's island. */
+const APP_INSET = 6;
 
 export type AppPanelDeps = {
   getLayout: () => Layout;
-  /** Makes room on the right (the page narrows), or gives it back — the dock the Notes panel
-   *  uses; only one of them shows at a time. */
+  /** Where apps open (Settings → Appearance): beside the rail (UI 3), or the dock on the right
+   *  that the Notes panel uses (then only one of them shows at a time). */
+  side?: () => 'left' | 'right';
+  /** Makes room for the app (the page narrows), or gives it back. */
   setDockOpen: (open: boolean) => void;
   /** A page outside the sidebar, in the favourite's profile (TabManager.createDetached). */
   createPage: (url: string, itemId: string, onChange: () => void) => TabController;
@@ -57,7 +61,7 @@ export class AppPanelController {
       });
       this.deps.attach(this.page.view);
     }
-    this.deps.closeNotes();
+    if (this.side === 'right') this.deps.closeNotes();
     this.shown = true;
     this.deps.setDockOpen(true);
     this.fit();
@@ -110,21 +114,29 @@ export class AppPanelController {
     else this.fit();
   }
 
+  /** Which side it opens on now. */
+  get side(): 'left' | 'right' {
+    return this.deps.side?.() ?? 'right';
+  }
+
   /** Re-place it after a layout change (the header sits above the app). */
   fit(): void {
     const view = this.page?.view;
     if (!view || !this.shown) return;
-    const dock = this.deps.getLayout().notes;
+    const layout = this.deps.getLayout();
+    const dock = this.side === 'left' ? layout.appDock : layout.notes;
     if (!dock || this.suspended || this.page?.state.loadError) {
       view.setVisible(false); // a page went fullscreen
       return;
     }
+    // A card inside the panel's glass island, below its header (UI 3).
     view.setBounds({
-      x: dock.x,
+      x: dock.x + APP_INSET,
       y: dock.y + APP_PANEL_HEADER,
-      width: dock.width,
-      height: Math.max(0, dock.height - APP_PANEL_HEADER),
+      width: Math.max(0, dock.width - APP_INSET * 2),
+      height: Math.max(0, dock.height - APP_PANEL_HEADER - APP_INSET),
     });
+    view.setBorderRadius(14);
     view.setVisible(true);
   }
 

@@ -185,7 +185,7 @@ export function WidgetGrid(props: {
         )
       ) : (
         <div
-          className="grid w-full max-w-[1100px] grid-flow-row-dense auto-rows-[172px] grid-cols-[repeat(auto-fill,172px)] justify-center gap-3.5"
+          className="grid w-full max-w-[1120px] grid-flow-row-dense auto-rows-[172px] grid-cols-[repeat(auto-fill,172px)] justify-center gap-3.5"
           data-testid="widget-grid"
         >
           {layout.widgets.map((widget, index) => (

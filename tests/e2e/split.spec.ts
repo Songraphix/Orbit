@@ -49,18 +49,21 @@ test('split view: two tabs side by side, focus, resize, swap, and leaving the sp
     await expect(cards.nth(0)).toHaveAttribute('data-tab-id', two.tabId);
     await expect(cards.nth(1)).toHaveAttribute('data-tab-id', one.tabId);
     await expect(cards.nth(1)).toHaveAttribute('data-focused', 'true');
-    await expect(cards.nth(0).getByTestId('toolbar-address')).toContainText('Page Two');
-    await expect(cards.nth(1).getByTestId('toolbar-address')).toContainText('Page One');
+    await expect(cards.nth(0).getByTestId('pane-title')).toContainText('Page Two');
+    await expect(cards.nth(1).getByTestId('pane-title')).toContainText('Page One');
+    // The toolbar row above follows the focused pane.
+    await expect(win.getByTestId('toolbar-address')).toContainText('Page One');
 
-    // Both pages are on screen, each below its own toolbar.
+    // Both pages are on screen, each below its own header.
     await expect.poll(async () => (await visibleViews(app)).length).toBe(2);
     const [left, right] = await visibleViews(app);
     expect(Math.abs(left!.width - right!.width)).toBeLessThanOrEqual(1);
     expect(right!.x).toBeGreaterThan(left!.x + left!.width);
 
-    // Clicking the left pane's toolbar focuses it.
-    await cards.nth(0).getByTestId('toolbar-reload').click();
+    // Clicking the left pane's header focuses it (and the toolbar follows).
+    await cards.nth(0).getByTestId('pane-reload').click();
     await expect(cards.nth(0)).toHaveAttribute('data-focused', 'true');
+    await expect(win.getByTestId('toolbar-address')).toContainText('Page Two');
 
     // Dragging the divider resizes the panes.
     const divider = await win.getByTestId('split-divider').boundingBox();
@@ -97,7 +100,7 @@ test('⌃⇧= splits with a new tab page; closing a pane leaves its partner full
     await clickMenu(app, 'split-view');
     await expect(cards).toHaveCount(2);
     await expect(cards.nth(0)).toHaveAttribute('data-tab-id', one.tabId);
-    await expect(cards.nth(1).getByTestId('toolbar-address')).toContainText('New Tab');
+    await expect(cards.nth(1).getByTestId('pane-title')).toContainText('New Tab');
 
     // ⌘W closes the focused (new tab) pane; Page One fills the card again.
     await clickMenu(app, 'close-tab');

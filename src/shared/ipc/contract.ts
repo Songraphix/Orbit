@@ -46,6 +46,7 @@ import { focusPrefsPatchSchema, focusSessionSchema, focusViewSchema } from '../f
 import { soundIdSchema, soundStateSchema } from '../sounds';
 import { uiPrefsPatchSchema, uiPrefsSchema } from '../ui-prefs';
 import { canvasFrameSchema, canvasStateSchema } from '../types/canvas';
+import { ORBIT_MENU_ACTIONS, orbitMenuViewSchema } from '../types/orbit-menu';
 import { homeLayoutSchema, placeSchema, weatherSchema, widgetDataSchema } from '../home-widgets';
 import { lookSchema, ROTATIONS, unsplashPhotoSchema } from '../backgrounds';
 import { appListSchema, appPanelStateSchema, OPEN_IN } from '../apps';
@@ -134,7 +135,10 @@ export const contract = {
   },
   /** The right-hand dock (Notes or a docked app): its edge dragged to `width`. */
   'dock:setWidth': {
-    input: z.object({ width: z.number().finite() }).strict(),
+    /** `app`: the pinned app beside the rail (UI 3); otherwise the dock on the right. */
+    input: z
+      .object({ width: z.number().finite(), dock: z.enum(['right', 'app']).optional() })
+      .strict(),
     output: z.void(),
   },
   /** Dock edge drag: the page and the dock's page hide meanwhile (like the sidebar's edge);
@@ -844,7 +848,8 @@ export const contract = {
   'applib:open': {
     input: z.object({}).strict(),
     output: z.void(),
-    surfaces: ['shell', 'overlay'],
+    // The rail's +, the command bar, and the Homepage dock's launcher.
+    surfaces: ['shell', 'overlay', 'internal'],
   },
   'applib:launch': {
     input: z.object({ itemId: z.string().max(64) }).strict(),
@@ -904,6 +909,23 @@ export const contract = {
     input: z.object({}).strict(),
     output: canvasStateSchema,
     surfaces: ['shell', 'overlay', 'internal'],
+  },
+  /** Where this Orbit page's view sits in its window (the Homepage lines its wallpaper up). */
+  'canvas:place': {
+    input: z.object({}).strict(),
+    output: canvasFrameSchema.nullable(),
+    surfaces: ['internal'],
+  },
+  /** Settings → Appearance: the wallpaper, and how much to dim a photo (only Settings may). */
+  'canvas:setWallpaper': {
+    input: z.object({ wallpaper: wallpaperChoiceSchema }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'canvas:setDim': {
+    input: z.object({ overlay: z.number().min(0).max(80) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
   },
   /** Settings → Appearance changes them (only Settings may). */
   'ui:set': {
@@ -1269,6 +1291,27 @@ export const contract = {
   'profile:menu': {
     input: z.object({ anchor: rectSchema }).strict(),
     output: z.void(),
+  },
+  /** The toolbar's "Orbit ⌄" opens (or closes) the Orbit menu (UI spec §5). */
+  'orbitmenu:open': {
+    input: z.object({ anchor: rectSchema }).strict(),
+    output: z.void(),
+    surfaces: ['shell'],
+  },
+  /** What the Orbit menu lists: your Spaces and sync's state. */
+  'orbitmenu:get': {
+    input: z.object({}).strict(),
+    output: orbitMenuViewSchema,
+    surfaces: ['overlay'],
+  },
+  /** One of the Orbit menu's items (the menu closes). */
+  'orbitmenu:run': {
+    input: z
+      .object({ action: z.enum(ORBIT_MENU_ACTIONS), spaceId: z.string().max(64).optional() })
+      .strict(),
+    output: z.void(),
+    // The overlay's menu, and the sidebar's Add Space row.
+    surfaces: ['overlay', 'shell'],
   },
   /** The active space's profile and every profile (with how many spaces use it). */
   'profile:get': {

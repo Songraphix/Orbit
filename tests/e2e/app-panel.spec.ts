@@ -28,8 +28,14 @@ async function openSettings(app: ElectronApplication): Promise<Page> {
 }
 type AppList = { apps: { id: string; title: string }[] };
 /** Adds favourites that open in the docked panel (through Settings → Apps' own calls). */
-async function addPanelApps(app: ElectronApplication, apps: { url: string; title: string }[]) {
+async function addPanelApps(
+  app: ElectronApplication,
+  apps: { url: string; title: string }[],
+  /** Where apps open: these tests mostly use the dock on the right (shared with Notes). */
+  side: 'left' | 'right' = 'right',
+) {
   const settings = await openSettings(app);
+  await invoke(settings, 'ui:set', { appSide: side });
   let list: AppList = { apps: [] };
   for (const a of apps) list = await invoke<AppList>(settings, 'apps:add', a);
   for (const a of list.apps)
@@ -46,7 +52,7 @@ const freePort = () =>
       server.close(() => resolve(port));
     });
   });
-/** The dock has finished sliding in: its right edge sits 8 px inside the window. */
+/** The dock has finished sliding in: its right edge sits 10 px inside the window. */
 const dockSettled = (win: Page) =>
   expect
     .poll(async () => {
@@ -55,7 +61,7 @@ const dockSettled = (win: Page) =>
         'layout:get',
       );
       const width = (await win.evaluate('innerWidth')) as number;
-      return layout.notes ? Math.round(layout.notes.x + layout.notes.width + 8 - width) : null;
+      return layout.notes ? Math.round(layout.notes.x + layout.notes.width + 10 - width) : null;
     })
     .toBe(0);
 const dockWidth = (win: Page) =>
@@ -100,6 +106,53 @@ test('the docked panel: drag its edge to resize; the width is kept', async () =>
     await expect.poll(() => dockWidth(win)).toBe(380);
   } finally {
     await second.close();
+    await server.close();
+  }
+});
+
+test('a pinned app opens beside the rail (UI 3): the page stays, Notes can sit on the right too', async () => {
+  test.setTimeout(90_000);
+  const server = await startTestServer();
+  const { app, win, close } = await launchOrbit();
+  type Box = { x: number; width: number };
+  const layout = () =>
+    invoke<{ card: Box; appDock: Box | null; notes: Box | null }>(win, 'layout:get');
+  try {
+    await addPanelApps(app, [{ url: server.url('/one'), title: 'Desk' }], 'left');
+    await win.getByTestId('favorite-tile').click();
+    await expect(win.getByTestId('app-dock')).toBeVisible();
+    await expect(win.getByTestId('app-panel-title')).toHaveText('Page One');
+    await expect(win.getByTestId('rail-panel-marker')).toHaveCount(1);
+    // It slides in beside the rail and the page makes room (it isn't covered).
+    await expect
+      .poll(async () => {
+        const l = await layout();
+        return l.appDock ? l.card.x - (l.appDock.x + l.appDock.width) : null;
+      })
+      .toBe(10);
+    expect((await layout()).appDock!.width).toBe(360);
+
+    // Notes opens on the right while the app stays.
+    await win.getByTestId('toolbar-notes').click();
+    await expect.poll(async () => (await layout()).notes !== null).toBe(true);
+    await expect(win.getByTestId('app-dock')).toBeVisible();
+
+    // Its edge resizes it.
+    const edge = (await win.getByTestId('app-dock-edge').boundingBox())!;
+    const y = edge.y + edge.height / 2;
+    await win.mouse.move(edge.x + edge.width / 2, y);
+    await win.mouse.down();
+    await win.mouse.move(edge.x + 30, y, { steps: 4 });
+    await win.mouse.move(edge.x + 60 + edge.width / 2, y, { steps: 4 });
+    await win.mouse.up();
+    await expect.poll(async () => (await layout()).appDock?.width).toBe(420);
+
+    // Closing it gives the page its room back; the marker goes.
+    await win.getByTestId('app-panel-close').click();
+    await expect(win.getByTestId('app-dock')).toHaveCount(0);
+    await expect(win.getByTestId('rail-panel-marker')).toHaveCount(0);
+  } finally {
+    await close();
     await server.close();
   }
 });

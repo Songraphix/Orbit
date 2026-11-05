@@ -101,7 +101,7 @@ test('a Boost from site controls: editor beside the page, live CSS and colours, 
 
   // Site controls lists the Boost; its switch turns it off live.
   await invoke(win, 'tabs:activate', { tabId: page.tabId });
-  await win.getByTestId('content-card').nth(0).getByTestId('toolbar-site-controls').click();
+  await win.getByTestId('toolbar-site-controls').click();
   const row = bar.getByTestId('site-boost-row');
   await expect(row).toHaveCount(1);
   await expect(row).toContainText('Boost for 127.0.0.1');

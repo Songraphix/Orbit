@@ -72,7 +72,7 @@ test('HTML fullscreen fills the window, and leaving restores the layout', async 
   });
   await expect.poll(async () => (await state()).fullScreen, { timeout: 10_000 }).toBe(false);
   await expect(win.getByTestId('toolbar')).toBeVisible();
-  await expect.poll(async () => (await state()).view?.y).toBe(44); // 8 inset + 36 toolbar
+  await expect.poll(async () => (await state()).view?.y).toBe(52); // below the 52 px toolbar row
 });
 
 test('web tabs have a right-click menu attached', async () => {

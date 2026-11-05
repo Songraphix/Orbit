@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { launchOrbit } from './launch-orbit';
 
-test('Arc-style window: hidden title bar with traffic lights inside the sidebar', async () => {
+test('hidden title bar, traffic lights in the toolbar row on the canvas', async () => {
   const orbit = await launchOrbit();
   try {
     // The window is shown on its first paint ('ready-to-show'), so wait for it.
@@ -13,9 +13,9 @@ test('Arc-style window: hidden title bar with traffic lights inside the sidebar'
     const buttons = await orbit.app.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0]!.getWindowButtonPosition(),
     );
-    expect(buttons).toEqual({ x: 16, y: 18 });
+    expect(buttons).toEqual({ x: 18, y: 20 });
 
-    const dragRegion = await orbit.win.getByTestId('title-strip').evaluate((el) => {
+    const dragRegion = await orbit.win.getByTestId('toolbar').evaluate((el) => {
       // Tests compile without DOM typings; describe the one browser API used here.
       type Css = { getPropertyValue(name: string): string };
       const g = globalThis as unknown as { getComputedStyle(el: unknown): Css };

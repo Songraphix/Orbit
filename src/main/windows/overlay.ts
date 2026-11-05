@@ -47,6 +47,7 @@ export class OverlayController {
   private createMenu: OverlayState['createMenu'] = null;
   private quickNote: OverlayState['quickNote'] = null;
   private profileMenu: OverlayState['profileMenu'] = null;
+  private orbitMenu: OverlayState['orbitMenu'] = null;
   private captureCard: OverlayState['captureCard'] = null;
   private shot: OverlayState['shot'] = null;
   private grouping: OverlayState['grouping'] = null;
@@ -98,6 +99,7 @@ export class OverlayController {
       createMenu: this.createMenu,
       quickNote: this.quickNote,
       profileMenu: this.profileMenu,
+      orbitMenu: this.orbitMenu,
       captureCard: this.captureCard,
       shot: this.shot,
       grouping: this.grouping,
@@ -120,6 +122,7 @@ export class OverlayController {
       this.createMenu !== null ||
       this.quickNote !== null ||
       this.profileMenu !== null ||
+      this.orbitMenu !== null ||
       this.captureCard !== null ||
       this.shot !== null ||
       this.grouping !== null ||
@@ -142,6 +145,7 @@ export class OverlayController {
       this.createMenu !== null ||
       this.quickNote !== null ||
       this.profileMenu !== null ||
+      this.orbitMenu !== null ||
       this.captureCard !== null ||
       this.shot !== null ||
       this.grouping !== null ||
@@ -229,6 +233,25 @@ export class OverlayController {
     this.createMenu = null;
     this.profileMenu = { anchor, openedAt: Date.now() };
     this.show();
+  }
+
+  /** The Orbit menu under the toolbar's "Orbit ⌄"; the button toggles it. */
+  toggleOrbitMenu(anchor: Rect): void {
+    if (this.orbitMenu) {
+      this.closeOrbitMenu();
+      return;
+    }
+    this.siteControls = null;
+    this.createMenu = null;
+    this.profileMenu = null;
+    this.orbitMenu = { anchor, openedAt: Date.now() };
+    this.show();
+  }
+
+  closeOrbitMenu(): void {
+    if (!this.orbitMenu) return;
+    this.orbitMenu = null;
+    this.sync();
   }
 
   closeProfileMenu(): void {

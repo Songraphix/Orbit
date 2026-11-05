@@ -24,6 +24,9 @@ export type CanvasDeps = {
   customFile: () => { path: string; stamp: number } | null;
   look: () => BackgroundLook;
   ui: () => UiPrefs;
+  /** Orbit's appearance is dark (Light / Dark / System): the glass's tone when the palette
+   *  doesn't follow the wallpaper. */
+  dark?: () => boolean;
   /** The palette cache (setting `canvas.palettes`). */
   cache: {
     get: () => { key: string; palette: Palette }[];
@@ -78,6 +81,10 @@ export class CanvasService {
       glass: ui.glass,
       accent: ui.accent,
       neutral: ui.palette === 'off',
+      // Off: the glass follows Light / Dark instead of the wallpaper.
+      ...(ui.palette === 'off' && this.deps.dark
+        ? { tone: this.deps.dark() ? ('dark' as const) : ('light' as const) }
+        : {}),
     });
     return {
       wallpaper: choice,

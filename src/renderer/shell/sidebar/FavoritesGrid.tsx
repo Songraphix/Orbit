@@ -85,19 +85,26 @@ export function FavoritesGrid({
   width: number;
 }) {
   if (rows.length === 0) return null;
-  const columns = Math.min(4, Math.max(2, Math.floor((width - 16) / 68)));
-  // px-2.5 padding (20) and gap-2 (8) between columns. Narrow sidebars get square tiles, like
-  // Arc's; wider ones settle at a calm 52–64 px height.
-  const tile = (width - 20 - 8 * (columns - 1)) / columns;
-  const height = Math.round(Math.max(52, Math.min(tile, 64)));
+  // UI 2: two big labelled tiles across a usual sidebar, three or four in a wide one.
+  const columns = Math.min(4, Math.max(2, Math.floor((width - 16) / 96)));
+  const tile = (width - 16 - 8 * (columns - 1)) / columns;
+  // Labels when the tiles are roomy enough; a narrow sidebar gets square icon tiles.
+  const labelled = tile >= 76;
+  const height = labelled ? 68 : Math.round(Math.max(52, Math.min(tile, 64)));
   return (
     <ul
-      className="grid gap-2 px-2.5 pb-3"
+      className="grid gap-2 px-0.5 pb-1"
       style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
       data-testid="favorites"
     >
       {rows.map((row) => (
-        <FavoriteTile key={row.id} row={row} active={row.id === activeId} height={height} />
+        <FavoriteTile
+          key={row.id}
+          row={row}
+          active={row.id === activeId}
+          height={height}
+          labelled={labelled}
+        />
       ))}
     </ul>
   );
@@ -107,10 +114,12 @@ function FavoriteTile({
   row,
   active,
   height,
+  labelled,
 }: {
   row: SidebarRow;
   active: boolean;
   height: number;
+  labelled: boolean;
 }) {
   const rgb = useFaviconColor(active ? row.favicon : null);
   const where =
@@ -133,10 +142,8 @@ function FavoriteTile({
           type="button"
           aria-label={where ? `${row.title}, ${where.toLowerCase()}` : row.title}
           aria-current={active ? 'page' : undefined}
-          className={`press relative grid w-full place-items-center rounded-[16px] ${
-            active
-              ? 'bg-[var(--row-active)] shadow-[var(--row-shadow)]'
-              : 'bg-[var(--tile-bg)] hover:bg-[var(--row-active)]'
+          className={`press lift relative flex w-full flex-col items-center justify-center gap-1.5 rounded-[16px] ${
+            active ? 'mat-sel' : 'mat-light hover:bg-[var(--glass-hover)]'
           }`}
           style={{ ...tint, height }}
           onClick={() => void invoke('tabs:activate', { tabId: row.id })}
@@ -146,9 +153,16 @@ function FavoriteTile({
           }}
           data-testid="favorite-tile"
         >
-          <span className="grid size-[18px] place-items-center [&>*]:size-[18px]">
+          <span
+            className={`grid place-items-center ${labelled ? 'size-[26px] [&>*]:size-[26px]' : 'size-[20px] [&>*]:size-[20px]'}`}
+          >
             <TabIcon row={row} />
           </span>
+          {labelled && (
+            <span className="max-w-full truncate px-2 text-[11.5px] leading-none text-[var(--fg-muted)]">
+              {row.title}
+            </span>
+          )}
           <PeekBadge row={row} tile />
           {row.openIn !== 'tab' && (
             // Apps that open beside the page, or in their own window, say so in a corner.

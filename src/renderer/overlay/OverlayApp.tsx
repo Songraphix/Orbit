@@ -13,6 +13,7 @@ import { PromptView } from './PromptView';
 import { FloatingSidebar } from './FloatingSidebar';
 import { CreateMenu } from './CreateMenu';
 import { ProfileMenu } from './ProfileMenu';
+import { OrbitMenu } from './OrbitMenu';
 import { CaptureCard } from './CaptureCard';
 import { TooltipPill } from '../tooltip/TooltipPill';
 import { DownloadFlight } from './DownloadFlight';
@@ -38,6 +39,7 @@ export function OverlayApp() {
     createMenu: null,
     quickNote: null,
     profileMenu: null,
+    orbitMenu: null,
     captureCard: null,
     shot: null,
     tooltip: null,
@@ -74,6 +76,8 @@ export function OverlayApp() {
     <SiteControls view={state.siteControls} />
   ) : state.createMenu ? (
     <CreateMenu key={state.createMenu.openedAt} anchor={state.createMenu.anchor} />
+  ) : state.orbitMenu ? (
+    <OrbitMenu key={state.orbitMenu.openedAt} anchor={state.orbitMenu.anchor} />
   ) : state.profileMenu ? (
     <ProfileMenu key={state.profileMenu.openedAt} anchor={state.profileMenu.anchor} />
   ) : state.shot ? (

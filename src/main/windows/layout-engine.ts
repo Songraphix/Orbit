@@ -31,6 +31,14 @@ export class LayoutEngine {
   private dockWidth: number;
   private dockSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private topTabs: boolean;
+  private apps: 'rail' | 'grid';
+  /** A pinned app beside the rail (UI 3): shown, heading open or shut, its slide and width. */
+  private appDock = false;
+  private appTarget = false;
+  private appProgress = 1;
+  private appTimer: ReturnType<typeof setInterval> | null = null;
+  private appWidth: number;
+  private appSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private layout: Layout;
 
   constructor(
@@ -43,6 +51,8 @@ export class LayoutEngine {
     this.sidebarVisible = settings.get('sidebar.visible');
     this.sidebarWidth = settings.get('sidebar.width');
     this.topTabs = settings.get('tabs.layout') === 'top';
+    this.apps = settings.get('ui').apps;
+    this.appWidth = settings.get('appdock.width') ?? 360;
     this.dockWidth = settings.get('dock.width');
     this.layout = this.compute();
     this.updateButtons();
@@ -106,12 +116,16 @@ export class LayoutEngine {
     this.update();
   }
 
-  /** Arc hides the traffic lights with the sidebar so they never float over the page; the
-   *  Library's column and the tab strip have room for them. */
+  /** Pinned apps in the rail or as a grid in the sidebar (Settings → Appearance). */
+  setApps(apps: 'rail' | 'grid'): void {
+    if (apps === this.apps) return;
+    this.apps = apps;
+    this.update();
+  }
+
+  /** The traffic lights always have a place: the toolbar row, or the top of the sidebar. */
   private updateButtons(): void {
-    this.win.setWindowButtonVisibility(
-      this.sidebarVisible || this.library !== null || this.topTabs,
-    );
+    this.win.setWindowButtonVisibility(true);
   }
 
   /** The Notes panel opened or closed. Not persisted. */
@@ -203,6 +217,78 @@ export class LayoutEngine {
     if (this.dockSaveTimer) clearTimeout(this.dockSaveTimer);
     this.dockSaveTimer = null;
     this.settings.set('dock.width', this.dockWidth);
+    if (this.appSaveTimer) {
+      clearTimeout(this.appSaveTimer);
+      this.appSaveTimer = null;
+      this.settings.set('appdock.width', this.appWidth);
+    }
+  }
+
+  /** A pinned app opened beside the rail, or closed: it slides from the rail's side while the
+   *  page makes room (and back), like the dock on the right. Not persisted. */
+  setAppDock(open: boolean): void {
+    if (open === this.appTarget) return;
+    const wasShown = this.appDock;
+    this.appTarget = open;
+    if (open) {
+      this.appDock = true;
+      if (this.animate() && (!wasShown || this.appTimer)) {
+        if (!wasShown) this.appProgress = 0;
+        this.slideApp(1);
+        return;
+      }
+      this.stopApp();
+      this.appProgress = 1;
+      this.update();
+      return;
+    }
+    if (wasShown && this.animate()) {
+      this.slideApp(0, () => {
+        this.appDock = false;
+        this.appProgress = 1;
+        this.update();
+      });
+      return;
+    }
+    this.stopApp();
+    this.appDock = false;
+    this.appProgress = 1;
+    this.update();
+  }
+
+  /** The app panel's edge was dragged: its new width (saved once dragging settles). */
+  setAppDockWidth(width: number): void {
+    const clamped = clampDockWidth(width);
+    if (clamped === this.appWidth) return;
+    this.appWidth = clamped;
+    if (this.appSaveTimer) clearTimeout(this.appSaveTimer);
+    this.appSaveTimer = setTimeout(() => this.flushDock(), SAVE_WIDTH_DELAY_MS);
+    this.update();
+  }
+
+  private slideApp(to: number, done?: () => void): void {
+    this.stopApp();
+    const from = this.appProgress;
+    const start = Date.now();
+    const step = () => {
+      const t = Math.min(1, (Date.now() - start) / DOCK_SLIDE_MS);
+      this.appProgress = from + (to - from) * (1 - (1 - t) ** 3);
+      if (t >= 1) {
+        this.stopApp();
+        this.appProgress = to;
+        if (done) done();
+        else this.update();
+        return;
+      }
+      this.update();
+    };
+    this.appTimer = setInterval(step, 16);
+    step();
+  }
+
+  private stopApp(): void {
+    if (this.appTimer) clearInterval(this.appTimer);
+    this.appTimer = null;
   }
 
   /** Split view started/resized (ratio) or ended (null). Not persisted. */
@@ -240,6 +326,8 @@ export class LayoutEngine {
       dockWidth: this.dockWidth,
       dockProgress: this.dockProgress,
       topTabs: this.topTabs,
+      apps: this.apps,
+      appDock: this.appDock ? { width: this.appWidth, progress: this.appProgress } : null,
     });
   }
 }
