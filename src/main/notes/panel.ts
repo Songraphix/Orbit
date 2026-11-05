@@ -30,6 +30,8 @@ export class NotesPanelController {
   private view: WebContentsView | null = null;
   private shown = false;
   private wide = false;
+  /** Hidden while the dock's edge is dragged (native views swallow the pointer). */
+  private suspended = false;
   /** Where the panel's page is: 'panel', 'panel/projects/<id>'… (checked by notesHash). */
   private route = 'panel';
 
@@ -141,11 +143,18 @@ export class NotesPanelController {
     else this.open();
   }
 
+  /** The dock's edge is being dragged (true) or was let go (false). */
+  suspend(on: boolean): void {
+    this.suspended = on;
+    if (on) this.view?.setVisible(false);
+    else this.fit();
+  }
+
   /** Re-place the panel after a layout change. */
   fit(): void {
     if (!this.view || !this.shown) return;
     const layout = this.deps.getLayout();
-    if (!layout.notes) {
+    if (!layout.notes || this.suspended) {
       this.view.setVisible(false); // e.g. a page went fullscreen
       return;
     }

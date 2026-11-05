@@ -1,6 +1,6 @@
 import type { Layout, LibraryPanel } from '@shared/types/layout';
 import type { SettingsRepository } from '../persistence/repositories/settings';
-import { computeLayout, sidebarDrag } from './layout';
+import { clampDockWidth, computeLayout, sidebarDrag } from './layout';
 
 /** The parts of BrowserWindow the engine uses (keeps it testable with a fake). */
 export type LayoutWindow = {
@@ -25,6 +25,8 @@ export class LayoutEngine {
   private library: LibraryPanel | null = null;
   private notes = false;
   private notesWide = false;
+  private dockWidth: number;
+  private dockSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private topTabs: boolean;
   private layout: Layout;
 
@@ -36,6 +38,7 @@ export class LayoutEngine {
     this.sidebarVisible = settings.get('sidebar.visible');
     this.sidebarWidth = settings.get('sidebar.width');
     this.topTabs = settings.get('tabs.layout') === 'top';
+    this.dockWidth = settings.get('dock.width');
     this.layout = this.compute();
     this.updateButtons();
   }
@@ -114,6 +117,23 @@ export class LayoutEngine {
     this.update();
   }
 
+  /** The dock's edge was dragged: its new width (saved once dragging settles). */
+  setDockWidth(width: number): void {
+    const clamped = clampDockWidth(width);
+    if (clamped === this.dockWidth) return;
+    this.dockWidth = clamped;
+    if (this.dockSaveTimer) clearTimeout(this.dockSaveTimer);
+    this.dockSaveTimer = setTimeout(() => this.flushDock(), SAVE_WIDTH_DELAY_MS);
+    this.update();
+  }
+
+  /** Writes a pending dock width now (dragging ended, or the window is closing). */
+  flushDock(): void {
+    if (this.dockSaveTimer) clearTimeout(this.dockSaveTimer);
+    this.dockSaveTimer = null;
+    this.settings.set('dock.width', this.dockWidth);
+  }
+
   /** Split view started/resized (ratio) or ended (null). Not persisted. */
   setSplitRatio(ratio: number | null): void {
     if (ratio === this.splitRatio) return;
@@ -146,6 +166,7 @@ export class LayoutEngine {
       library: this.library,
       notes: this.notes,
       notesWide: this.notesWide,
+      dockWidth: this.dockWidth,
       topTabs: this.topTabs,
     });
   }

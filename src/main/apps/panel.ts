@@ -33,6 +33,8 @@ export class AppPanelController {
   private page: TabController | null = null;
   private itemId: string | null = null;
   private shown = false;
+  /** Hidden while the dock's edge is dragged (native views swallow the pointer). */
+  private suspended = false;
 
   constructor(private readonly deps: AppPanelDeps) {}
 
@@ -97,12 +99,19 @@ export class AppPanelController {
     this.push();
   }
 
+  /** The dock's edge is being dragged (true) or was let go (false). */
+  suspend(on: boolean): void {
+    this.suspended = on;
+    if (on) this.page?.view.setVisible(false);
+    else this.fit();
+  }
+
   /** Re-place it after a layout change (the header sits above the app). */
   fit(): void {
     const view = this.page?.view;
     if (!view || !this.shown) return;
     const dock = this.deps.getLayout().notes;
-    if (!dock) {
+    if (!dock || this.suspended) {
       view.setVisible(false); // a page went fullscreen
       return;
     }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   sidebarDrag,
+  clampDockWidth,
   clampSidebarWidth,
   computeLayout,
   computePeek,
@@ -173,6 +174,26 @@ describe('Notes panel layout', () => {
     const wide = computeLayout({ ...base, windowWidth: 1600, notes: true, notesWide: true });
     expect(wide.notes!.width).toBe(720);
     expect(computeLayout({ ...base, notes: true, notesWide: true }).card.width).toBe(420);
+  });
+
+  it('takes the width it was dragged to, within its limits and the page’s minimum', () => {
+    const dragged = computeLayout({ ...base, windowWidth: 1600, notes: true, dockWidth: 520 });
+    expect(dragged.notes!.width).toBe(520);
+    expect(dragged.card.x + dragged.card.width).toBe(dragged.notes!.x - 8);
+    // Wider than the window allows: the page keeps 420 px.
+    const big = computeLayout({ ...base, notes: true, dockWidth: 1000 });
+    expect(big.card.width).toBe(420);
+    // The Project Board is at least its wide width, or wider if dragged so.
+    const board = { ...base, windowWidth: 2200, notes: true, notesWide: true };
+    expect(computeLayout({ ...board, dockWidth: 400 }).notes!.width).toBe(720);
+    expect(computeLayout({ ...board, dockWidth: 900 }).notes!.width).toBe(900);
+  });
+
+  it('clamps dragged dock widths to 280–1000 whole pixels', () => {
+    expect(clampDockWidth(100)).toBe(280);
+    expect(clampDockWidth(5000)).toBe(1000);
+    expect(clampDockWidth(433.6)).toBe(434);
+    expect(clampDockWidth(Number.NaN)).toBe(380);
   });
 
   it('works beside split view and Library mode, and hides in fullscreen', () => {

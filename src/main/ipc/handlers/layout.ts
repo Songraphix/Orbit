@@ -33,6 +33,24 @@ export function registerLayoutHandlers(router: IpcRouter, windows: WindowManager
     snapshot: windowFor(sender.webContentsId).tabs.freeze(),
   }));
 
+  router.handle('dock:setWidth', ({ width }, { sender }) => {
+    windowFor(sender.webContentsId).layout.setDockWidth(width);
+  });
+  // Synchronous like the sidebar's: the views hide before the next pointer move arrives.
+  router.handle('dock:beginResize', (_input, { sender }) => {
+    const { tabs, notes, appPanel } = windowFor(sender.webContentsId);
+    notes.suspend(true);
+    appPanel.suspend(true);
+    return { snapshot: tabs.freeze() };
+  });
+  router.handle('dock:endResize', (_input, { sender }) => {
+    const { tabs, notes, appPanel, layout } = windowFor(sender.webContentsId);
+    layout.flushDock();
+    tabs.unfreeze();
+    notes.suspend(false);
+    appPanel.suspend(false);
+  });
+
   router.handle('split:create', ({ tabId }, { sender }) => {
     const { tabs } = windowFor(sender.webContentsId);
     if (tabId) tabs.splitWith(tabId);

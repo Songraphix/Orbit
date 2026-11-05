@@ -8,7 +8,7 @@ import { homeLayoutSchema } from './home-widgets';
 import { DEFAULT_LOOK, lookSchema, ROTATIONS } from './backgrounds';
 import { aiPrefsSchema, DEFAULT_AI_PREFS } from './ai';
 import { rulesSchema } from './rules';
-import { rectSchema, SIDEBAR_WIDTH } from './types/layout';
+import { NOTES_WIDTH, rectSchema, SIDEBAR_WIDTH } from './types/layout';
 
 /**
  * Every persisted setting, with its schema and default. Stored as JSON in the `settings` table.
@@ -79,6 +79,8 @@ export const settingsSchema = {
     .max(50),
   /** The productivity panel: open or not, and where (`panel/projects/<id>`…), for a restart. */
   'panel.state': z.object({ open: z.boolean(), route: z.string().max(120) }),
+  /** The right-hand dock's width, as last dragged (Notes and docked apps share it). */
+  'dock.width': z.number().int().min(NOTES_WIDTH.min).max(NOTES_WIDTH.max),
   /** The focus session under way (roadmap P2.3), kept across a restart. */
   'focus.session': focusSessionSchema.nullable(),
   /** How you like to focus: length, break, blocking, sound (kept between sessions). */
@@ -132,6 +134,7 @@ export const settingsDefaults: Settings = {
   'media.autoPopout': true,
   'notes.floating': [],
   'panel.state': { open: false, route: 'panel' },
+  'dock.width': NOTES_WIDTH.panel,
   'capture.lastProject': null,
   'focus.session': null,
   'focus.prefs': DEFAULT_FOCUS_PREFS,

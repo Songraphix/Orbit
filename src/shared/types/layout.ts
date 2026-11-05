@@ -46,6 +46,7 @@ export type LibraryPanel = 'narrow' | 'wide';
 /** The tab strip's height: the traffic lights (at y 18, 12 tall) sit centred in it. */
 export const TAB_STRIP_HEIGHT = 48;
 
-/** The productivity panel (Notes, Projects, Tasks): its width, its width for the Project Board,
- *  the least it shrinks to, and the page width it leaves at least. */
-export const NOTES_WIDTH = { panel: 380, wide: 720, min: 280, pageMin: 420 } as const;
+/** The right-hand dock (Notes, Projects, Tasks… or a docked app): its usual width, its width for
+ *  the Project Board, the least it shrinks to, the most it can be dragged to, and the page width
+ *  it leaves at least. */
+export const NOTES_WIDTH = { panel: 380, wide: 720, min: 280, max: 1000, pageMin: 420 } as const;

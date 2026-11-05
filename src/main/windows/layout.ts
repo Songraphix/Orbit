@@ -22,21 +22,31 @@ export type LayoutInput = {
   /** The Notes panel (F-33) is open on the right; wide for the Project Board. */
   notes?: boolean;
   notesWide?: boolean;
+  /** The dock's width as last dragged (setting `dock.width`). */
+  dockWidth?: number;
   /** Tabs on top instead of in the sidebar. */
   topTabs?: boolean;
 };
 
-/** How wide the Notes panel is: its usual width, giving way (down to its minimum) so the page
- *  keeps at least `pageMin`. Pure. */
+/** How wide the dock is: the width you dragged it to (the Project Board at least its wide
+ *  width), giving way (down to its minimum) so the page keeps at least `pageMin`. Pure. */
 export function notesWidth(
   windowWidth: number,
   pageLeft: number,
   inset: number,
   wide = false,
+  preferred: number = NOTES_WIDTH.panel,
 ): number {
-  const { panel, min, pageMin } = NOTES_WIDTH;
+  const { min, pageMin } = NOTES_WIDTH;
+  const chosen = clampDockWidth(preferred);
   const spare = windowWidth - pageLeft - inset * 2 - pageMin;
-  return Math.max(min, Math.min(wide ? NOTES_WIDTH.wide : panel, spare));
+  return Math.max(min, Math.min(wide ? Math.max(NOTES_WIDTH.wide, chosen) : chosen, spare));
+}
+
+/** A dragged dock width, kept within the dock's limits (whole pixels). Pure. */
+export function clampDockWidth(width: number): number {
+  if (!Number.isFinite(width)) return NOTES_WIDTH.panel;
+  return Math.round(Math.min(NOTES_WIDTH.max, Math.max(NOTES_WIDTH.min, width)));
 }
 
 /** Where Library mode's sections column and panel go, and where the page starts. Pure. */
@@ -130,7 +140,9 @@ export function computeLayout(input: LayoutInput): Layout {
   const top = strip ? TAB_STRIP_HEIGHT : inset;
   const left = library ? library.pageLeft : sidebarVisible ? sidebarWidth : inset;
   // The Notes panel takes a column on the right, with the usual gap before it.
-  const notesW = input.notes ? notesWidth(input.windowWidth, left, inset, input.notesWide) : 0;
+  const notesW = input.notes
+    ? notesWidth(input.windowWidth, left, inset, input.notesWide, input.dockWidth)
+    : 0;
   const right = input.notes ? notesW + inset * 2 : inset;
 
   const card = {

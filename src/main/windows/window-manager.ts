@@ -608,6 +608,7 @@ export class WindowManager {
     });
     win.on('close', () => {
       layout.flush();
+      layout.flushDock();
       flushSplits();
       this.deps.store.flushLive(); // the sidebar store saves structure at once; live details now
     });

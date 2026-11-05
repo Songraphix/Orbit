@@ -98,15 +98,16 @@ function useResizeSnapshot() {
   const [snapshot, setSnapshot] = useState<string | null>(null);
   const resizing = useRef(false);
 
-  const onResizeStart = useCallback(() => {
+  /** The sidebar's edge or the dock's edge started moving. */
+  const onResizeStart = useCallback((edge: 'sidebar' | 'dock' = 'sidebar') => {
     resizing.current = true;
-    void window.orbit.invoke('sidebar:beginResize', {}).then((r) => {
+    void window.orbit.invoke(`${edge}:beginResize`, {}).then((r) => {
       if (resizing.current) setSnapshot(r.snapshot);
     });
   }, []);
-  const onResizeEnd = useCallback(() => {
+  const onResizeEnd = useCallback((edge: 'sidebar' | 'dock' = 'sidebar') => {
     resizing.current = false;
-    void window.orbit.invoke('sidebar:endResize', {}).then(() => setSnapshot(null));
+    void window.orbit.invoke(`${edge}:endResize`, {}).then(() => setSnapshot(null));
   }, []);
 
   return { snapshot, onResizeStart, onResizeEnd };
@@ -163,8 +164,8 @@ function Chrome({
           media={media}
           librarySection={librarySection}
           activeTab={activeTab}
-          onResizeStart={onResizeStart}
-          onResizeEnd={onResizeEnd}
+          onResizeStart={() => onResizeStart('sidebar')}
+          onResizeEnd={() => onResizeEnd('sidebar')}
         />
       )}
       {paneTabs.map((tab, i) => {
@@ -200,6 +201,13 @@ function Chrome({
         />
       )}
       {layout.notes && <AppPanelHeader rect={layout.notes} radius={layout.radius} />}
+      {layout.notes && (
+        <DockEdge
+          dock={layout.notes}
+          onStart={() => onResizeStart('dock')}
+          onEnd={() => onResizeEnd('dock')}
+        />
+      )}
       {split && layout.divider && (
         <SplitDivider rect={layout.divider} left={layout.panes[0]!} right={layout.panes[1]!} />
       )}
@@ -208,6 +216,65 @@ function Chrome({
 }
 
 type Pane = Layout['panes'][number];
+
+/** The usual dock width (double-clicking its edge goes back to it). */
+const DOCK_USUAL = 380;
+/** The gap between the page and the dock that holds its edge. */
+const DOCK_GAP = 8;
+
+/**
+ * The dock's edge (Notes or a docked app): dragging the gap before it makes the dock wider or
+ * narrower; the width is remembered. The page and the dock's page hide meanwhile (a snapshot of
+ * the page stands in). Double-click: the usual width.
+ */
+function DockEdge({
+  dock,
+  onStart,
+  onEnd,
+}: {
+  dock: Rect;
+  onStart: () => void;
+  onEnd: () => void;
+}) {
+  const [dragging, setDragging] = useState(false);
+  const onPointerDown = (event: ReactPointerEvent) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    setDragging(true);
+    onStart();
+    const right = dock.x + dock.width;
+    const onMove = (ev: PointerEvent) => {
+      // Chromium sends a synthetic move after the views hide; ignore moves without the button.
+      if ((ev.buttons & 1) === 0) return;
+      void window.orbit.invoke('dock:setWidth', { width: right - ev.clientX - DOCK_GAP / 2 });
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      setDragging(false);
+      onEnd();
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  };
+  return (
+    <div
+      className="group absolute flex cursor-col-resize items-center justify-center"
+      style={{ left: dock.x - DOCK_GAP, top: dock.y, width: DOCK_GAP, height: dock.height }}
+      onPointerEnter={() => void window.orbit.invoke('sidebar:prepareResize', {})}
+      onPointerDown={onPointerDown}
+      onDoubleClick={() => void window.orbit.invoke('dock:setWidth', { width: DOCK_USUAL })}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize panel"
+      data-testid="dock-edge"
+    >
+      <div
+        className={`h-10 w-1 rounded-full transition-[background,opacity] duration-150 ${dragging ? 'bg-[var(--accent)] opacity-100' : 'bg-[var(--sidebar-fg)] opacity-0 group-hover:opacity-25'}`}
+      />
+    </div>
+  );
+}
 
 /**
  * A content card: toolbar on top; the tab's web view is a native view that main places exactly

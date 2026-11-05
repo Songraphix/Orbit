@@ -129,6 +129,21 @@ export const contract = {
     input: z.object({}).strict(),
     output: z.void(),
   },
+  /** The right-hand dock (Notes or a docked app): its edge dragged to `width`. */
+  'dock:setWidth': {
+    input: z.object({ width: z.number().finite() }).strict(),
+    output: z.void(),
+  },
+  /** Dock edge drag: the page and the dock's page hide meanwhile (like the sidebar's edge);
+   *  the shell shows the page's snapshot instead. */
+  'dock:beginResize': {
+    input: z.object({}).strict(),
+    output: z.object({ snapshot: z.string().nullable() }),
+  },
+  'dock:endResize': {
+    input: z.object({}).strict(),
+    output: z.void(),
+  },
   /** Split view (F-13): the active tab beside `tabId`, or beside a new tab page. */
   'split:create': {
     input: z.object({ tabId: tabId.optional() }).strict(),
