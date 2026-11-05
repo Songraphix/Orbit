@@ -38,6 +38,8 @@ export type ResultInput = {
   local?: readonly { port: number; url: string; title: string }[];
   /** Orbit AI is available: offer "Ask Orbit AI" (first for questions). */
   ask?: boolean;
+  /** Files in your Google Drive that match (when it's connected). */
+  drive?: readonly { id: string; name: string; kind: string; edited: string; url: string }[];
 };
 
 /** "localhost", "local", "127.0.0.1", ":5173", "dev server": the query wants local servers. */
@@ -216,8 +218,19 @@ export function buildResults(input: ResultInput): CommandItem[] {
 
   if (askItem && !question) items.push(askItem);
 
-  // 3. Your projects, tasks, notes and research; then archived tabs.
+  // 3. Your projects, tasks, notes and research; your Drive; then archived tabs.
   if (input.work) items.push(...workResults(query, input.work));
+  for (const file of (input.drive ?? []).slice(0, 3)) {
+    if (!/^https:\/\//.test(file.url)) continue;
+    add({
+      id: `drive:${file.id}`,
+      kind: 'drive',
+      title: file.name,
+      subtitle: [file.kind, file.edited].filter(Boolean).join(' · '),
+      favicon: null,
+      url: file.url,
+    });
+  }
   // An archived tab beats a history entry for the same page (it comes back as it was).
   for (const a of (input.archived ?? []).slice(0, 2)) {
     if (seenUrls.some((u) => sameUrl(u, a.url))) continue;

@@ -23,6 +23,7 @@ import { AccountSection } from './settings/AccountSection';
 import { AppearanceSection } from './settings/AppearanceSection';
 import { AppsSection } from './settings/AppsSection';
 import { VoiceSection } from './settings/VoiceSection';
+import { DriveGroup } from './settings/DriveGroup';
 import { buttonClass, FIELD } from '../ui/controls';
 import { useEffect, useState } from 'react';
 import type { UserSettings } from '@shared/settings';
@@ -498,6 +499,19 @@ function AiSection() {
             onChange={(e) => set({ historyAccess: e.target.checked })}
             className="orbit-switch"
             data-testid="ai-history-access"
+          />
+        </Row>
+        <Row
+          label="Google Drive"
+          hint="When Drive is connected (Settings → Integrations): Orbit AI can search your Drive and read a file when a question needs it, and links the file it used. Only the files it reads are sent."
+        >
+          <input
+            type="checkbox"
+            role="switch"
+            checked={prefs.driveAccess}
+            onChange={(e) => set({ driveAccess: e.target.checked })}
+            className="orbit-switch"
+            data-testid="ai-drive-access"
           />
         </Row>
         <div className="px-4 py-3 text-meta text-neutral-500" data-testid="ai-privacy">
@@ -1490,6 +1504,7 @@ function IntegrationsSection() {
   if (!status) return null;
   return (
     <>
+      <DriveGroup />
       <Group title="GitHub">
         <Row
           label="Personal access token"

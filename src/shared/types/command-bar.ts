@@ -19,6 +19,8 @@ export const commandItemSchema = z.object({
     'archived',
     /** Orbit AI: ask this (the words typed or spoken). */
     'ask',
+    /** A file in your Google Drive (opens in its Google app). */
+    'drive',
   ]),
   title: z.string(),
   subtitle: z.string(),

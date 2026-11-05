@@ -100,6 +100,9 @@ import { WeatherService } from './newtab/weather';
 import { registerAppHubHandlers } from './ipc/handlers/apps';
 import { browserToolDeps } from './ai/browser-deps';
 import { VoiceService } from './voice/service';
+import { DriveService } from './drive/service';
+import { driveKind, editedLabel } from '@shared/drive';
+import { registerDriveHandlers } from './ipc/handlers/drive';
 import {
   downloadVoiceModel,
   readModelFile,
@@ -184,6 +187,7 @@ function openFocusView(controller: WindowController): void {
 }
 let assistantService: AssistantService | null = null;
 let voiceService: VoiceService | null = null;
+let driveService: DriveService | null = null;
 let toolkitService: ToolkitService | null = null;
 
 function loadRenderer(win: BrowserWindow, entry: RendererEntry, query?: string): void {
@@ -1033,6 +1037,51 @@ void app.whenReady().then(() => {
   });
   registerAccountHandlers(router, windowManager, accounts);
   accounts.restore();
+
+  // Google Drive, read-only (roadmap R2 M3): its own Google connection (the same Desktop OAuth
+  // client), the refresh token Keychain-encrypted in its own file. Development builds may use a
+  // stand-in for Google (tests); the packaged app always talks to Google.
+  const googleTest = devOnly('ORBIT_GOOGLE_TEST_BASE');
+  const driveKey = new AiKeyStore(
+    join(app.getPath('userData'), 'google-drive.bin'),
+    testCipher ?? safeStorage,
+  );
+  const drive = new DriveService({
+    google: google ?? (googleTest ? { clientId: 'test-client', clientSecret: 'test' } : null),
+    fetchImpl: cloudFetch,
+    // Tests: "the browser" just follows Google's redirect back to Orbit.
+    openExternal: googleTest
+      ? (url) => void net.fetch(url).catch(() => undefined)
+      : (url) => shell.openExternal(url),
+    store: {
+      get canStore() {
+        return driveKey.canStore;
+      },
+      get: () => driveKey.get(),
+      set: (value) => driveKey.set(value),
+      clear: () => driveKey.clear(),
+    },
+    onChange: (status) => {
+      for (const id of senders.idsOf('internal')) {
+        const contents = webContents.fromId(id);
+        if (contents && windowManager.settingsFor(id)) {
+          broadcaster.sendTo(contents, 'drive:update', status);
+        }
+      }
+    },
+    ...(googleTest
+      ? {
+          endpoints: {
+            auth: `${googleTest}/google/auth`,
+            token: `${googleTest}/google/token`,
+            revoke: `${googleTest}/google/revoke`,
+            api: googleTest,
+          },
+        }
+      : {}),
+  });
+  driveService = drive;
+  registerDriveHandlers(router, windowManager, drive);
   // Coming back to Orbit, or the Mac waking: other Macs may have changed something.
   app.on('browser-window-focus', () => accounts.pullSoon());
   powerMonitor.on('resume', () => void accounts.syncNow());
@@ -1327,6 +1376,7 @@ void app.whenReady().then(() => {
           notes: persistence!.notes,
           openApp: (target, itemId) => openFavorite(target, itemId, (url) => openLittle?.(url)),
           notesChanged: () => windowManager.all().forEach((c) => c.notes.refresh()),
+          drive: driveService,
         },
         userWords,
       ),
@@ -1668,6 +1718,25 @@ void app.whenReady().then(() => {
         available: () => ai.available,
         ask: (controller, text, spoken) =>
           assistantService?.open(controller, { prompt: text, spoken }),
+      },
+      // Drive in the command bar: a quick look (it never holds the results up for long).
+      async (query) => {
+        if (!drive.connected) return [];
+        const files = await drive.search(query, { limit: 3, timeoutMs: 900 });
+        const now = Date.now();
+        return files.flatMap((f) =>
+          f.webViewLink
+            ? [
+                {
+                  id: f.id,
+                  name: f.name,
+                  kind: driveKind(f.mimeType),
+                  edited: editedLabel(f.modifiedTime, now),
+                  url: f.webViewLink,
+                },
+              ]
+            : [],
+        );
       },
     ),
   );

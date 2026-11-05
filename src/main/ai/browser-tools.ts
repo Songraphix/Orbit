@@ -44,6 +44,8 @@ const inputs = {
     title: z.string().min(1).max(120),
     text: z.string().max(20_000).describe('The note in Markdown'),
   }),
+  search_drive: z.object({ query: z.string().max(200) }),
+  read_drive_file: z.object({ file_id: z.string().min(1).max(200) }),
 } as const;
 export type BrowserToolName = keyof typeof inputs;
 
@@ -66,10 +68,14 @@ const DESCRIPTIONS: Record<BrowserToolName, string> = {
   open_note: 'Open one of the user’s notes in the side panel beside the page.',
   create_note:
     'Save a new note in Orbit (Markdown: headings, lists, links). Use when the user asks to save or note something.',
+  search_drive:
+    'Search the user’s Google Drive (read-only): files whose name or text contains the words — ids, names, kinds (Google Docs, Sheets, PDF…), when edited, and links.',
+  read_drive_file:
+    'Read a Google Drive file’s text (an id from search_drive): Google Docs, Sheets (as CSV), Slides and text files. Name the file and give its link when you use it.',
 };
 
 /** Which tools need which permission (Settings → AI → What Orbit AI can use). */
-const NEEDS: Record<BrowserToolName, 'browser' | 'history' | 'notes'> = {
+const NEEDS: Record<BrowserToolName, 'browser' | 'history' | 'notes' | 'drive'> = {
   list_tabs: 'browser',
   switch_to_tab: 'browser',
   open_url: 'browser',
@@ -81,9 +87,11 @@ const NEEDS: Record<BrowserToolName, 'browser' | 'history' | 'notes'> = {
   read_note: 'notes',
   open_note: 'notes',
   create_note: 'notes',
+  search_drive: 'drive',
+  read_drive_file: 'drive',
 };
 
-export type BrowserAccess = { browser: boolean; history: boolean; notes: boolean };
+export type BrowserAccess = { browser: boolean; history: boolean; notes: boolean; drive: boolean };
 
 export type TabInfo = {
   id: string;
@@ -120,6 +128,21 @@ export type BrowserToolDeps = {
   };
   /** What the user typed or said in this question (links they named open directly). */
   userWords: string;
+  /** Google Drive, when it's connected. */
+  drive?: {
+    search: (
+      words: string,
+    ) => Promise<
+      { id: string; name: string; kind: string; modified: string | null; url: string | null }[]
+    >;
+    read: (fileId: string) => Promise<{
+      name: string;
+      kind: string;
+      url: string | null;
+      text: string | null;
+      truncated: boolean;
+    }>;
+  };
   now?: () => number;
 };
 
@@ -164,7 +187,9 @@ const host = (url: string) => {
   }
 };
 const DAY = 24 * 60 * 60 * 1000;
-const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text);
+function clip(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}
 
 /** A web address Claude gave, if it is one (http/https only). Pure. */
 export function webAddress(input: string): string | null {
@@ -179,13 +204,72 @@ export function webAddress(input: string): string | null {
 }
 
 /** Runs one browser tool call, if it's allowed. Inputs are untrusted: each is checked. */
-export function runBrowserTool(
+export async function runBrowserTool(
   name: BrowserToolName,
   input: unknown,
   access: BrowserAccess,
   deps: BrowserToolDeps,
-): ToolOutcome {
+): Promise<ToolOutcome> {
   if (!access[NEEDS[name]]) return error('The user hasn’t allowed this in Settings → AI');
+  if (name === 'search_drive' || name === 'read_drive_file') {
+    return runDriveTool(name, input, deps);
+  }
+  return runLocalTool(name, input, deps);
+}
+
+/** Drive: search, and read one file (its link is offered as the answer's source). */
+async function runDriveTool(
+  name: 'search_drive' | 'read_drive_file',
+  input: unknown,
+  deps: BrowserToolDeps,
+): Promise<ToolOutcome> {
+  const drive = deps.drive;
+  if (!drive) return error('Google Drive isn’t connected (Settings → Integrations)');
+  const parsed = inputs[name].safeParse(input);
+  if (!parsed.success) {
+    return error(`Invalid input: ${parsed.error.issues.map((i) => i.message).join('; ')}`);
+  }
+  try {
+    if (name === 'search_drive') {
+      const { query } = parsed.data as { query: string };
+      const files = await drive.search(query);
+      return ok(
+        { files: files.slice(0, 15) },
+        { kind: 'read', label: `Searched your Drive for “${clip(query, 40)}” (${files.length})` },
+      );
+    }
+    const { file_id } = parsed.data as { file_id: string };
+    const file = await drive.read(file_id);
+    if (file.text === null) {
+      return ok(
+        { name: file.name, kind: file.kind, url: file.url, readable: false },
+        { kind: 'read', label: `Couldn’t read “${clip(file.name, 50)}” (${file.kind})` },
+      );
+    }
+    return ok(
+      {
+        name: file.name,
+        kind: file.kind,
+        url: file.url,
+        text: clip(file.text, 60_000),
+        ...(file.truncated || file.text.length > 60_000
+          ? { note: 'Only the start of the file' }
+          : {}),
+      },
+      file.url
+        ? { kind: 'link', label: `Read “${clip(file.name, 50)}” · Open`, url: file.url }
+        : { kind: 'read', label: `Read “${clip(file.name, 50)}”` },
+    );
+  } catch (e) {
+    return error(e instanceof Error ? e.message : 'Google Drive didn’t answer');
+  }
+}
+
+function runLocalTool(
+  name: Exclude<BrowserToolName, 'search_drive' | 'read_drive_file'>,
+  input: unknown,
+  deps: BrowserToolDeps,
+): ToolOutcome {
   const parsed = inputs[name].safeParse(input);
   if (!parsed.success) {
     return error(`Invalid input: ${parsed.error.issues.map((i) => i.message).join('; ')}`);

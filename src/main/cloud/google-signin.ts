@@ -24,19 +24,51 @@ const WAIT_MS = 5 * 60_000;
 const base64url = (b: Buffer) => b.toString('base64url');
 
 /** The page your browser shows once it's done (Orbit can't close a tab it didn't open). */
-const DONE_PAGE = (ok: boolean) => `<!doctype html><meta charset="utf-8"><title>Orbit</title>
+const DONE_PAGE = (
+  ok: boolean,
+  done: string,
+) => `<!doctype html><meta charset="utf-8"><title>Orbit</title>
 <body style="font:15px -apple-system,sans-serif;display:grid;place-items:center;height:90vh;color:#333">
-<div style="text-align:center"><h2>${ok ? 'You’re signed in to Orbit' : 'Sign-in didn’t finish'}</h2>
+<div style="text-align:center"><h2>${ok ? done : 'Sign-in didn’t finish'}</h2>
 <p>${ok ? 'You can close this tab and go back to Orbit.' : 'Go back to Orbit and try again.'}</p></div>`;
 
-export async function googleSignIn(options: {
+export type GoogleOptions = {
   clientId: string;
   clientSecret: string;
   fetchImpl: Fetch;
   openExternal: (url: string) => Promise<void> | void;
   /** Rejects with SignInCancelled when this fires (the Cancel button). */
   signal?: AbortSignal;
-}): Promise<string> {
+  /** Development and tests: a stand-in for Google's sign-in and token addresses. */
+  endpoints?: { auth: string; token: string };
+};
+
+export type GoogleTokens = {
+  id_token?: string;
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  scope?: string;
+};
+
+/** Signs in with Google (to an Orbit account): Google's ID token. */
+export async function googleSignIn(options: GoogleOptions): Promise<string> {
+  const tokens = await googleAuthorize(options, {
+    scope: 'openid email profile',
+    done: 'You’re signed in to Orbit',
+  });
+  if (!tokens.id_token) throw new Error('Google didn’t confirm who you are. Try again.');
+  return tokens.id_token;
+}
+
+/**
+ * The installed-app flow for any scopes: the browser, a one-off loopback address, PKCE; returns
+ * Google's tokens. `offline` asks for a refresh token (kept by the caller, encrypted).
+ */
+export async function googleAuthorize(
+  options: GoogleOptions,
+  request: { scope: string; done: string; offline?: boolean },
+): Promise<GoogleTokens> {
   const verifier = base64url(randomBytes(48));
   const challenge = base64url(createHash('sha256').update(verifier).digest());
   const state = base64url(randomBytes(16));
@@ -61,7 +93,9 @@ export async function googleSignIn(options: {
         }
         const got = url.searchParams.get('code');
         const ok = Boolean(got) && url.searchParams.get('state') === state;
-        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(DONE_PAGE(ok));
+        res
+          .writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+          .end(DONE_PAGE(ok, request.done));
         clearTimeout(timer);
         if (ok) resolve(got!);
         else if (url.searchParams.get('error') === 'access_denied') reject(new SignInCancelled());
@@ -71,15 +105,18 @@ export async function googleSignIn(options: {
         client_id: options.clientId,
         redirect_uri: redirectUri,
         response_type: 'code',
-        scope: 'openid email profile',
+        scope: request.scope,
         code_challenge: challenge,
         code_challenge_method: 'S256',
         state,
-        prompt: 'select_account',
+        // A refresh token comes only with consent; offline access asks for it every time.
+        prompt: request.offline ? 'consent select_account' : 'select_account',
+        ...(request.offline ? { access_type: 'offline' } : {}),
       });
-      void Promise.resolve(options.openExternal(`${AUTH_URL}?${params}`)).catch(stop);
+      const authUrl = options.endpoints?.auth ?? AUTH_URL;
+      void Promise.resolve(options.openExternal(`${authUrl}?${params}`)).catch(stop);
     });
-    const tokens = (await requestJson(options.fetchImpl, TOKEN_URL, {
+    return (await requestJson(options.fetchImpl, options.endpoints?.token ?? TOKEN_URL, {
       form: {
         code,
         client_id: options.clientId,
@@ -88,9 +125,7 @@ export async function googleSignIn(options: {
         grant_type: 'authorization_code',
         code_verifier: verifier,
       },
-    })) as { id_token?: string };
-    if (!tokens.id_token) throw new Error('Google didn’t confirm who you are. Try again.');
-    return tokens.id_token;
+    })) as GoogleTokens;
   } finally {
     server.close();
   }

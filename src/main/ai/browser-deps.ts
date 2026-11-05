@@ -5,6 +5,8 @@ import type { NotesRepository } from '../persistence/repositories/notes';
 import { noteFromMarkdown } from '../notes/from-markdown';
 import { searchUrl } from '../omnibox/classify';
 import type { BrowserToolDeps, TabInfo } from './browser-tools';
+import type { DriveService } from '../drive/service';
+import { driveKind } from '@shared/drive';
 
 const hostOf = (url: string) => {
   try {
@@ -27,6 +29,8 @@ export function browserToolDeps(
     /** Opens an app the way it's set to open (tab, panel, window), as clicking it does. */
     openApp: (controller: WindowController, itemId: string) => boolean;
     notesChanged: () => void;
+    /** Google Drive, when it's connected. */
+    drive?: DriveService | null;
   },
   userWords: string,
 ): BrowserToolDeps {
@@ -68,8 +72,33 @@ export function browserToolDeps(
       }));
   const visits = (rows: { url: string; title: string; lastVisitAt: number }[]) =>
     rows.map(({ url, title, lastVisitAt }) => ({ url, title, lastVisitAt }));
+  const drive = services.drive?.connected ? services.drive : null;
   return {
     userWords,
+    ...(drive
+      ? {
+          drive: {
+            search: async (words: string) =>
+              (await drive.search(words, { limit: 15 })).map((f) => ({
+                id: f.id,
+                name: f.name,
+                kind: driveKind(f.mimeType),
+                modified: f.modifiedTime,
+                url: f.webViewLink,
+              })),
+            read: async (fileId: string) => {
+              const { file, text, truncated } = await drive.read(fileId);
+              return {
+                name: file.name,
+                kind: driveKind(file.mimeType),
+                url: file.webViewLink,
+                text,
+                truncated,
+              };
+            },
+          },
+        }
+      : {}),
     tabs: tabRows,
     switchTo: (tabId) => {
       if (!store.item(tabId)) return false;

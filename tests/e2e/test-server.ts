@@ -151,6 +151,12 @@ export type TestServer = {
   unsplashDownloads: () => string[];
   /** The Authorization header of the last request to the stand-in GitHub API ('' = none). */
   lastGithubAuth: () => string;
+  /** The stand-in Google: what the last sign-in asked for, and tokens revoked. */
+  google: () => {
+    authParams: Record<string, string> | null;
+    revoked: string[];
+    driveCalls: number;
+  };
 };
 
 type FakeBlock =
@@ -204,6 +210,7 @@ function fakeTasks(body: FakeRequest) {
 function streamAnswer(body: FakeRequest, res: ServerResponse) {
   if (coworkerAnswer(body, res)) return;
   if (browserToolsAnswer(body, res)) return;
+  if (driveToolsAnswer(body, res)) return;
   const docs = blocksOf(body).filter(
     (b): b is Extract<FakeBlock, { type: 'document' }> => b.type === 'document',
   );
@@ -491,6 +498,87 @@ function browserToolsAnswer(body: FakeRequest, res: ServerResponse): boolean {
   return true;
 }
 
+/**
+ * Orbit AI with Google Drive: a question containing DRIVETOOLS searches the Drive for "brand",
+ * reads the first file found, then answers with a phrase from it.
+ */
+function driveToolsAnswer(body: FakeRequest, res: ServerResponse): boolean {
+  if (!JSON.stringify(body.messages).includes('DRIVETOOLS') || !body.tools?.length) return false;
+  const results = body.messages.filter(
+    (m) =>
+      typeof m.content !== 'string' &&
+      (m.content ?? []).some((b) => b.type === ('tool_result' as string)),
+  );
+  const last = JSON.stringify(body.messages.at(-1));
+  const call =
+    results.length === 0
+      ? { name: 'search_drive', input: { query: 'brand' } }
+      : results.length === 1
+        ? {
+            name: 'read_drive_file',
+            input: { file_id: /\\"id\\":\\"([^\\]+)\\"/.exec(last)?.[1] ?? 'none' },
+          }
+        : null;
+  const events: Record<string, unknown>[] = [
+    {
+      type: 'message_start',
+      message: {
+        id: `msg_drive_${results.length}`,
+        type: 'message',
+        role: 'assistant',
+        model: body.model,
+        content: [],
+        stop_reason: null,
+        stop_sequence: null,
+        usage: { input_tokens: 400, output_tokens: 1 },
+      },
+    },
+  ];
+  if (call) {
+    events.push(
+      {
+        type: 'content_block_start',
+        index: 0,
+        content_block: { type: 'tool_use', id: `toolu_${call.name}`, name: call.name, input: {} },
+      },
+      {
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'input_json_delta', partial_json: JSON.stringify(call.input) },
+      },
+      { type: 'content_block_stop', index: 0 },
+      {
+        type: 'message_delta',
+        delta: { stop_reason: 'tool_use', stop_sequence: null },
+        usage: { output_tokens: 20 },
+      },
+    );
+  } else {
+    const colours = /Colours: ([a-z ]+)\./.exec(last)?.[1] ?? 'unknown';
+    events.push(
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      {
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'text_delta', text: `The brand colours are ${colours}.` },
+      },
+      { type: 'content_block_stop', index: 0 },
+      {
+        type: 'message_delta',
+        delta: { stop_reason: 'end_turn', stop_sequence: null },
+        usage: { output_tokens: 10 },
+      },
+    );
+  }
+  events.push({ type: 'message_stop' });
+  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
+  for (const event of events) {
+    res.write(`event: ${String(event['type'])}\ndata: ${JSON.stringify(event)}\n\n`);
+  }
+  res.end();
+  return true;
+}
+
 /** Serves a few static pages on 127.0.0.1 so tests never depend on the internet. */
 export async function startTestServer(): Promise<TestServer> {
   // /feed.xml grows by one post each time /feed/publish is requested (Live Folder tests).
@@ -505,6 +593,7 @@ export async function startTestServer(): Promise<TestServer> {
   let lastAiRequest: ReturnType<TestServer['lastAiRequest']> = null;
   const aiRequests: NonNullable<ReturnType<TestServer['lastAiRequest']>>[] = [];
   let lastGithubAuth = '';
+  const google: ReturnType<TestServer['google']> = { authParams: null, revoked: [], driveCalls: 0 };
   const unsplashDownloads: string[] = [];
   const livePort = () => (server.address() as AddressInfo).port;
   const server = createServer((req, res) => {
@@ -587,6 +676,110 @@ export async function startTestServer(): Promise<TestServer> {
           ]
         : [];
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ results }));
+      return;
+    }
+    // A stand-in for Google: sign-in (straight back to Orbit's loopback address), tokens,
+    // revoking, and a tiny read-only Drive (Drive tests).
+    if (path === '/google/auth') {
+      const params = Object.fromEntries(new URL(req.url ?? '/', 'http://x').searchParams);
+      google.authParams = params;
+      const back = new URL(params['redirect_uri'] ?? 'http://127.0.0.1/');
+      back.searchParams.set('code', 'fake-code');
+      back.searchParams.set('state', params['state'] ?? '');
+      res.writeHead(302, { location: back.toString() }).end();
+      return;
+    }
+    if (path === '/google/token' || path === '/google/revoke') {
+      let raw = '';
+      req.on('data', (chunk: Buffer) => (raw += chunk.toString()));
+      req.on('end', () => {
+        const form = Object.fromEntries(new URLSearchParams(raw));
+        if (path === '/google/revoke') {
+          google.revoked.push(new URL(req.url ?? '/', 'http://x').searchParams.get('token') ?? '');
+          res.writeHead(200).end('{}');
+          return;
+        }
+        const json = (status: number, body: unknown) =>
+          res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+        const idToken = `x.${Buffer.from(JSON.stringify({ email: 'drive.tester@example.com' })).toString('base64url')}.y`;
+        if (form['grant_type'] === 'authorization_code' && form['code'] === 'fake-code') {
+          json(200, {
+            access_token: 'drive-access-1',
+            refresh_token: 'drive-refresh-1',
+            expires_in: 3600,
+            scope: 'openid email https://www.googleapis.com/auth/drive.readonly',
+            id_token: idToken,
+          });
+        } else if (
+          form['grant_type'] === 'refresh_token' &&
+          form['refresh_token'] === 'drive-refresh-1' &&
+          !google.revoked.includes('drive-refresh-1')
+        ) {
+          json(200, { access_token: 'drive-access-2', expires_in: 3600 });
+        } else json(400, { error: 'invalid_grant' });
+      });
+      return;
+    }
+    if (path.startsWith('/drive/v3/files')) {
+      google.driveCalls++;
+      const auth = String(req.headers['authorization'] ?? '');
+      if (!/^Bearer drive-access-[12]$/.test(auth)) {
+        res
+          .writeHead(401, { 'content-type': 'application/json' })
+          .end('{"error":{"message":"Invalid Credentials"}}');
+        return;
+      }
+      const files = [
+        {
+          id: 'doc-brand',
+          name: 'Brand guide',
+          mimeType: 'application/vnd.google-apps.document',
+          modifiedTime: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+          webViewLink: 'https://docs.google.com/document/d/doc-brand/edit',
+          text: 'Brand guide. Colours: teal and sand. Headings in Comfortaa.',
+        },
+        {
+          id: 'sheet-budget',
+          name: 'Q4 budget',
+          mimeType: 'application/vnd.google-apps.spreadsheet',
+          modifiedTime: new Date().toISOString(),
+          webViewLink: 'https://docs.google.com/spreadsheets/d/sheet-budget/edit',
+          text: 'item,amount\nads,1200',
+        },
+      ];
+      const url = new URL(req.url ?? '/', 'http://x');
+      const meta = (f: (typeof files)[number]) => ({
+        id: f.id,
+        name: f.name,
+        mimeType: f.mimeType,
+        modifiedTime: f.modifiedTime,
+        webViewLink: f.webViewLink,
+      });
+      const rest = path.slice('/drive/v3/files'.length);
+      const send = (body: unknown, type = 'application/json') =>
+        res
+          .writeHead(200, { 'content-type': type })
+          .end(typeof body === 'string' ? body : JSON.stringify(body));
+      if (!rest) {
+        const word =
+          /contains '([^']*)'/.exec(url.searchParams.get('q') ?? '')?.[1]?.toLowerCase() ?? '';
+        send({
+          files: files
+            .filter((f) => !word || `${f.name} ${f.text}`.toLowerCase().includes(word))
+            .map(meta),
+        });
+        return;
+      }
+      const [, id, action] = rest.split('/');
+      const file = files.find((f) => f.id === decodeURIComponent(id ?? ''));
+      if (!file) {
+        res
+          .writeHead(404, { 'content-type': 'application/json' })
+          .end('{"error":{"message":"File not found"}}');
+        return;
+      }
+      if (action === 'export') send(file.text, 'text/plain');
+      else send(meta(file));
       return;
     }
     // The speech model, through the local mirror (voice tests): /hf/<repo>/resolve/<rev>/<file>.
@@ -759,5 +952,6 @@ export async function startTestServer(): Promise<TestServer> {
     aiRequests: () => aiRequests,
     unsplashDownloads: () => unsplashDownloads,
     lastGithubAuth: () => lastGithubAuth,
+    google: () => google,
   };
 }

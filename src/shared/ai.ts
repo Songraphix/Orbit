@@ -56,6 +56,8 @@ export const aiPrefsSchema = z.object({
   historyAccess: z.boolean().default(false),
   /** …find, read, open and write your notes. */
   notesAccess: z.boolean().default(true),
+  /** …search and read your Google Drive (when it's connected; read-only). */
+  driveAccess: z.boolean().default(true),
 });
 export type AiPrefs = z.output<typeof aiPrefsSchema>;
 
@@ -67,6 +69,7 @@ export const aiPrefsPatchSchema = aiPrefsSchema
     browserAccess: z.boolean(),
     historyAccess: z.boolean(),
     notesAccess: z.boolean(),
+    driveAccess: z.boolean(),
   })
   .partial()
   .strict();
@@ -80,6 +83,7 @@ export const DEFAULT_AI_PREFS: AiPrefs = {
   browserAccess: true,
   historyAccess: false,
   notesAccess: true,
+  driveAccess: true,
 };
 
 /** What each request was for, in the activity log. */

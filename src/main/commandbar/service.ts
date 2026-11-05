@@ -220,6 +220,10 @@ export class CommandBarService {
       available: () => boolean;
       ask: (controller: WindowController, text: string, spoken: boolean) => void;
     },
+    /** Google Drive (roadmap R2 M3): files matching the words, when it's connected. */
+    private readonly drive?: (
+      query: string,
+    ) => Promise<{ id: string; name: string; kind: string; edited: string; url: string }[]>,
   ) {}
 
   /** Universal search: typing also finds tabs in your other Spaces (picking one goes there). */
@@ -251,15 +255,19 @@ export class CommandBarService {
     const mode: CommandBarMode = controller.overlay.mode ?? 'new';
     const trimmed = query.trim();
     const snapshot = controller.tabs.snapshot();
-    const [history, suggestions, local] = await Promise.all([
+    const classified = classifyInput(trimmed);
+    const [history, suggestions, local, drive] = await Promise.all([
       Promise.resolve(trimmed ? this.history.search(trimmed, 10) : []),
       this.suggest(trimmed),
       this.local && wantsLocalServers(trimmed) ? this.local().catch(() => []) : Promise.resolve([]),
+      this.drive && trimmed.length >= 3 && classified?.kind !== 'url'
+        ? this.drive(trimmed).catch(() => [])
+        : Promise.resolve([]),
     ]);
     return buildResults({
       query: trimmed,
       mode,
-      classified: classifyInput(trimmed),
+      classified,
       tabs: [
         ...snapshot.tabs.map((t) => ({
           id: t.id,
@@ -278,6 +286,7 @@ export class CommandBarService {
       ...(trimmed && this.archived ? { archived: this.archived(trimmed) } : {}),
       local,
       ask: Boolean(trimmed && this.ai?.available()),
+      drive,
     });
   }
 

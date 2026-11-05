@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Bookmark,
   Clock,
+  FileText,
   FolderClosed,
   Globe,
   Layers,
@@ -242,6 +243,8 @@ function Glyph({ item }: { item: CommandItem }) {
       return <Archive {...props} />;
     case 'ask':
       return <Sparkles {...props} />;
+    case 'drive':
+      return <FileText {...props} />;
     case 'command':
       return item.commandId === 'new-tab-page' ? (
         <Sparkles {...props} />

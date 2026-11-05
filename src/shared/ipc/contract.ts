@@ -62,6 +62,7 @@ import { TOOLKIT_SECTIONS, toolkitStateSchema, viewportSchema } from '../toolkit
 import { githubRepoViewSchema } from '../github';
 import { ruleInputSchema, rulesSchema } from '../rules';
 import { voicePrefsSchema, voiceStateSchema } from '../voice';
+import { driveStatusSchema } from '../drive';
 
 /**
  * Every IPC channel lives here (PLAN.md section 4.4). Names follow `domain:verb`.
@@ -1449,6 +1450,27 @@ export const contract = {
     output: z.void(),
     surfaces: ['internal'],
   },
+  /** Google Drive, read-only (roadmap R2 M3): Settings → Integrations. */
+  'drive:status': {
+    input: z.object({}).strict(),
+    output: driveStatusSchema,
+    surfaces: ['internal'],
+  },
+  'drive:connect': {
+    input: z.object({}).strict(),
+    output: driveStatusSchema,
+    surfaces: ['internal'],
+  },
+  'drive:cancel': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  'drive:disconnect': {
+    input: z.object({}).strict(),
+    output: driveStatusSchema,
+    surfaces: ['internal'],
+  },
   /** Voice (roadmap R2 M2): push-to-talk. The command bar's microphone, ⇧⌘Space. */
   'voice:get': {
     input: z.object({}).strict(),
@@ -1914,6 +1936,8 @@ export const events = {
   'state:appPanel': appPanelStateSchema.nullable(),
   /** The customization preferences, sent to every shell and overlay. */
   'state:ui': uiPrefsSchema,
+  /** Google Drive's connection, sent to Settings. */
+  'drive:update': driveStatusSchema,
   /** Voice (listening, transcribing…), sent to every shell and overlay. */
   'state:voice': voiceStateSchema,
   /** What the hidden voice page should do. */
@@ -1935,6 +1959,7 @@ export const CHANNEL_NAME_PATTERN = /^[a-z]+:[a-z][a-zA-Z]*$/;
 
 /** The events internal orbit:// pages may listen to (main sends them to one page only). */
 export const INTERNAL_EVENTS = [
+  'drive:update',
   'voice:command',
   'assistant:update',
   'toolkit:update',
