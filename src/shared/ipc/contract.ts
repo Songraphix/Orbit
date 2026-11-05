@@ -1113,8 +1113,37 @@ export const contract = {
   },
   /** A widget's item: a note (as a tab) or a project (in the panel). */
   'newtab:open': {
-    input: z.object({ kind: z.enum(['note', 'project']), id: z.string().min(1).max(64) }).strict(),
+    /** note / project / app (a favourite, where it's set to open) / space (switch to it) /
+     *  settings (a section of Settings). */
+    input: z
+      .object({
+        kind: z.enum(['note', 'project', 'app', 'space', 'settings']),
+        id: z.string().min(1).max(64),
+      })
+      .strict(),
     output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** The Homepage's Ask Orbit widget: the question goes to Orbit AI (the panel opens). */
+  'newtab:ask': {
+    input: z.object({ text: z.string().min(1).max(4000) }).strict(),
+    output: z.void(),
+    surfaces: ['internal'],
+  },
+  /** The Homepage's Google Drive widget: files edited lately (null: Drive isn't connected). */
+  'newtab:driveRecent': {
+    input: z.object({}).strict(),
+    output: z
+      .array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          kind: z.string(),
+          edited: z.string(),
+          url: z.string(),
+        }),
+      )
+      .nullable(),
     surfaces: ['internal'],
   },
   /** Loads what the user typed in the search box into the new tab page's own tab. */

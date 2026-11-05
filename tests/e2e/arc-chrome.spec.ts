@@ -161,6 +161,7 @@ test('right-clicking the sidebar’s empty space shows Arc’s sidebar menu', as
       '—',
       'Paste and Go to “example.com”',
       '—',
+      'Group Tabs…',
       'Tidy Today',
       'Sort Today',
       'Close Duplicate Tabs',

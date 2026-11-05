@@ -18,6 +18,10 @@ export const WIDGET_TYPES = [
   'stopwatch',
   'palette',
   'quote',
+  'apps',
+  'spaces',
+  'ask',
+  'drive',
 ] as const;
 export type WidgetType = (typeof WIDGET_TYPES)[number];
 
@@ -75,6 +79,25 @@ export const WIDGETS: Record<
     size: 'm',
   },
   quote: { name: 'Quote', description: 'A thought for the day', sizes: ['m', 'l'], size: 'm' },
+  apps: {
+    name: 'Apps',
+    description: 'Your favourites — open where each is set to',
+    sizes: ['m', 'l'],
+    size: 'm',
+  },
+  spaces: { name: 'Spaces', description: 'Jump to a Space', sizes: ['s', 'm'], size: 'm' },
+  ask: {
+    name: 'Ask Orbit',
+    description: 'Ask Orbit AI — type or speak',
+    sizes: ['m', 'l'],
+    size: 'm',
+  },
+  drive: {
+    name: 'Google Drive',
+    description: 'Files you edited lately (when Drive is connected)',
+    sizes: ['m', 'l'],
+    size: 'm',
+  },
 };
 
 const cityName = z.string().min(1).max(80);
@@ -207,6 +230,21 @@ export const widgetDataSchema = z.object({
   ),
   notes: z.array(z.object({ id: z.string(), title: z.string(), updatedAt: z.number() })),
   recent: z.array(z.object({ url: z.string(), title: z.string(), favicon: z.string().nullable() })),
+  /** This Space's apps (favourites) and where each opens. */
+  apps: z
+    .array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        favicon: z.string().nullable(),
+        openIn: z.enum(['tab', 'panel', 'window']),
+      }),
+    )
+    .default([]),
+  /** The profile's Spaces (the one showing marked). */
+  spaces: z
+    .array(z.object({ id: z.string(), name: z.string(), icon: z.string(), active: z.boolean() }))
+    .default([]),
 });
 export type WidgetData = z.output<typeof widgetDataSchema>;
 

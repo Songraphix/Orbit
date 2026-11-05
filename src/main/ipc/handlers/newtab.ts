@@ -1,3 +1,4 @@
+import { showsIn } from '@shared/apps';
 import { NEW_TAB_URL } from '@shared/types/tabs';
 import type { NewTabState } from '@shared/types/newtab';
 import type { IpcRouter } from '../router';
@@ -43,6 +44,14 @@ export function registerNewTabHandlers(
     unsplash: UnsplashService;
     /** Opens a note as a tab, or a project in the panel, in this window. */
     openNote: (window: WindowController, id: string) => void;
+    /** Opens a favourite where it's set to open (App Hub). */
+    openApp?: (window: WindowController, itemId: string) => void;
+    /** Asks Orbit AI (the assistant opens with the question). */
+    ask?: (window: WindowController, text: string) => void;
+    /** Google Drive's recent files, or null when it isn't connected. */
+    driveRecent?: () => Promise<
+      { id: string; name: string; kind: string; edited: string; url: string }[] | null
+    >;
   },
 ): void {
   const { home, settings, history, work } = deps;
@@ -267,7 +276,38 @@ export function registerNewTabHandlers(
         .filter((h) => /^https?:/i.test(h.url))
         .slice(0, 8)
         .map(({ url, title, favicon }) => ({ url, title: title || url, favicon })),
+      ...appsAndSpaces(ownerOf(sender.webContentsId).window),
     };
+  });
+
+  /** The Homepage's Apps and Spaces widgets: this Space's favourites, the profile's Spaces. */
+  const appsAndSpaces = (window: WindowController) => {
+    const space = window.tabs.space;
+    return {
+      apps: window.store
+        .rows('favorite', space)
+        .filter(({ item }) => item.kind === 'tab' && showsIn(item.data?.app, space.id))
+        .slice(0, 16)
+        .map(({ item }) => ({
+          id: item.id,
+          title: item.titleOverride || item.title || item.url || 'App',
+          favicon: item.favicon,
+          openIn: item.data?.app?.openIn ?? ('tab' as const),
+        })),
+      spaces: window.store.spaces
+        .filter((s) => s.profileId === space.profileId)
+        .map((s) => ({ id: s.id, name: s.name, icon: s.icon, active: s.id === space.id })),
+    };
+  };
+
+  router.handle('newtab:ask', ({ text }, { sender }) => {
+    const { window } = ownerOf(sender.webContentsId);
+    deps.ask?.(window, text);
+  });
+
+  router.handle('newtab:driveRecent', async (_input, { sender }) => {
+    ownerOf(sender.webContentsId);
+    return (await deps.driveRecent?.().catch(() => null)) ?? null;
   });
 
   router.handle('newtab:findPlace', ({ query }, { sender }) => {
@@ -283,7 +323,12 @@ export function registerNewTabHandlers(
   router.handle('newtab:open', ({ kind, id }, { sender }) => {
     const { window } = ownerOf(sender.webContentsId);
     if (kind === 'note') deps.openNote(window, id);
-    else window.notes.openAt(`panel/projects/${id}`);
+    else if (kind === 'app') deps.openApp?.(window, id);
+    else if (kind === 'settings') {
+      if (/^(integrations|ai|voice|apps)$/.test(id)) windows.openSettings(id);
+    } else if (kind === 'space') {
+      if (window.store.spaces.some((s) => s.id === id)) window.tabs.switchSpace(id);
+    } else window.notes.openAt(`panel/projects/${id}`);
   });
 
   router.handle('newtab:navigate', ({ input }, { sender }) => {

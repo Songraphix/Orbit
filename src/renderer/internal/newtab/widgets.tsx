@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 import {
   Check,
   Copy,
+  FileText,
   GripVertical,
+  Mic,
   Maximize2,
   Pause,
   Play,
@@ -41,6 +43,7 @@ import type { SoundState } from '@shared/sounds';
 import { harmony, HARMONIES } from '@shared/toolkit/palette';
 import { hslToRgb } from '@shared/toolkit/color';
 import { dateKey } from '@shared/work';
+import { SpaceIcon } from '../../shell/sidebar/SpaceIcon';
 
 const invoke = window.orbit.invoke;
 
@@ -339,7 +342,9 @@ function TileButton(props: {
 /** The work widgets' data, fetched when the page opens or regains focus. */
 function useWidgetData(layout: HomeLayout): WidgetData | null {
   const [data, setData] = useState<WidgetData | null>(null);
-  const wants = layout.widgets.some((w) => ['projects', 'notes', 'recent'].includes(w.type));
+  const wants = layout.widgets.some((w) =>
+    ['projects', 'notes', 'recent', 'apps', 'spaces'].includes(w.type),
+  );
   useEffect(() => {
     if (!wants) return;
     const load = () => void invoke('newtab:widgetData', {}).then(setData);
@@ -391,9 +396,185 @@ function WidgetBody(props: {
       return <StopwatchWidget />;
     case 'palette':
       return <PaletteWidget size={widget.size} />;
+    case 'apps':
+      return <AppsWidget data={props.data} />;
+    case 'spaces':
+      return <SpacesWidget data={props.data} />;
+    case 'ask':
+      return <AskWidget />;
+    case 'drive':
+      return <DriveWidget />;
     default:
       return null;
   }
+}
+
+/** Your favourites (this Space's): each opens where it's set to — a tab, the panel, a window. */
+function AppsWidget({ data }: { data: WidgetData | null }) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col" data-testid="apps-widget">
+      <Title>Apps</Title>
+      {data && data.apps.length === 0 && (
+        <Empty>Add favourites (or Settings → Apps) to keep them here.</Empty>
+      )}
+      <ul className="grid min-h-0 grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-1 overflow-y-auto">
+        {data?.apps.map((app) => (
+          <li key={app.id}>
+            <button
+              type="button"
+              onClick={() => void invoke('newtab:open', { kind: 'app', id: app.id })}
+              className="press flex w-full flex-col items-center gap-1 rounded-[12px] px-1 py-2 hover:bg-white/10"
+              title={
+                app.openIn === 'panel'
+                  ? `${app.title} — opens beside the page`
+                  : app.openIn === 'window'
+                    ? `${app.title} — opens in a window`
+                    : app.title
+              }
+              data-testid="apps-widget-item"
+            >
+              <span className="grid size-9 place-items-center rounded-[10px] bg-white shadow-[0_1px_3px_rgb(0_0_0/0.25)]">
+                {app.favicon ? (
+                  <img src={app.favicon} alt="" className="size-5" />
+                ) : (
+                  <span className="text-[14px] font-semibold text-neutral-600">
+                    {app.title.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+              </span>
+              <span className="w-full truncate text-center text-[11.5px] opacity-80">
+                {app.title}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** The profile's Spaces: one click goes there. */
+function SpacesWidget({ data }: { data: WidgetData | null }) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col" data-testid="spaces-widget">
+      <Title>Spaces</Title>
+      <ul className="flex min-h-0 flex-wrap gap-1.5 overflow-y-auto">
+        {data?.spaces.map((space) => (
+          <li key={space.id}>
+            <button
+              type="button"
+              disabled={space.active}
+              onClick={() => void invoke('newtab:open', { kind: 'space', id: space.id })}
+              className={`press flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] ${
+                space.active ? 'bg-white/25 font-semibold' : 'bg-white/10 hover:bg-white/20'
+              }`}
+              data-testid="spaces-widget-item"
+            >
+              <SpaceIcon icon={space.icon} size={13} />
+              <span className="max-w-[120px] truncate">{space.name}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Ask Orbit AI from the Homepage — typed, or spoken with the microphone (push-to-talk). */
+function AskWidget() {
+  const [text, setText] = useState('');
+  const ask = () => {
+    const question = text.trim();
+    if (!question) return;
+    void invoke('newtab:ask', { text: question });
+    setText('');
+  };
+  return (
+    <div className="flex min-h-0 flex-1 flex-col" data-testid="ask-widget">
+      <Title>Ask Orbit</Title>
+      <form
+        className="flex items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          ask();
+        }}
+      >
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Summarize this page, plan my week…"
+          aria-label="Ask Orbit AI"
+          className={inputClass}
+          data-testid="ask-widget-input"
+        />
+        <button
+          type="button"
+          aria-label="Speak (⇧⌘Space)"
+          title="Speak (⇧⌘Space)"
+          onClick={() => void invoke('voice:toggle', {})}
+          className="press grid size-8 shrink-0 place-items-center rounded-full bg-white/10 hover:bg-white/20"
+          data-testid="ask-widget-voice"
+        >
+          <Mic size={15} />
+        </button>
+      </form>
+      <p className="mt-2 text-[12px] opacity-60">
+        Answers open in the panel. Orbit AI sees only what you attach or allow (Settings → AI).
+      </p>
+    </div>
+  );
+}
+
+type DriveFile = { id: string; name: string; kind: string; edited: string; url: string };
+
+/** Google Drive's files edited lately (when it's connected; asked of Drive when shown). */
+function DriveWidget() {
+  const [files, setFiles] = useState<DriveFile[] | null | undefined>(undefined);
+  useEffect(() => {
+    const load = () => void invoke('newtab:driveRecent', {}).then(setFiles);
+    load();
+    window.addEventListener('focus', load);
+    return () => window.removeEventListener('focus', load);
+  }, []);
+  return (
+    <div className="flex min-h-0 flex-1 flex-col" data-testid="drive-widget">
+      <Title>Google Drive</Title>
+      {files === null && (
+        <Empty>
+          <button
+            type="button"
+            onClick={() => void invoke('newtab:open', { kind: 'settings', id: 'integrations' })}
+            className="underline decoration-white/40 underline-offset-2 hover:decoration-white"
+            data-testid="drive-widget-connect"
+          >
+            Connect Google Drive
+          </button>{' '}
+          to see files you edited lately.
+        </Empty>
+      )}
+      {files && files.length === 0 && <Empty>No files yet.</Empty>}
+      <ul className="flex min-h-0 flex-col overflow-y-auto">
+        {files?.map((f) => (
+          <li key={f.id}>
+            <button
+              type="button"
+              onClick={() => void invoke('newtab:navigate', { input: f.url })}
+              className="flex w-full items-center gap-2 rounded-[8px] py-1 text-left text-[14px] hover:bg-white/10"
+              title={f.url}
+              data-testid="drive-widget-item"
+            >
+              <FileText size={14} className="shrink-0 opacity-60" />
+              <span className="flex-1 truncate">{f.name}</span>
+              <span className="shrink-0 text-[12px] opacity-55">
+                {f.kind}
+                {f.edited ? ` · ${f.edited.replace('edited ', '')}` : ''}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function useTick(ms: number, on = true): number {

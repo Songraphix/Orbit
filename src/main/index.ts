@@ -1196,6 +1196,26 @@ void app.whenReady().then(() => {
       openNote: (controller, id) => {
         if (persistence?.notes.title(id) !== null) controller.tabs.create(noteUrl(id));
       },
+      openApp: (controller, itemId) =>
+        void openFavorite(controller, itemId, (url) => openLittle?.(url)),
+      ask: (controller, text) => assistantService?.open(controller, { prompt: text }),
+      driveRecent: async () => {
+        if (!driveService?.connected) return null;
+        const now = Date.now();
+        return (await driveService.search('', { limit: 6, timeoutMs: 8000 })).flatMap((f) =>
+          f.webViewLink
+            ? [
+                {
+                  id: f.id,
+                  name: f.name,
+                  kind: driveKind(f.mimeType),
+                  edited: editedLabel(f.modifiedTime, now),
+                  url: f.webViewLink,
+                },
+              ]
+            : [],
+        );
+      },
     },
   );
   registerFindHandlers(router, windowManager);

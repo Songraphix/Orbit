@@ -26,6 +26,7 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 - [ ] Settings → Backup: choose a folder (iCloud Drive keeps a copy off the Mac) and, if you like, a passphrase
 - [ ] Google Drive: in Google Cloud project orbit-f4f0c-513713 enable the **Google Drive API** and add the `drive.readonly` scope on the consent screen (docs/DRIVE.md), then Settings → Integrations → Connect Google Drive; type part of a file's name in ⌘T; ask Orbit AI about a Google Doc
 - [ ] PDFs: ⌘O a PDF from your Mac; right-click → PDF Notes; select a sentence → Add to PDF Notes; ask Orbit AI to summarize it
+- [ ] Decide on "Hey Orbit" (docs/WAKE-WORD.md): leave it, a Siri Shortcut, or local always-on listening
 - [ ] Voice: press ⇧⌘Space, agree to the one-time speech model download (80 MB), allow the microphone when macOS asks, and say "what's on my list today?"; try Settings → Voice → a different voice
 - [ ] Orbit AI with the browser: "what tabs do I have open about X?", "open Spotify in the sidebar" (with Spotify as a panel app), "save the key points to my notes"; turn on Settings → AI → Browsing history and ask "find the article I read yesterday"
 - [ ] Add your extensions: open each Web Store page in Orbit → site controls (sliders button) → Add to Orbit; then fill "Usage" / "Blocker?" in docs/reference/extensions.md
@@ -181,9 +182,11 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-05 — **Voice / AI / workspace roadmap M4: Group Tabs and PDFs** (docs/TABS-AND-PDF.md). **Group Tabs** without AI: folders by site, then by shared title words, shown in a preview card (leave out, rename, merge, take tabs out) — nothing moves until accepted; Undo shared with Tidy; a crowded Today suggests it (Not Now quiets it; Settings → General → Tabs turns it off). **PDFs**: Chromium's viewer already reads them; added File → Open PDF… (⌘O), Finder / Dock opening at scoped random `orbit-pdf://` addresses (no `file://` in tabs), **PDF Notes** (one Orbit note per PDF beside it; Add to PDF Notes from a selection; the file is never changed), and **Orbit AI reads PDFs** (PDF.js 6.4.299 text extraction in main, only when asked; Drive PDFs too). Tests: grouping + PDF e2e, unit for the grouping model, PDF text, local registry, menu, Drive
 
+- 2026-11-05 — **Voice / AI / workspace roadmap M5: Homepage connections and the wake-word investigation — roadmap complete.** Four new Homepage widgets connect existing Orbit features (show, hide, reorder and size them as before): **Apps** (this Space's favourites; each opens where it's set to — tab, side panel, window), **Spaces** (jump to one), **Ask Orbit** (type a question for Orbit AI, or the microphone for push-to-talk) and **Google Drive** (files edited lately; a link to connect when it isn't). Recent pages, Notes, Projects, Today, Focus (timer and sounds) were already widgets. Calendar isn't built: it needs its own Google consent (`calendar.readonly`) — a later step. **"Hey Orbit"** investigated, not built (docs/WAKE-WORD.md): recommendation is a Siri Shortcut → push-to-talk first, openWakeWord (local, opt-in) only if needed — owner's decision. Tests: homepage-connections e2e (apps open in the panel, Spaces switch, Ask Orbit typed and spoken, Drive connect + recent files). A full e2e run under extra CPU load had 5 timing failures that pass when re-run (and 1 real: the sidebar menu's new Group Tabs… item, fixed)
+
 ## In progress
 
-- Voice / AI / workspace roadmap: M5 (homepage widgets, wake-word investigation)
+- UI redesign brief (orbit_ui_motion_redesign_brief.md, "Quietly Alive"): M0 audit → M1 foundation → M2 homepage + chrome → M3 app rail, App Hub, panels → M4 motion → M5 whole app
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0
 
 ## Decisions made
