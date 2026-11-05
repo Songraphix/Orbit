@@ -188,3 +188,64 @@ test('the Orbit menu: real actions only — Spaces, Settings — and sync shows 
     await close();
   }
 });
+
+/** Native menus: records each one's labels and can pick an item (instead of showing them). */
+const captureMenus = (app: ElectronApplication) =>
+  app.evaluate(({ Menu }) => {
+    type Item = { label?: string; click?: () => void };
+    const g = globalThis as unknown as { menus: Item[][] };
+    g.menus = [];
+    Menu.buildFromTemplate = ((template: Item[]) => {
+      g.menus.push(template);
+      return { popup: () => undefined };
+    }) as never;
+  });
+const lastMenuLabels = (app: ElectronApplication) =>
+  app.evaluate(() => {
+    const g = globalThis as unknown as { menus: { label?: string }[][] };
+    return (g.menus.at(-1) ?? []).map((i) => i.label ?? '—');
+  });
+const pick = (app: ElectronApplication, label: string) =>
+  app.evaluate((_e, l) => {
+    const g = globalThis as unknown as { menus: { label?: string; click?: () => void }[][] };
+    g.menus
+      .at(-1)
+      ?.find((i) => i.label === l)
+      ?.click?.();
+  }, label);
+
+test('right-click the toolbar or a tab: switch between sidebar and horizontal tabs', async () => {
+  test.setTimeout(60_000);
+  const server = await startTestServer();
+  const { app, win, close } = await launchOrbit();
+  try {
+    await invoke(win, 'tabs:create', { url: server.url('/one') });
+    await expect(win.getByTestId('toolbar-address')).toContainText('Page One');
+    await captureMenus(app);
+
+    // The toolbar row's empty space (not the address or a button).
+    const bar = (await win.getByTestId('toolbar').boundingBox())!;
+    const nav = (await win.getByTestId('nav-pill').boundingBox())!;
+    await win.mouse.click(nav.x - 12, bar.y + bar.height / 2, { button: 'right' });
+    await expect.poll(() => lastMenuLabels(app)).toContain('Switch to Horizontal Tabs');
+    await pick(app, 'Switch to Horizontal Tabs');
+    await expect(win.getByTestId('tab-strip')).toBeVisible();
+
+    // A tab pill's own menu has the way back (and the strip's empty space too).
+    await win.getByTestId('strip-tab').first().click({ button: 'right' });
+    await expect.poll(() => lastMenuLabels(app)).toContain('Switch to Sidebar Tabs');
+    expect(await lastMenuLabels(app)).toContain('Duplicate'); // still the tab's menu
+    await pick(app, 'Switch to Sidebar Tabs');
+    await expect(win.getByTestId('tab-strip')).toHaveCount(0);
+    await expect(win.getByTestId('sidebar')).toBeVisible();
+
+    // A sidebar tab row's menu offers it too.
+    await win.locator('[data-testid="tab-list"] [data-testid="tab-row"]').first().click({
+      button: 'right',
+    });
+    await expect.poll(() => lastMenuLabels(app)).toContain('Switch to Horizontal Tabs');
+  } finally {
+    await close();
+    await server.close();
+  }
+});

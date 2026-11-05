@@ -52,6 +52,8 @@ export type SidebarUi = {
     refresh: (folderId: string | null) => void;
     markAllRead: (folderId: string) => void;
   };
+  /** Tabs in the sidebar or across the top (Settings → Appearance → Tab layout). */
+  tabLayout?: () => 'sidebar' | 'top';
   /** Workspace templates (roadmap P2.5): save a Space as one, or start a Space from one. */
   templates?: {
     save: (spaceId: string) => void;
@@ -440,6 +442,41 @@ export class SidebarActions {
         },
       );
     }
+    template.push(...this.layoutItems());
+    Menu.buildFromTemplate(template).popup();
+  }
+
+  /** Sidebar tabs ↔ horizontal tabs, from any tab's or bar's right-click menu (owner request). */
+  private layoutItems(): MenuItemConstructorOptions[] {
+    const top = this.ui.tabLayout?.() === 'top';
+    return [
+      { type: 'separator' },
+      {
+        label: top ? 'Switch to Sidebar Tabs' : 'Switch to Horizontal Tabs',
+        click: () => this.ui.command('toggle-tabs-top'),
+      },
+    ];
+  }
+
+  /**
+   * Right-click on the toolbar row, the tab row's empty space or the rail: the tab layout, and
+   * the sidebar (with tabs in it) or a new tab.
+   */
+  barMenu(): void {
+    const top = this.ui.tabLayout?.() === 'top';
+    const template: MenuItemConstructorOptions[] = [
+      { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: () => this.ui.openCommandBar() },
+      ...(top
+        ? []
+        : [
+            {
+              label: 'Show or Hide Sidebar',
+              accelerator: 'CmdOrCtrl+S',
+              click: () => this.ui.command('toggle-sidebar'),
+            },
+          ]),
+      ...this.layoutItems(),
+    ];
     Menu.buildFromTemplate(template).popup();
   }
 
@@ -516,6 +553,7 @@ export class SidebarActions {
         accelerator: 'CmdOrCtrl+S',
         click: () => this.ui.command('toggle-sidebar'),
       },
+      ...this.layoutItems(),
     ];
     Menu.buildFromTemplate(template).popup();
   }

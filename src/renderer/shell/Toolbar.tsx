@@ -106,6 +106,12 @@ export function Toolbar(props: {
     <div
       className="drag-region absolute flex items-center gap-2 pr-2.5 text-[var(--fg)]"
       style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
+      onContextMenu={(e) => {
+        // Tabs, apps and text fields have their own menus.
+        if (e.defaultPrevented || (e.target as HTMLElement).closest('input, textarea')) return;
+        e.preventDefault();
+        void invoke('toolbar:menu', {});
+      }}
       data-testid="toolbar"
     >
       <div

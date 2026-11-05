@@ -171,6 +171,8 @@ test('right-clicking the sidebar’s empty space shows Arc’s sidebar menu', as
       'Library',
       '—',
       'Hide Sidebar',
+      '—',
+      'Switch to Horizontal Tabs',
     ]);
 
   // A tab row keeps its own menu.

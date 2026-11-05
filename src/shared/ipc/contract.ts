@@ -280,6 +280,12 @@ export const contract = {
     output: z.void(),
   },
   /** Right-click on the sidebar's empty space: a native menu built in main. */
+  /** Right-click on the toolbar row, the tab row or the rail: tab layout, sidebar, new tab. */
+  'toolbar:menu': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['shell'],
+  },
   'sidebar:backgroundMenu': {
     input: z.object({}).strict(),
     output: z.void(),

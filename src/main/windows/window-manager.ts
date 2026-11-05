@@ -604,6 +604,7 @@ export class WindowManager {
       toast: (message) => broadcaster.sendTo(contents, 'toast:show', { message, at: Date.now() }),
       openCommandBar: () => overlay.openCommandBar('new'),
       command: (commandId) => this.deps.runCommand?.(controller, commandId),
+      tabLayout: () => settings.get('tabs.layout'),
       liveFolders: this.deps.liveFolders && {
         add: (kind, spaceId) => this.deps.liveFolders?.add(controller, kind, spaceId),
         refresh: (folderId) => this.deps.liveFolders?.refresh(folderId),

@@ -51,6 +51,12 @@ export function Rail(props: {
       className="no-drag mat-deep absolute flex flex-col items-center gap-1.5 rounded-[22px] py-2.5"
       style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
       aria-label="Apps"
+      onContextMenu={(e) => {
+        // Tabs, apps and text fields have their own menus.
+        if (e.defaultPrevented || (e.target as HTMLElement).closest('input, textarea')) return;
+        e.preventDefault();
+        void invoke('toolbar:menu', {});
+      }}
       data-testid="app-rail"
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes(DRAG_TYPE)) e.preventDefault();
