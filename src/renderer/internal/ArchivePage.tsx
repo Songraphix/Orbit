@@ -192,7 +192,7 @@ function Chip(props: { on: boolean; onClick: () => void; testId: string; childre
       aria-pressed={props.on}
       onClick={props.onClick}
       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium ${
-        props.on ? 'bg-[var(--accent,#5b5bd6)] text-on-accent' : `${TILE} ${HOVER}`
+        props.on ? 'bg-[var(--accent,#2f7d75)] text-on-accent' : `${TILE} ${HOVER}`
       }`}
       data-testid={props.testId}
     >

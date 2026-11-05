@@ -350,7 +350,15 @@ function Reply({ reply }: { reply: AssistantReply }) {
             testId="assistant-speak"
             data-speaking={speaking}
           >
-            {speaking ? <Square size={11} fill="currentColor" /> : <Volume2 size={13} />}
+            {speaking ? (
+              // Reading aloud: a slow breath (it doesn't pretend to follow the voice).
+              <span className="relative grid size-3 place-items-center" aria-hidden>
+                <span className="ambient absolute inset-0 rounded-full bg-[var(--work-accent-text)] opacity-30 animate-[orbit-breathe_2.4s_var(--ease-in-out)_infinite]" />
+                <Square size={8} fill="currentColor" className="relative" />
+              </span>
+            ) : (
+              <Volume2 size={13} />
+            )}
           </SmallAction>
         </div>
       )}

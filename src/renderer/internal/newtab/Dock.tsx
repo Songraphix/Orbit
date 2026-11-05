@@ -18,7 +18,7 @@ const GROW = 0.3;
 /** How far (px) from the pointer icons still grow a little. */
 const REACH = 120;
 
-const LETTER_COLORS = ['#5b5bd6', '#0a84ff', '#30a46c', '#e5484d', '#f76b15', '#d6409f'];
+const LETTER_COLORS = ['#4f8f86', '#5a87a6', '#9c8a6b', '#6d7f8c', '#7a6f99', '#5f8a6a'];
 
 const reducedMotion = () =>
   document.documentElement.classList.contains('motion-reduced') ||

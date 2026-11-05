@@ -9,7 +9,7 @@ export type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-[var(--accent-fill,#5b5bd6)] text-on-accent shadow-[0_1px_2px_rgb(0_0_0/0.12)] hover:brightness-110',
+    'bg-[var(--accent-fill,#2f7d75)] text-on-accent shadow-[0_1px_2px_rgb(0_0_0/0.12)] hover:brightness-110',
   secondary:
     'border border-neutral-200 bg-white text-neutral-800 shadow-[0_1px_1px_rgb(0_0_0/0.04)] hover:bg-neutral-50',
   ghost: 'text-neutral-700 hover:bg-black/[0.05]',

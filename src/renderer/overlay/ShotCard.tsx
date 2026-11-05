@@ -96,7 +96,7 @@ function ShotButton(props: {
       title={props.keys}
       className={`press flex h-9 items-center justify-center gap-1.5 rounded-[11px] text-[12.5px] font-medium ${
         props.primary
-          ? 'bg-[var(--accent-fill,#5b5bd6)] text-white hover:brightness-110'
+          ? 'bg-[var(--accent-fill,#2f7d75)] text-white hover:brightness-110'
           : 'bg-white/[0.09] hover:bg-white/[0.16]'
       }`}
       data-testid={props.testId}

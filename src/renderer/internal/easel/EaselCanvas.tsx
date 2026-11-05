@@ -227,7 +227,7 @@ export default function EaselCanvas({
                   onClick={() => chooseBackground(b.id)}
                   className={`grid size-7 place-items-center rounded-md ${
                     background === b.id
-                      ? 'bg-[#5b5bd6] text-white'
+                      ? 'bg-[var(--accent-fill)] text-white'
                       : theme === 'dark'
                         ? 'text-white/60 hover:bg-white/10'
                         : 'text-neutral-500 hover:bg-neutral-100'
@@ -244,7 +244,7 @@ export default function EaselCanvas({
               onBlur={(e) => saveTitle(e.currentTarget.value)}
               onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
               aria-label="Easel title"
-              className={`w-44 rounded-lg border px-2 py-1.5 text-sm font-semibold outline-none focus:border-[#5b5bd6] ${
+              className={`w-44 rounded-lg border px-2 py-1.5 text-sm font-semibold outline-none focus:border-[var(--accent-fill)] ${
                 theme === 'dark'
                   ? 'border-white/15 bg-[#232329] text-white'
                   : 'border-neutral-200 bg-white text-neutral-800'
@@ -256,7 +256,7 @@ export default function EaselCanvas({
               disabled={capturing}
               onClick={() => void capture()}
               title="Capture part of a web page onto this Easel"
-              className="flex items-center gap-1.5 rounded-lg bg-[#5b5bd6] px-3 py-1.5 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
+              className="flex items-center gap-1.5 rounded-lg bg-[var(--accent-fill)] px-3 py-1.5 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
               data-testid="easel-capture"
             >
               <Camera size={14} /> Capture

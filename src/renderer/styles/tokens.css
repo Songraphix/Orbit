@@ -1012,3 +1012,16 @@ button:hover > .lib-icon {
     transform: translate3d(1.5%, -2.5%, 0) scale(1.05);
   }
 }
+
+/* A calm "this is happening" breath (reading aloud): opacity and a little scale, no flashing. */
+@keyframes orbit-breathe {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.25);
+  }
+}

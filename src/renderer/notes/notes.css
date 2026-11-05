@@ -194,22 +194,23 @@
   --note-hover: rgb(255 255 255 / 0.07);
 }
 
-/* The productivity panel's Projects / Tasks / Board (owner request): purple accent, quiet cards. */
+/* The productivity panel's Projects / Tasks / Board: Orbit's one accent (sea glass by default;
+   Settings → Appearance → Accent changes it everywhere at once), quiet cards. */
 [data-note-theme='light'] {
-  --work-accent: #6d5dfc;
-  /* Accent-coloured text: the same purple reads on white (4.5:1). */
-  --work-accent-text: #6d5dfc;
-  --work-accent-soft: rgb(109 93 252 / 0.12);
+  --work-accent: var(--accent-fill, #2f7d75);
+  /* Accent-coloured text: the fill reads on white (4.5:1 or more). */
+  --work-accent-text: var(--accent-fill, #2f7d75);
+  --work-accent-soft: color-mix(in srgb, var(--accent-fill, #2f7d75) 12%, transparent);
   --work-card: rgb(0 0 0 / 0.035);
   --work-border: rgb(0 0 0 / 0.07);
   --work-track: rgb(0 0 0 / 0.08);
   --work-sheet: #ffffff;
 }
 [data-note-theme='dark'] {
-  /* Fills keep white text readable (4.5:1); text in the accent is lighter (5:1 on the panel). */
-  --work-accent: #6d5dfc;
-  --work-accent-text: #8a7cff;
-  --work-accent-soft: rgb(124 108 255 / 0.2);
+  /* Fills keep white text readable; text in the accent is lightened to read on the panel. */
+  --work-accent: var(--accent-fill, #2f7d75);
+  --work-accent-text: color-mix(in srgb, var(--accent-fill, #2f7d75) 55%, white);
+  --work-accent-soft: color-mix(in srgb, var(--accent-fill, #2f7d75) 22%, transparent);
   --work-card: rgb(255 255 255 / 0.045);
   --work-border: rgb(255 255 255 / 0.07);
   --work-track: rgb(255 255 255 / 0.1);

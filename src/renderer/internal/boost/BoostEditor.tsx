@@ -109,7 +109,7 @@ export function BoostEditor({ id }: { id: string }) {
   return (
     <main className="mx-auto max-w-2xl px-6 py-6 text-neutral-800" data-testid="boost-editor">
       <header className="flex items-center gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#5b5bd6] text-on-accent">
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--accent-fill)] text-on-accent">
           <Wand2 size={18} />
         </span>
         <input
@@ -143,7 +143,7 @@ export function BoostEditor({ id }: { id: string }) {
         </button>
       </header>
 
-      <label className="mt-3 flex items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2 text-sm focus-within:border-[#5b5bd6]">
+      <label className="mt-3 flex items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2 text-sm focus-within:border-[var(--accent-fill)]">
         <Globe size={14} className="text-neutral-400" />
         <span className="text-neutral-400">Applies to</span>
         <input
@@ -188,7 +188,7 @@ export function BoostEditor({ id }: { id: string }) {
                 aria-label={swatch.label}
                 title={swatch.label}
                 onClick={() => setColor({ ...(color ?? DEFAULT_COLOR), hue: swatch.hue })}
-                className={`size-7 rounded-full ring-offset-2 ${selected ? 'ring-2 ring-[#5b5bd6]' : 'hover:ring-2 hover:ring-neutral-300'}`}
+                className={`size-7 rounded-full ring-offset-2 ${selected ? 'ring-2 ring-[var(--accent-fill)]' : 'hover:ring-2 hover:ring-neutral-300'}`}
                 style={{ background: swatch.color }}
                 data-testid="boost-swatch"
               />
@@ -389,7 +389,7 @@ function TextButton(props: { onClick: () => void; testId: string; children: Reac
     <button
       type="button"
       onClick={props.onClick}
-      className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-[#5b5bd6] hover:bg-[#5b5bd6]/10"
+      className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-[var(--accent-fill)] hover:bg-[var(--accent-fill)]/10"
       data-testid={props.testId}
     >
       {props.children}
@@ -410,7 +410,7 @@ function Switch(props: {
       aria-checked={props.checked}
       aria-label={props.label}
       onClick={() => props.onChange(!props.checked)}
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${props.checked ? 'bg-[#5b5bd6]' : 'bg-neutral-300'}`}
+      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${props.checked ? 'bg-[var(--accent-fill)]' : 'bg-neutral-300'}`}
       data-testid={props.testId}
     >
       <span
@@ -438,7 +438,7 @@ function Slider(props: {
         max={props.max}
         value={props.value}
         onChange={(e) => props.onChange(Number(e.target.value))}
-        className="flex-1 accent-[#5b5bd6]"
+        className="flex-1 accent-[var(--accent-fill)]"
         data-testid={props.testId}
       />
       <span className="w-12 text-right text-xs text-neutral-500 tabular-nums">

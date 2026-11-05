@@ -27,7 +27,7 @@ export function BlockedPage({ encoded }: { encoded: string }) {
       data-testid="blocked-page"
     >
       <div className="flex max-w-sm flex-col items-center text-center">
-        <span className="mb-5 grid size-14 place-items-center rounded-[18px] bg-[#5b5bd6] text-on-accent shadow-[0_10px_30px_-10px_#5b5bd6]">
+        <span className="mb-5 grid size-14 place-items-center rounded-[18px] bg-[var(--accent-fill)] text-on-accent shadow-[0_10px_30px_-10px_var(--accent-fill)]">
           <Target size={26} />
         </span>
         <h1 className="text-[22px] font-semibold tracking-tight">You’re focusing</h1>
@@ -48,7 +48,7 @@ export function BlockedPage({ encoded }: { encoded: string }) {
         <div className="mt-6 flex gap-2">
           <button
             type="button"
-            className="rounded-lg bg-[#5b5bd6] px-4 py-2 text-sm font-medium text-on-accent hover:brightness-110"
+            className="rounded-lg bg-[var(--accent-fill)] px-4 py-2 text-sm font-medium text-on-accent hover:brightness-110"
             onClick={() => (history.length > 1 ? history.back() : window.close())}
             data-testid="blocked-back"
           >

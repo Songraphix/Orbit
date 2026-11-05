@@ -75,7 +75,7 @@ export function AppearanceSection(props: {
                 onClick={() => set({ font: f })}
                 className={`press rounded-[9px] px-2.5 py-1 text-[13px] ${
                   prefs.font === f
-                    ? 'bg-[var(--accent-fill,#5b5bd6)] text-on-accent'
+                    ? 'bg-[var(--accent-fill,#2f7d75)] text-on-accent'
                     : 'bg-black/[0.05] hover:bg-black/[0.09] dark:bg-white/[0.08]'
                 }`}
                 style={{ fontFamily: FONT_INFO[f].stack }}
@@ -340,7 +340,7 @@ function TemplateCard(props: {
 }) {
   const { template: t, on } = props;
   const dark = t.appearance === 'dark';
-  const accent = t.look.accent ?? '#5b5bd6';
+  const accent = t.look.accent ?? '#2f7d75';
   const surface =
     t.appearance === 'system'
       ? 'linear-gradient(135deg, #f4f4f6 0 50%, #26262c 50% 100%)'
@@ -353,7 +353,7 @@ function TemplateCard(props: {
       onClick={props.onPick}
       aria-pressed={on}
       className={`press flex flex-col gap-1.5 rounded-[12px] p-1.5 text-left ${
-        on ? 'ring-2 ring-[var(--accent-fill,#5b5bd6)]' : 'hover:bg-black/[0.04]'
+        on ? 'ring-2 ring-[var(--accent-fill,#2f7d75)]' : 'hover:bg-black/[0.04]'
       }`}
       data-testid="theme-template"
       data-id={t.id}

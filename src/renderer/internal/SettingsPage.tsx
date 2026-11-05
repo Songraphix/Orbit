@@ -547,7 +547,7 @@ function AiSection() {
         >
           <div className="h-1.5 w-28 overflow-hidden rounded-full bg-neutral-100" aria-hidden>
             <div
-              className={`h-full rounded-full ${share >= 1 ? 'bg-red-500' : share > 0.8 ? 'bg-amber-500' : 'bg-[var(--accent,#5b5bd6)]'}`}
+              className={`h-full rounded-full ${share >= 1 ? 'bg-red-500' : share > 0.8 ? 'bg-amber-500' : 'bg-[var(--accent,#2f7d75)]'}`}
               style={{ width: `${Math.max(share * 100, usage.cost > 0 ? 3 : 0)}%` }}
             />
           </div>
@@ -751,7 +751,7 @@ function SettingsNav() {
           title={item.label}
           className={`press flex h-9 items-center gap-2.5 rounded-[9px] px-2.5 text-left text-[13.5px] ${
             active === item.id
-              ? 'bg-[#5b5bd6] font-medium text-on-accent shadow-[0_1px_2px_rgb(0_0_0/0.15)]'
+              ? 'bg-[var(--accent-fill)] font-medium text-on-accent shadow-[0_1px_2px_rgb(0_0_0/0.15)]'
               : 'text-neutral-600 hover:bg-black/[0.05]'
           }`}
           data-testid="settings-nav"
@@ -1099,7 +1099,7 @@ function RulesSection() {
         {data.rules.map((rule) => (
           <div key={rule.id} className="flex items-center gap-3 px-4 py-2.5" data-testid="rule-row">
             <span
-              className={`grid size-8 shrink-0 place-items-center rounded-[10px] ${rule.enabled ? 'bg-[var(--accent,#5b5bd6)]/10 text-[var(--accent,#5b5bd6)]' : 'bg-neutral-100 text-neutral-400'}`}
+              className={`grid size-8 shrink-0 place-items-center rounded-[10px] ${rule.enabled ? 'bg-[var(--accent,#2f7d75)]/10 text-[var(--accent,#2f7d75)]' : 'bg-neutral-100 text-neutral-400'}`}
             >
               {rule.kind === 'link' ? <Route size={15} /> : <Archive size={15} />}
             </span>

@@ -101,7 +101,7 @@ export function SiteControls({ view }: { view: SiteControlsView }) {
               type="button"
               disabled={view.storeExtension.installed}
               onClick={() => void window.orbit.invoke('extensions:install', {})}
-              className="mb-1.5 flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[var(--accent,#5b5bd6)] font-semibold text-on-accent hover:brightness-110 disabled:bg-white/10 disabled:text-white/60"
+              className="mb-1.5 flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[var(--accent,#2f7d75)] font-semibold text-on-accent hover:brightness-110 disabled:bg-white/10 disabled:text-white/60"
               data-testid="site-extension-install"
             >
               {view.storeExtension.installed ? 'Added to Orbit' : 'Add to Orbit'}
@@ -238,7 +238,7 @@ function BoostRow({ boost }: { boost: BoostSummary }) {
         title="Edit Boost"
         data-testid="site-boost-edit"
       >
-        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--accent,#5b5bd6)] text-on-accent">
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--accent,#2f7d75)] text-on-accent">
           <Wand2 size={14} />
         </span>
         <span className="truncate font-semibold">{boost.name}</span>
@@ -251,7 +251,7 @@ function BoostRow({ boost }: { boost: BoostSummary }) {
         onClick={() =>
           void window.orbit.invoke('boosts:toggle', { id: boost.id, enabled: !boost.enabled })
         }
-        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${boost.enabled ? 'bg-[var(--accent,#5b5bd6)]' : 'bg-white/20'}`}
+        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${boost.enabled ? 'bg-[var(--accent,#2f7d75)]' : 'bg-white/20'}`}
         data-testid="site-boost-toggle"
       >
         <span

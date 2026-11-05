@@ -31,7 +31,7 @@ export function FocusPill({ session }: { session: FocusSession }) {
       className={`no-drag animate-pop flex h-7 max-w-[300px] min-w-0 items-center gap-1 rounded-full pr-0.5 pl-2 text-[12.5px] font-semibold ring-1 ${
         brk
           ? 'bg-[#34c759]/[0.12] text-[#1f7a37] ring-[#34c759]/25 dark:text-[#7ee29a]'
-          : 'bg-[#5b5bd6]/[0.1] text-[#3f3fb0] ring-[#5b5bd6]/20 dark:bg-[#5b5bd6]/25 dark:text-[#c3bcff]'
+          : 'bg-[var(--accent-fill)]/[0.1] text-[var(--accent-fill)] ring-[var(--accent-fill)]/20 dark:bg-[var(--accent-fill)]/25 dark:text-[var(--orbit-sea-glass)]'
       }`}
       data-testid="focus-pill"
       data-kind={session.kind}
@@ -64,7 +64,7 @@ export function FocusPill({ session }: { session: FocusSession }) {
             type="button"
             aria-label={paused ? 'Resume' : 'Pause'}
             onClick={() => void window.orbit.invoke('focus:pause', { paused: !paused })}
-            className="press grid size-6 shrink-0 place-items-center rounded-full hover:bg-[#5b5bd6]/15"
+            className="press grid size-6 shrink-0 place-items-center rounded-full hover:bg-[var(--accent-fill)]/15"
             data-testid="focus-pill-pause"
           >
             {paused ? (
@@ -81,7 +81,7 @@ export function FocusPill({ session }: { session: FocusSession }) {
             type="button"
             aria-label="Done"
             onClick={() => void window.orbit.invoke('focus:end', { complete: true })}
-            className="press grid size-6 shrink-0 place-items-center rounded-full bg-[#5b5bd6] text-on-accent hover:brightness-110"
+            className="press grid size-6 shrink-0 place-items-center rounded-full bg-[var(--accent-fill)] text-on-accent hover:brightness-110"
             data-testid="focus-done"
           >
             <Check size={13} strokeWidth={3} />
@@ -93,7 +93,7 @@ export function FocusPill({ session }: { session: FocusSession }) {
           type="button"
           aria-label="End focus"
           onClick={() => void window.orbit.invoke('focus:end', { complete: false })}
-          className="press grid size-6 shrink-0 place-items-center rounded-full hover:bg-[#5b5bd6]/15"
+          className="press grid size-6 shrink-0 place-items-center rounded-full hover:bg-[var(--accent-fill)]/15"
           data-testid="focus-end"
         >
           <Square size={10} fill="currentColor" />
