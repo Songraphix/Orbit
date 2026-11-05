@@ -945,7 +945,7 @@ void app.whenReady().then(() => {
   registerAppHandlers(router);
   registerLayoutHandlers(router, windowManager);
   registerTabHandlers(router, windowManager, { openWindow: (url) => openLittle?.(url) });
-  registerAppHubHandlers(router, windowManager);
+  registerAppHubHandlers(router, windowManager, { openWindow: (url) => openLittle?.(url) });
 
   // Orbit accounts and cloud sync (docs/FIREBASE.md). Optional: without an account everything
   // stays on this Mac. The session is Keychain-encrypted in its own file; development builds

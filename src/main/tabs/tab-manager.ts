@@ -749,7 +749,7 @@ export class TabManager {
         const tab = this.live.get(id);
         if (this.disposed || !tab) return;
         const { url, title, favicon } = tab.state;
-        // A crashed page is hidden so the shell's Reload card shows through.
+        // A crashed page (or one that couldn't load) is hidden so the shell's card shows through.
         if (this.shownIds().includes(id)) this.place();
         this.deps.store.updateLive(id, { url, title, favicon });
         this.announce(tab);
@@ -799,6 +799,7 @@ export class TabManager {
       canGoForward: false,
       kind: isInternal(url) ? 'internal' : 'web',
       crashed: false,
+      loadError: null,
       devMode: this.devModeFor(url),
       consoleErrors: 0,
       viewport: null,
@@ -856,7 +857,7 @@ export class TabManager {
         tab.view.setBounds(bounds);
         tab.view.setBorderRadius(layout.radius);
       }
-      tab.view.setVisible(!this.frozen && !tab.state.crashed);
+      tab.view.setVisible(!this.frozen && !tab.state.crashed && !tab.state.loadError);
     });
   }
 

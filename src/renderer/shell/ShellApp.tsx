@@ -17,6 +17,7 @@ import type { LibrarySection } from '@shared/types/library';
 import type { MediaState } from '@shared/types/media';
 import type { TabState, TabsSnapshot } from '@shared/types/tabs';
 import { LittleBar } from './LittleBar';
+import { LoadErrorCard } from './LoadErrorCard';
 import { Tip } from '../tooltip/Tip';
 import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
@@ -372,6 +373,23 @@ function ContentCard(props: {
           </button>
         </div>
       )}
+      {tab?.loadError && !tab.crashed && (
+        <div className="absolute inset-x-0 bottom-0" style={{ top: webViewTop }}>
+          <LoadErrorCard
+            code={tab.loadError.code}
+            url={tab.loadError.url}
+            actions={[
+              {
+                label: 'Try Again',
+                primary: true,
+                testId: 'load-error-retry',
+                onClick: () =>
+                  void window.orbit.invoke('tabs:navigate', { tabId: tab.id, action: 'reload' }),
+              },
+            ]}
+          />
+        </div>
+      )}
       {!tab && (
         <div className="flex h-full items-center justify-center pb-9 text-sm text-neutral-400">
           No tab open — press ⌘T
@@ -445,81 +463,126 @@ function AppPanelHeader({
 }) {
   const app = useMainState('state:appPanel');
   if (!app) return null;
-  const act = (action: 'close' | 'back' | 'reload' | 'openAsTab' | 'manage') =>
+  const act = (action: 'close' | 'back' | 'reload' | 'openAsTab' | 'openInWindow' | 'manage') =>
     void window.orbit.invoke('apps:panel', { action });
   const apps = panelApps(favorites);
   return (
-    <div
-      className="ui-light absolute flex items-center gap-1 overflow-hidden border-b border-black/[0.06] bg-white px-2 text-neutral-700"
-      style={{
-        left: rect.x,
-        top: rect.y,
-        width: rect.width,
-        height: 40,
-        borderTopLeftRadius: radius,
-        borderTopRightRadius: radius,
-      }}
-      data-testid="app-panel-header"
-    >
-      {apps.length > 1 ? (
+    <>
+      {app.loadError !== null && (
+        // The app couldn't load: main hid its page, so this card shows in the panel.
         <div
-          className="scrollbar-none flex max-w-[55%] shrink-0 items-center gap-0.5 overflow-x-auto"
-          role="tablist"
-          aria-label="Panel apps"
-          data-testid="app-panel-switcher"
+          className="ui-light absolute overflow-hidden bg-white"
+          style={{
+            left: rect.x,
+            top: rect.y + 40,
+            width: rect.width,
+            height: Math.max(0, rect.height - 40),
+            borderBottomLeftRadius: radius,
+            borderBottomRightRadius: radius,
+          }}
         >
-          {apps.map((row) => {
-            const current = row.id === app.itemId;
-            return (
-              <Tip key={row.id} label={row.title || row.url || 'App'}>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={current}
-                  aria-label={row.title || row.url || 'App'}
-                  onClick={() => {
-                    if (!current) void window.orbit.invoke('tabs:activate', { tabId: row.id });
-                  }}
-                  className={`press grid size-7 shrink-0 place-items-center rounded-[8px] transition-colors ${current ? 'bg-black/[0.07]' : 'opacity-60 hover:bg-black/[0.05] hover:opacity-100'}`}
-                  data-testid="app-panel-switch"
-                  data-current={current}
-                >
-                  <AppIcon favicon={row.favicon} />
-                </button>
-              </Tip>
-            );
-          })}
+          <LoadErrorCard
+            compact
+            code={app.loadError}
+            url={app.url}
+            actions={[
+              {
+                label: 'Try Again',
+                primary: true,
+                testId: 'load-error-retry',
+                onClick: () => act('reload'),
+              },
+              { label: 'Open as Tab', testId: 'load-error-tab', onClick: () => act('openAsTab') },
+              {
+                label: 'Open in Window',
+                testId: 'load-error-window',
+                onClick: () => act('openInWindow'),
+              },
+            ]}
+          />
         </div>
-      ) : (
-        <AppIcon favicon={app.favicon} />
       )}
-      <span
-        className="ml-1 min-w-0 flex-1 truncate text-[13px] font-medium"
-        data-testid="app-panel-title"
+      <div
+        className="ui-light absolute flex items-center gap-1 overflow-hidden border-b border-black/[0.06] bg-white px-2 text-neutral-700"
+        style={{
+          left: rect.x,
+          top: rect.y,
+          width: rect.width,
+          height: 40,
+          borderTopLeftRadius: radius,
+          borderTopRightRadius: radius,
+        }}
+        data-testid="app-panel-header"
       >
-        {app.title}
-      </span>
-      <HeaderButton label="Add Apps…" onClick={() => act('manage')} testId="app-panel-add">
-        <Plus size={14} />
-      </HeaderButton>
-      <HeaderButton
-        label="Back"
-        onClick={() => act('back')}
-        disabled={!app.canGoBack}
-        testId="app-panel-back"
-      >
-        <ArrowLeft size={14} />
-      </HeaderButton>
-      <HeaderButton label="Reload" onClick={() => act('reload')} testId="app-panel-reload">
-        <RotateCw size={13} className={app.isLoading ? 'animate-spin' : ''} />
-      </HeaderButton>
-      <HeaderButton label="Open as Tab" onClick={() => act('openAsTab')} testId="app-panel-tab">
-        <ExternalLink size={13} />
-      </HeaderButton>
-      <HeaderButton label="Close" onClick={() => act('close')} testId="app-panel-close">
-        <X size={14} />
-      </HeaderButton>
-    </div>
+        {apps.length > 1 ? (
+          <div
+            className="scrollbar-none flex max-w-[55%] shrink-0 items-center gap-0.5 overflow-x-auto"
+            role="tablist"
+            aria-label="Panel apps"
+            data-testid="app-panel-switcher"
+          >
+            {apps.map((row) => {
+              const current = row.id === app.itemId;
+              return (
+                <Tip key={row.id} label={row.title || row.url || 'App'}>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={current}
+                    aria-label={row.title || row.url || 'App'}
+                    onClick={() => {
+                      if (!current) void window.orbit.invoke('tabs:activate', { tabId: row.id });
+                    }}
+                    className={`press grid size-7 shrink-0 place-items-center rounded-[8px] transition-colors ${current ? 'bg-black/[0.07]' : 'opacity-60 hover:bg-black/[0.05] hover:opacity-100'}`}
+                    data-testid="app-panel-switch"
+                    data-current={current}
+                  >
+                    <AppIcon favicon={row.favicon} />
+                  </button>
+                </Tip>
+              );
+            })}
+          </div>
+        ) : (
+          <AppIcon favicon={app.favicon} />
+        )}
+        <span
+          className="ml-1 min-w-0 flex-1 truncate text-[13px] font-medium"
+          data-testid="app-panel-title"
+        >
+          {app.title}
+        </span>
+        <HeaderButton label="Add Apps…" onClick={() => act('manage')} testId="app-panel-add">
+          <Plus size={14} />
+        </HeaderButton>
+        <HeaderButton
+          label="Back"
+          onClick={() => act('back')}
+          disabled={!app.canGoBack}
+          testId="app-panel-back"
+        >
+          <ArrowLeft size={14} />
+        </HeaderButton>
+        <HeaderButton label="Reload" onClick={() => act('reload')} testId="app-panel-reload">
+          <RotateCw size={13} className={app.isLoading ? 'animate-spin' : ''} />
+        </HeaderButton>
+        <HeaderButton label="Open as Tab" onClick={() => act('openAsTab')} testId="app-panel-tab">
+          <ExternalLink size={13} />
+        </HeaderButton>
+        <HeaderButton label="Close" onClick={() => act('close')} testId="app-panel-close">
+          <X size={14} />
+        </HeaderButton>
+        {app.isLoading && (
+          // A thin loading line along the header's foot.
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] overflow-hidden"
+            data-testid="app-panel-loading"
+          >
+            <div className="h-full w-1/3 animate-[orbit-loading_1.1s_ease-in-out_infinite] rounded-full bg-[var(--accent)]" />
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

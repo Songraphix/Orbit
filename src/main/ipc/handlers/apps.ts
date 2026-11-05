@@ -7,7 +7,14 @@ import type { WindowController, WindowManager } from '../../windows/window-manag
  * App Hub (brief M5): the docked app panel's header (from the shell), and Settings → Apps —
  * your favourites as apps: add by address, rename, where each opens, which Spaces show it.
  */
-export function registerAppHubHandlers(router: IpcRouter, windows: WindowManager): void {
+export function registerAppHubHandlers(
+  router: IpcRouter,
+  windows: WindowManager,
+  deps: {
+    /** Little Orbit: the panel's app in its own small window. */
+    openWindow?: (url: string) => void;
+  } = {},
+): void {
   const shellOf = (webContentsId: number) => {
     const controller = windows.forSender(webContentsId);
     if (!controller || controller.win.webContents.id !== webContentsId) {
@@ -50,7 +57,11 @@ export function registerAppHubHandlers(router: IpcRouter, windows: WindowManager
   router.handle('apps:panel', ({ action }, { sender }) => {
     const { appPanel } = shellOf(sender.webContentsId);
     if (action === 'manage') windows.openSettings('apps');
-    else if (action === 'close') appPanel.close();
+    else if (action === 'openInWindow') {
+      const url = appPanel.state()?.url;
+      appPanel.close();
+      if (url) deps.openWindow?.(url);
+    } else if (action === 'close') appPanel.close();
     else if (action === 'openAsTab') appPanel.openAsTab();
     else appPanel.navigate(action);
   });

@@ -51,7 +51,10 @@ export class AppPanelController {
     if (this.itemId !== itemId || !this.page) {
       this.dispose();
       this.itemId = itemId;
-      this.page = this.deps.createPage(url, itemId, () => this.push());
+      this.page = this.deps.createPage(url, itemId, () => {
+        this.fit(); // a page that couldn't load hides, so the shell's card shows
+        this.push();
+      });
       this.deps.attach(this.page.view);
     }
     this.deps.closeNotes();
@@ -80,7 +83,8 @@ export class AppPanelController {
   navigate(action: 'back' | 'forward' | 'reload'): void {
     const contents = this.page?.view.webContents;
     if (!contents || contents.isDestroyed()) return;
-    if (action === 'reload') contents.reload();
+    if (action === 'reload')
+      this.page?.reload(); // also retries a page that couldn't load
     else if (action === 'back' && contents.navigationHistory.canGoBack())
       contents.navigationHistory.goBack();
     else if (action === 'forward' && contents.navigationHistory.canGoForward())
@@ -111,7 +115,7 @@ export class AppPanelController {
     const view = this.page?.view;
     if (!view || !this.shown) return;
     const dock = this.deps.getLayout().notes;
-    if (!dock || this.suspended) {
+    if (!dock || this.suspended || this.page?.state.loadError) {
       view.setVisible(false); // a page went fullscreen
       return;
     }
@@ -126,8 +130,16 @@ export class AppPanelController {
 
   state(): AppPanelState | null {
     if (!this.shown || !this.page || !this.itemId) return null;
-    const { title, url, favicon, isLoading, canGoBack } = this.page.state;
-    return { itemId: this.itemId, title: title || url, url, favicon, isLoading, canGoBack };
+    const { title, url, favicon, isLoading, canGoBack, loadError } = this.page.state;
+    return {
+      itemId: this.itemId,
+      title: title || url,
+      url,
+      favicon,
+      isLoading,
+      canGoBack,
+      loadError: loadError?.code ?? null,
+    };
   }
 
   destroy(): void {

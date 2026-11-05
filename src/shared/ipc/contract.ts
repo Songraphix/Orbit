@@ -787,8 +787,16 @@ export const contract = {
   'apps:panel': {
     input: z
       .object({
-        // manage: Settings → Apps (the switcher's +)
-        action: z.enum(['close', 'back', 'forward', 'reload', 'openAsTab', 'manage']),
+        // manage: Settings → Apps (the switcher's +); openInWindow: its own small window
+        action: z.enum([
+          'close',
+          'back',
+          'forward',
+          'reload',
+          'openAsTab',
+          'openInWindow',
+          'manage',
+        ]),
       })
       .strict(),
     output: z.void(),

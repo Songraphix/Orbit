@@ -6,6 +6,7 @@ import { attachContextMenu } from './context-menu';
 import type { PageMenuRequest } from './context-menu';
 import { guardWebContents } from './web-guards';
 import { MEDIA_SESSION_SHIM } from '../media/session-bridge';
+import { ERR_ABORTED } from '@shared/load-error';
 
 /** What a tab needs from the outside world. Keeps TabController free of window/manager details. */
 export type TabEnv = {
@@ -88,6 +89,7 @@ export class TabController {
       canGoForward: false,
       kind,
       crashed: false,
+      loadError: null,
       devMode: false,
       consoleErrors: 0,
       viewport: null,
@@ -137,6 +139,7 @@ export class TabController {
       canGoBack: false,
       canGoForward: false,
       crashed: false,
+      loadError: null,
     });
     this.loadIntoView(url);
   }
@@ -157,6 +160,11 @@ export class TabController {
     if (this.stateValue.crashed) {
       this.update({ crashed: false });
       contents.reload();
+    } else if (this.stateValue.loadError) {
+      // Try the address that failed again (what the window shows may be an empty error page).
+      const { url } = this.stateValue.loadError;
+      this.update({ loadError: null });
+      void contents.loadURL(url).catch(() => undefined);
     } else if (this.stateValue.kind === 'internal') {
       this.env.loadInternal(this.view, this.stateValue.url);
     } else if (hard) {
@@ -228,7 +236,14 @@ export class TabController {
     contents.on('enter-html-full-screen', () => this.env.onHtmlFullscreen(true));
     contents.on('leave-html-full-screen', () => this.env.onHtmlFullscreen(false));
 
-    contents.on('did-start-loading', () => this.update({ isLoading: true, crashed: false }));
+    contents.on('did-start-loading', () =>
+      this.update({ isLoading: true, crashed: false, loadError: null }),
+    );
+    // A page that can't load (offline, unknown address…) gets a card, not a blank page.
+    contents.on('did-fail-load', (_e, code, _description, url, isMainFrame) => {
+      if (!isMainFrame || code === ERR_ABORTED) return;
+      this.update({ loadError: { code, url }, url, isLoading: false });
+    });
     // Focus mode's blocked sites: links, redirects and typed addresses alike.
     contents.on('did-start-navigation', (details) => {
       if (!details.isMainFrame || details.isSameDocument) return;

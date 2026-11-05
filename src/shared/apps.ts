@@ -25,6 +25,8 @@ export const appPanelStateSchema = z.object({
   favicon: z.string().nullable(),
   isLoading: z.boolean(),
   canGoBack: z.boolean(),
+  /** The app couldn't load (Chromium's net error code): the panel shows a card instead. */
+  loadError: z.number().int().nullable().default(null),
 });
 export type AppPanelState = z.output<typeof appPanelStateSchema>;
 

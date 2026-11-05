@@ -16,6 +16,9 @@ export const tabStateSchema = z.object({
   kind: z.enum(['web', 'internal']),
   /** The page's renderer process died; the shell shows a Reload card instead of the page. */
   crashed: z.boolean(),
+  /** The page failed to load (offline, unknown address, refused…): Chromium's net error code
+   *  and the address it tried. The shell shows a card with Try Again instead of a blank page. */
+  loadError: z.object({ code: z.number().int(), url: z.string() }).nullable().default(null),
   /** The site is in Developer Mode (F-30): full URL, DevTools button, error count. */
   devMode: z.boolean(),
   /** Console errors since the page loaded (shown in Developer Mode). */
