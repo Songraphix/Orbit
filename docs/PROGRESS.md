@@ -25,6 +25,7 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 - [ ] Settings → Rules: with Orbit as the default browser, a link from Slack or Mail to a site you route opens in its Space
 - [ ] Settings → Backup: choose a folder (iCloud Drive keeps a copy off the Mac) and, if you like, a passphrase
 - [ ] Google Drive: in Google Cloud project orbit-f4f0c-513713 enable the **Google Drive API** and add the `drive.readonly` scope on the consent screen (docs/DRIVE.md), then Settings → Integrations → Connect Google Drive; type part of a file's name in ⌘T; ask Orbit AI about a Google Doc
+- [ ] PDFs: ⌘O a PDF from your Mac; right-click → PDF Notes; select a sentence → Add to PDF Notes; ask Orbit AI to summarize it
 - [ ] Voice: press ⇧⌘Space, agree to the one-time speech model download (80 MB), allow the microphone when macOS asks, and say "what's on my list today?"; try Settings → Voice → a different voice
 - [ ] Orbit AI with the browser: "what tabs do I have open about X?", "open Spotify in the sidebar" (with Spotify as a panel app), "save the key points to my notes"; turn on Settings → AI → Browsing history and ask "find the article I read yesterday"
 - [ ] Add your extensions: open each Web Store page in Orbit → site controls (sliders button) → Add to Orbit; then fill "Usage" / "Blocker?" in docs/reference/extensions.md
@@ -178,9 +179,11 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
 
 - 2026-11-05 — **Voice / AI / workspace roadmap M3: Google Drive, read-only** (docs/DRIVE.md). Settings → Integrations → Connect Google Drive (browser, loopback, PKCE; `drive.readonly`; refresh token Keychain-encrypted, access tokens in memory; Disconnect revokes at Google). The command bar shows matching Drive files (name or text, kind, when edited; opens in its Google app). Orbit AI can search Drive and read Docs / Sheets (CSV) / Slides / text files and links the file it read (Settings → AI → Google Drive). Nothing is indexed ahead of time. Keep has no public API for personal accounts; Microsoft 365 / OneDrive needs a Microsoft Graph app registration — documented, not built. Also: nested database transactions now become savepoints (a once-seen flaky "transaction within a transaction" when closing a tab). Tests: e2e against a stand-in Google (connect, command bar, AI reads a file, kept after restart, disconnect revokes); unit for the Drive tools
 
+- 2026-11-05 — **Voice / AI / workspace roadmap M4: Group Tabs and PDFs** (docs/TABS-AND-PDF.md). **Group Tabs** without AI: folders by site, then by shared title words, shown in a preview card (leave out, rename, merge, take tabs out) — nothing moves until accepted; Undo shared with Tidy; a crowded Today suggests it (Not Now quiets it; Settings → General → Tabs turns it off). **PDFs**: Chromium's viewer already reads them; added File → Open PDF… (⌘O), Finder / Dock opening at scoped random `orbit-pdf://` addresses (no `file://` in tabs), **PDF Notes** (one Orbit note per PDF beside it; Add to PDF Notes from a selection; the file is never changed), and **Orbit AI reads PDFs** (PDF.js 6.4.299 text extraction in main, only when asked; Drive PDFs too). Tests: grouping + PDF e2e, unit for the grouping model, PDF text, local registry, menu, Drive
+
 ## In progress
 
-- Voice / AI / workspace roadmap: M4 (tab grouping, PDF) → M5 (homepage widgets, wake word)
+- Voice / AI / workspace roadmap: M5 (homepage widgets, wake-word investigation)
 - Owner dogfooding of Phases 1–4 (see docs/AUDIT.md for what's left), then v0.1.0
 
 ## Decisions made
