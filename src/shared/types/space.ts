@@ -19,7 +19,8 @@ export type SpaceTheme = z.output<typeof spaceThemeSchema>;
 
 export const DEFAULT_THEME: SpaceTheme = {
   mode: 'dark',
-  colors: ['#2b1b4a', '#14102a'],
+  // Sea glass into deep night (the "Quietly Alive" palette); your Spaces keep their own.
+  colors: ['#2f6b70', '#10262d'],
   intensity: 0.7,
   noise: 0.15,
 };

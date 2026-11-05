@@ -8,6 +8,9 @@ export type LayoutWindow = {
   setWindowButtonVisibility(visible: boolean): void;
 };
 
+/** How long the dock (Notes, a docked app) takes to slide in or out (the panel duration). */
+const DOCK_SLIDE_MS = 240;
+
 /** Sidebar width is saved after dragging settles, not on every pixel. */
 const SAVE_WIDTH_DELAY_MS = 300;
 
@@ -34,6 +37,8 @@ export class LayoutEngine {
     private readonly win: LayoutWindow,
     private readonly settings: SettingsRepository,
     private readonly onChange: (layout: Layout) => void,
+    /** Reduce Motion (macOS or Orbit's own setting): no slides. */
+    private readonly reducedMotion?: () => boolean,
   ) {
     this.sidebarVisible = settings.get('sidebar.visible');
     this.sidebarWidth = settings.get('sidebar.width');
@@ -111,10 +116,76 @@ export class LayoutEngine {
 
   /** The Notes panel opened or closed. Not persisted. */
   setNotes(open: boolean, wide = this.notesWide): void {
-    if (open === this.notes && wide === this.notesWide) return;
-    this.notes = open;
+    // Compare with where the dock is heading (it may be sliding the other way right now).
+    if (open === this.notesTarget && wide === this.notesWide) return;
+    const wasShown = this.notes;
+    this.notesTarget = open;
     this.notesWide = wide;
+    if (open) {
+      this.notes = true;
+      if (this.animate() && (!wasShown || this.slideTimer)) {
+        // From closed, or reversing a slide out: on from where it is.
+        if (!wasShown) this.dockProgress = 0;
+        this.slide(1);
+        return;
+      }
+      this.stopSlide();
+      this.dockProgress = 1;
+      this.update();
+      return;
+    }
+    if (wasShown && this.animate()) {
+      // The page grows back over the dock as it slides out, then the dock goes.
+      this.slide(0, () => {
+        this.notes = false;
+        this.dockProgress = 1;
+        this.update();
+      });
+      return;
+    }
+    this.stopSlide();
+    this.notes = false;
+    this.dockProgress = 1;
     this.update();
+  }
+
+  /** Where the dock is heading: open or closed. */
+  private notesTarget = false;
+
+  /** Whether the dock slides (not with Reduce Motion, or Orbit's Motion: Reduced). */
+  private animate(): boolean {
+    return !(this.reducedMotion?.() ?? false);
+  }
+
+  private dockProgress = 1;
+  private slideTimer: ReturnType<typeof setInterval> | null = null;
+
+  /** Eases the dock towards `to` over the panel duration (~60 steps a second). */
+  private slide(to: number, done?: () => void): void {
+    this.stopSlide();
+    const from = this.dockProgress;
+    const start = Date.now();
+    const step = () => {
+      const t = Math.min(1, (Date.now() - start) / DOCK_SLIDE_MS);
+      // ease-out cubic: quick to answer, soft to settle
+      const eased = 1 - (1 - t) ** 3;
+      this.dockProgress = from + (to - from) * eased;
+      if (t >= 1) {
+        this.stopSlide();
+        this.dockProgress = to;
+        if (done) done();
+        else this.update();
+        return;
+      }
+      this.update();
+    };
+    this.slideTimer = setInterval(step, 16);
+    step();
+  }
+
+  private stopSlide(): void {
+    if (this.slideTimer) clearInterval(this.slideTimer);
+    this.slideTimer = null;
   }
 
   /** The dock's edge was dragged: its new width (saved once dragging settles). */
@@ -167,6 +238,7 @@ export class LayoutEngine {
       notes: this.notes,
       notesWide: this.notesWide,
       dockWidth: this.dockWidth,
+      dockProgress: this.dockProgress,
       topTabs: this.topTabs,
     });
   }

@@ -176,6 +176,13 @@ export const THEME_TEMPLATES: {
   look: ThemeLook;
 }[] = [
   {
+    id: 'quiet',
+    name: 'Quietly Alive',
+    hint: 'Sea glass, calm glass, Comfortaa',
+    appearance: 'system',
+    look: { accent: '#2f7d75', font: 'comfortaa', surfaces: 'glass', density: 'comfortable' },
+  },
+  {
     id: 'orbit',
     name: 'Orbit',
     hint: 'Comfortaa, glass, each Space’s colour',

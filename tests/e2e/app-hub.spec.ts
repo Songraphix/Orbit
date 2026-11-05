@@ -58,7 +58,7 @@ test('App Hub: add apps, open one docked beside the page, in a tab or its own wi
     // Clicking it again closes it; the dock gives the room back.
     await win.getByTestId('favorite-tile').click();
     await expect(win.getByTestId('app-panel-header')).toHaveCount(0);
-    expect(await dockOpen(win)).toBe(false);
+    await expect.poll(() => dockOpen(win)).toBe(false); // after it slides out
     // Open as Tab: the page joins Today as it is.
     await win.getByTestId('favorite-tile').click();
     await win.getByTestId('app-panel-tab').click();

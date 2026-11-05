@@ -1,4 +1,4 @@
-import { BrowserWindow, nativeTheme, dialog, screen } from 'electron';
+import { BrowserWindow, nativeTheme, dialog, screen, systemPreferences } from 'electron';
 import type { WebContents, WebContentsView } from 'electron';
 import { APP_NAME } from '@shared/constants';
 import type { RendererEntry } from '@shared/constants';
@@ -296,16 +296,24 @@ export class WindowManager {
       () => tabs?.active?.view.webContents ?? null,
       (state) => broadcaster.sendTo(contents, 'state:find', state),
     );
-    const layout = new LayoutEngine(win, settings, (next) => {
-      tabs?.applyLayout(); // web views move in the same tick the shell is told
-      peek?.fit();
-      library?.fit();
-      notes?.fit();
-      appPanel?.fit();
-      // Pinning the sidebar (or a page going fullscreen) ends the slide-out.
-      if (next.sidebar.visible || next.fullscreen) closeSidebarPeek();
-      broadcaster.sendTo(contents, 'state:layout', next);
-    });
+    const layout = new LayoutEngine(
+      win,
+      settings,
+      (next) => {
+        tabs?.applyLayout(); // web views move in the same tick the shell is told
+        peek?.fit();
+        library?.fit();
+        notes?.fit();
+        appPanel?.fit();
+        // Pinning the sidebar (or a page going fullscreen) ends the slide-out.
+        if (next.sidebar.visible || next.fullscreen) closeSidebarPeek();
+        broadcaster.sendTo(contents, 'state:layout', next);
+      },
+      // The dock doesn't slide with Reduce Motion (the Mac's, or Orbit's own setting).
+      () =>
+        settings.get('ui').motion === 'reduced' ||
+        (systemPreferences.getAnimationSettings?.().prefersReducedMotion ?? false),
+    );
     tabs = new TabManager({
       win,
       store: this.deps.store,

@@ -24,6 +24,9 @@ export type LayoutInput = {
   notesWide?: boolean;
   /** The dock's width as last dragged (setting `dock.width`). */
   dockWidth?: number;
+  /** How far the dock has slid in (0–1, eased) while it opens or closes; 1 when settled. The
+   *  dock keeps its full width and slides in from the window's edge; the page makes room. */
+  dockProgress?: number;
   /** Tabs on top instead of in the sidebar. */
   topTabs?: boolean;
 };
@@ -143,7 +146,8 @@ export function computeLayout(input: LayoutInput): Layout {
   const notesW = input.notes
     ? notesWidth(input.windowWidth, left, inset, input.notesWide, input.dockWidth)
     : 0;
-  const right = input.notes ? notesW + inset * 2 : inset;
+  const progress = Math.min(1, Math.max(0, input.dockProgress ?? 1));
+  const right = input.notes ? inset + (notesW + inset) * progress : inset;
 
   const card = {
     x: left,

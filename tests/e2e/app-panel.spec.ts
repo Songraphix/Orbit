@@ -42,6 +42,18 @@ const freePort = () =>
       server.close(() => resolve(port));
     });
   });
+/** The dock has finished sliding in: its right edge sits 8 px inside the window. */
+const dockSettled = (win: Page) =>
+  expect
+    .poll(async () => {
+      const layout = await invoke<{ notes: { x: number; width: number } | null }>(
+        win,
+        'layout:get',
+      );
+      const width = (await win.evaluate('innerWidth')) as number;
+      return layout.notes ? Math.round(layout.notes.x + layout.notes.width + 8 - width) : null;
+    })
+    .toBe(0);
 const dockWidth = (win: Page) =>
   invoke<{ notes: { width: number } | null }>(win, 'layout:get').then((l) => l.notes?.width ?? 0);
 
@@ -56,6 +68,7 @@ test('the docked panel: drag its edge to resize; the width is kept', async () =>
     await win.getByTestId('favorite-tile').click();
     await expect(win.getByTestId('app-panel-header')).toBeVisible();
     expect(await dockWidth(win)).toBe(380);
+    await dockSettled(win);
 
     // Drag the gap before the panel 120 px to the left: the panel widens by as much.
     const edge = (await win.getByTestId('dock-edge').boundingBox())!;

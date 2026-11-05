@@ -189,6 +189,18 @@ describe('Notes panel layout', () => {
     expect(computeLayout({ ...board, dockWidth: 900 }).notes!.width).toBe(900);
   });
 
+  it('slides in: the dock keeps its width while the page makes room for it', () => {
+    const half = computeLayout({ ...base, windowWidth: 1600, notes: true, dockProgress: 0.5 });
+    const full = computeLayout({ ...base, windowWidth: 1600, notes: true });
+    expect(half.notes!.width).toBe(full.notes!.width);
+    expect(half.card.width).toBeGreaterThan(full.card.width);
+    expect(half.notes!.x).toBe(half.card.x + half.card.width + 8);
+    // Partly past the window's edge (the window clips it): it slides in from the right.
+    expect(half.notes!.x + half.notes!.width).toBeGreaterThan(1600);
+    const start = computeLayout({ ...base, windowWidth: 1600, notes: true, dockProgress: 0 });
+    expect(start.card.width).toBe(computeLayout({ ...base, windowWidth: 1600 }).card.width);
+  });
+
   it('clamps dragged dock widths to 280–1000 whole pixels', () => {
     expect(clampDockWidth(100)).toBe(280);
     expect(clampDockWidth(5000)).toBe(1000);

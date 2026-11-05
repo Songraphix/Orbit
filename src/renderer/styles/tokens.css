@@ -15,7 +15,7 @@
   --sidebar-bg: rgb(27 21 48 / 0.62);
   --sidebar-fg: #ece9f5;
   --sidebar-muted: rgb(236 233 245 / 0.55);
-  --accent: #8b7cf6;
+  --accent: #6fb3aa;
   --tile-bg: rgb(255 255 255 / 0.08);
   --hover: rgb(255 255 255 / 0.06);
   --row-active: rgb(255 255 255 / 0.16);
@@ -193,9 +193,10 @@ body {
   --radius-capsule: 999px;
 }
 
-/* The accent used for fills under white text (buttons, the on state of switches). */
+/* The accent used for fills under white text (buttons, the on state of switches): sea glass,
+   deep enough for white text (4.6:1). Settings → Appearance → Accent replaces it. */
 :root {
-  --accent-fill: #5b5bd6;
+  --accent-fill: #2f7d75;
 }
 
 /* ── Switch (Toggle): a real checkbox drawn as a macOS-style switch ──────────────────── */
