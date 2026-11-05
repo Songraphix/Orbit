@@ -54,6 +54,10 @@ export function registerProfileHandlers(
     windowFor(sender.webContentsId).overlay.toggleOrbitMenu(anchor);
   });
 
+  router.handle('orbitmenu:close', (_input, { sender }) => {
+    windowFor(sender.webContentsId).overlay.closeOrbitMenu();
+  });
+
   router.handle('orbitmenu:get', (_input, { sender }) => {
     const { store, tabs } = windowFor(sender.webContentsId);
     const sync = deps.syncStatus?.() ?? null;

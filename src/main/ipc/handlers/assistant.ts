@@ -43,6 +43,7 @@ export function registerAssistantHandlers(
     if (input.research !== undefined) assistant.attachResearch(controller, input.research);
     if (input.tabs !== undefined) assistant.setTabs(controller, input.tabs);
     if (input.project !== undefined) assistant.setProject(controller, input.project);
+    if (input.work !== undefined) assistant.setWork(controller, input.work);
   });
   router.handle('assistant:source', ({ messageId, n }, { sender }) =>
     assistant.showSource(panelWindow(sender.webContentsId), messageId, n),

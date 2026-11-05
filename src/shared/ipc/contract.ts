@@ -1304,6 +1304,12 @@ export const contract = {
     output: z.void(),
     surfaces: ['shell'],
   },
+  /** The Orbit menu closes (a click outside it, or Esc). */
+  'orbitmenu:close': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['overlay'],
+  },
   /** What the Orbit menu lists: your Spaces and sync's state. */
   'orbitmenu:get': {
     input: z.object({}).strict(),
@@ -1810,6 +1816,8 @@ export const contract = {
         tabs: z.array(z.string().max(64)).max(4).optional(),
         /** A project to share (null: stop sharing it). */
         project: z.string().max(64).nullable().optional(),
+        /** Let this conversation look at and change your projects and tasks. */
+        work: z.boolean().optional(),
       })
       .strict(),
     output: z.void(),

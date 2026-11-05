@@ -116,6 +116,8 @@ export const assistantStateSchema = z.object({
   model: z.string(),
   /** Orbit AI may look at and change your projects and tasks (Settings → AI). */
   workAccess: z.boolean().default(false),
+  /** This conversation uses your projects and tasks (off until you add them; owner request). */
+  workOn: z.boolean().default(false),
   /** Tasks Claude suggested, waiting for you to pick and add them. */
   tasks: z
     .object({

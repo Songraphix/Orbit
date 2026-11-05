@@ -1,3 +1,6 @@
+import { useCanvas } from '../ui/canvas-store';
+import { Wallpaper } from '../ui/Wallpaper';
+import type { CanvasState } from '@shared/types/canvas';
 import {
   CircleUserRound,
   Info,
@@ -52,6 +55,7 @@ const ENGINES: { value: UserSettings['searchEngine']; label: string }[] = [
 /** orbit://settings (Phase 4): archive, sleeping tabs, search engine, history. */
 /** orbit://settings, or orbit://settings/<section> to open on one (the profile menu's links). */
 export function SettingsPage({ section = null }: { section?: string | null }) {
+  const canvas = useCanvas();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [cleared, setCleared] = useState(false);
 
@@ -69,11 +73,18 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
   if (!settings) return null;
   return (
     <div
-      className="ui-light flex min-h-screen bg-[var(--surface-page)] text-neutral-800"
+      className={`ui-light relative flex min-h-screen text-neutral-800 ${
+        canvas
+          ? canvas.tone === 'dark'
+            ? 'ui-glass-dark'
+            : 'ui-glass-light'
+          : 'bg-[var(--surface-page)]'
+      }`}
       data-testid="settings-page"
     >
+      {canvas && <SettingsCanvas canvas={canvas} />}
       <SettingsNav />
-      <main className="min-w-0 flex-1 px-5 pt-9 pb-24 md:px-10">
+      <main className="relative min-w-0 flex-1 px-5 pt-9 pb-24 md:px-10">
         <div className="mx-auto max-w-2xl">
           <AccountSection />
           <Section
@@ -702,6 +713,31 @@ function AiKeyRow(props: { hasKey: boolean; canStore: boolean; onChange: () => v
   );
 }
 
+/**
+ * Settings on the canvas: the window's wallpaper behind it, under a soft veil so headings
+ * read (the groups are glass cards on top). Your own image is fetched for this page.
+ */
+function SettingsCanvas({ canvas }: { canvas: CanvasState }) {
+  const [image, setImage] = useState<string | null>(null);
+  const custom = canvas.wallpaper.kind === 'custom';
+  useEffect(() => {
+    if (!custom) return;
+    void window.orbit.invoke('canvas:get', {}).then((c) => setImage(c.customImage));
+  }, [custom, canvas.wallpaper]);
+  return (
+    <div className="pointer-events-none fixed inset-0" aria-hidden>
+      <Wallpaper
+        choice={canvas.wallpaper}
+        customImage={custom ? image : null}
+        look={canvas.look}
+        light={canvas.tone === 'light'}
+        testId="settings-wallpaper"
+      />
+      <div className={`fixed inset-0 ${canvas.tone === 'dark' ? 'bg-black/30' : 'bg-white/35'}`} />
+    </div>
+  );
+}
+
 const NAV = [
   { id: 'account', label: 'Account', icon: <CircleUserRound size={16} /> },
   { id: 'general', label: 'General', icon: <Settings size={16} /> },
@@ -737,10 +773,10 @@ function SettingsNav() {
   }, []);
   return (
     <nav
-      className="sticky top-0 flex h-screen w-[60px] shrink-0 flex-col gap-0.5 border-r border-black/[0.06] bg-white/70 px-2 pt-9 backdrop-blur-xl md:w-56 md:px-3"
+      className="mat-deep sticky top-2.5 z-10 m-2.5 mr-0 flex h-[calc(100vh-20px)] w-[60px] shrink-0 flex-col gap-0.5 overflow-y-auto rounded-[22px] px-2 pt-9 md:w-56 md:px-3"
       aria-label="Settings"
     >
-      <div className="mb-4 flex items-center gap-2 px-2.5 text-[15px] font-semibold">
+      <div className="mb-4 flex items-center gap-2 px-2.5 text-[15px] font-semibold text-[var(--fg)]">
         <Settings size={17} /> <span className="hidden md:inline">Settings</span>
       </div>
       {NAV.map((item) => (
@@ -756,8 +792,8 @@ function SettingsNav() {
           title={item.label}
           className={`press flex h-9 items-center gap-2.5 rounded-[9px] px-2.5 text-left text-[13.5px] ${
             active === item.id
-              ? 'bg-[var(--accent-fill)] font-medium text-on-accent shadow-[0_1px_2px_rgb(0_0_0/0.15)]'
-              : 'text-neutral-600 hover:bg-black/[0.05]'
+              ? 'mat-sel font-medium text-[var(--fg)]'
+              : 'text-[var(--fg-muted)] hover:bg-[var(--glass-hover)] hover:text-[var(--fg)]'
           }`}
           data-testid="settings-nav"
           data-section={item.id}
@@ -926,7 +962,7 @@ const SHORTCUTS: [string, string][] = [
   ['Find in page', '⌘F'],
   ['Zoom in / out / reset', '⌘+ / ⌘− / ⌘0'],
   ['Reload / hard reload', '⌘R / ⇧⌘R'],
-  ['Back / forward', '⌘[ / ⌘]'],
+  ['Back / forward', '⌘[ / ⌘]  ·  ⇧← / ⇧→ (outside text boxes)'],
   ['Developer tools', '⌥⌘I'],
   ['Settings', '⌘,'],
 ];

@@ -1254,7 +1254,8 @@ void app.whenReady().then(() => {
     return { x: bounds.x, y: bounds.y, windowWidth, windowHeight };
   });
   router.handle('canvas:get', (_input, { sender }) =>
-    senders.surfaceOf(sender) === 'internal'
+    // Orbit's pages don't draw the canvas — except Settings, which sits on it.
+    senders.surfaceOf(sender) === 'internal' && !windowManager.settingsFor(sender.webContentsId)
       ? { ...canvas.state, customImage: null }
       : canvas.state,
   );
@@ -1916,8 +1917,66 @@ void app.whenReady().then(() => {
     const role = el.getAttribute && el.getAttribute('role');
     return role === 'textbox' || role === 'searchbox' || role === 'combobox';
   })()`;
+  // Shift+← / Shift+→ (owner request): back and forward without reaching for the toolbar —
+  // except in a text box, where they select text as usual (the key is handed back untouched).
+  const replaying = new Set<number>();
+  const historyKey = (
+    contents: Electron.WebContents,
+    input: Electron.Input,
+    event: Electron.Event,
+  ): boolean => {
+    if (
+      input.type !== 'keyDown' ||
+      (input.key !== 'ArrowLeft' && input.key !== 'ArrowRight') ||
+      !input.shift ||
+      input.meta ||
+      input.control ||
+      input.alt ||
+      contents.id === voiceHostId ||
+      windowManager.settingsFor(contents.id)
+    ) {
+      return false;
+    }
+    if (replaying.delete(contents.id)) return true; // our own replay: let it through
+    event.preventDefault();
+    const back = input.key === 'ArrowLeft';
+    void contents
+      .executeJavaScriptInIsolatedWorld(1004, [{ code: EDITABLE }])
+      .catch(() => true)
+      .then((editable) => {
+        if (editable) {
+          replaying.add(contents.id);
+          setTimeout(() => replaying.delete(contents.id), 200);
+          contents.sendInputEvent({
+            type: 'keyDown',
+            keyCode: back ? 'Left' : 'Right',
+            modifiers: ['shift'],
+          });
+          contents.sendInputEvent({
+            type: 'keyUp',
+            keyCode: back ? 'Left' : 'Right',
+            modifiers: ['shift'],
+          });
+          return;
+        }
+        // Orbit's own chrome (the shell, the overlay, the side panel) moves the page on screen.
+        const controller = windowOfSender(contents.id);
+        const chrome =
+          controller &&
+          (contents.id === controller.win.webContents.id ||
+            contents.id === controller.overlay.view.webContents.id ||
+            windowManager.notesPanelFor(contents.id) !== null);
+        const target = chrome ? controller.tabs.active?.view.webContents : contents;
+        if (!target || target.isDestroyed()) return;
+        const history = target.navigationHistory;
+        if (back && history.canGoBack()) history.goBack();
+        else if (!back && history.canGoForward()) history.goForward();
+      });
+    return true;
+  };
   app.on('web-contents-created', (_event, contents) => {
     contents.on('before-input-event', (event, input) => {
+      if (historyKey(contents, input, event)) return;
       if (
         input.type !== 'keyDown' ||
         input.key !== ' ' ||

@@ -169,6 +169,15 @@ export const WALLPAPER_CSS: Record<BuiltinWallpaperId, string> = {
 export const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E\")";
 
+/** A built-in's small picture for galleries: a photo's thumbnail (the whole picture, cropped
+ *  to the tile), or the CSS itself for the drawn ones. */
+export function wallpaperThumb(id: BuiltinWallpaperId): string {
+  const file = builtinPhoto(id);
+  return file
+    ? `url("${PHOTO_BASE}thumbs/${file}") center / cover no-repeat, ${PHOTO_AVERAGE[id] ?? '#1a1d2e'}`
+    : WALLPAPER_CSS[id];
+}
+
 /** Whether a background is a photograph (your image, Unsplash, a built-in photo): it gets the
  *  fit, position and veil adjustments. */
 export const isPhotoChoice = (c: WallpaperChoice) =>

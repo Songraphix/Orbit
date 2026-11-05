@@ -5,9 +5,10 @@ import type { ReactNode } from 'react';
 
 export function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="mt-6">
-      <h3 className="mb-2 px-1 text-subheading text-neutral-500">{title}</h3>
-      <div className="divide-y divide-neutral-100 rounded-[var(--radius-card)] border border-black/[0.06] bg-white shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
+    <section className="relative mt-6 focus-within:z-20">
+      <h3 className="mb-2 px-1 text-subheading text-neutral-600">{title}</h3>
+      {/* A glass card on the wallpaper (UI spec §13: Settings in the new design). */}
+      <div className="mat-deep divide-y divide-[var(--glass-border)] rounded-[20px]">
         {children}
       </div>
     </section>

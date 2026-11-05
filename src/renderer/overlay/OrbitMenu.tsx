@@ -31,7 +31,7 @@ export function OrbitMenu({ anchor }: { anchor: Rect }) {
   const [view, setView] = useState<OrbitMenuView | null>(null);
   const [spacesOpen, setSpacesOpen] = useState(false);
   const list = useRef<HTMLDivElement>(null);
-  const close = () => void invoke('orbitmenu:open', { anchor });
+  const close = () => void invoke('orbitmenu:close', {});
   const run = (action: OrbitMenuAction, spaceId?: string) =>
     void invoke('orbitmenu:run', spaceId ? { action, spaceId } : { action });
 

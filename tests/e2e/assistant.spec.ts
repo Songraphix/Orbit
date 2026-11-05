@@ -194,6 +194,9 @@ test('Orbit AI as a coworker: it looks at today’s tasks, adds one, and says wh
   await addKey(app);
   await win.getByTestId('toolbar-assistant').click();
   const panel = await pageWith(app, '#/notes/panel/assistant');
+  // A conversation starts plain; + Projects & tasks lets this one use them.
+  await expect(panel.getByTestId('assistant-work-access')).toHaveCount(0);
+  await panel.getByTestId('assistant-attach-work').click();
   await expect(panel.getByTestId('assistant-work-access')).toBeVisible();
   const today = await panel.evaluate(() => {
     const d = new Date();

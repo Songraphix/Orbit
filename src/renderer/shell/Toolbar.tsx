@@ -139,7 +139,7 @@ export function Toolbar(props: {
       >
         <ToolbarButton
           label="Back"
-          keys="⌘["
+          keys="⇧←"
           anim="nudge-left"
           disabled={!tab?.canGoBack}
           onClick={() => navigate('back')}
@@ -149,7 +149,7 @@ export function Toolbar(props: {
         </ToolbarButton>
         <ToolbarButton
           label="Forward"
-          keys="⌘]"
+          keys="⇧→"
           anim="nudge-right"
           disabled={!tab?.canGoForward}
           onClick={() => navigate('forward')}

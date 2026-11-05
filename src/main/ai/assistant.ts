@@ -85,6 +85,8 @@ type Session = {
   tabs: string[];
   /** A project the user chose to share (brief M8). */
   projectId: string | null;
+  /** Projects and tasks are in play for this conversation (added by the user; off at first). */
+  work: boolean;
   abort: AbortController | null;
   /** The page the panel last showed (to send updates only when it changes). */
   pageKey: string;
@@ -146,6 +148,7 @@ export class AssistantService {
         tasks: null,
         tabs: [],
         projectId: null,
+        work: false,
         abort: null,
         pageKey: '',
       };
@@ -193,6 +196,7 @@ export class AssistantService {
       blocked: this.deps.ai.blocked(),
       model: this.deps.ai.prefs.model,
       workAccess: this.deps.work !== undefined && this.deps.ai.prefs.workAccess,
+      workOn: this.session(controller).work,
       tasks: session.tasks,
       tabs: session.tabs.flatMap((id) => {
         const t = controller.tabs.get(id);
@@ -243,6 +247,11 @@ export class AssistantService {
   /** Share a project (or stop): its brief, tasks and notes go with the next questions. */
   setProject(controller: WindowController, projectId: string | null): void {
     this.session(controller).projectId = projectId;
+    this.push(controller);
+  }
+  /** + Projects & tasks (or ×): this conversation may look at and change them. */
+  setWork(controller: WindowController, on: boolean): void {
+    this.session(controller).work = on;
     this.push(controller);
   }
 
@@ -487,7 +496,8 @@ export class AssistantService {
     // Orbit AI as a coworker: its tools for your projects and tasks, and for your browser, as
     // far as you've allowed them (Settings → AI).
     const prefs = this.deps.ai.prefs;
-    const work = prefs.workAccess ? this.deps.work : undefined;
+    // Only when this conversation has them (+ Projects & tasks): a plain chat stays plain.
+    const work = prefs.workAccess && session.work ? this.deps.work : undefined;
     // Sites named anywhere in what the user wrote in this conversation open without asking.
     const userWords = session.messages
       .flatMap((m) => (m.role === 'user' ? [m.text] : []))

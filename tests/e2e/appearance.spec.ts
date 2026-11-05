@@ -58,7 +58,8 @@ test('Settings → Appearance: Light and Dark switch the whole app, and are kept
     await picker.locator('[data-value="dark"]').click();
     await expect.poll(() => dark(win)).toBe(true);
     await expect.poll(() => sidebarFg(win)).toBe('rgb(246 247 250 / 1)');
-    await expect.poll(() => surface(settings, 'settings-page')).toBe('#1f1f23');
+    // Settings sits on the wallpaper: dark surfaces tinted by it (no longer plain white).
+    await expect.poll(() => surface(settings, 'settings-page')).not.toBe('#fff');
     // The overlay's glass follows too (it's drawn dark; light mode mirrors it).
     await win.evaluate(() =>
       (

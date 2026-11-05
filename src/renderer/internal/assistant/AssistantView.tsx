@@ -680,16 +680,27 @@ function Composer({ state }: { state: AssistantState }) {
             />
           )
         )}
-        {state.workAccess && (
-          <span
-            className="flex h-6 items-center gap-1 rounded-full bg-[var(--work-accent-soft)] px-2 text-[11.5px] font-medium text-[var(--work-accent-text)]"
-            title="Orbit AI can look at and change your projects and tasks when you ask. Turn it off in Settings → AI."
-            data-testid="assistant-work-access"
-          >
-            <FolderKanban size={12} />
-            Projects & tasks
-          </span>
-        )}
+        {state.workAccess &&
+          (state.workOn ? (
+            <Chip
+              icon={<FolderKanban size={12} />}
+              label="Projects & tasks"
+              onRemove={() => void invoke('assistant:attach', { work: false })}
+              testId="assistant-work-access"
+              attached
+            />
+          ) : (
+            <button
+              type="button"
+              className="press flex h-6 items-center gap-1 rounded-full border border-dashed border-[var(--note-muted)] px-2 text-[11.5px] text-[var(--note-muted)] hover:border-[var(--work-accent)] hover:text-[var(--work-accent-text)]"
+              onClick={() => void invoke('assistant:attach', { work: true })}
+              title="Let Orbit AI look at and change your projects and tasks in this conversation"
+              data-testid="assistant-attach-work"
+            >
+              <Plus size={12} />
+              Projects & tasks
+            </button>
+          ))}
         {state.research ? (
           <Chip
             icon={<BookMarked size={12} />}

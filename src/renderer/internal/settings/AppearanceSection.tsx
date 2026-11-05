@@ -15,7 +15,7 @@ import type { UserSettings } from '@shared/settings';
 import { useUiPrefs } from '../../ui/prefs-store';
 import { useCanvas } from '../../ui/canvas-store';
 import { BUILTIN_WALLPAPERS } from '@shared/types/newtab';
-import { WALLPAPER_CSS } from '@shared/wallpapers';
+import { wallpaperThumb } from '@shared/wallpapers';
 import { Segmented } from '../../ui/Segmented';
 import { Toggle } from '../../ui/Toggle';
 import { Group, Row, Section } from './parts';
@@ -67,7 +67,7 @@ export function AppearanceSection(props: {
       <Group title="Wallpaper and glass">
         <div className="p-3" data-testid="ui-wallpapers">
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-            {BUILTIN_WALLPAPERS.slice(0, 12).map((w) => {
+            {BUILTIN_WALLPAPERS.map((w) => {
               const on = canvas?.wallpaper.kind === 'builtin' && canvas.wallpaper.id === w.id;
               return (
                 <button
@@ -86,7 +86,7 @@ export function AppearanceSection(props: {
                       ? 'shadow-[0_0_0_2px_var(--accent-fill,#2f7d75),0_0_0_4px_white]'
                       : 'hover:brightness-110'
                   }`}
-                  style={{ background: WALLPAPER_CSS[w.id], backgroundSize: 'cover' }}
+                  style={{ background: wallpaperThumb(w.id) }}
                   data-testid="ui-wallpaper"
                   data-value={w.id}
                 />
@@ -94,7 +94,8 @@ export function AppearanceSection(props: {
             })}
           </div>
           <p className="mt-2 text-[12px] text-neutral-500">
-            Your own image, colours and Unsplash photos are in the Homepage’s Customize panel.
+            Your own image, colours, gradients and Unsplash photos are in the Homepage’s Customize
+            panel.
           </p>
         </div>
         <Row

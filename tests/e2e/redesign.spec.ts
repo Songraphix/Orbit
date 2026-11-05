@@ -249,3 +249,77 @@ test('right-click the toolbar or a tab: switch between sidebar and horizontal ta
     await server.close();
   }
 });
+
+test('a click outside the Orbit menu (or Esc) closes it, and Orbit takes clicks again', async () => {
+  const { app, win, close } = await launchOrbit();
+  try {
+    const overlay = await pageWith(app, '/overlay/');
+    await win.getByTestId('orbit-menu-button').click();
+    await expect(overlay.getByTestId('orbit-menu')).toBeVisible();
+    // Anywhere else on the window: the menu goes, and the overlay with it.
+    await overlay.getByTestId('orbit-menu-backdrop').click({ position: { x: 900, y: 500 } });
+    await expect(overlay.getByTestId('orbit-menu')).toHaveCount(0);
+    await expect
+      .poll(() =>
+        app.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()[0]!.contentView.children.at(-1)!.getVisible(),
+        ),
+      )
+      .toBe(false);
+    // Esc too.
+    await win.getByTestId('orbit-menu-button').click();
+    await expect(overlay.getByTestId('orbit-menu')).toBeVisible();
+    await overlay.keyboard.press('Escape');
+    await expect(overlay.getByTestId('orbit-menu')).toHaveCount(0);
+  } finally {
+    await close();
+  }
+});
+
+test('Shift+← and Shift+→ go back and forward; in a text box they select text as usual', async () => {
+  const server = await startTestServer();
+  const { app, win, close } = await launchOrbit();
+  const press = (fragment: string, key: 'Left' | 'Right') =>
+    app.evaluate(
+      ({ webContents }, [f, k]) => {
+        const c = webContents.getAllWebContents().find((w) => w.getURL().includes(f!))!;
+        c.focus();
+        c.sendInputEvent({ type: 'keyDown', keyCode: k!, modifiers: ['shift'] });
+        c.sendInputEvent({ type: 'keyUp', keyCode: k!, modifiers: ['shift'] });
+      },
+      [fragment, key] as const,
+    );
+  try {
+    await invoke(win, 'tabs:create', { url: server.url('/one') });
+    await expect(win.getByTestId('toolbar-address')).toContainText('Page One');
+    const one = app.windows().find((p) => p.url().includes('/one'))!;
+    await one.click('#next');
+    await expect(win.getByTestId('toolbar-address')).toContainText('Page Three');
+
+    await press('/three', 'Left');
+    await expect(win.getByTestId('toolbar-address')).toContainText('Page One');
+    await press('/one', 'Right');
+    await expect(win.getByTestId('toolbar-address')).toContainText('Page Three');
+    // From Orbit's own toolbar (focus in the shell): the page on screen goes back.
+    await press('/shell/', 'Left');
+    await expect(win.getByTestId('toolbar-address')).toContainText('Page One');
+
+    // In the Homepage's search box: the keys stay with the text.
+    await invoke(win, 'tabs:create', {});
+    const home = await pageWith(app, '#/newtab');
+    await home.getByTestId('newtab-search').fill('hello');
+    await press('#/newtab', 'Left');
+    await expect
+      .poll(() =>
+        home.getByTestId('newtab-search').evaluate((el) => {
+          const input = el as unknown as { selectionStart: number; selectionEnd: number };
+          return input.selectionEnd - input.selectionStart;
+        }),
+      )
+      .toBe(1);
+    await expect(home.getByTestId('newtab')).toBeVisible(); // still the Homepage
+  } finally {
+    await close();
+    await server.close();
+  }
+});

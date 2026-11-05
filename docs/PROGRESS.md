@@ -202,6 +202,14 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
   - **New prefs:** where new apps open (beside the page by default), rail or grid, and the app panel's side. Appearance also gains wallpaper picks, Match the wallpaper, glass level and photo dimming; with Match off, Light / Dark decides the glass.
   - **Tests:** layout unit tests rewritten for the new geometry; e2e updated where the design moved things (toolbar row, pane headers, rail ids); a new e2e covers the left app panel.
 
+- 2026-11-05 — Owner requests after trying the redesign:
+  - **Orbit menu that wouldn't close:** its click-outside and Esc used a channel the overlay may not call, so the menu stayed open and its invisible backdrop took every click — the "stiff" browser. Fixed with its own close channel; every channel each surface calls was then checked against what it may call.
+  - **Shift+← / Shift+→** go back and forward (focused page, or the page on screen from Orbit's own chrome); in a text box they still select text.
+  - **Orbit AI starts each conversation plain:** "+ Projects & tasks" adds them only when you want; Settings → AI still allows or forbids it.
+  - **Settings in the new design:** the wallpaper behind it, a floating glass nav, and glass cards in the wallpaper's tone.
+  - **Wallpapers in the gallery:** the owner's eight now have their own section in Customize → Background (thumbnails that show the whole picture), and Settings → Appearance lists every wallpaper.
+  - **Right-click the toolbar, tab row, rail or any tab** to switch between sidebar and horizontal tabs.
+
 ## In progress
 
 - Owner review of the redesign in the running app (light and dark); v0.1.0 after dogfooding

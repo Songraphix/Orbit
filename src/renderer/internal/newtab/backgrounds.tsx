@@ -5,7 +5,7 @@ import { backgroundKey, DEFAULT_LOOK } from '@shared/backgrounds';
 import type { BackgroundLook, Rotation, UnsplashPhoto } from '@shared/backgrounds';
 import { BUILTIN_WALLPAPERS } from '@shared/types/newtab';
 import type { NewTabState, WallpaperChoice } from '@shared/types/newtab';
-import { backgroundCss, isPhotoChoice, WALLPAPER_CSS } from '@shared/wallpapers';
+import { backgroundCss, isPhotoChoice, wallpaperThumb } from '@shared/wallpapers';
 
 const invoke = window.orbit.invoke;
 
@@ -126,7 +126,13 @@ export function BackgroundSection(props: {
                 {state.favorites.map((f) => (
                   <Tile
                     key={backgroundKey(f)}
-                    background={backgroundCss(f, state.customImage)}
+                    background={
+                      f.kind === 'builtin'
+                        ? wallpaperThumb(f.id)
+                        : f.kind === 'custom' || f.kind === 'unsplash'
+                          ? `${backgroundCss(f, state.customImage)} center / cover no-repeat`
+                          : backgroundCss(f, state.customImage)
+                    }
                     selected={selected(f)}
                     onClick={() => props.onPreview(f)}
                     testId="background-favorite"
@@ -135,15 +141,32 @@ export function BackgroundSection(props: {
               </Grid>
             </>
           )}
-          <SubLabel>Orbit</SubLabel>
-          <Grid>
-            {BUILTIN_WALLPAPERS.map(({ id, name }) => {
+          {/* The owner's wallpapers first, as big tiles (UI spec §4). */}
+          <SubLabel>Wallpapers</SubLabel>
+          <Grid cols={2}>
+            {BUILTIN_WALLPAPERS.filter((w) => 'photo' in w).map(({ id, name }) => {
               const c: WallpaperChoice = { kind: 'builtin', id };
               return (
                 <Tile
                   key={id}
                   label={name}
-                  background={WALLPAPER_CSS[id]}
+                  background={wallpaperThumb(id)}
+                  selected={selected(c)}
+                  onClick={() => props.onPreview(c)}
+                  testId={`wallpaper-${id}`}
+                />
+              );
+            })}
+          </Grid>
+          <SubLabel>Atmospheres and colour fields</SubLabel>
+          <Grid>
+            {BUILTIN_WALLPAPERS.filter((w) => !('photo' in w)).map(({ id, name }) => {
+              const c: WallpaperChoice = { kind: 'builtin', id };
+              return (
+                <Tile
+                  key={id}
+                  label={name}
+                  background={wallpaperThumb(id)}
                   selected={selected(c)}
                   onClick={() => props.onPreview(c)}
                   testId={`wallpaper-${id}`}
