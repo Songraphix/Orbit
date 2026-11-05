@@ -19,6 +19,8 @@ export const tabStateSchema = z.object({
   /** The page failed to load (offline, unknown address, refused…): Chromium's net error code
    *  and the address it tried. The shell shows a card with Try Again instead of a blank page. */
   loadError: z.object({ code: z.number().int(), url: z.string() }).nullable().default(null),
+  /** The page is a PDF in Chromium's viewer (roadmap R2 M4: PDF Notes, reading it for AI). */
+  pdf: z.boolean().default(false),
   /** The site is in Developer Mode (F-30): full URL, DevTools button, error count. */
   devMode: z.boolean(),
   /** Console errors since the page loaded (shown in Developer Mode). */

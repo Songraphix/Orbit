@@ -107,8 +107,57 @@ const jumpScript = (index: number) => `((i) => {
 
 const KINDS = new Set(['heading', 'text', 'item', 'quote', 'code']);
 
-/** Reads the page in `contents`: its title, address and readable passages (null if it can't). */
+/** A tab showing a PDF (Chromium's viewer): its document's type says so. */
+async function isPdf(contents: WebContents): Promise<boolean> {
+  try {
+    return (
+      (await contents.executeJavaScriptInIsolatedWorld(READER_WORLD, [
+        { code: 'document.contentType' },
+      ])) === 'application/pdf'
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** A PDF tab's text, from the file itself (with the tab's session: its cookies and logins). */
+async function readPdf(contents: WebContents): Promise<ExtractedPage | null> {
+  const url = contents.getURL();
+  try {
+    const response = await contents.session.fetch(url);
+    if (!response.ok) return null;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const { pdfText } = await import('../pdf/text');
+    const text = await pdfText(bytes);
+    const passages: PagePassage[] = [];
+    text.pages.forEach((page, i) => {
+      if (!page) return;
+      if (text.pages.length > 1) passages.push({ kind: 'heading', text: `Page ${i + 1}` });
+      for (const paragraph of page.split(/\n{2,}/)) {
+        const clean = paragraph.replace(/\s*\n\s*/g, ' ').trim();
+        if (clean) passages.push({ kind: 'text', text: clean });
+      }
+    });
+    const limited = limitPassages(passages);
+    const file = decodeURIComponent(new URL(url).pathname.split('/').pop() ?? '') || 'PDF';
+    return {
+      title: (text.title ?? contents.getTitle()) || file,
+      url,
+      description: `PDF, ${text.numPages} page${text.numPages === 1 ? '' : 's'}`,
+      site: url.startsWith('orbit-pdf:') ? 'this Mac' : new URL(url).hostname || 'PDF',
+      passages: limited.passages,
+      truncated: limited.truncated || text.truncated,
+      anchored: false,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Reads the page in `contents`: its title, address and readable passages (null if it can't).
+ *  A PDF is read from its file (PDF.js), not the viewer. */
 export async function readPage(contents: WebContents): Promise<ExtractedPage | null> {
+  if (await isPdf(contents)) return readPdf(contents);
   let raw: unknown;
   try {
     raw = await contents.executeJavaScriptInIsolatedWorld(READER_WORLD, [{ code: READ_PAGE }]);

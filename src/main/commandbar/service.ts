@@ -155,6 +155,12 @@ export const COMMANDS: readonly CommandDef[] = [
     shortcut: '⌥⌘R',
   },
   {
+    id: 'open-pdf',
+    title: 'Open PDF…',
+    keywords: ['pdf', 'file', 'document', 'read', 'open'],
+    shortcut: '⌘O',
+  },
+  {
     id: 'group-tabs',
     title: 'Group Tabs…',
     keywords: ['folders', 'organise', 'organize', 'tidy', 'sort', 'group', 'clean'],

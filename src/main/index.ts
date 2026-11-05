@@ -9,6 +9,7 @@ import {
   nativeTheme,
   net,
   powerMonitor,
+  protocol,
   Notification,
   safeStorage,
   session,
@@ -57,7 +58,7 @@ import type { Cipher } from './ai/key-store';
 import { AIService, TIDY_MODEL } from './ai/service';
 import { AssistantService } from './ai/assistant';
 import { registerAssistantHandlers } from './ipc/handlers/assistant';
-import { noteFromMarkdown } from './notes/from-markdown';
+import { appendMarkdown, noteFromMarkdown } from './notes/from-markdown';
 import type { PageMenuRequest } from './tabs/context-menu';
 import { TidyService } from './ai/tidy';
 import { feedInputUrl, githubRepo } from './live-folders/model';
@@ -101,6 +102,7 @@ import { registerAppHubHandlers } from './ipc/handlers/apps';
 import { browserToolDeps } from './ai/browser-deps';
 import { VoiceService } from './voice/service';
 import { DriveService } from './drive/service';
+import { LocalPdfs, PDF_SCHEME } from './pdf/local-files';
 import { driveKind, editedLabel } from '@shared/drive';
 import { registerDriveHandlers } from './ipc/handlers/drive';
 import {
@@ -167,6 +169,14 @@ process.on('unhandledRejection', (reason) => console.error('[orbit] unhandled re
 let windows: WindowManager | null = null;
 let floatingNotes: FloatingNotes | null = null;
 let captureService: CaptureService | null = null;
+// PDFs from this Mac open at orbit-pdf:// addresses (Chromium's PDF viewer shows them).
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'orbit-pdf',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+  },
+]);
+
 // Tests only: Chromium's fake microphone plays a recording (voice e2e), and nothing asks.
 if (process.env['ORBIT_TEST_FAKE_MIC']) {
   app.commandLine.appendSwitch('use-fake-device-for-media-stream');
@@ -236,7 +246,17 @@ function applyLittleShortcut(enabled: boolean): void {
   if (enabled) globalShortcut.register(LITTLE_SHORTCUT, openEmptyLittle);
 }
 
+/** PDFs from Finder or the Dock (Open With → Orbit, dropping on the icon). */
+const pendingPdfs: string[] = [];
+let openPdfFile: ((path: string) => void) | null = null;
+
 app.on('will-finish-launching', () => {
+  app.on('open-file', (event, path) => {
+    if (!/\.pdf$/i.test(path)) return;
+    event.preventDefault();
+    if (openPdfFile) openPdfFile(path);
+    else pendingPdfs.push(path);
+  });
   app.on('open-url', (event, url) => {
     event.preventDefault();
     if (!acceptExternalUrl(url)) return;
@@ -460,6 +480,45 @@ function pageMenuRequest(
       controller.notes.open(id);
       return;
     }
+    case 'pdf-note':
+    case 'pdf-notes': {
+      // Orbit's notes on a PDF (roadmap R2 M4): one note per PDF, beside it; quotes are added
+      // to it. They're Orbit's — the PDF file itself is never changed.
+      if (!persistence || !page.url) return;
+      const notes = persistence.notes;
+      const key = page.url.split('#')[0]!;
+      const map = { ...persistence.settings.get('pdf.notes') };
+      let id = map[key];
+      if (!id || notes.title(id) === null) {
+        const name = page.title.trim() || decodeURIComponent(key.split('/').pop() ?? '') || 'PDF';
+        const where = /^https?:/i.test(key)
+          ? `[${name.replace(/[[\]]/g, '')}](${key})`
+          : `${name} (on this Mac)`;
+        const note = noteFromMarkdown(`Notes · ${name}`, `On ${where}`);
+        id = notes.create();
+        notes.save(id, note.doc, note.text);
+        map[key] = id;
+        const keys = Object.keys(map);
+        for (const old of keys.slice(0, Math.max(0, keys.length - 500))) delete map[old];
+        persistence.settings.set('pdf.notes', map);
+      }
+      if (request.kind === 'pdf-note' && request.text.trim()) {
+        const current = notes.get(id);
+        if (current) {
+          const quote = request.text
+            .trim()
+            .split('\n')
+            .map((line) => `> ${line}`)
+            .join('\n');
+          const next = appendMarkdown(current.doc, current.text, quote);
+          notes.save(id, next.doc, next.text);
+        }
+        toast(controller, 'Added to PDF Notes');
+      }
+      controller.notes.open(id);
+      controller.notes.refresh();
+      return;
+    }
     case 'ask-page':
       assistantService?.open(controller, { attachPage: true });
       return;
@@ -594,6 +653,18 @@ function runCommand(controller: WindowController, commandId: string): void {
       return;
     case 'group-tabs':
       openGrouping?.(controller);
+      return;
+    case 'open-pdf':
+      void dialog
+        .showOpenDialog(controller.win, {
+          title: 'Open PDF',
+          filters: [{ name: 'PDF', extensions: ['pdf'] }],
+          properties: ['openFile', 'multiSelections'],
+        })
+        .then(({ canceled, filePaths }) => {
+          if (canceled) return;
+          for (const path of filePaths) openPdfFile?.(path);
+        });
       return;
     case 'voice':
       // Push-to-talk: the command bar opens to show what's heard (again: finish now).
@@ -913,6 +984,12 @@ void app.whenReady().then(() => {
   const updateExtensions = () => void extensionHost.update();
   setTimeout(updateExtensions, 60_000).unref();
   setInterval(updateExtensions, 6 * 3_600_000).unref();
+  // PDFs from this Mac (roadmap R2 M4): only files you opened, at random orbit-pdf:// addresses.
+  const localPdfs = new LocalPdfs({
+    get: () => persistence!.settings.get('pdf.local'),
+    set: (list) => persistence!.settings.set('pdf.local', list),
+  });
+  const pdfSessions = new WeakSet<Session>();
   const sessionFor = (profileId: string): Session | undefined => {
     const profile = store.profiles.find((p) => p.id === profileId);
     const s =
@@ -922,6 +999,10 @@ void app.whenReady().then(() => {
     permissions.configure(s); // once per session
     downloads.configure(s, profileId);
     void extensionHost.configure(s);
+    if (!pdfSessions.has(s)) {
+      pdfSessions.add(s);
+      s.protocol.handle(PDF_SCHEME, (request) => localPdfs.respond(request));
+    }
     return s;
   };
   sessionFor(DEFAULT_PROFILE_ID);
@@ -1914,6 +1995,19 @@ void app.whenReady().then(() => {
 
   windowManager.createMainWindow();
   for (const url of pendingUrls.splice(0)) openExternal(url);
+  // A PDF from this Mac opens in a tab of the front window (Chromium's PDF viewer).
+  openPdfFile = (path) => {
+    const controller = windowManager.focused() ?? windowManager.all()[0];
+    if (!controller) return;
+    try {
+      controller.tabs.create(localPdfs.addressFor(path), { activate: true });
+      controller.win.show();
+      controller.win.focus();
+    } catch (error) {
+      toast(controller, error instanceof Error ? error.message : String(error));
+    }
+  };
+  for (const path of pendingPdfs.splice(0)) openPdfFile(path);
 
   // Notes left empty last time go (unless a tab or floating note still shows them); floating
   // notes come back where they were.

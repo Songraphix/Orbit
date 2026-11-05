@@ -71,3 +71,16 @@ describe('Markdown for answers', () => {
     expect(inlineText(nodes)).toBe('Grids help. Next.');
   });
 });
+
+describe('appendMarkdown', () => {
+  it('adds to the end of a note, keeping what was there', async () => {
+    const { appendMarkdown, noteFromMarkdown } = await import('../../src/main/notes/from-markdown');
+    const first = noteFromMarkdown('Notes · Brand guide.pdf', 'On Brand guide.pdf (on this Mac)');
+    const next = appendMarkdown(first.doc, first.text, '> teal and sand');
+    const doc = JSON.parse(next.doc) as { content: { type: string }[] };
+    expect(doc.content.map((n) => n.type)).toEqual(['heading', 'paragraph', 'blockquote']);
+    expect(next.text).toContain('teal and sand');
+    expect(next.text.startsWith('Notes · Brand guide.pdf')).toBe(true);
+    expect(JSON.parse(appendMarkdown('not json', '', 'x').doc).content).toHaveLength(1);
+  });
+});

@@ -135,3 +135,23 @@ export function noteFromMarkdown(
   }
   return { doc: JSON.stringify({ type: 'doc', content }), text: lines.filter(Boolean).join('\n') };
 }
+
+/** Adds Markdown to the end of a saved note (its doc JSON and text); a bad doc starts afresh. */
+export function appendMarkdown(
+  doc: string,
+  text: string,
+  markdown: string,
+): { doc: string; text: string } {
+  const body = parseMarkdown(markdown);
+  let content: PMNode[];
+  try {
+    const parsed = JSON.parse(doc) as { content?: PMNode[] };
+    content = Array.isArray(parsed.content) ? parsed.content : [];
+  } catch {
+    content = [];
+  }
+  return {
+    doc: JSON.stringify({ type: 'doc', content: [...content, ...blocks(body)] }),
+    text: [text, plainText(body)].filter(Boolean).join('\n'),
+  };
+}

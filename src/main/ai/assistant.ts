@@ -153,10 +153,13 @@ export class AssistantService {
   }
 
   /** The web page the window shows (Orbit's own pages can't be attached). */
+  /** The page the assistant can read: a web page, or a PDF (from the web or this Mac). */
   private currentPage(controller: WindowController) {
     const tab = controller.tabs.active;
-    if (!tab || tab.state.kind !== 'web' || !/^https?:/i.test(tab.state.url)) return null;
-    return tab;
+    if (!tab || tab.state.kind !== 'web') return null;
+    const web = /^https?:/i.test(tab.state.url);
+    const localPdf = tab.state.pdf && tab.state.url.startsWith('orbit-pdf:');
+    return web || localPdf ? tab : null;
   }
 
   state(controller: WindowController): AssistantState {
@@ -168,7 +171,9 @@ export class AssistantService {
       page: tab
         ? {
             title: clip(tab.state.title || hostOf(tab.state.url), 120),
-            host: hostOf(tab.state.url),
+            host: tab.state.url.startsWith('orbit-pdf:')
+              ? 'PDF on this Mac'
+              : hostOf(tab.state.url),
             favicon: tab.state.favicon,
             attached: session.attachPage,
           }

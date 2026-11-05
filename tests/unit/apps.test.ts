@@ -90,3 +90,17 @@ describe('panelAppShowsIn', () => {
     expect(panelAppShowsIn(onlyHome, { id: 'h', profileId: 'p1' })).toBe(true);
   });
 });
+
+describe('Drive read plans', () => {
+  it('exports Google formats, downloads text and PDFs, refuses the rest', async () => {
+    const { readPlan } = await import('../../src/shared/drive');
+    expect(readPlan({ mimeType: 'application/vnd.google-apps.document', size: null })).toEqual({
+      kind: 'export',
+      mimeType: 'text/plain',
+    });
+    expect(readPlan({ mimeType: 'application/pdf', size: 1_000_000 })).toEqual({ kind: 'pdf' });
+    expect(readPlan({ mimeType: 'application/pdf', size: 90_000_000 }).kind).toBe('unsupported');
+    expect(readPlan({ mimeType: 'text/markdown', size: 100 })).toEqual({ kind: 'download' });
+    expect(readPlan({ mimeType: 'image/png', size: 100 }).kind).toBe('unsupported');
+  });
+});

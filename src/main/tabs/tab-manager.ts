@@ -802,6 +802,7 @@ export class TabManager {
       kind: isInternal(url) ? 'internal' : 'web',
       crashed: false,
       loadError: null,
+      pdf: false,
       devMode: this.devModeFor(url),
       consoleErrors: 0,
       viewport: null,

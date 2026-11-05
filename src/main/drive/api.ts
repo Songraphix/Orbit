@@ -97,6 +97,21 @@ export class DriveApi {
     const plan = readPlan(file);
     if (plan.kind === 'unsupported') return null;
     const id = encodeURIComponent(file.id);
+    if (plan.kind === 'pdf') {
+      const response = await this.get(
+        token,
+        `/drive/v3/files/${id}?alt=media&supportsAllDrives=true`,
+        60_000,
+      );
+      const { pdfText } = await import('../pdf/text');
+      const pdf = await pdfText(new Uint8Array(await response.arrayBuffer()));
+      const text = pdf.pages
+        .map((p, i) => (pdf.pages.length > 1 ? `[Page ${i + 1}]\n${p}` : p))
+        .join('\n\n');
+      return text.length > MAX_TEXT
+        ? { text: text.slice(0, MAX_TEXT), truncated: true }
+        : { text, truncated: pdf.truncated };
+    }
     const path =
       plan.kind === 'export'
         ? `/drive/v3/files/${id}/export?mimeType=${encodeURIComponent(plan.mimeType)}`

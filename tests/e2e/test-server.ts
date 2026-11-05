@@ -720,6 +720,13 @@ export async function startTestServer(): Promise<TestServer> {
       });
       return;
     }
+    // A PDF on the web (PDF tests).
+    if (path === '/two-pages.pdf') {
+      res
+        .writeHead(200, { 'content-type': 'application/pdf' })
+        .end(readFileSync(join(import.meta.dirname, '../fixtures/two-pages.pdf')));
+      return;
+    }
     // A page titled by its address (?t=…), for grouping tests.
     if (path === '/titled') {
       const t = new URL(req.url ?? '/', 'http://x').searchParams.get('t') ?? 'Untitled';

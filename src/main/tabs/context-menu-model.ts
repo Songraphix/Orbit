@@ -59,12 +59,15 @@ export type ContextAction =
   | 'search-image'
   | 'save-page'
   | 'split-page'
+  // PDFs (roadmap R2 M4): Orbit's own notes on a PDF, kept apart from the file.
+  | 'pdf-note'
+  | 'pdf-notes'
   | `spell:${string}`;
 
 export type ContextItem =
   { type: 'item'; action: ContextAction; label: string; enabled: boolean } | { type: 'separator' };
 
-export type PageState = { canGoBack: boolean; canGoForward: boolean };
+export type PageState = { canGoBack: boolean; canGoForward: boolean; pdf?: boolean };
 
 const item = (action: ContextAction, label: string, enabled = true): ContextItem => ({
   type: 'item',
@@ -135,6 +138,7 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
       item('explain-selection', 'Explain with Orbit AI'),
       item('translate-selection', 'Translate with Orbit AI'),
       item('tasks-selection', 'Make Tasks from Selection…'),
+      ...(page.pdf ? [item('pdf-note', 'Add to PDF Notes')] : []),
       item('note-selection', 'New Note from Selection'),
       item('capture-selection', 'Save Selection to Orbit…'),
     ]);
@@ -149,8 +153,9 @@ export function buildContextMenu(params: ContextParams, page: PageState): Contex
     ]);
     groups.push([item('save-page', 'Save Page As…'), item('split-page', 'Open in Split View')]);
     groups.push([
-      item('summarize-page', 'Summarize Page'),
-      item('ask-page', 'Ask Orbit About This Page'),
+      item('summarize-page', page.pdf ? 'Summarize PDF' : 'Summarize Page'),
+      item('ask-page', page.pdf ? 'Ask Orbit About This PDF' : 'Ask Orbit About This Page'),
+      ...(page.pdf ? [item('pdf-notes', 'PDF Notes')] : []),
       item('capture-page', 'Save Page to Orbit…'),
       item('annotate-page', 'Annotate Screenshot…'),
     ]);

@@ -12,8 +12,8 @@ Roadmap: `orbit_voice_ai_workspace_roadmap.md`, milestone 3.
   in its Google app (in a tab; Google Docs as a panel app works too).
 - **Orbit AI:** with Settings → AI → Google Drive on (the default once connected), it can
   `search_drive` and `read_drive_file`: Google Docs (as text), Sheets (as CSV), Slides (their
-  text) and plain text files. The answer links the file it read ("Read “Brand guide” · Open").
-  Other kinds (PDF, Word, images) say they can't be read yet.
+  text), PDFs (their text, with PDF.js; up to 30 MB) and plain text files. The answer links the file it read ("Read “Brand guide” · Open").
+  Other kinds (Word, images, scanned PDFs without text) say they can't be read yet.
 - **Disconnect** revokes Orbit's access at Google and deletes the token here.
 
 ## Privacy and security
@@ -54,7 +54,6 @@ Until then, Connect fails at Google with a message about the API or the scope.
 - **Microsoft 365 / OneDrive / Excel:** Excel for the web works as a panel app. Searching and
   reading OneDrive files would use Microsoft Graph, which needs an app registration in Microsoft
   Entra ID (owner), consent for `Files.Read`, and a separate integration like this one — later.
-- **PDFs in Drive:** not read yet (the PDF reader, milestone 4, may make this possible).
 
 ## Tests
 

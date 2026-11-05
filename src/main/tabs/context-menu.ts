@@ -20,6 +20,8 @@ export type PageAssistRequest =
   | { kind: 'translate-selection'; text: string }
   | { kind: 'tasks-selection'; text: string }
   | { kind: 'note-selection'; text: string }
+  | { kind: 'pdf-note'; text: string }
+  | { kind: 'pdf-notes' }
   | { kind: 'ask-page' }
   | { kind: 'summarize-page' };
 
@@ -39,12 +41,15 @@ export function attachContextMenu(
   contents: WebContents,
   openInTab: (url: string, activate: boolean) => void,
   capture?: (request: PageMenuRequest) => void,
+  /** The page is a PDF (Chromium's viewer): PDF Notes in the menu. */
+  isPdf?: () => boolean,
 ): void {
   contents.on('context-menu', (_event, params) => {
     const history = contents.navigationHistory;
     const items = buildContextMenu(params, {
       canGoBack: history.canGoBack(),
       canGoForward: history.canGoForward(),
+      pdf: isPdf?.() ?? false,
     });
 
     const run = (action: ContextAction) => {
@@ -100,7 +105,10 @@ export function attachContextMenu(
         case 'translate-selection':
         case 'tasks-selection':
         case 'note-selection':
+        case 'pdf-note':
           return capture?.({ kind: action, text: params.selectionText });
+        case 'pdf-notes':
+          return capture?.({ kind: 'pdf-notes' });
         case 'split-page':
           return capture?.({ kind: 'split-page' });
         case 'search-image':

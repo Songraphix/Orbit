@@ -137,6 +137,21 @@ describe('buildContextMenu', () => {
   });
 });
 
+describe('PDFs', () => {
+  const pdf = { ...page, pdf: true };
+  it('offers PDF Notes, and Add to PDF Notes for a selection', () => {
+    const empty = labels(buildContextMenu(params(), pdf));
+    expect(empty).toContain('Summarize PDF');
+    expect(empty).toContain('Ask Orbit About This PDF');
+    expect(empty).toContain('PDF Notes');
+    const selected = labels(buildContextMenu(params({ selectionText: 'teal and sand' }), pdf));
+    expect(selected).toContain('Add to PDF Notes');
+    expect(labels(buildContextMenu(params({ selectionText: 'x' }), page))).not.toContain(
+      'Add to PDF Notes',
+    );
+  });
+});
+
 describe('searchLabel', () => {
   it('truncates long selections', () => {
     expect(searchLabel('a'.repeat(50))).toBe(`Search Google for “${'a'.repeat(31)}…”`);

@@ -90,6 +90,7 @@ export class TabController {
       kind,
       crashed: false,
       loadError: null,
+      pdf: false,
       devMode: false,
       consoleErrors: 0,
       viewport: null,
@@ -232,7 +233,18 @@ export class TabController {
       contents,
       (url, activate) => this.env.openInNewTab(url, activate),
       (request) => this.env.onCapture?.(request),
+      () => this.stateValue.pdf,
     );
+    // Is it a PDF (Chromium's viewer)? Its document's type says so, once it has loaded.
+    contents.on('did-finish-load', () => {
+      void contents
+        .executeJavaScriptInIsolatedWorld(1003, [{ code: 'document.contentType' }])
+        .then((type) => {
+          const pdf = type === 'application/pdf';
+          if (pdf !== this.stateValue.pdf) this.update({ pdf });
+        })
+        .catch(() => undefined);
+    });
     contents.on('enter-html-full-screen', () => this.env.onHtmlFullscreen(true));
     contents.on('leave-html-full-screen', () => this.env.onHtmlFullscreen(false));
 

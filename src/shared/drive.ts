@@ -75,7 +75,11 @@ export function driveQuery(words: string): string {
 export function readPlan(
   file: Pick<DriveFile, 'mimeType' | 'size'>,
   maxBytes = 2_000_000,
-): { kind: 'export'; mimeType: string } | { kind: 'download' } | { kind: 'unsupported' } {
+):
+  | { kind: 'export'; mimeType: string }
+  | { kind: 'download' }
+  | { kind: 'pdf' }
+  | { kind: 'unsupported' } {
   switch (file.mimeType) {
     case 'application/vnd.google-apps.document':
       return { kind: 'export', mimeType: 'text/plain' };
@@ -83,6 +87,10 @@ export function readPlan(
       return { kind: 'export', mimeType: 'text/csv' };
     case 'application/vnd.google-apps.presentation':
       return { kind: 'export', mimeType: 'text/plain' };
+  }
+  // PDFs: downloaded and read with PDF.js (text only), up to 30 MB.
+  if (file.mimeType === 'application/pdf') {
+    return (file.size ?? 0) <= 30_000_000 ? { kind: 'pdf' } : { kind: 'unsupported' };
   }
   const texty =
     file.mimeType.startsWith('text/') ||

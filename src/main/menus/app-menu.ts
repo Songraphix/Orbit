@@ -92,6 +92,12 @@ export function installAppMenu(actions: AppMenuActions): void {
           click: () => actions.command('new-easel'),
         },
         {
+          id: 'open-pdf',
+          label: 'Open PDF…',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => actions.command('open-pdf'),
+        },
+        {
           id: 'screenshot',
           label: 'Take Screenshot',
           accelerator: 'Shift+CmdOrCtrl+2',

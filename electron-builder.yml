@@ -32,6 +32,11 @@ fileAssociations:
   - ext: [html, htm, xhtml, shtml]
     name: HTML Document
     role: Viewer
+  # PDFs open in Orbit's PDF viewer too (Open With → Orbit); Orbit isn't made the default.
+  - ext: [pdf]
+    name: PDF Document
+    role: Viewer
+    rank: Alternate
 # Electron Fuses (PLAN.md sections 4.8 and 12), flipped in the packaged binary:
 # - no ELECTRON_RUN_AS_NODE, NODE_OPTIONS or --inspect: the app can't be turned into a Node shell
 # - the app is loaded only from app.asar, whose integrity is checked

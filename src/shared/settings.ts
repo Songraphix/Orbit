@@ -82,6 +82,12 @@ export const settingsSchema = {
     .max(50),
   /** The productivity panel: open or not, and where (`panel/projects/<id>`…), for a restart. */
   'panel.state': z.object({ open: z.boolean(), route: z.string().max(120) }),
+  /** PDFs opened from this Mac: their random orbit-pdf:// tokens (roadmap R2 M4). */
+  'pdf.local': z
+    .array(z.object({ token: z.string(), path: z.string(), name: z.string() }))
+    .max(300),
+  /** Each PDF's Orbit notes (its address → the note's id). */
+  'pdf.notes': z.record(z.string(), z.string()),
   /** Voice (push-to-talk): run what you say at once, read answers aloud, which voice. */
   'voice.prefs': voicePrefsSchema,
   /** The right-hand dock's width, as last dragged (Notes and docked apps share it). */
@@ -142,6 +148,8 @@ export const settingsDefaults: Settings = {
   'panel.state': { open: false, route: 'panel' },
   'dock.width': NOTES_WIDTH.panel,
   'voice.prefs': DEFAULT_VOICE_PREFS,
+  'pdf.local': [],
+  'pdf.notes': {},
   'capture.lastProject': null,
   'focus.session': null,
   'focus.prefs': DEFAULT_FOCUS_PREFS,
