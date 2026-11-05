@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { AppWindow, PanelRight } from 'lucide-react';
 import type { SidebarRow } from '@shared/types/space';
 import { PeekBadge, TabIcon } from './Rows';
 import { Tip } from '../../tooltip/Tip';
@@ -112,6 +113,12 @@ function FavoriteTile({
   height: number;
 }) {
   const rgb = useFaviconColor(active ? row.favicon : null);
+  const where =
+    row.openIn === 'panel'
+      ? 'Opens beside the page'
+      : row.openIn === 'window'
+        ? 'Opens in a window'
+        : null;
   const tint: CSSProperties =
     active && rgb
       ? {
@@ -121,10 +128,10 @@ function FavoriteTile({
       : {};
   return (
     <li>
-      <Tip label={row.title}>
+      <Tip label={where ? `${row.title} · ${where}` : row.title}>
         <button
           type="button"
-          aria-label={row.title}
+          aria-label={where ? `${row.title}, ${where.toLowerCase()}` : row.title}
           aria-current={active ? 'page' : undefined}
           className={`press relative grid w-full place-items-center rounded-[16px] ${
             active
@@ -143,6 +150,21 @@ function FavoriteTile({
             <TabIcon row={row} />
           </span>
           <PeekBadge row={row} tile />
+          {row.openIn !== 'tab' && (
+            // Apps that open beside the page, or in their own window, say so in a corner.
+            <span
+              className="pointer-events-none absolute bottom-1.5 left-2 opacity-40"
+              aria-hidden
+              data-testid="favorite-opens-in"
+              data-open-in={row.openIn}
+            >
+              {row.openIn === 'panel' ? (
+                <PanelRight size={10} strokeWidth={2.2} />
+              ) : (
+                <AppWindow size={10} strokeWidth={2.2} />
+              )}
+            </span>
+          )}
           {hasCount(row.title) && (
             <span
               className="absolute right-2.5 bottom-2 size-[7px] rounded-full bg-[#ff453a] shadow-[0_0_0_1.5px_var(--tile-bg)]"

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import { APP_CATALOG, appUrl } from '@shared/apps';
+import { useEffect, useRef, useState } from 'react';
+import { Check, ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { APP_CATALOG, appUrl, spacesLabel, toggleSpace } from '@shared/apps';
 import type { AppList, OpenIn } from '@shared/apps';
 import { buttonClass, FIELD } from '../../ui/controls';
 import { Group, Section } from './parts';
@@ -166,20 +166,11 @@ function AppRow(props: {
         <option value="panel">Opens in the side panel</option>
         <option value="window">Opens in its own window</option>
       </select>
-      <select
-        value={app.spaces?.[0] ?? ''}
-        onChange={(e) => update({ spaces: e.target.value ? [e.target.value] : null })}
-        aria-label="Shows in"
-        className={FIELD}
-        data-testid="app-spaces"
-      >
-        <option value="">In every Space</option>
-        {props.spaces.map((s) => (
-          <option key={s.id} value={s.id}>
-            Only in {s.name}
-          </option>
-        ))}
-      </select>
+      <SpacesPicker
+        value={app.spaces}
+        spaces={props.spaces}
+        onChange={(spaces) => update({ spaces })}
+      />
       <button
         type="button"
         aria-label={`Remove ${app.title}`}
@@ -191,5 +182,104 @@ function AppRow(props: {
         <Trash2 size={15} />
       </button>
     </div>
+  );
+}
+
+/**
+ * Which Spaces show an app: a button naming them, opening a checklist (every Space, or any of
+ * them; at least one stays ticked).
+ */
+function SpacesPicker(props: {
+  value: string[] | null;
+  spaces: AppList['spaces'];
+  onChange: (spaces: string[] | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  const ids = props.spaces.map((s) => s.id);
+  const shown = (id: string) => props.value?.includes(id) ?? false;
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Shows in"
+        onClick={() => setOpen((o) => !o)}
+        className={`${FIELD} flex items-center gap-1.5 text-left`}
+        data-testid="app-spaces"
+      >
+        <span className="truncate">{spacesLabel(props.value, props.spaces)}</span>
+        <ChevronDown size={13} className="shrink-0 text-neutral-400" />
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          aria-multiselectable
+          aria-label="Spaces"
+          className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-black/[0.06] bg-white p-1 shadow-[0_12px_32px_-8px_rgb(0_0_0/0.25)]"
+          data-testid="app-spaces-menu"
+        >
+          <SpaceOption
+            label="Every Space"
+            checked={!props.value}
+            onToggle={() => props.onChange(null)}
+            testId="app-space-all"
+          />
+          <div className="my-1 h-px bg-neutral-100" />
+          {props.spaces.map((s) => (
+            <SpaceOption
+              key={s.id}
+              label={s.name}
+              checked={shown(s.id)}
+              onToggle={() => props.onChange(toggleSpace(props.value, s.id, ids))}
+              testId="app-space-option"
+              spaceId={s.id}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SpaceOption(props: {
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+  testId: string;
+  spaceId?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={props.checked}
+      onClick={props.onToggle}
+      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-label hover:bg-neutral-50"
+      data-testid={props.testId}
+      data-space-id={props.spaceId}
+      data-checked={props.checked}
+    >
+      <span
+        className={`grid size-4 shrink-0 place-items-center rounded-[5px] border ${props.checked ? 'border-[var(--accent)] bg-[var(--accent)] text-on-accent' : 'border-neutral-300'}`}
+      >
+        {props.checked && <Check size={11} strokeWidth={3} />}
+      </span>
+      <span className="truncate">{props.label}</span>
+    </button>
   );
 }

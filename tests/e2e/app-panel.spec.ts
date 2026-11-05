@@ -199,3 +199,51 @@ test('a panel app’s sign-in popup opens as a popup window that can answer the 
     await server.close();
   }
 });
+
+test('panel apps are marked in Favorites; an app can show in several chosen Spaces', async () => {
+  test.setTimeout(90_000);
+  const server = await startTestServer();
+  const { app, win, close } = await launchOrbit();
+  try {
+    await addPanelApps(app, [{ url: server.url('/one'), title: 'Desk' }]);
+    const tile = win.getByTestId('favorite-tile');
+    await expect(tile.getByTestId('favorite-opens-in')).toHaveAttribute('data-open-in', 'panel');
+    await expect(tile).toHaveAttribute('aria-label', 'Desk, opens beside the page');
+
+    // Three Spaces: show the app in the first and the last only.
+    await clickMenu(app, 'new-space');
+    await clickMenu(app, 'new-space');
+    const settings = await openSettings(app);
+    await settings.locator('[data-testid="settings-nav"][data-section="apps"]').click();
+    await settings.getByTestId('app-spaces').click();
+    const options = settings.getByTestId('app-space-option');
+    await expect(options).toHaveCount(3);
+    await options.nth(0).click(); // from Every Space: only this one
+    await expect(settings.getByTestId('app-spaces')).toContainText('Only in');
+    await options.nth(2).click();
+    await expect(settings.getByTestId('app-spaces')).toContainText(' and ');
+    await expect(options.nth(1)).toHaveAttribute('data-checked', 'false');
+    // The last ticked Space stays ticked.
+    await options.nth(0).click();
+    await options.nth(2).click();
+    await expect(options.nth(2)).toHaveAttribute('data-checked', 'true');
+    await options.nth(0).click();
+    await settings.keyboard.press('Escape');
+    await expect(settings.getByTestId('app-spaces-menu')).toHaveCount(0);
+    await closeSettings(app);
+
+    // Now in the third Space (the newest): shown; the second: not (an open panel closes); the
+    // first: shown.
+    await expect(tile).toHaveCount(1);
+    await tile.click();
+    await expect(win.getByTestId('app-panel-header')).toBeVisible();
+    await invoke(win, 'spaces:cycle', { direction: -1 });
+    await expect(tile).toHaveCount(0);
+    await expect(win.getByTestId('app-panel-header')).toHaveCount(0);
+    await invoke(win, 'spaces:cycle', { direction: -1 });
+    await expect(tile).toHaveCount(1);
+  } finally {
+    await close();
+    await server.close();
+  }
+});

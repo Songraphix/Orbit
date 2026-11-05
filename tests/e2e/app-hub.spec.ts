@@ -69,12 +69,9 @@ test('App Hub: add apps, open one docked beside the page, in a tab or its own wi
     await clickMenu(app, 'settings');
     const settings2 = await pageWith(app, '#/settings');
     await settings2.locator('[data-testid="settings-nav"][data-section="apps"]').click();
-    const spaceId = await settings2
-      .getByTestId('app-spaces')
-      .locator('option')
-      .nth(1)
-      .getAttribute('value');
-    await settings2.getByTestId('app-spaces').selectOption(spaceId!);
+    await settings2.getByTestId('app-spaces').click();
+    await settings2.getByTestId('app-space-option').first().click();
+    await expect(settings2.getByTestId('app-spaces')).toContainText('Only in');
     await closeSettings(app);
     await clickMenu(app, 'new-space');
     await expect(win.getByTestId('favorite-tile')).toHaveCount(0);

@@ -54,9 +54,49 @@ export function panelApps<R extends { kind: string; openIn: OpenIn }>(
   return favorites.filter((row) => row.kind === 'tab' && row.openIn === 'panel');
 }
 
+/**
+ * Settings → Apps' Spaces checklist: ticking or unticking `spaceId`. null is "Every Space"
+ * (Spaces made later too); from there, ticking a Space means only that one. The last ticked
+ * Space can't be unticked (an app shows somewhere). Kept in `all`'s order. Pure.
+ */
+export function toggleSpace(
+  spaces: readonly string[] | null,
+  spaceId: string,
+  all: readonly string[],
+): string[] | null {
+  if (!spaces) return [spaceId];
+  const current = new Set(spaces.filter((id) => all.includes(id)));
+  if (current.has(spaceId)) {
+    if (current.size === 1) return [...current];
+    current.delete(spaceId);
+  } else current.add(spaceId);
+  return all.filter((id) => current.has(id));
+}
+
+/** "In every Space", "Only in Work", "In Work and Home", "In 3 Spaces". Pure. */
+export function spacesLabel(
+  spaces: readonly string[] | null,
+  all: readonly { id: string; name: string }[],
+): string {
+  if (!spaces) return 'In every Space';
+  const names = all.filter((s) => spaces.includes(s.id)).map((s) => s.name);
+  if (names.length === 0) return 'In no Space';
+  if (names.length === 1) return `Only in ${names[0]}`;
+  if (names.length === 2) return `In ${names[0]} and ${names[1]}`;
+  return `In ${names.length} Spaces`;
+}
+
 /** Whether a favourite shows in a Space. Pure. */
 export function showsIn(options: AppOptions | undefined, spaceId: string): boolean {
   return !options?.spaces || options.spaces.includes(spaceId);
+}
+
+/** Whether the docked app can stay open in a Space: same profile, and shown there. Pure. */
+export function panelAppShowsIn(
+  item: { profileId: string; data?: { app?: AppOptions } | null },
+  space: { id: string; profileId: string },
+): boolean {
+  return item.profileId === space.profileId && showsIn(item.data?.app, space.id);
 }
 
 /** "notion.so" → "https://notion.so/"; null if it isn't a web address. Pure. */

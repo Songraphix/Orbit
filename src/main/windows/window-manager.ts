@@ -22,6 +22,7 @@ import { LibraryController } from '../library/controller';
 import { NotesPanelController } from '../notes/panel';
 import { AppPanelController } from '../apps/panel';
 import { notesHash } from '../notes/model';
+import { panelAppShowsIn } from '@shared/apps';
 import type { PageMenuRequest } from '../tabs/context-menu';
 import { shouldPeek } from '../peek/policy';
 import { LayoutEngine } from './layout-engine';
@@ -311,7 +312,16 @@ export class WindowManager {
       archive: this.deps.archive,
       initialSpaceId: settings.get('window.activeSpace') ?? '',
       sessionFor: this.deps.sessionFor,
-      onSpaceChange: (spaceId) => settings.set('window.activeSpace', spaceId),
+      onSpaceChange: (spaceId) => {
+        settings.set('window.activeSpace', spaceId);
+        // A docked app that this Space doesn't show (another profile, or not chosen for it)
+        // steps aside.
+        const openId = appPanel?.openItemId;
+        if (!openId) return;
+        const item = this.deps.store.item(openId);
+        const space = this.deps.store.spaces.find((s) => s.id === spaceId);
+        if (!item || !space || !panelAppShowsIn(item, space)) appPanel?.close();
+      },
       getLayout: () => layout.current(),
       internalPreload: this.deps.internalPreloadPath,
       loadInternal: this.deps.loadInternal,

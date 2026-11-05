@@ -537,14 +537,14 @@ function AppPanelHeader({
                     data-testid="app-panel-switch"
                     data-current={current}
                   >
-                    <AppIcon favicon={row.favicon} />
+                    <AppIcon favicon={row.favicon} title={row.title || row.url || ''} />
                   </button>
                 </Tip>
               );
             })}
           </div>
         ) : (
-          <AppIcon favicon={app.favicon} />
+          <AppIcon favicon={app.favicon} title={app.title} />
         )}
         <span
           className="ml-1 min-w-0 flex-1 truncate text-[13px] font-medium"
@@ -586,11 +586,14 @@ function AppPanelHeader({
   );
 }
 
-function AppIcon({ favicon }: { favicon: string | null }) {
+/** An app's icon; without one, its initial (so apps in the switcher stay tellable apart). */
+function AppIcon({ favicon, title }: { favicon: string | null; title: string }) {
   return favicon ? (
     <img src={favicon} alt="" className="size-4 shrink-0 rounded-[4px]" />
   ) : (
-    <span className="size-4 shrink-0 rounded-[4px] bg-neutral-200" />
+    <span className="grid size-4 shrink-0 place-items-center rounded-[4px] bg-neutral-200 text-[10px] leading-none font-semibold text-neutral-600">
+      {(title.replace(/^https?:\/\/(www\.)?/, '')[0] ?? '?').toUpperCase()}
+    </span>
   );
 }
 
