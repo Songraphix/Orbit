@@ -11,6 +11,7 @@ import { themeToVars } from '@shared/theme';
 import { useColorMode } from './use-color-mode';
 import { useCanvas } from '../ui/canvas-store';
 import { Wallpaper } from '../ui/Wallpaper';
+import { CANVAS_SHELL_VARS } from '../ui/canvas-vars';
 import { useUiPrefs } from '../ui/prefs-store';
 import { DEFAULT_THEME } from '@shared/types/space';
 import type { SidebarSnapshot } from '@shared/types/space';
@@ -62,19 +63,7 @@ function MainShell() {
       ...themeToVars(theme, mode),
       // Everything floats on the wallpaper: text and states come from the canvas's theme, so they
       // read on whatever wallpaper is behind (the Space's colours tint only its accent then).
-      ...(canvas
-        ? {
-            '--sidebar-bg': 'transparent',
-            '--sidebar-fg': 'var(--fg)',
-            '--sidebar-muted': 'var(--fg-muted)',
-            '--hover': 'var(--glass-hover)',
-            '--row-active': 'var(--sel-bg)',
-            '--tile-bg': 'var(--glass-light)',
-            '--row-shadow':
-              'inset 0 0 0 0.5px var(--sel-border), inset 0 1px 0 var(--glass-highlight)',
-            '--grain': '0',
-          }
-        : {}),
+      ...(canvas ? CANVAS_SHELL_VARS : {}),
       ...(accent ? { '--accent': accent } : {}),
     }),
     [theme, mode, accent, canvas],
@@ -225,6 +214,15 @@ function Chrome({
           style={{ top: layout.toolbar.height, width: Math.max(8, layout.card.x - 2) }}
           onPointerEnter={() => void window.orbit.invoke('sidebar:peek', { open: true })}
           data-testid="sidebar-edge"
+        />
+      )}
+      {layout.railHidden && (
+        // The tucked-away rail: resting the pointer on the window's left edge slides it out.
+        <div
+          className="absolute bottom-0 left-0 z-10"
+          style={{ top: 52, width: 10 }}
+          onPointerEnter={() => void window.orbit.invoke('rail:peek', { open: true })}
+          data-testid="rail-edge"
         />
       )}
       {layout.rail && sidebar && (

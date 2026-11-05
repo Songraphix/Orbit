@@ -106,6 +106,8 @@ const fields = {
   appSide: z.enum(['left', 'right']),
   /** Where a newly added app opens (each app can still be changed in Settings → Apps). */
   appOpen: z.enum(['tab', 'panel', 'window']),
+  /** The app rail tucks away, and slides out when the pointer reaches the window's left edge. */
+  railAutoHide: z.boolean(),
 };
 
 export const uiPrefsSchema = z.object({
@@ -121,6 +123,7 @@ export const uiPrefsSchema = z.object({
   apps: fields.apps.default('rail'),
   appSide: fields.appSide.default('left'),
   appOpen: fields.appOpen.default('panel'),
+  railAutoHide: fields.railAutoHide.default(false),
 });
 
 /** A change to some of them. (Not uiPrefsSchema.partial(): zod 4 would fill in every default.) */

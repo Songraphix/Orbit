@@ -15,6 +15,7 @@ import { CreateMenu } from './CreateMenu';
 import { ProfileMenu } from './ProfileMenu';
 import { OrbitMenu } from './OrbitMenu';
 import { AppFloat } from './AppFloat';
+import { FloatingRail } from './FloatingRail';
 import { CaptureCard } from './CaptureCard';
 import { TooltipPill } from '../tooltip/TooltipPill';
 import { DownloadFlight } from './DownloadFlight';
@@ -42,6 +43,8 @@ export function OverlayApp() {
     profileMenu: null,
     orbitMenu: null,
     appFloat: null,
+    sheet: null,
+    railPeek: null,
     captureCard: null,
     shot: null,
     tooltip: null,
@@ -100,10 +103,20 @@ export function OverlayApp() {
   const busy = top !== null;
   useEffect(() => {
     if (busy && state.sidebarPeek) void window.orbit.invoke('sidebar:peek', { open: false });
-  }, [busy, state.sidebarPeek]);
+    if (busy && state.railPeek) void window.orbit.invoke('rail:peek', { open: false });
+  }, [busy, state.sidebarPeek, state.railPeek]);
   return (
     <BackdropContext.Provider value={state.backdrop}>
       {state.sidebarPeek && !busy && <FloatingSidebar width={state.sidebarPeek.width} />}
+      {state.railPeek && !busy && <FloatingRail rect={state.railPeek.rect} />}
+      {state.sheet && (
+        // Settings over the window: the rest dims; a click there puts Settings away.
+        <div
+          className="fixed inset-0 animate-[orbit-fade-in_var(--dur-modal)_var(--ease-out)] bg-black/30"
+          onMouseDown={() => void window.orbit.invoke('settings:close', {})}
+          data-testid="settings-sheet-backdrop"
+        />
+      )}
       {state.appFloat && (
         <AppFloat rect={state.appFloat.rect} origin={state.origin} interactive={top === null} />
       )}

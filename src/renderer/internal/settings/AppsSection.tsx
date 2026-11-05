@@ -201,7 +201,11 @@ function SpacesPicker(props: {
     const away = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault(); // this Esc closes the menu, not Settings
+      setOpen(false);
+    };
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', esc);
     return () => {

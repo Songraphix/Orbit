@@ -32,6 +32,7 @@ export class LayoutEngine {
   private dockSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private topTabs: boolean;
   private apps: 'rail' | 'grid';
+  private railAutoHide: boolean;
   /** A pinned app beside the rail (UI 3): shown, heading open or shut, its slide and width. */
   private appDock = false;
   /** Floating over the page (unpinned) rather than beside it. */
@@ -54,6 +55,7 @@ export class LayoutEngine {
     this.sidebarWidth = settings.get('sidebar.width');
     this.topTabs = settings.get('tabs.layout') === 'top';
     this.apps = settings.get('ui').apps;
+    this.railAutoHide = settings.get('ui').railAutoHide ?? false;
     this.appWidth = settings.get('appdock.width') ?? 360;
     this.dockWidth = settings.get('dock.width');
     this.layout = this.compute();
@@ -115,6 +117,13 @@ export class LayoutEngine {
     if (on === this.topTabs) return;
     this.topTabs = on;
     this.updateButtons();
+    this.update();
+  }
+
+  /** The rail tucks away (auto-hide) or stays. */
+  setRailAutoHide(on: boolean): void {
+    if (on === this.railAutoHide) return;
+    this.railAutoHide = on;
     this.update();
   }
 
@@ -337,6 +346,7 @@ export class LayoutEngine {
       dockProgress: this.dockProgress,
       topTabs: this.topTabs,
       apps: this.apps,
+      railAutoHide: this.railAutoHide,
       appDock: this.appDock
         ? { width: this.appWidth, progress: this.appProgress, float: this.appFloat }
         : null,

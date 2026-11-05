@@ -54,6 +54,8 @@ export type SidebarUi = {
   };
   /** Tabs in the sidebar or across the top (Settings → Appearance → Tab layout). */
   tabLayout?: () => 'sidebar' | 'top';
+  /** The app rail tucks away until the pointer reaches the window's edge. */
+  railAutoHide?: () => boolean;
   /** Sidebar apps kept running out of sight: whether one is, and stopping it. */
   apps?: { alive: (itemId: string) => boolean; quit: (itemId: string) => void };
   /** Workspace templates (roadmap P2.5): save a Space as one, or start a Space from one. */
@@ -485,6 +487,12 @@ export class SidebarActions {
             },
           ]),
       ...this.layoutItems(),
+      {
+        label: 'Auto-hide App Rail',
+        type: 'checkbox',
+        checked: this.ui.railAutoHide?.() ?? false,
+        click: () => this.ui.command('toggle-rail-autohide'),
+      },
     ];
     Menu.buildFromTemplate(template).popup();
   }

@@ -1,3 +1,4 @@
+import { RAIL_WIDTH, TAB_STRIP_HEIGHT } from '@shared/types/layout';
 import type { IpcRouter } from '../router';
 import type { WindowManager } from '../../windows/window-manager';
 
@@ -18,6 +19,23 @@ export function registerLayoutHandlers(router: IpcRouter, windows: WindowManager
 
   router.handle('sidebar:peek', ({ open }, { sender }) => {
     windowFor(sender.webContentsId).setSidebarPeek(open);
+  });
+
+  router.handle('rail:peek', ({ open }, { sender }) => {
+    const { layout, overlay, win } = windowFor(sender.webContentsId);
+    const current = layout.current();
+    if (open && (!current.railHidden || current.fullscreen)) return;
+    const [, height = 0] = win.getContentSize();
+    overlay.setRailPeek(
+      open
+        ? {
+            x: 10,
+            y: TAB_STRIP_HEIGHT,
+            width: RAIL_WIDTH,
+            height: Math.max(0, height - TAB_STRIP_HEIGHT - 10),
+          }
+        : null,
+    );
   });
 
   router.handle('sidebar:setWidth', ({ width }, { sender }) => {

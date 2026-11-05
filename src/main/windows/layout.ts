@@ -41,6 +41,8 @@ export type LayoutInput = {
   topTabs?: boolean;
   /** Pinned apps in a rail (UI 1, the default) or as a grid in the sidebar (UI 2). */
   apps?: 'rail' | 'grid';
+  /** The rail tucks away until the pointer reaches the window's left edge. */
+  railAutoHide?: boolean;
   /** A pinned app open beside the rail: its width and how far it has slid in (0–1); `float`:
    *  over the page, which keeps its width. */
   appDock?: { width: number; progress: number; float?: boolean } | null;
@@ -154,6 +156,7 @@ export function computeLayout(input: LayoutInput): Layout {
       notes: null,
       appDock: null,
       appDockFloat: false,
+      railHidden: false,
       tabStrip: null,
     };
   }
@@ -164,8 +167,9 @@ export function computeLayout(input: LayoutInput): Layout {
   const shown = input.sidebarVisible && !library;
   const sidebarShown = shown && !strip;
   // The rail: always with tabs on top; beside the sidebar unless apps are a grid inside it.
-  const railShown = shown && (strip || input.apps !== 'grid');
-  const gridMode = sidebarShown && !railShown;
+  const railWanted = shown && (strip || input.apps !== 'grid');
+  const railShown = railWanted && !input.railAutoHide;
+  const gridMode = sidebarShown && !railWanted;
   const top = toolbarHeight;
   const below = { y: top, height: Math.max(0, H - top - inset) };
 
@@ -254,6 +258,7 @@ export function computeLayout(input: LayoutInput): Layout {
     notes,
     appDock,
     appDockFloat: appDock !== null && floatDock,
+    railHidden: railWanted && !railShown,
     tabStrip,
   };
 }

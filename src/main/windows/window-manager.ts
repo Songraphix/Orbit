@@ -1,5 +1,6 @@
-import { BrowserWindow, nativeTheme, dialog, screen, systemPreferences } from 'electron';
-import type { WebContents, WebContentsView } from 'electron';
+import { BrowserWindow, dialog, screen, systemPreferences, WebContentsView } from 'electron';
+import type { WebContents } from 'electron';
+import type { Rect } from '@shared/types/layout';
 import { APP_NAME } from '@shared/constants';
 import type { RendererEntry } from '@shared/constants';
 import type { Broadcaster } from '../ipc/broadcaster';
@@ -154,32 +155,32 @@ export class WindowManager {
     return match ?? last ?? this.controllers.values().next().value;
   }
 
-  // ── Settings window (owner request): Settings opens in a window of its own, like a Mac app's.
+  // ── Settings (owner request): a sheet over the browser window — like the App Library, it
+  // opens on top and a click outside (or Esc) puts it away. One per window.
 
-  private settingsWin: BrowserWindow | null = null;
+  private readonly sheets = new Map<WindowController, WebContentsView>();
   private lastMain: WindowController | null = null;
 
-  /** Opens Settings in its window (or brings it forward), on a section if given. */
+  /** Where the sheet sits: centred, with the window's canvas showing around it. Pure-ish. */
+  private sheetRect(controller: WindowController): Rect {
+    const [width = 0, height = 0] = controller.win.getContentSize();
+    const w = Math.max(0, Math.min(1040, width - 80));
+    const h = Math.max(0, height - 72);
+    return { x: Math.round((width - w) / 2), y: 40, width: w, height: h };
+  }
+
+  /** Opens Settings in the window you're using (or shows it again), on a section if given. */
   openSettings(section?: string): void {
+    const controller = this.focused();
+    if (!controller) return;
     const url = section ? `orbit://settings/${section}` : 'orbit://settings';
-    const open = this.settingsWin;
-    if (open && !open.isDestroyed()) {
+    const open = this.sheets.get(controller);
+    if (open && !open.webContents.isDestroyed()) {
       if (section) this.deps.loadInternal(open, url);
-      if (open.isMinimized()) open.restore();
-      open.show();
-      open.focus();
+      open.webContents.focus();
       return;
     }
-    const win = new BrowserWindow({
-      width: 980,
-      height: 720,
-      minWidth: 620,
-      minHeight: 460,
-      title: 'Orbit Settings',
-      titleBarStyle: 'hiddenInset',
-      trafficLightPosition: { x: 16, y: 16 },
-      backgroundColor: nativeTheme.shouldUseDarkColors ? '#161619' : '#f6f6f8',
-      show: false,
+    const view = new WebContentsView({
       webPreferences: {
         preload: this.deps.internalPreloadPath,
         sandbox: true,
@@ -187,50 +188,62 @@ export class WindowManager {
         nodeIntegration: false,
       },
     });
-    this.settingsWin = win;
-    const contents = win.webContents;
+    view.setBackgroundColor('#00000000');
+    const contents = view.webContents;
     const id = contents.id;
     this.deps.senders.add(id, 'internal');
     contents.on('will-navigate', (event) => event.preventDefault());
     contents.setWindowOpenHandler(() => ({ action: 'deny' }));
-    // Its own window: a strip along the top to drag it by (no title bar), and room for the
-    // traffic lights above the nav. (Settings in a tab must not move the browser window.)
-    contents.on('dom-ready', () => {
-      void contents.insertCSS(
-        `body::before { content: ''; position: fixed; inset: 0 0 auto 0; height: 34px;
-           -webkit-app-region: drag; z-index: 50; }
-         nav[aria-label='Settings'] { padding-top: 52px !important; }
-         button, input, select, a { -webkit-app-region: no-drag; }`,
-      );
-    });
-    win.once('ready-to-show', () => {
-      // Test runs stay in the background (ORBIT_QUIET), like every other window.
-      if (process.env['ORBIT_QUIET'] === '1') win.showInactive();
-      else win.show();
-    });
-    win.on('closed', () => {
-      this.deps.senders.remove(id);
-      if (this.settingsWin === win) this.settingsWin = null;
-    });
-    this.deps.loadInternal(win, url);
+    contents.once('destroyed', () => this.deps.senders.remove(id));
+    this.sheets.set(controller, view);
+    // On top of everything (the overlay draws the dimmed backdrop just beneath it).
+    controller.win.contentView.addChildView(view);
+    this.fitSheet(controller);
+    this.deps.loadInternal(view, url);
+    contents.focus();
   }
 
-  /** Closes the Settings window if it's the one in front (⌘W there). */
-  closeSettingsIfFocused(): boolean {
-    const win = this.settingsWin;
-    if (!win || win.isDestroyed() || BrowserWindow.getFocusedWindow() !== win) return false;
-    win.close();
+  /** Puts Settings away (its page closes; the page you were on gets the keyboard back). */
+  closeSettings(controller: WindowController): boolean {
+    const view = this.sheets.get(controller);
+    if (!view) return false;
+    this.sheets.delete(controller);
+    controller.overlay.setSheet(null);
+    if (!controller.win.isDestroyed()) controller.win.contentView.removeChildView(view);
+    if (!view.webContents.isDestroyed()) view.webContents.close();
+    controller.tabs.active?.view.webContents.focus();
     return true;
   }
 
+  /** Re-places the sheet after the window changed size. */
+  private fitSheet(controller: WindowController): void {
+    const view = this.sheets.get(controller);
+    if (!view) return;
+    const rect = this.sheetRect(controller);
+    view.setBounds(rect);
+    view.setBorderRadius(22);
+    controller.overlay.setSheet(rect);
+  }
+
+  /** Closes Settings if it's what has the keyboard (⌘W there). */
+  closeSettingsIfFocused(): boolean {
+    for (const [controller, view] of this.sheets) {
+      if (!view.webContents.isDestroyed() && view.webContents.isFocused()) {
+        return this.closeSettings(controller);
+      }
+    }
+    return false;
+  }
+
   /**
-   * The browser window Settings acts for: when it's the Settings window, the window last used;
-   * when it's Settings in a tab (orbit://settings typed in), that tab's window. Null otherwise.
+   * The browser window Settings acts for: its sheet's window; or, for Settings in a tab
+   * (orbit://settings typed in), that tab's window. Null otherwise.
    */
   settingsFor(webContentsId: number): WindowController | null {
-    const win = this.settingsWin;
-    if (win && !win.isDestroyed() && win.webContents.id === webContentsId) {
-      return this.focused() ?? null;
+    for (const [controller, view] of this.sheets) {
+      if (!view.webContents.isDestroyed() && view.webContents.id === webContentsId) {
+        return controller;
+      }
     }
     const owner = this.tabForContents(webContentsId);
     return owner?.tab.state.url.startsWith('orbit://settings') ? owner.window : null;
@@ -307,6 +320,7 @@ export class WindowManager {
         library?.fit();
         notes?.fit();
         appPanel?.fit();
+        if (controllerRef) this.fitSheet(controllerRef); // Settings stays centred
         // Pinning the sidebar (or a page going fullscreen) ends the slide-out.
         if (next.sidebar.visible || next.fullscreen) closeSidebarPeek();
         broadcaster.sendTo(contents, 'state:layout', next);
@@ -515,8 +529,6 @@ export class WindowManager {
       // (Tabs on top: no sidebar to slide out.)
       if (open && (current.sidebar.visible || current.fullscreen || current.tabStrip)) return;
       overlay.setSidebarPeek(open ? current.sidebar.width : null);
-      // The traffic lights come out with it, like Arc.
-      win.setWindowButtonVisibility(open || current.sidebar.visible);
     }
     function closeSidebarPeek(): void {
       if (overlayRef?.sidebarPeekOpen) setSidebarPeek(false);
@@ -600,7 +612,10 @@ export class WindowManager {
         broadcaster.sendTo(contents, 'state:appPanel', state);
         broadcaster.sendTo(overlay.view.webContents, 'state:appPanel', state);
       },
-      pushAlive: (alive) => broadcaster.sendTo(contents, 'state:appsAlive', alive),
+      pushAlive: (alive) => {
+        broadcaster.sendTo(contents, 'state:appsAlive', alive);
+        broadcaster.sendTo(overlay.view.webContents, 'state:appsAlive', alive);
+      },
       closeNotes: () => notesPanel.close(),
     });
     const appPanelController = appPanel;
@@ -619,6 +634,7 @@ export class WindowManager {
       openCommandBar: () => overlay.openCommandBar('new'),
       command: (commandId) => this.deps.runCommand?.(controller, commandId),
       tabLayout: () => settings.get('tabs.layout'),
+      railAutoHide: () => settings.get('ui').railAutoHide,
       apps: {
         alive: (itemId) => appPanelController.isAlive(itemId),
         quit: (itemId) => appPanelController.quit(itemId),

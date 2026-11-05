@@ -19,13 +19,6 @@ export function registerAppHubHandlers(
     defaultOpenIn?: () => OpenIn;
   } = {},
 ): void {
-  const shellOf = (webContentsId: number) => {
-    const controller = windows.forSender(webContentsId);
-    if (!controller || controller.win.webContents.id !== webContentsId) {
-      throw new Error(`Sender ${webContentsId} is not a shell`);
-    }
-    return controller;
-  };
   const settingsOf = (webContentsId: number) => {
     const window = windows.settingsFor(webContentsId);
     if (!window) throw new Error(`Sender ${webContentsId} is not Settings`);
@@ -65,7 +58,7 @@ export function registerAppHubHandlers(
     chromeOf(sender.webContentsId).appPanel.state(),
   );
   router.handle('apps:alive', (_input, { sender }) =>
-    shellOf(sender.webContentsId).appPanel.alive(),
+    chromeOf(sender.webContentsId).appPanel.alive(),
   );
 
   router.handle('apps:panel', ({ action }, { sender }) => {

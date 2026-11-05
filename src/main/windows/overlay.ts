@@ -49,6 +49,8 @@ export class OverlayController {
   private profileMenu: OverlayState['profileMenu'] = null;
   private orbitMenu: OverlayState['orbitMenu'] = null;
   private appFloat: OverlayState['appFloat'] = null;
+  private sheet: OverlayState['sheet'] = null;
+  private railPeek: OverlayState['railPeek'] = null;
   private captureCard: OverlayState['captureCard'] = null;
   private shot: OverlayState['shot'] = null;
   private grouping: OverlayState['grouping'] = null;
@@ -106,6 +108,8 @@ export class OverlayController {
       profileMenu: this.profileMenu,
       orbitMenu: this.orbitMenu,
       appFloat: this.appFloat,
+      sheet: this.sheet,
+      railPeek: this.railPeek,
       captureCard: this.captureCard,
       shot: this.shot,
       grouping: this.grouping,
@@ -130,13 +134,15 @@ export class OverlayController {
       this.profileMenu !== null ||
       this.orbitMenu !== null ||
       this.appFloat !== null ||
+      this.sheet !== null ||
       this.captureCard !== null ||
       this.shot !== null ||
       this.grouping !== null ||
       this.appLibrary !== null ||
       this.voicePopup !== null ||
       this.flight !== null ||
-      this.sidebarPeek !== null
+      this.sidebarPeek !== null ||
+      this.railPeek !== null
     );
   }
 
@@ -154,6 +160,7 @@ export class OverlayController {
       this.profileMenu !== null ||
       this.orbitMenu !== null ||
       this.appFloat !== null ||
+      this.sheet !== null ||
       this.captureCard !== null ||
       this.shot !== null ||
       this.grouping !== null ||
@@ -175,7 +182,12 @@ export class OverlayController {
 
   /** Only a tooltip is showing: the overlay is just its box (no clicks taken anywhere else). */
   private get onlyTooltip(): boolean {
-    return this.tooltip !== null && !this.othersOpen && this.sidebarPeek === null;
+    return (
+      this.tooltip !== null &&
+      !this.othersOpen &&
+      this.sidebarPeek === null &&
+      this.railPeek === null
+    );
   }
 
   /**
@@ -206,6 +218,7 @@ export class OverlayController {
   private get onlyAppFloat(): boolean {
     return (
       this.appFloat !== null &&
+      this.sheet === null &&
       this.commandBar === null &&
       this.prompts.length === 0 &&
       this.peek === null &&
@@ -222,7 +235,8 @@ export class OverlayController {
       this.appLibrary === null &&
       this.voicePopup === null &&
       this.flight === null &&
-      this.sidebarPeek === null
+      this.sidebarPeek === null &&
+      this.railPeek === null
     );
   }
 
@@ -277,6 +291,21 @@ export class OverlayController {
     this.appFloat = rect ? { rect } : null;
     if (rect) this.show();
     else this.sync();
+  }
+
+  /** Settings over the window: the dimmed backdrop beneath its page (null: gone). */
+  setSheet(rect: Rect | null): void {
+    if (JSON.stringify(rect) === JSON.stringify(this.sheet?.rect ?? null)) return;
+    this.sheet = rect ? { rect } : null;
+    if (rect) {
+      this.orbitMenu = null;
+      this.profileMenu = null;
+      this.createMenu = null;
+      this.siteControls = null;
+      this.fit();
+      this.view.setVisible(true);
+      this.send(); // no focus: the sheet's page has the keyboard
+    } else this.sync();
   }
 
   /** The Orbit menu under the toolbar's "Orbit ⌄"; the button toggles it. */
@@ -362,6 +391,25 @@ export class OverlayController {
     if (!this.createMenu) return;
     this.createMenu = null;
     this.sync();
+  }
+
+  /** Only the slid-out rail is showing: the overlay is just its strip. */
+  private get onlyRail(): boolean {
+    return this.railPeek !== null && !this.othersOpen && this.sidebarPeek === null;
+  }
+
+  /** Slides the tucked-away rail out (where it goes) or back in (null). */
+  setRailPeek(rect: Rect | null): void {
+    if (JSON.stringify(rect) === JSON.stringify(this.railPeek?.rect ?? null)) return;
+    this.railPeek = rect ? { rect } : null;
+    if (!rect) {
+      if (this.othersOpen || this.tooltip || this.sidebarPeek) this.fit();
+      else this.view.setVisible(false);
+    } else {
+      this.fit();
+      this.view.setVisible(true);
+    }
+    this.send();
   }
 
   get sidebarPeekOpen(): boolean {
@@ -559,6 +607,11 @@ export class OverlayController {
     }
     if (this.onlyPeek) {
       this.view.setBounds(this.peek!.cover);
+      return;
+    }
+    if (this.onlyRail) {
+      const { x, width: w } = this.railPeek!.rect;
+      this.view.setBounds({ x: 0, y: 0, width: Math.min(width, x + w + 24), height });
       return;
     }
     if (this.onlyAppFloat) {

@@ -287,6 +287,11 @@ export const contract = {
     output: z.void(),
     surfaces: ['shell'],
   },
+  /** The tucked-away app rail slides out (the pointer reached the window's edge) or back. */
+  'rail:peek': {
+    input: z.object({ open: z.boolean() }).strict(),
+    output: z.void(),
+  },
   'sidebar:backgroundMenu': {
     input: z.object({}).strict(),
     output: z.void(),
@@ -837,7 +842,7 @@ export const contract = {
   'apps:alive': {
     input: z.object({}).strict(),
     output: z.array(aliveAppSchema),
-    surfaces: ['shell'],
+    surfaces: ['shell', 'overlay'],
   },
   'apps:panel': {
     input: z
@@ -933,6 +938,12 @@ export const contract = {
     input: z.object({}).strict(),
     output: canvasFrameSchema.nullable(),
     surfaces: ['internal'],
+  },
+  /** Settings is put away (a click outside it, Esc, or its own close button). */
+  'settings:close': {
+    input: z.object({}).strict(),
+    output: z.void(),
+    surfaces: ['internal', 'overlay'],
   },
   /** Settings → Appearance: the wallpaper, and how much to dim a photo (only Settings may). */
   'canvas:setWallpaper': {

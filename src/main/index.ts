@@ -1,3 +1,4 @@
+import type { UiPrefs } from '@shared/ui-prefs';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -229,6 +230,30 @@ let openExternal: ((url: string) => void) | null = null;
 /** ⌥⌘N, from any app (F-24). */
 const LITTLE_SHORTCUT = 'Alt+CommandOrControl+N';
 let lastEmptyLittle = 0;
+/** Changes Orbit's appearance preferences (Settings → Appearance, or a menu) and tells every
+ *  window and page. */
+function setUiPrefs(patch: Partial<UiPrefs>): UiPrefs {
+  const settings = persistence!.settings;
+  const previous = settings.get('ui');
+  const next = { ...previous, ...patch };
+  // An app open on the side that's no longer used closes (it reopens on the new side).
+  if (next.appSide !== previous.appSide) {
+    for (const controller of windows?.all() ?? []) controller.appPanel.close();
+  }
+  settings.set('ui', next);
+  broadcaster.send('state:ui', next);
+  canvasService?.refresh(); // the accent, glass and palette preferences shape the canvas
+  for (const controller of windows?.all() ?? []) {
+    controller.layout.setApps(next.apps);
+    controller.layout.setRailAutoHide(next.railAutoHide);
+  }
+  for (const id of senders.idsOf('internal')) {
+    const contents = webContents.fromId(id);
+    if (contents) broadcaster.sendTo(contents, 'ui:update', next);
+  }
+  return next;
+}
+
 /** Tabs on top (the strip) or in the sidebar, in every window. */
 function applyTabLayout(layout: 'sidebar' | 'top'): void {
   for (const controller of windows?.all() ?? []) controller.layout.setTopTabs(layout === 'top');
@@ -613,6 +638,9 @@ function runCommand(controller: WindowController, commandId: string): void {
       return;
     case 'quick-note':
       if (persistence) toggleQuickNote(persistence.notes, controller);
+      return;
+    case 'toggle-rail-autohide':
+      setUiPrefs({ railAutoHide: !persistence!.settings.get('ui').railAutoHide });
       return;
     case 'toggle-tabs-top': {
       const next = persistence?.settings.get('tabs.layout') === 'top' ? 'sidebar' : 'top';
@@ -1232,6 +1260,15 @@ void app.whenReady().then(() => {
   // Light / Dark (or the Mac's own) — the glass's tone when it doesn't follow the wallpaper.
   nativeTheme.on('updated', () => {
     if (persistence?.settings.get('ui').palette === 'off') canvas.refresh();
+  });
+  router.handle('settings:close', (_input, { sender }) => {
+    const controller =
+      windowManager.settingsFor(sender.webContentsId) ??
+      windowManager.forSender(sender.webContentsId);
+    if (!controller || windowManager.closeSettings(controller)) return;
+    // Settings in a tab (orbit://settings typed in): its close button closes the tab.
+    const owner = windowManager.tabForContents(sender.webContentsId);
+    if (owner) owner.window.tabs.close(owner.tab.id);
   });
   // Settings → Appearance (the Homepage's Customize panel has the full background picker).
   router.handle('canvas:setWallpaper', ({ wallpaper }, { sender }) => {
@@ -2135,21 +2172,7 @@ void app.whenReady().then(() => {
     if (!windowManager.settingsFor(sender.webContentsId)) {
       throw new Error(`Sender ${sender.webContentsId} is not Settings`);
     }
-    const previous = persistence!.settings.get('ui');
-    const next = { ...previous, ...patch };
-    // An app open on the side that's no longer used closes (it reopens on the new side).
-    if (next.appSide !== previous.appSide) {
-      for (const controller of windowManager.all()) controller.appPanel.close();
-    }
-    persistence!.settings.set('ui', next);
-    broadcaster.send('state:ui', next);
-    canvasService?.refresh(); // the accent, glass and palette preferences shape the canvas
-    for (const controller of windowManager.all()) controller.layout.setApps(next.apps);
-    for (const id of senders.idsOf('internal')) {
-      const contents = webContents.fromId(id);
-      if (contents) broadcaster.sendTo(contents, 'ui:update', next);
-    }
-    return next;
+    return setUiPrefs(patch);
   });
   router.handle('appearance:toggle', (_input, { sender }) => {
     if (!windowManager.forSender(sender.webContentsId)) {

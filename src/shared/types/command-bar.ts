@@ -113,6 +113,10 @@ export const overlayStateSchema = z.object({
   orbitMenu: z.object({ anchor: rectSchema, openedAt: z.number() }).nullable().default(null),
   /** A sidebar app floating over the page (unpinned): its frame; a click outside tucks it away. */
   appFloat: z.object({ rect: rectSchema }).nullable().default(null),
+  /** Settings open over the window (its page sits on top): a dimmed backdrop that puts it away. */
+  sheet: z.object({ rect: rectSchema }).nullable().default(null),
+  /** The tucked-away app rail, slid out over the page while the pointer is on it. */
+  railPeek: z.object({ rect: rectSchema }).nullable().default(null),
   /** An Arc-style tooltip for a shell control: label, key caps, and its box in the window.
    *  `alone`: nothing else is showing, so the overlay is just this box. */
   tooltip: z

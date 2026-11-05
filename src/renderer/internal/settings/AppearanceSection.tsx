@@ -171,6 +171,17 @@ export function AppearanceSection(props: {
           />
         </Row>
         <Row
+          label="Auto-hide the app rail"
+          hint="The rail tucks away; rest the pointer on the window’s left edge to bring it out."
+        >
+          <Toggle
+            checked={prefs.railAutoHide}
+            onChange={(railAutoHide) => set({ railAutoHide })}
+            label="Auto-hide the app rail"
+            testId="ui-rail-autohide"
+          />
+        </Row>
+        <Row
           label="New apps open"
           hint="Where an app you add opens. Each app can be changed in Apps."
         >

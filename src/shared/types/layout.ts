@@ -41,6 +41,8 @@ export const layoutSchema = z.object({
   appDock: rectSchema.nullable(),
   /** …or floating over the page (unpinned): the page keeps its width. */
   appDockFloat: z.boolean().default(false),
+  /** The app rail is tucked away (auto-hide): it slides out from the window's left edge. */
+  railHidden: z.boolean().default(false),
   /** Tabs on top: the row of tab pills across the window's top. */
   tabStrip: rectSchema.nullable(),
 });

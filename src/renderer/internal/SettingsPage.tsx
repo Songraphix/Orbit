@@ -19,6 +19,7 @@ import {
   Trash2,
   UserRound,
   UsersRound,
+  X,
 } from 'lucide-react';
 import { SpaceIcon } from '../shell/sidebar/SpaceIcon';
 import { Group, Row, Section } from './settings/parts';
@@ -83,6 +84,7 @@ export function SettingsPage({ section = null }: { section?: string | null }) {
       data-testid="settings-page"
     >
       {canvas && <SettingsCanvas canvas={canvas} />}
+      <CloseSettings />
       <SettingsNav />
       <main className="relative min-w-0 flex-1 px-5 pt-9 pb-24 md:px-10">
         <div className="mx-auto max-w-2xl">
@@ -710,6 +712,32 @@ function AiKeyRow(props: { hasKey: boolean; canStore: boolean; onChange: () => v
         </form>
       )}
     </Row>
+  );
+}
+
+/** Settings opens over the window (owner request): × or Esc puts it away (a click outside it
+ *  too). Esc inside a menu or a field's own popup closes that first. */
+function CloseSettings() {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (document.querySelector('[role="menu"], [role="listbox"], [data-menu-open]')) return;
+      void window.orbit.invoke('settings:close', {});
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  return (
+    <button
+      type="button"
+      aria-label="Close Settings"
+      title="Close (Esc)"
+      onClick={() => void window.orbit.invoke('settings:close', {})}
+      className="mat-light fixed top-4 right-4 z-30 grid size-9 place-items-center rounded-full text-[var(--fg)] hover:bg-[var(--glass-hover)]"
+      data-testid="settings-close"
+    >
+      <X size={16} />
+    </button>
   );
 }
 

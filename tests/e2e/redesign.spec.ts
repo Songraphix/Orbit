@@ -323,3 +323,52 @@ test('Shift+← and Shift+→ go back and forward; in a text box they select tex
     await server.close();
   }
 });
+
+test('the app rail can auto-hide: it tucks away and slides out from the window’s left edge', async () => {
+  const server = await startTestServer();
+  const { app, win, close } = await launchOrbit();
+  type L = { rail: unknown; railHidden: boolean; card: { x: number } };
+  try {
+    const settings = await openSettings(app);
+    await invoke(settings, 'apps:add', { url: server.url('/one'), title: 'Desk' });
+    const before = await invoke<L>(win, 'layout:get');
+    await settings.getByTestId('ui-rail-autohide').click();
+    await closeSettings(app);
+    // Tucked away: no rail, and the sidebar and page move left into its room.
+    await expect(win.getByTestId('app-rail')).toHaveCount(0);
+    const hidden = await invoke<L>(win, 'layout:get');
+    expect(hidden.railHidden).toBe(true);
+    expect(hidden.card.x).toBeLessThan(before.card.x);
+
+    // Resting on the left edge slides it out over the page, with its apps.
+    await win.getByTestId('rail-edge').hover();
+    const overlay = await pageWith(app, '/overlay/');
+    await expect(overlay.getByTestId('rail-peek')).toBeVisible();
+    await expect(overlay.getByTestId('favorite-tile')).toHaveCount(1);
+    // Leaving it slides it back.
+    await overlay.evaluate(() =>
+      (
+        globalThis as unknown as {
+          document: { documentElement: { dispatchEvent(e: unknown): void } };
+        }
+      ).document.documentElement.dispatchEvent(
+        new (globalThis as unknown as { MouseEvent: new (t: string) => unknown }).MouseEvent(
+          'mouseleave',
+        ),
+      ),
+    );
+    await expect(overlay.getByTestId('rail-peek')).toHaveCount(0);
+
+    // The toolbar's right-click menu has the switch too.
+    await captureMenus(app);
+    const bar = (await win.getByTestId('toolbar').boundingBox())!;
+    const nav = (await win.getByTestId('nav-pill').boundingBox())!;
+    await win.mouse.click(nav.x - 12, bar.y + bar.height / 2, { button: 'right' });
+    await expect.poll(() => lastMenuLabels(app)).toContain('Auto-hide App Rail');
+    await pick(app, 'Auto-hide App Rail');
+    await expect(win.getByTestId('app-rail')).toBeVisible();
+  } finally {
+    await close();
+    await server.close();
+  }
+});

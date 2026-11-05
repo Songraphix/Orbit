@@ -218,6 +218,15 @@ Target: 2026-12-21 · Phases 0–11 merged to `main` · Unsigned DMG: `release/0
   - **Orbit AI on the Homepage:** asking from the Homepage just answers. "This page" goes along only when there is one, so the "Open a web page" error is gone.
   - **Tests:** e2e for running apps, floating, tuck-away, pin and quit, and for asking from the Homepage. Full suite: 163 passed, 2 skipped.
 
+- 2026-11-05 — Owner requests: Opera-style rail apps, Settings over the window, rail auto-hide.
+  - **Rail apps open as floating mini pages, not tabs.** From the rail every app opens beside the page, whatever it was set to, unless it's set to its own window. Floating (unpinned) is the default.
+  - **The rail stays usable while an app floats:** the overlay covers only the page side, so clicking another app switches to it.
+  - **Settings is a sheet over the browser window**, no longer a separate window. A click outside, Esc or × puts it away; ⌘, opens it and ⌘W closes it.
+  - **Auto-hide the app rail** (Settings → Appearance, or right-click the toolbar or rail): it tucks away and slides out over the page from the window's left edge.
+  - **The slid-out sidebar is on the canvas glass too.**
+  - **Fixed:** Esc in a Settings dropdown closed Settings as well.
+  - **Tests:** e2e for the sheet (click outside, Esc, ×), rail auto-hide and the floating mini pages. Full suite: 161 passed before the last two fixes, then both affected specs re-run and green.
+
 ## In progress
 
 - Owner review of the redesign in the running app (light and dark); v0.1.0 after dogfooding
