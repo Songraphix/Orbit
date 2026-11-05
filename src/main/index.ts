@@ -97,6 +97,8 @@ import { registerFocusHandlers } from './ipc/handlers/focus';
 import { FocusService } from './focus/service';
 import { WeatherService } from './newtab/weather';
 import { registerAppHubHandlers } from './ipc/handlers/apps';
+import { browserToolDeps } from './ai/browser-deps';
+import { openFavorite } from './apps/open';
 import { UnsplashService } from './newtab/unsplash';
 import { SoundService } from './focus/sounds';
 import { soundIdSchema } from '@shared/sounds';
@@ -1290,6 +1292,18 @@ void app.whenReady().then(() => {
     },
     startFocus: (controller, input) => focusService?.start(controller, input),
     workChanged: () => windowManager.all().forEach((c) => c.notes.refresh()),
+    // Orbit AI's browser tools (roadmap R2 M2): tabs, apps, history and notes, as allowed.
+    browser: (controller, userWords) =>
+      browserToolDeps(
+        controller,
+        {
+          history: persistence!.history,
+          notes: persistence!.notes,
+          openApp: (target, itemId) => openFavorite(target, itemId, (url) => openLittle?.(url)),
+          notesChanged: () => windowManager.all().forEach((c) => c.notes.refresh()),
+        },
+        userWords,
+      ),
     saveNote: (doc, text, projectId) => {
       const id = persistence!.notes.create(Date.now(), projectId);
       persistence!.notes.save(id, doc, text);

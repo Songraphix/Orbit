@@ -89,6 +89,36 @@ export class HistoryRepository {
     return rows.map((r) => ({ ...r, favicon: this.faviconFor(r.url) }));
   }
 
+  /** Pages last visited between two times, newest first (Orbit AI: "what was I reading
+   *  yesterday?"). */
+  visitedBetween(from: number, to: number, limit = 50): HistoryEntry[] {
+    const rows = this.db
+      .prepare(
+        `SELECT url, title, visit_count AS visitCount, last_visit_at AS lastVisitAt
+           FROM history WHERE profile_id = ? AND last_visit_at >= ? AND last_visit_at < ?
+          ORDER BY last_visit_at DESC LIMIT ?`,
+      )
+      .all(PROFILE, from, to, limit) as Omit<HistoryEntry, 'favicon'>[];
+    return rows.map((r) => ({ ...r, favicon: this.faviconFor(r.url) }));
+  }
+
+  /** Whether any page on `host` (with or without www.) was visited. */
+  knowsHost(host: string): boolean {
+    const bare = host.toLowerCase().replace(/^www\./, '');
+    if (!bare) return false;
+    const esc = bare.replace(/[\\%_]/g, (c) => `\\${c}`);
+    // The host, then its path or its port.
+    const patterns = ['https://', 'http://', 'https://www.', 'http://www.'].flatMap((prefix) => [
+      `${prefix}${esc}/%`,
+      `${prefix}${esc}:%`,
+    ]);
+    const like = patterns.map(() => `url LIKE ? ESCAPE '\\'`).join(' OR ');
+    const row = this.db
+      .prepare(`SELECT 1 AS hit FROM history WHERE profile_id = ? AND (${like}) LIMIT 1`)
+      .get(PROFILE, ...patterns);
+    return row !== undefined;
+  }
+
   /** Imported history (Arc importer, Phase 3) arrives in bulk. */
   importVisits(
     entries: { url: string; title: string; visitCount: number; lastVisitAt: number }[],

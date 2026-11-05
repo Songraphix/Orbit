@@ -47,6 +47,9 @@ export function registerAssistantHandlers(
   router.handle('assistant:source', ({ messageId, n }, { sender }) =>
     assistant.showSource(panelWindow(sender.webContentsId), messageId, n),
   );
+  router.handle('assistant:openLink', ({ messageId, index }, { sender }) =>
+    assistant.openLink(panelWindow(sender.webContentsId), messageId, index),
+  );
   router.handle('assistant:toNote', ({ messageId }, { sender }) => ({
     noteId: assistant.saveToNote(panelWindow(sender.webContentsId), messageId),
   }));

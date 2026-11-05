@@ -41,8 +41,10 @@ export type AssistantContext = z.output<typeof assistantContextSchema>;
 
 /** Something Orbit AI did with your projects and tasks while answering (shown in the reply). */
 export const assistantActionSchema = z.object({
-  kind: z.enum(['read', 'create', 'update', 'focus']),
+  /** link: a site Orbit AI suggests but didn't open by itself (the user clicks to open it). */
+  kind: z.enum(['read', 'create', 'update', 'focus', 'link']),
   label: z.string(),
+  url: z.string().max(2000).optional(),
 });
 export type AssistantAction = z.output<typeof assistantActionSchema>;
 

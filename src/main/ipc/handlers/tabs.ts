@@ -2,6 +2,7 @@ import type { IpcRouter } from '../router';
 import type { TabController } from '../../tabs/tab-controller';
 import { classifyInput } from '../../omnibox/classify';
 import type { WindowManager } from '../../windows/window-manager';
+import { openFavorite } from '../../apps/open';
 
 export function registerTabHandlers(
   router: IpcRouter,
@@ -27,19 +28,10 @@ export function registerTabHandlers(
   });
 
   router.handle('tabs:activate', ({ tabId }, { sender }) => {
-    // App Hub (brief M5): a favourite may open in the docked panel or its own window.
+    // App Hub (brief M5): a favourite may open in the docked panel (a click again closes it)
+    // or its own window.
     const controller = windows.forSender(sender.webContentsId);
-    const item = controller?.store.item(tabId);
-    const openIn = item?.section === 'favorite' ? item.data?.app?.openIn : undefined;
-    const url = item ? (item.homeUrl ?? item.url) : null;
-    if (controller && item && url && openIn === 'panel') {
-      controller.appPanel.toggle(item.id, url);
-      return;
-    }
-    if (url && openIn === 'window' && deps.openWindow) {
-      deps.openWindow(url);
-      return;
-    }
+    if (controller && openFavorite(controller, tabId, deps.openWindow, { toggle: true })) return;
     tabsFor(sender.webContentsId).activate(tabId);
   });
 

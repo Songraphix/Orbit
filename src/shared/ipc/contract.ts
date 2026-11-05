@@ -1559,6 +1559,14 @@ export const contract = {
     output: z.void(),
     surfaces: ['internal'],
   },
+  /** A link Orbit AI offered instead of opening it: open it (by its place in the answer). */
+  'assistant:openLink': {
+    input: z
+      .object({ messageId: z.string().max(64), index: z.number().int().min(0).max(50) })
+      .strict(),
+    output: z.boolean(),
+    surfaces: ['internal'],
+  },
   'assistant:toNote': {
     input: z.object({ messageId: z.string().max(64) }).strict(),
     output: z.object({ noteId: z.string().nullable() }),

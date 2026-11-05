@@ -234,13 +234,23 @@ test('Orbit AI as a coworker: it looks at today’s tasks, adds one, and says wh
   };
   expect(work.tasks.find((t) => t.title === 'Call the printer')?.priority).toBe('high');
 
-  // Off in Settings → AI: no tools are offered, and the panel says so.
+  // Off in Settings → AI: no project tools are offered, and the panel says so; with every
+  // source off, no tools at all.
   await clickMenu(app, 'settings');
   const settings = await pageWith(app, '#/settings');
   await settings.locator('[data-testid="settings-nav"][data-section="ai"]').click();
   await settings.getByTestId('ai-work-access').uncheck();
-  await closeSettings(app);
   await panel.getByTestId('assistant-input').fill('anything else?');
+  await panel.getByTestId('assistant-input').press('Enter');
+  await expect(panel.getByTestId('assistant-answer').last()).toHaveAttribute('data-status', 'done');
+  const offered = (server.lastAiRequest()!.body['tools'] as { name: string }[]).map((t) => t.name);
+  expect(offered).not.toContain('create_task');
+  expect(offered).toContain('list_tabs');
+  expect(offered).not.toContain('search_history'); // history is off until allowed
+  await settings.getByTestId('ai-browser-access').uncheck();
+  await settings.getByTestId('ai-notes-access').uncheck();
+  await closeSettings(app);
+  await panel.getByTestId('assistant-input').fill('and now?');
   await panel.getByTestId('assistant-input').press('Enter');
   await expect(panel.getByTestId('assistant-answer').last()).toHaveAttribute('data-status', 'done');
   expect(server.lastAiRequest()!.body['tools']).toBeUndefined();
@@ -276,4 +286,51 @@ test('compare pages and share a project: both go with the question, and say so',
   expect(sent).toContain(`Project: ${project.trim()}`);
   expect(sent).toContain('Tasks (');
   expect((sent.match(/A web page the user chose to share/g) ?? []).length).toBe(1); // the other tab
+});
+
+test('Orbit AI uses the browser: lists apps and tabs, opens an app in the panel, saves a note; an unknown site waits as a link', async () => {
+  const { app, win } = orbit;
+  await addKey(app);
+  // An app that opens in the side panel.
+  await clickMenu(app, 'settings');
+  const settings = await pageWith(app, '#/settings');
+  const list = (await invoke(settings, 'apps:add', {
+    url: server.url('/two'),
+    title: 'Music',
+  })) as { apps: { id: string }[] };
+  await invoke(settings, 'apps:update', { itemId: list.apps[0]!.id, openIn: 'panel' });
+  await closeSettings(app);
+
+  await win.getByTestId('toolbar-assistant').click();
+  const panel = await pageWith(app, '#/notes/panel/assistant');
+  await panel.getByTestId('assistant-input').fill('BROWSERTOOLS open my music app and note this');
+  await panel.getByTestId('assistant-input').press('Enter');
+  const answer = panel.getByTestId('assistant-answer').last();
+  await expect(answer).toHaveAttribute('data-status', 'done');
+  await expect(answer.getByTestId('assistant-action')).toHaveText([
+    'Looked at your apps (1)',
+    /Looked at your tabs \(\d+\)/,
+    'Opened Music',
+    'Open attacker.example',
+    'Saved the note “Voice notes”',
+  ]);
+  // The app opened where it's set to open: the docked panel.
+  await expect(win.getByTestId('app-panel-title')).toHaveText('Page Two');
+  // The unknown site did not open by itself (no tab went there)…
+  const tabs = () => invoke(win, 'tabs:get') as Promise<{ tabs: { url: string }[] }>;
+  expect((await tabs()).tabs.some((t) => t.url.includes('attacker.example'))).toBe(false);
+  // …until the user clicks it.
+  await answer.getByTestId('assistant-link').click();
+  await expect
+    .poll(async () => (await tabs()).tabs.some((t) => t.url.includes('attacker.example')))
+    .toBe(true);
+  // The note was saved.
+  const { notes } = (await invoke(panel, 'notes:list', { query: 'Voice notes' })) as {
+    notes: { title: string }[];
+  };
+  expect(notes.map((n) => n.title)).toContain('Voice notes');
+  // History wasn't offered (it's off until allowed in Settings → AI).
+  const offered = (server.aiRequests()[0]!.body['tools'] as { name: string }[]).map((t) => t.name);
+  expect(offered).toEqual(expect.arrayContaining(['list_tabs', 'open_app', 'create_note']));
+  expect(offered).not.toContain('search_history');
 });

@@ -50,13 +50,24 @@ export const aiPrefsSchema = z.object({
   attachPage: z.boolean(),
   /** Orbit AI may look at and change your projects and tasks when a question needs it. */
   workAccess: z.boolean().default(true),
+  /** …your open tabs and apps, and open sites, search, switch tabs and open apps for you. */
+  browserAccess: z.boolean().default(true),
+  /** …search the pages you've visited (off until you allow it). */
+  historyAccess: z.boolean().default(false),
+  /** …find, read, open and write your notes. */
+  notesAccess: z.boolean().default(true),
 });
 export type AiPrefs = z.output<typeof aiPrefsSchema>;
 
 /** A change to some AI preferences. (Not aiPrefsSchema.partial(): zod 4 keeps `.default()`
  *  inside optional fields, so a patch would switch workAccess back on.) */
 export const aiPrefsPatchSchema = aiPrefsSchema
-  .extend({ workAccess: z.boolean() })
+  .extend({
+    workAccess: z.boolean(),
+    browserAccess: z.boolean(),
+    historyAccess: z.boolean(),
+    notesAccess: z.boolean(),
+  })
   .partial()
   .strict();
 
@@ -66,6 +77,9 @@ export const DEFAULT_AI_PREFS: AiPrefs = {
   monthlyBudget: 10,
   attachPage: false,
   workAccess: true,
+  browserAccess: true,
+  historyAccess: false,
+  notesAccess: true,
 };
 
 /** What each request was for, in the activity log. */

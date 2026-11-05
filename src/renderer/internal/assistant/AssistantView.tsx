@@ -16,6 +16,7 @@ import {
   Target,
   SquarePen,
   X,
+  ExternalLink,
 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
@@ -177,34 +178,52 @@ function Reply({ reply }: { reply: AssistantReply }) {
       {reply.actions.length > 0 && (
         // What it looked at and changed in your projects and tasks, in order.
         <ul className="mb-2 flex flex-col gap-1" data-testid="assistant-actions">
-          {reply.actions.map((a, i) => (
-            <li
-              key={i}
-              className={`flex items-center gap-1.5 text-[12px] ${
-                a.kind === 'read' ? 'text-[var(--note-muted)]' : 'font-medium'
-              }`}
-              data-testid="assistant-action"
-              data-kind={a.kind}
-            >
-              <span
-                className={`grid size-4 shrink-0 place-items-center rounded-full ${
-                  a.kind === 'read'
-                    ? 'bg-[var(--note-hover)]'
-                    : 'bg-[var(--work-accent-soft)] text-[var(--work-accent-text)]'
+          {reply.actions.map((a, i) =>
+            a.kind === 'link' ? (
+              // A site Orbit AI offered rather than opened: the user decides.
+              <li key={i} data-testid="assistant-action" data-kind="link">
+                <button
+                  type="button"
+                  onClick={() =>
+                    void invoke('assistant:openLink', { messageId: reply.id, index: i })
+                  }
+                  className="press inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--work-accent-soft)] px-2.5 py-1 text-[12px] font-medium text-[var(--work-accent-text)] hover:brightness-95"
+                  title={a.url}
+                  data-testid="assistant-link"
+                >
+                  <ExternalLink size={11} className="shrink-0" />
+                  <span className="min-w-0 truncate">{a.label}</span>
+                </button>
+              </li>
+            ) : (
+              <li
+                key={i}
+                className={`flex items-center gap-1.5 text-[12px] ${
+                  a.kind === 'read' ? 'text-[var(--note-muted)]' : 'font-medium'
                 }`}
-                aria-hidden
+                data-testid="assistant-action"
+                data-kind={a.kind}
               >
-                {a.kind === 'read' ? (
-                  <Eye size={10} />
-                ) : a.kind === 'focus' ? (
-                  <Target size={10} />
-                ) : (
-                  <Check size={10} strokeWidth={3} />
-                )}
-              </span>
-              <span className="min-w-0 truncate">{a.label}</span>
-            </li>
-          ))}
+                <span
+                  className={`grid size-4 shrink-0 place-items-center rounded-full ${
+                    a.kind === 'read'
+                      ? 'bg-[var(--note-hover)]'
+                      : 'bg-[var(--work-accent-soft)] text-[var(--work-accent-text)]'
+                  }`}
+                  aria-hidden
+                >
+                  {a.kind === 'read' ? (
+                    <Eye size={10} />
+                  ) : a.kind === 'focus' ? (
+                    <Target size={10} />
+                  ) : (
+                    <Check size={10} strokeWidth={3} />
+                  )}
+                </span>
+                <span className="min-w-0 truncate">{a.label}</span>
+              </li>
+            ),
+          )}
         </ul>
       )}
       {blocks.length > 0 && (

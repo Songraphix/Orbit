@@ -457,13 +457,52 @@ function AiSection() {
             data-testid="ai-work-access"
           />
         </Row>
+        <Row
+          label="Tabs and apps"
+          hint="Orbit AI can see your open tabs’ titles and addresses and your apps, switch tabs, search, and open sites or apps when you ask. Sites you haven’t named or visited are offered as a link to click, never opened by themselves."
+        >
+          <input
+            type="checkbox"
+            role="switch"
+            checked={prefs.browserAccess}
+            onChange={(e) => set({ browserAccess: e.target.checked })}
+            className="orbit-switch"
+            data-testid="ai-browser-access"
+          />
+        </Row>
+        <Row
+          label="Notes"
+          hint="Orbit AI can find and read your notes when a question needs them, open one beside the page, and save new notes when you ask. It never changes or deletes a note."
+        >
+          <input
+            type="checkbox"
+            role="switch"
+            checked={prefs.notesAccess}
+            onChange={(e) => set({ notesAccess: e.target.checked })}
+            className="orbit-switch"
+            data-testid="ai-notes-access"
+          />
+        </Row>
+        <Row
+          label="Browsing history"
+          hint="Off by default. On: Orbit AI can search the pages you visited (titles, addresses, when) to answer things like “the article I read yesterday” — only the matches it finds are sent."
+        >
+          <input
+            type="checkbox"
+            role="switch"
+            checked={prefs.historyAccess}
+            onChange={(e) => set({ historyAccess: e.target.checked })}
+            className="orbit-switch"
+            data-testid="ai-history-access"
+          />
+        </Row>
         <div className="px-4 py-3 text-meta text-neutral-500" data-testid="ai-privacy">
           What you attach (a page’s text, a selection, saved findings) and your question go to
-          Anthropic’s API with your key — and, with Projects and tasks on, the projects and tasks
-          Claude looks at to answer. Never your history or other tabs. Anthropic doesn’t train on
-          API data. Conversations stay in memory until Orbit quits; answers you save become notes.
-          Orbit keeps a log of each request below (when, what kind, tokens and cost — not the
-          words).
+          Anthropic’s API with your key — plus, for what you’ve allowed above, only what Claude
+          looks at to answer: projects and tasks, tab titles and addresses, notes, or history
+          matches. Never all of your history or other tabs’ contents. Anthropic doesn’t train on API
+          data. Conversations stay in memory until Orbit quits; answers you save become notes. Orbit
+          keeps a log of each request below (when, what kind, tokens and cost — not the words).
         </div>
       </Group>
 

